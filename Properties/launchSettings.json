@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "AutoScheduling3 (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "AutoScheduling3 (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
