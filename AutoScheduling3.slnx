@@ -10,4 +10,5 @@
     <Platform Solution="*|x86" Project="x86" />
     <Deploy />
   </Project>
+  <Project Path="ConstraintTest/ConstraintTest.csproj" Id="83a1516a-1e51-44ae-a119-6686a39d0bfe" />
 </Solution>
