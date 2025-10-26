@@ -326,5 +326,25 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
                 throw;
             }
         }
+
+        /// <summary>
+        /// 获取最近一次确认的排班表（用于算法历史约束处理）
+        /// </summary>
+        /// <returns>最近确认的排班表，如果没有则返回 null</returns>
+        public async Task<Schedule?> GetLastConfirmedScheduleAsync()
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT ScheduleId FROM HistorySchedules ORDER BY ConfirmTime DESC LIMIT 1";
+            var result = await cmd.ExecuteScalarAsync();
+
+            if (result == null)
+                return null;
+
+            int scheduleId = Convert.ToInt32(result);
+            return await _schedulingRepo.GetScheduleAsync(scheduleId);
+        }
     }
 }
