@@ -4,16 +4,19 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoScheduling3.Models;
 using AutoScheduling3.SchedulingEngine.Core;
+using AutoScheduling3.SchedulingEngine.Strategies;
 
 namespace AutoScheduling3.SchedulingEngine
 {
     /// <summary>
-    /// 贪心调度器：基于MRV启发式策略的排班算法核心
+    /// 贪心调度器：基于MRV启发式策略的排班算法核心（增强版）
     /// </summary>
     public class GreedyScheduler
     {
         private readonly SchedulingContext _context;
         private FeasibilityTensor? _tensor;
+        private MRVStrategy? _mrvStrategy;
+        private ScoreCalculator? _scoreCalculator;
 
         public GreedyScheduler(SchedulingContext context)
         {
@@ -34,10 +37,13 @@ namespace AutoScheduling3.SchedulingEngine
             // 第3步：应用初始约束
             ApplyInitialConstraints();
 
-            // 第4步：执行分配循环（MRV策略）
-            PerformAssignments();
+            // 第4步：初始化MRV策略和评分计算器
+            InitializeStrategies();
 
-            // 第5步：生成结果
+            // 第5步：执行分配循环（MRV策略）
+            PerformAssignmentsWithMRV();
+
+            // 第6步：生成结果
             var schedule = GenerateSchedule();
 
             return schedule;
@@ -135,85 +141,84 @@ namespace AutoScheduling3.SchedulingEngine
         }
 
         /// <summary>
-        /// 执行分配循环（简化版MRV策略）
+        /// 初始化MRV策略和评分计算器
         /// </summary>
-        private void PerformAssignments()
+        private void InitializeStrategies()
         {
             if (_tensor == null) return;
+
+            _mrvStrategy = new MRVStrategy(_tensor, _context);
+            _scoreCalculator = new ScoreCalculator(_context);
+        }
+
+        /// <summary>
+        /// 执行分配循环（使用MRV策略 - 增强版）
+        /// </summary>
+        private void PerformAssignmentsWithMRV()
+        {
+            if (_tensor == null || _mrvStrategy == null || _scoreCalculator == null) 
+                return;
 
             var currentDate = _context.StartDate.Date;
-            while (currentDate <= _context.EndDate.Date)
+            int totalDays = (_context.EndDate.Date - _context.StartDate.Date).Days + 1;
+            int assignmentCount = 0;
+
+            // 遍历每一天
+            for (int day = 0; day < totalDays; day++)
             {
-                // 遍历每个时段
-                for (int periodIdx = 0; periodIdx < 12; periodIdx++)
+                var date = currentDate.AddDays(day);
+
+                // 每天处理12个时段 × N个哨位
+                for (int slotIdx = 0; slotIdx < _tensor.PositionCount * 12; slotIdx++)
                 {
-                    // 遍历每个哨位
-                    for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
+                    // 使用MRV策略选择下一个要分配的位置
+                    var (posIdx, periodIdx) = _mrvStrategy.SelectNextSlot();
+
+                    if (posIdx == -1 || periodIdx == -1)
                     {
-                        // 获取可行人员
-                        var feasiblePersons = _tensor.GetFeasiblePersons(posIdx, periodIdx);
-                        
-                        if (feasiblePersons.Length == 0)
-                        {
-                            // 无解：跳过或记录错误
-                            continue;
-                        }
+                        // 当天所有位置已分配或无法分配
+                        break;
+                    }
 
-                        // 计算每个可行人员的得分
-                        int bestPersonIdx = SelectBestPerson(feasiblePersons, periodIdx, currentDate);
+                    // 获取可行人员
+                    var feasiblePersons = _tensor.GetFeasiblePersons(posIdx, periodIdx);
+                    
+                    if (feasiblePersons.Length == 0)
+                    {
+                        // 无可行人员，标记为已分配（跳过）
+                        _mrvStrategy.MarkAsAssigned(posIdx, periodIdx);
+                        Console.WriteLine($"警告：{date:yyyy-MM-dd} 时段{periodIdx} 哨位{posIdx} 无可行人员");
+                        continue;
+                    }
 
-                        if (bestPersonIdx >= 0)
-                        {
-                            // 执行分配
-                            AssignPerson(posIdx, periodIdx, bestPersonIdx, currentDate);
-                        }
+                    // 使用评分计算器选择最佳人员
+                    int bestPersonIdx = _scoreCalculator.SelectBestPerson(feasiblePersons, periodIdx, date);
+
+                    if (bestPersonIdx >= 0)
+                    {
+                        // 执行分配
+                        AssignPersonEnhanced(posIdx, periodIdx, bestPersonIdx, date);
+                        assignmentCount++;
                     }
                 }
-
-                currentDate = currentDate.AddDays(1);
             }
+
+            Console.WriteLine($"排班完成：共分配 {assignmentCount} 个班次");
         }
 
         /// <summary>
-        /// 选择最佳人员（基于软约束评分）
+        /// 执行分配并更新约束（增强版）
         /// </summary>
-        private int SelectBestPerson(int[] feasiblePersons, int periodIdx, DateTime date)
+        private void AssignPersonEnhanced(int positionIdx, int periodIdx, int personIdx, DateTime date)
         {
-            if (feasiblePersons.Length == 0) return -1;
-
-            int bestPersonIdx = feasiblePersons[0];
-            double bestScore = -1;
-
-            bool isHoliday = _context.IsHoliday(date);
-
-            foreach (var personIdx in feasiblePersons)
-            {
-                int personId = _context.PersonIdxToId[personIdx];
-                if (!_context.PersonScoreStates.ContainsKey(personId))
-                    continue;
-
-                var scoreState = _context.PersonScoreStates[personId];
-                double score = scoreState.CalculateScore(periodIdx, date, isHoliday);
-
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    bestPersonIdx = personIdx;
-                }
-            }
-
-            return bestPersonIdx;
-        }
-
-        /// <summary>
-        /// 执行分配并更新约束
-        /// </summary>
-        private void AssignPerson(int positionIdx, int periodIdx, int personIdx, DateTime date)
-        {
-            if (_tensor == null) return;
+            if (_tensor == null || _mrvStrategy == null || _scoreCalculator == null) 
+                return;
 
             // 记录分配
             _context.RecordAssignment(date, periodIdx, positionIdx, personIdx);
+
+            // 标记为已分配
+            _mrvStrategy.MarkAsAssigned(positionIdx, periodIdx);
 
             // 更新张量约束
             // 单人上哨：同一哨位时段只能一个人
@@ -245,14 +250,11 @@ namespace AutoScheduling3.SchedulingEngine
                 }
             }
 
+            // 更新MRV候选人员数缓存
+            _mrvStrategy.UpdateCandidateCountsAfterAssignment(positionIdx, periodIdx, personIdx);
+
             // 更新人员评分状态
-            int personId = _context.PersonIdxToId[personIdx];
-            if (_context.PersonScoreStates.ContainsKey(personId))
-            {
-                var scoreState = _context.PersonScoreStates[personId];
-                bool isHoliday = _context.IsHoliday(date);
-                scoreState.UpdateAfterAssignment(periodIdx, date, isHoliday);
-            }
+            _scoreCalculator.UpdatePersonScoreState(personIdx, periodIdx, date);
         }
 
         /// <summary>
