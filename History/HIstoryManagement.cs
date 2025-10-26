@@ -44,13 +44,13 @@ namespace AutoScheduling3.History
 CREATE TABLE IF NOT EXISTS HistorySchedules (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     ScheduleId INTEGER NOT NULL,
-    ConfirmTime TEXT NOT NULL, -- ISO 8601
+    ConfirmTime TEXT NOT NULL, -- ISO8601
     FOREIGN KEY (ScheduleId) REFERENCES Schedules(Id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS BufferSchedules (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     ScheduleId INTEGER NOT NULL UNIQUE,
-    CreateTime TEXT NOT NULL, -- ISO 8601
+    CreateTime TEXT NOT NULL, -- ISO8601
     FOREIGN KEY (ScheduleId) REFERENCES Schedules(Id) ON DELETE CASCADE
 );
 ";
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
-            using var tx = await conn.BeginTransactionAsync();
+            using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
 
             try
             {
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
-            using var tx = await conn.BeginTransactionAsync();
+            using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
 
             try
             {
@@ -214,7 +214,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
-            using var tx = await conn.BeginTransactionAsync();
+            using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
 
             try
             {
@@ -261,7 +261,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
-            using var tx = await conn.BeginTransactionAsync();
+            using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
 
             try
             {
@@ -292,7 +292,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
-            using var tx = await conn.BeginTransactionAsync();
+            using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
 
             try
             {

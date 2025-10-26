@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS SingleShifts (
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
-            using var tx = await conn.BeginTransactionAsync();
+            using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
 
             var cmd = conn.CreateCommand();
             cmd.Transaction = tx;
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS SingleShifts (
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
-            using var tx = await conn.BeginTransactionAsync();
+            using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
 
             var cmd = conn.CreateCommand();
             cmd.Transaction = tx;

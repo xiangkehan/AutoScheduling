@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +9,7 @@ namespace AutoScheduling3.Models
 {
     /// <summary>
     /// 哨位数据模型：表示一个哨位的基本信息，用于通过 SQLite 存储。
-    /// 包含：数据库ID、哨位名称、哨位地点、哨位介绍、哨位要求。
+    /// 包含：数据库ID、哨位名称、哨位地点、哨位介绍、哨位要求、哨位所需技能ID集合。
     /// </summary>
     public class PositionLocation
     {
@@ -35,9 +35,14 @@ namespace AutoScheduling3.Models
         public string Description { get; set; } = string.Empty;
 
         /// <summary>
-        /// 哨位要求
+        /// 哨位要求（文本描述，用于显示）
         /// </summary>
         public string Requirements { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 哨位所需技能ID集合（用于算法快速匹配）
+        /// </summary>
+        public List<int> RequiredSkillIds { get; set; } = new List<int>();
 
         public override string ToString()
         {
