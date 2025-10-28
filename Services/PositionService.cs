@@ -25,7 +25,7 @@ public class PositionService : IPositionService
     public async Task<List<PositionDto>> GetAllAsync()
     {
         var positions = await _repository.GetAllAsync();
-        return _mapper.ToDtoList(positions);
+        return await _mapper.ToDtoListAsync(positions);
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ public class PositionService : IPositionService
             throw new ArgumentException("无效的哨位ID", nameof(id));
 
         var position = await _repository.GetByIdAsync(id);
-        return position != null ? _mapper.ToDto(position) : null;
+        return position != null ? await _mapper.ToDtoAsync(position) : null;
     }
 
     /// <summary>
@@ -51,7 +51,7 @@ public class PositionService : IPositionService
         var id = await _repository.CreateAsync(model);
         
         model.Id = id;
-        return _mapper.ToDto(model);
+        return await _mapper.ToDtoAsync(model);
     }
 
     /// <summary>
@@ -93,8 +93,7 @@ public class PositionService : IPositionService
     public async Task<List<PositionDto>> GetActiveAsync()
     {
         var allPositions = await _repository.GetAllAsync();
-        var activePositions = allPositions.Where(p => p.IsActive).ToList();
-        return _mapper.ToDtoList(activePositions);
+        return await _mapper.ToDtoListAsync(allPositions);
     }
 
     /// <summary>
@@ -103,8 +102,7 @@ public class PositionService : IPositionService
     public async Task<List<PositionDto>> GetByPriorityAsync()
     {
         var positions = await _repository.GetAllAsync();
-        var sortedPositions = positions.OrderBy(p => p.Priority).ToList();
-        return _mapper.ToDtoList(sortedPositions);
+        return await _mapper.ToDtoListAsync(positions);
     }
 
     /// <summary>
@@ -115,13 +113,8 @@ public class PositionService : IPositionService
         if (string.IsNullOrWhiteSpace(keyword))
             return await GetAllAsync();
 
-        var allPositions = await _repository.GetAllAsync();
-        var filteredPositions = allPositions.Where(p => 
-            p.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-            (p.Description != null && p.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-        ).ToList();
-
-        return _mapper.ToDtoList(filteredPositions);
+        var filteredPositions = await _repository.SearchByNameAsync(keyword);
+        return await _mapper.ToDtoListAsync(filteredPositions);
     }
 
     /// <summary>
@@ -138,14 +131,20 @@ public class PositionService : IPositionService
         if (dto.Name.Length > 100)
             throw new ArgumentException("哨位名称不能超过100个字符", nameof(dto.Name));
 
-        if (dto.RequiredPersonnel < 1)
-            throw new ArgumentException("所需人数必须至少为1", nameof(dto.RequiredPersonnel));
+        if (string.IsNullOrWhiteSpace(dto.Location))
+            throw new ArgumentException("哨位地点为必填项", nameof(dto.Location));
 
-        if (dto.RequiredPersonnel > 50)
-            throw new ArgumentException("所需人数不能超过50", nameof(dto.RequiredPersonnel));
+        if (dto.Location.Length > 200)
+            throw new ArgumentException("地点不能超过200个字符", nameof(dto.Location));
 
-        if (dto.Priority < 1)
-            throw new ArgumentException("优先级必须至少为1", nameof(dto.Priority));
+        if (dto.Description != null && dto.Description.Length > 500)
+            throw new ArgumentException("介绍不能超过500个字符", nameof(dto.Description));
+
+        if (dto.Requirements != null && dto.Requirements.Length > 1000)
+            throw new ArgumentException("要求说明不能超过1000个字符", nameof(dto.Requirements));
+
+        if (dto.RequiredSkillIds == null || dto.RequiredSkillIds.Count == 0)
+            throw new ArgumentException("哨位必须至少需要一项技能", nameof(dto.RequiredSkillIds));
     }
 
     /// <summary>
@@ -162,13 +161,19 @@ public class PositionService : IPositionService
         if (dto.Name.Length > 100)
             throw new ArgumentException("哨位名称不能超过100个字符", nameof(dto.Name));
 
-        if (dto.RequiredPersonnel < 1)
-            throw new ArgumentException("所需人数必须至少为1", nameof(dto.RequiredPersonnel));
+        if (string.IsNullOrWhiteSpace(dto.Location))
+            throw new ArgumentException("哨位地点为必填项", nameof(dto.Location));
 
-        if (dto.RequiredPersonnel > 50)
-            throw new ArgumentException("所需人数不能超过50", nameof(dto.RequiredPersonnel));
+        if (dto.Location.Length > 200)
+            throw new ArgumentException("地点不能超过200个字符", nameof(dto.Location));
 
-        if (dto.Priority < 1)
-            throw new ArgumentException("优先级必须至少为1", nameof(dto.Priority));
+        if (dto.Description != null && dto.Description.Length > 500)
+            throw new ArgumentException("介绍不能超过500个字符", nameof(dto.Description));
+
+        if (dto.Requirements != null && dto.Requirements.Length > 1000)
+            throw new ArgumentException("要求说明不能超过1000个字符", nameof(dto.Requirements));
+
+        if (dto.RequiredSkillIds == null || dto.RequiredSkillIds.Count == 0)
+            throw new ArgumentException("哨位必须至少需要一项技能", nameof(dto.RequiredSkillIds));
     }
 }

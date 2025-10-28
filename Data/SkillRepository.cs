@@ -32,7 +32,10 @@ namespace AutoScheduling3.Data
 CREATE TABLE IF NOT EXISTS Skills (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     Name TEXT NOT NULL,
-    Description TEXT NOT NULL
+    Description TEXT NOT NULL,
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    CreatedAt TEXT NOT NULL,
+    UpdatedAt TEXT NOT NULL
 );";
             await cmd.ExecuteNonQueryAsync();
         }
@@ -46,9 +49,12 @@ CREATE TABLE IF NOT EXISTS Skills (
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "INSERT INTO Skills (Name, Description) VALUES (@name, @desc); SELECT last_insert_rowid();";
+            cmd.CommandText = "INSERT INTO Skills (Name, Description, IsActive, CreatedAt, UpdatedAt) VALUES (@name, @desc, @isActive, @createdAt, @updatedAt); SELECT last_insert_rowid();";
             cmd.Parameters.AddWithValue("@name", skill.Name ?? string.Empty);
             cmd.Parameters.AddWithValue("@desc", skill.Description ?? string.Empty);
+            cmd.Parameters.AddWithValue("@isActive", skill.IsActive ? 1 : 0);
+            cmd.Parameters.AddWithValue("@createdAt", skill.CreatedAt.ToString("o"));
+            cmd.Parameters.AddWithValue("@updatedAt", skill.UpdatedAt.ToString("o"));
 
             var result = await cmd.ExecuteScalarAsync();
             skill.Id = Convert.ToInt32(result);
@@ -64,7 +70,7 @@ CREATE TABLE IF NOT EXISTS Skills (
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT Id, Name, Description FROM Skills WHERE Id = @id";
+            cmd.CommandText = "SELECT Id, Name, Description, IsActive, CreatedAt, UpdatedAt FROM Skills WHERE Id = @id";
             cmd.Parameters.AddWithValue("@id", id);
 
             using var reader = await cmd.ExecuteReaderAsync();
@@ -74,7 +80,10 @@ CREATE TABLE IF NOT EXISTS Skills (
                 {
                     Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
-                    Description = reader.GetString(2)
+                    Description = reader.GetString(2),
+                    IsActive = reader.IsDBNull(3) ? true : reader.GetInt32(3) == 1,
+                    CreatedAt = reader.IsDBNull(4) ? DateTime.Now : DateTime.Parse(reader.GetString(4)),
+                    UpdatedAt = reader.IsDBNull(5) ? DateTime.Now : DateTime.Parse(reader.GetString(5))
                 };
             }
 
@@ -91,7 +100,7 @@ CREATE TABLE IF NOT EXISTS Skills (
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT Id, Name, Description FROM Skills ORDER BY Id";
+            cmd.CommandText = "SELECT Id, Name, Description, IsActive, CreatedAt, UpdatedAt FROM Skills ORDER BY Id";
 
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -100,7 +109,10 @@ CREATE TABLE IF NOT EXISTS Skills (
                 {
                     Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
-                    Description = reader.GetString(2)
+                    Description = reader.GetString(2),
+                    IsActive = reader.IsDBNull(3) ? true : reader.GetInt32(3) == 1,
+                    CreatedAt = reader.IsDBNull(4) ? DateTime.Now : DateTime.Parse(reader.GetString(4)),
+                    UpdatedAt = reader.IsDBNull(5) ? DateTime.Now : DateTime.Parse(reader.GetString(5))
                 });
             }
 
@@ -121,7 +133,7 @@ CREATE TABLE IF NOT EXISTS Skills (
 
             var idsStr = string.Join(",", ids);
             var cmd = conn.CreateCommand();
-            cmd.CommandText = $"SELECT Id, Name, Description FROM Skills WHERE Id IN ({idsStr}) ORDER BY Id";
+            cmd.CommandText = $"SELECT Id, Name, Description, IsActive, CreatedAt, UpdatedAt FROM Skills WHERE Id IN ({idsStr}) ORDER BY Id";
 
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -130,7 +142,10 @@ CREATE TABLE IF NOT EXISTS Skills (
                 {
                     Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
-                    Description = reader.GetString(2)
+                    Description = reader.GetString(2),
+                    IsActive = reader.IsDBNull(3) ? true : reader.GetInt32(3) == 1,
+                    CreatedAt = reader.IsDBNull(4) ? DateTime.Now : DateTime.Parse(reader.GetString(4)),
+                    UpdatedAt = reader.IsDBNull(5) ? DateTime.Now : DateTime.Parse(reader.GetString(5))
                 });
             }
 
@@ -146,9 +161,11 @@ CREATE TABLE IF NOT EXISTS Skills (
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "UPDATE Skills SET Name = @name, Description = @desc WHERE Id = @id";
+            cmd.CommandText = "UPDATE Skills SET Name = @name, Description = @desc, IsActive = @isActive, UpdatedAt = @updatedAt WHERE Id = @id";
             cmd.Parameters.AddWithValue("@name", skill.Name ?? string.Empty);
             cmd.Parameters.AddWithValue("@desc", skill.Description ?? string.Empty);
+            cmd.Parameters.AddWithValue("@isActive", skill.IsActive ? 1 : 0);
+            cmd.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("o"));
             cmd.Parameters.AddWithValue("@id", skill.Id);
 
             await cmd.ExecuteNonQueryAsync();

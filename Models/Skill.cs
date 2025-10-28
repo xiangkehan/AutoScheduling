@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,6 +28,21 @@ namespace AutoScheduling3.Models
         /// 技能描述
         /// </summary>
         public string Description { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// 是否激活/可用
+        /// </summary>
+        public bool IsActive { get; set; } = true;
+        
+        /// <summary>
+        /// 创建时间
+        /// </summary>
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        
+        /// <summary>
+        /// 更新时间
+        /// </summary>
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
         public override string ToString()
         {
