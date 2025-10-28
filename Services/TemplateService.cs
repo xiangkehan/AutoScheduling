@@ -2,6 +2,10 @@ using AutoScheduling3.DTOs;
 using AutoScheduling3.DTOs.Mappers;
 using AutoScheduling3.Data.Interfaces;
 using AutoScheduling3.Services.Interfaces;
+using System;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace AutoScheduling3.Services;
 
@@ -134,7 +138,7 @@ public class TemplateService : ITemplateService
         if (template == null)
         {
             result.IsValid = false;
-            result.Errors.Add("模板不存在");
+            result.Errors.Add(new ValidationMessage { Message = "模板不存在" });
             return result;
         }
 
@@ -145,7 +149,7 @@ public class TemplateService : ITemplateService
             if (!exists)
             {
                 result.IsValid = false;
-                result.Warnings.Add($"人员 ID {personnelId} 不存在");
+                result.Warnings.Add(new ValidationMessage { Message = $"人员 ID {personnelId} 不存在", ResourceId = personnelId });
             }
         }
 
@@ -156,20 +160,20 @@ public class TemplateService : ITemplateService
             if (!exists)
             {
                 result.IsValid = false;
-                result.Warnings.Add($"哨位 ID {positionId} 不存在");
+                result.Warnings.Add(new ValidationMessage { Message = $"哨位 ID {positionId} 不存在", ResourceId = positionId });
             }
         }
 
         if (template.PersonnelIds.Count == 0)
         {
             result.IsValid = false;
-            result.Errors.Add("模板必须包含至少一名人员");
+            result.Errors.Add(new ValidationMessage { Message = "模板必须包含至少一名人员" });
         }
 
         if (template.PositionIds.Count == 0)
         {
             result.IsValid = false;
-            result.Errors.Add("模板必须包含至少一个哨位");
+            result.Errors.Add(new ValidationMessage { Message = "模板必须包含至少一个哨位" });
         }
 
         return result;

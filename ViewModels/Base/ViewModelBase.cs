@@ -1,4 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System;
+using System.Threading.Tasks;
 
 namespace AutoScheduling3.ViewModels.Base;
 

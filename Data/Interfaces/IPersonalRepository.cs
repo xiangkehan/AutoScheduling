@@ -1,4 +1,6 @@
 using AutoScheduling3.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace AutoScheduling3.Data.Interfaces;
 

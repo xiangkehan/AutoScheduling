@@ -2,6 +2,9 @@ using AutoScheduling3.Data.Interfaces;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.DTOs.Mappers;
 using AutoScheduling3.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace AutoScheduling3.Services;
 
@@ -22,6 +25,7 @@ public class PersonnelService : IPersonnelService
     public async Task<List<PersonnelDto>> GetAllAsync()
     {
         var models = await _repository.GetAllAsync();
+        // 修正：确保类型为 List<Personal>，而不是 List<AutoScheduling3.Models.Personal>
         return await _mapper.ToDtoListAsync(models);
     }
 
@@ -72,6 +76,7 @@ public class PersonnelService : IPersonnelService
     public async Task<List<PersonnelDto>> SearchAsync(string keyword)
     {
         var models = await _repository.SearchByNameAsync(keyword);
+        // 修正：确保类型为 List<Personal>，而不是 List<AutoScheduling3.Models.Personal>
         return await _mapper.ToDtoListAsync(models);
     }
 

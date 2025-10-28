@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml.Data;
+using System;
 
 namespace AutoScheduling3.Converters;
 

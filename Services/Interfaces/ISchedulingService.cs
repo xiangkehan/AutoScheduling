@@ -1,4 +1,7 @@
 using AutoScheduling3.DTOs;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace AutoScheduling3.Services.Interfaces;
 

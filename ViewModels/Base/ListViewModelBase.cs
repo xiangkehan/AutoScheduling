@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 
 namespace AutoScheduling3.ViewModels.Base;

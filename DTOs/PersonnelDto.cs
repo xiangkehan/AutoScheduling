@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace AutoScheduling3.DTOs;
 
 /// <summary>
@@ -141,4 +143,5 @@ public class UpdatePersonnelDto
     /// 各时段班次间隔计数
     /// </summary>
     public int[] RecentPeriodShiftIntervals { get; set; } = new int[12];
+    public bool IsRetired { get; internal set; }
 }

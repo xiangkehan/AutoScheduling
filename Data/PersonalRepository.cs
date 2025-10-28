@@ -260,5 +260,31 @@ WHERE Id = @id";
                 RecentPeriodShiftIntervals = periodIntervals
             };
         }
+        /// <summary>
+        /// 按姓名关键字搜索人员
+        /// </summary>
+        public async Task<List<Personal>> SearchByNameAsync(string keyword)
+        {
+            var list = new List<Personal>();
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+        SELECT Id, Name, PositionId, SkillIds, IsAvailable, IsRetired,
+               RecentShiftIntervalCount, RecentHolidayShiftIntervalCount, RecentPeriodShiftIntervals
+        FROM Personals
+        WHERE Name LIKE @keyword
+        ORDER BY Id";
+            cmd.Parameters.AddWithValue("@keyword", $"%{keyword}%");
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapPerson(reader));
+            }
+
+            return list;
+        }
     }
 }

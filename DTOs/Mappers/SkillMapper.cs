@@ -1,5 +1,8 @@
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace AutoScheduling3.DTOs.Mappers;
 

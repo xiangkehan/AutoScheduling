@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace AutoScheduling3.DTOs;
 
 /// <summary>

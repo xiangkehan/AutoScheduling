@@ -1,3 +1,5 @@
+using System;
+
 namespace AutoScheduling3.DTOs;
 
 /// <summary>
@@ -19,6 +21,9 @@ public class SkillDto
     /// 技能描述
     /// </summary>
     public string? Description { get; set; }
+    public bool IsActive { get; internal set; }
+    public DateTime CreatedAt { get; internal set; }
+    public DateTime UpdatedAt { get; internal set; }
 }
 
 /// <summary>
@@ -51,4 +56,5 @@ public class UpdateSkillDto
     /// 技能描述（可选，最多200字符）
     /// </summary>
     public string? Description { get; set; }
+    public bool IsActive { get; internal set; }
 }

@@ -2,6 +2,9 @@ using AutoScheduling3.DTOs;
 using AutoScheduling3.DTOs.Mappers;
 using AutoScheduling3.Data.Interfaces;
 using AutoScheduling3.Services.Interfaces;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System;
 
 namespace AutoScheduling3.Services;
 
