@@ -6,7 +6,7 @@
 
 ## 已完成任务 ✅
 
-### 1. 项目目录结构创建
+### 1. 项目目录结构创建 ✅
 - ✅ DTOs/ 及 DTOs/Mappers/
 - ✅ Services/Interfaces/
 - ✅ Data/Interfaces/
@@ -16,34 +16,172 @@
 - ✅ Converters/
 - ✅ Helpers/
 
-### 2. DTO 数据传输对象
+### 2. DTO 数据传输对象 ✅
 已创建以下 DTO 类：
 - ✅ **PersonnelDto.cs** - 人员DTO及创建/更新DTO
 - ✅ **PositionDto.cs** - 哨位DTO及创建/更新DTO
 - ✅ **SkillDto.cs** - 技能DTO及创建/更新DTO
 - ✅ **ScheduleDto.cs** - 排班DTO、班次DTO、摘要DTO、请求DTO
+- ✅ **SchedulingTemplateDto.cs** - 模板DTO及相关验证DTO
+
+### 3. Repository 接口定义 ✅
+已定义以下 Repository 接口：
+- ✅ **IPersonalRepository.cs** - 人员仓储接口
+- ✅ **IPositionRepository.cs** - 哨位仓储接口
+- ✅ **ISkillRepository.cs** - 技能仓储接口
+- ✅ **ITemplateRepository.cs** - 模板仓储接口
+
+### 4. Repository 实现重构 ✅
+已重构现有 Repository 实现接口：
+- ✅ **PersonalRepository.cs** - 实现 IPersonalRepository，添加 ExistsAsync
+- ✅ **PositionLocationRepository.cs** - 实现 IPositionRepository，添加 ExistsAsync, SearchByNameAsync
+- ✅ **SkillRepository.cs** - 实现 ISkillRepository，添加 ExistsAsync，扩展 Skill 模型字段
+- ✅ **SchedulingTemplateRepository.cs** - 新建，实现 ITemplateRepository（完整CRUD）
+
+### 5. Service 接口定义 ✅
+已定义以下 Service 接口：
+- ✅ **IPersonnelService.cs** - 人员服务接口
+- ✅ **IPositionService.cs** - 哨位服务接口
+- ✅ **ISkillService.cs** - 技能服务接口
+- ✅ **ISchedulingService.cs** - 排班服务接口
+- ✅ **ITemplateService.cs** - 模板服务接口
+
+### 6. Service 实现 ✅
+已实现以下 Service 类：
+- ✅ **PersonnelService.cs** - 人员服务实现（包含验证逻辑）
+- ✅ **PositionService.cs** - 哨位服务实现（包含验证逻辑）
+- ✅ **SkillService.cs** - 技能服务实现（包含验证逻辑）
+- ✅ **TemplateService.cs** - 模板服务实现（包含验证、使用模板创建排班）
+
+### 7. DTO Mapper 创建 ✅
+已创建以下 Mapper 类：
+- ✅ **PersonnelMapper.cs** - 人员数据映射器（异步加载关联数据）
+- ✅ **PositionMapper.cs** - 哨位数据映射器（异步加载技能名称）
+- ✅ **SkillMapper.cs** - 技能数据映射器
+- ✅ **TemplateMapper.cs** - 模板数据映射器
+
+### 8. 数据模型扩展 ✅
+已扩展以下模型：
+- ✅ **SchedulingTemplate.cs** - 新建排班模板数据模型
+- ✅ **Skill.cs** - 添加 IsActive, CreatedAt, UpdatedAt 字段
+
+## 当前进度：约 60% 完成
 
 ## 待完成任务 📋
 
 ### 高优先级任务
-1. **创建模板相关DTO** - SchedulingTemplateDto、CreateTemplateDto等
-2. **定义Repository接口** - IPersonalRepository、IPositionRepository等
-3. **定义Service接口** - IPersonnelService、ISchedulingService等
-4. **创建DTO Mapper** - Model与DTO互转
+1. **重构 SchedulingService** - 移除数据管理方法、使用依赖注入、使用 DTO、添加验证
+2. **创建 ViewModels** - ViewModelBase、PersonnelViewModel、PositionViewModel、SchedulingViewModel、TemplateViewModel 等
+3. **创建辅助类和转换器** - NavigationService、DialogService、BoolToVisibilityConverter、DateTimeFormatConverter
+4. **配置依赖注入** - 在 App.xaml.cs 中注册所有 Services、Repositories、ViewModels
 
 ### 中优先级任务
-5. **重构现有Repository** - 实现新定义的接口
-6. **实现Service类** - PersonnelService、PositionService等
-7. **重构SchedulingService** - 移除数据管理方法,使用DI和DTO
-8. **添加模板功能** - SchedulingTemplate模型和仓储
+5. **创建 XAML Views** - PersonnelPage、PositionPage、SchedulingPage、TemplatePage 等
+6. **重构 MainWindow** - 添加 NavigationView、配置导航菜单、实现页面导航
 
 ### 低优先级任务
-9. **创建ViewModels** - 所有页面的ViewModel
-10. **创建XAML Views** - 所有页面的XAML视图
-11. **创建自定义控件** - ScheduleGridControl、PersonnelCard等
-12. **创建辅助类** - NavigationService、DialogService等
-13. **配置依赖注入** - App.xaml.cs中注册所有服务
-14. **重构MainWindow** - 添加NavigationView导航系统
+7. **创建自定义控件** - ScheduleGridControl、PersonnelCard、PositionCard、LoadingIndicator、EmptyState、ErrorState
+8. **测试和调试** - 验证所有功能、修复问题、性能优化
+
+## 最近更新（本次会话）
+
+### 新增文件（14个）
+1. `DTOs/Mappers/PositionMapper.cs`
+2. `DTOs/Mappers/SkillMapper.cs`
+3. `DTOs/Mappers/TemplateMapper.cs`
+4. `Services/Interfaces/ISkillService.cs`
+5. `Services/Interfaces/ITemplateService.cs`
+6. `Services/PositionService.cs`
+7. `Services/SkillService.cs`
+8. `Services/TemplateService.cs`
+9. `Models/SchedulingTemplate.cs`
+10. `Data/Interfaces/ITemplateRepository.cs`
+11. `Data/SchedulingTemplateRepository.cs`
+
+### 修改文件（4个）
+1. `Data/PersonalRepository.cs` - 实现 IPersonalRepository 接口
+2. `Data/SkillRepository.cs` - 实现 ISkillRepository 接口，扩展字段
+3. `Data/PositionLocationRepository.cs` - 实现 IPositionRepository 接口
+4. `Models/Skill.cs` - 添加 IsActive, CreatedAt, UpdatedAt 字段
+
+## 技术架构进展
+
+```
+AutoScheduling3/
+├── DTOs/ ✅                         # 数据传输对象层
+│   ├── PersonnelDto.cs
+│   ├── PositionDto.cs
+│   ├── SkillDto.cs
+│   ├── ScheduleDto.cs
+│   ├── SchedulingTemplateDto.cs
+│   └── Mappers/ ✅
+│       ├── PersonnelMapper.cs
+│       ├── PositionMapper.cs
+│       ├── SkillMapper.cs
+│       └── TemplateMapper.cs
+│
+├── Services/ ⏳                     # 业务逻辑层
+│   ├── Interfaces/ ✅
+│   │   ├── IPersonnelService.cs
+│   │   ├── IPositionService.cs
+│   │   ├── ISkillService.cs
+│   │   ├── ISchedulingService.cs
+│   │   └── ITemplateService.cs
+│   ├── PersonnelService.cs ✅
+│   ├── PositionService.cs ✅
+│   ├── SkillService.cs ✅
+│   ├── TemplateService.cs ✅
+│   └── SchedulingService.cs ⏳ (需重构)
+│
+├── Data/ ✅                         # 数据访问层
+│   ├── Interfaces/ ✅
+│   │   ├── IPersonalRepository.cs
+│   │   ├── IPositionRepository.cs
+│   │   ├── ISkillRepository.cs
+│   │   └── ITemplateRepository.cs
+│   ├── PersonalRepository.cs ✅
+│   ├── PositionLocationRepository.cs ✅
+│   ├── SkillRepository.cs ✅
+│   ├── SchedulingTemplateRepository.cs ✅
+│   ├── SchedulingRepository.cs (现有)
+│   └── ConstraintRepository.cs (现有)
+│
+├── Models/ ⏳                       # 数据模型层
+│   ├── Personal.cs (现有)
+│   ├── PositionLocation.cs (现有)
+│   ├── Skill.cs ✅ (已扩展)
+│   ├── Schedule.cs (现有)
+│   ├── SchedulingTemplate.cs ✅ (新建)
+│   └── Constraints/ (现有)
+│
+├── ViewModels/ ⏳                  # 视图模型层
+│   ├── Base/ (待创建)
+│   ├── DataManagement/ (待创建)
+│   ├── Scheduling/ (待创建)
+│   └── History/ (待创建)
+│
+├── Views/ ⏳                        # 视图层
+│   ├── DataManagement/ (待创建)
+│   ├── Scheduling/ (待创建)
+│   └── History/ (待创建)
+│
+├── Controls/ ⏳                     # 自定义控件
+│   └── (待创建)
+│
+├── Converters/ ⏳                   # 值转换器
+│   └── (待创建)
+│
+└── Helpers/ ⏳                      # 辅助类
+    └── (待创建)
+```
+
+## 下一步行动计划
+
+1. **立即执行**：重构 SchedulingService，移除数据管理方法，使用依赖注入
+2. **后续步骤**：创建 ViewModelBase 和核心 ViewModels
+3. **配置阶段**：设置依赖注入容器
+4. **UI 开发**：创建 XAML Views 和自定义控件
+5. **集成测试**：验证整个架构流程
 
 ## 实施建议
 
