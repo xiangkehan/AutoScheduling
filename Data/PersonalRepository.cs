@@ -4,13 +4,14 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using AutoScheduling3.Models;
+using AutoScheduling3.Data.Interfaces;
 
 namespace AutoScheduling3.Data
 {
     /// <summary>
     /// 人员数据访问层：管理人员信息的 CRUD 操作
     /// </summary>
-    public class PersonalRepository
+    public class PersonalRepository : IPersonalRepository
     {
         private readonly string _connectionString;
         private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.General);
@@ -47,7 +48,7 @@ CREATE TABLE IF NOT EXISTS Personals (
         /// <summary>
         /// 添加人员
         /// </summary>
-        public async Task<int> AddAsync(Personal person)
+        public async Task<int> CreateAsync(Personal person)
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
@@ -220,6 +221,22 @@ WHERE Id = @id";
             cmd.CommandText = "DELETE FROM Personals WHERE Id = @id";
             cmd.Parameters.AddWithValue("@id", id);
             await cmd.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
+        /// 检查人员是否存在
+        /// </summary>
+        public async Task<bool> ExistsAsync(int id)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(1) FROM Personals WHERE Id = @id";
+            cmd.Parameters.AddWithValue("@id", id);
+
+            var result = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(result) > 0;
         }
 
         /// <summary>

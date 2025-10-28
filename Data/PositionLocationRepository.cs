@@ -4,10 +4,11 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using AutoScheduling3.Models;
+using AutoScheduling3.Data.Interfaces;
 
 namespace AutoScheduling3.Data
 {
-    public class PositionLocationRepository
+    public class PositionLocationRepository : IPositionRepository
     {
         private readonly string _connectionString;
         private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.General);
@@ -36,7 +37,7 @@ CREATE TABLE IF NOT EXISTS Positions (
             await cmd.ExecuteNonQueryAsync();
         }
 
-        public async Task<int> AddAsync(PositionLocation item)
+        public async Task<int> CreateAsync(PositionLocation item)
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
@@ -142,6 +143,44 @@ CREATE TABLE IF NOT EXISTS Positions (
             cmd.Parameters.AddWithValue("@id", id);
 
             await cmd.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
+        /// 检查哨位是否存在
+        /// </summary>
+        public async Task<bool> ExistsAsync(int id)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(1) FROM Positions WHERE Id = @id";
+            cmd.Parameters.AddWithValue("@id", id);
+
+            var result = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(result) > 0;
+        }
+
+        /// <summary>
+        /// 按名称搜索哨位
+        /// </summary>
+        public async Task<List<PositionLocation>> SearchByNameAsync(string keyword)
+        {
+            var list = new List<PositionLocation>();
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds FROM Positions WHERE Name LIKE @keyword OR Location LIKE @keyword ORDER BY Id";
+            cmd.Parameters.AddWithValue("@keyword", $"%{keyword}%");
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapPosition(reader));
+            }
+
+            return list;
         }
 
         private PositionLocation MapPosition(SqliteDataReader reader)

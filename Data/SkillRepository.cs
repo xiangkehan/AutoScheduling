@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using AutoScheduling3.Models;
+using AutoScheduling3.Data.Interfaces;
 
 namespace AutoScheduling3.Data
 {
     /// <summary>
     /// 技能数据访问层：管理技能信息的 CRUD 操作
     /// </summary>
-    public class SkillRepository
+    public class SkillRepository : ISkillRepository
     {
         private readonly string _connectionString;
 
@@ -39,7 +40,7 @@ CREATE TABLE IF NOT EXISTS Skills (
         /// <summary>
         /// 添加技能
         /// </summary>
-        public async Task<int> AddAsync(Skill skill)
+        public async Task<int> CreateAsync(Skill skill)
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
@@ -165,6 +166,22 @@ CREATE TABLE IF NOT EXISTS Skills (
             cmd.CommandText = "DELETE FROM Skills WHERE Id = @id";
             cmd.Parameters.AddWithValue("@id", id);
             await cmd.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
+        /// 检查技能是否存在
+        /// </summary>
+        public async Task<bool> ExistsAsync(int id)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(1) FROM Skills WHERE Id = @id";
+            cmd.Parameters.AddWithValue("@id", id);
+
+            var result = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(result) > 0;
         }
     }
 }
