@@ -3,17 +3,70 @@
     x:Class="AutoScheduling3.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:AutoScheduling3"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="AutoScheduling3">
+    Title="自动排班系统">
 
     <Window.SystemBackdrop>
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid>
+    <NavigationView x:Name="NavigationViewControl"
+                    IsBackButtonVisible="Auto"
+                    IsBackEnabled="{x:Bind ContentFrame.CanGoBack, Mode=OneWay}"
+                    BackRequested="NavigationView_BackRequested"
+                    ItemInvoked="NavigationView_ItemInvoked"
+                    PaneDisplayMode="Left">
+        
+        <NavigationView.MenuItems>
+            <!-- 数据管理 -->
+            <NavigationViewItemHeader Content="数据管理"/>
+            <NavigationViewItem Content="人员管理" Tag="Personnel">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE716;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="哨位管理" Tag="Position">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE707;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="技能管理" Tag="Skill">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE82F;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            
+            <!-- 排班管理 -->
+            <NavigationViewItemHeader Content="排班管理"/>
+            <NavigationViewItem Content="创建排班" Tag="Scheduling">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE8F4;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="排班模板" Tag="Template">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE8D2;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="排班历史" Tag="History">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE81C;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+        </NavigationView.MenuItems>
 
-    </Grid>
+        <NavigationView.PaneFooter>
+            <StackPanel>
+                <NavigationViewItem Content="设置" Tag="Settings">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </StackPanel>
+        </NavigationView.PaneFooter>
+
+        <Frame x:Name="ContentFrame"/>
+    </NavigationView>
 </Window>
