@@ -264,16 +264,16 @@ namespace AutoScheduling3.Examples
             }
         }
 
-        /// <summary>
-        /// 运行示例的静态入口
-        /// </summary>
-        public static async Task Main(string[] args)
-        {
-            var example = new SchedulingExample();
-            await example.RunExampleAsync();
+        ///// <summary>
+        ///// 运行示例的静态入口
+        ///// </summary>
+        //public static async Task Main(string[] args)
+        //{
+        //    var example = new SchedulingExample();
+        //    await example.RunExampleAsync();
 
-            Console.WriteLine("\n按任意键退出...");
-            Console.ReadKey();
-        }
+        //    Console.WriteLine("\n按任意键退出...");
+        //    Console.ReadKey();
+        //}
     }
 }

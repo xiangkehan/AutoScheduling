@@ -40,27 +40,27 @@ namespace AutoScheduling3.Models
         /// </summary>
         public DateTime? LastAssignedDate { get; set; }
 
-        /// <summary>
-        /// 构造函数：初始化评分状态
-        /// </summary>
-        /// <param name="personalId">人员ID</param>
-        /// <param name="recentShiftInterval">初始班次间隔</param>
-        /// <param name="recentHolidayInterval">初始休息日间隔</param>
-        /// <param name="periodIntervals">初始时段间隔数组</param>
+        // 替换原有的 PeriodIntervals 长度检查和 Resize 逻辑
         public PersonScoreState(int personalId, int recentShiftInterval = 0, int recentHolidayInterval = 0, int[]? periodIntervals = null)
         {
             PersonalId = personalId;
             RecentShiftInterval = recentShiftInterval;
             RecentHolidayInterval = recentHolidayInterval;
-            PeriodIntervals = periodIntervals ?? new int[12];
+            // 如果 periodIntervals 不为 null 且长度为 12，则直接赋值，否则新建长度为 12 的数组并复制已有内容
+            if (periodIntervals != null && periodIntervals.Length == 12)
+            {
+                PeriodIntervals = periodIntervals;
+            }
+            else
+            {
+                PeriodIntervals = new int[12];
+                if (periodIntervals != null)
+                {
+                    Array.Copy(periodIntervals, PeriodIntervals, Math.Min(periodIntervals.Length, 12));
+                }
+            }
             LastAssignedPeriod = -1;
             LastAssignedDate = null;
-
-            // 确保数组长度为12
-            if (PeriodIntervals.Length != 12)
-            {
-                Array.Resize(ref PeriodIntervals, 12);
-            }
         }
 
         /// <summary>

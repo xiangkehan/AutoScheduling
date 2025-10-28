@@ -1,0 +1,12 @@
+.cs
+// 删除或注释掉 SchedulingExample.Main 方法
+/*
+public static async Task Main(string[] args)
+{
+    var example = new SchedulingExample();
+    await example.RunExampleAsync();
+
+    Console.WriteLine("\n按任意键退出...");
+    Console.ReadKey();
+}
+*/
