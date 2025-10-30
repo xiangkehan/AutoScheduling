@@ -1,8 +1,6 @@
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Navigation;
-using AutoScheduling3.ViewModels.DataManagement;
-using AutoScheduling3.DTOs;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml;
+using AutoScheduling3.ViewModels.DataManagement;
 
 namespace AutoScheduling3.Views.DataManagement;
 
@@ -16,12 +14,7 @@ public sealed partial class SkillPage : Page
     public SkillPage()
     {
         this.InitializeComponent();
-        ViewModel = App.Services.GetRequiredService<SkillViewModel>();
-    }
-
-    protected override async void OnNavigatedTo(NavigationEventArgs e)
-    {
-        base.OnNavigatedTo(e);
-        await ViewModel.LoadDataAsync();
+        ViewModel = ((App)Application.Current).ServiceProvider.GetRequiredService<SkillViewModel>();
+        _ = ViewModel.LoadDataAsync();
     }
 }

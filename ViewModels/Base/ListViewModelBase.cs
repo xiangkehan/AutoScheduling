@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.Collections.Generic; // 添加以支持 IEnumerable<T>
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
+using System.Collections.Specialized;
+using System.ComponentModel;
 
 namespace AutoScheduling3.ViewModels.Base;
 
@@ -49,6 +51,16 @@ public abstract class ListViewModelBase<T> : ViewModelBase where T : class
     }
 
     /// <summary>
+    /// 是否显示空状态
+    /// </summary>
+    public bool ShowEmptyState => !IsBusy && string.IsNullOrEmpty(ErrorMessage) && Items.Count == 0;
+
+    /// <summary>
+    /// 是否显示错误状态
+    /// </summary>
+    public bool ShowErrorState => !IsBusy && !string.IsNullOrEmpty(ErrorMessage);
+
+    /// <summary>
     /// 刷新命令
     /// </summary>
     public IAsyncRelayCommand RefreshCommand { get; }
@@ -62,6 +74,22 @@ public abstract class ListViewModelBase<T> : ViewModelBase where T : class
     {
         RefreshCommand = new AsyncRelayCommand(LoadDataAsync);
         SearchCommand = new AsyncRelayCommand(SearchAsync);
+        Items.CollectionChanged += OnItemsCollectionChanged;
+    }
+
+    private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(ShowEmptyState));
+    }
+
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.PropertyName == nameof(IsBusy) || e.PropertyName == nameof(ErrorMessage))
+        {
+            OnPropertyChanged(nameof(ShowEmptyState));
+            OnPropertyChanged(nameof(ShowErrorState));
+        }
     }
 
     /// <summary>
