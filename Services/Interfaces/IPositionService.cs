@@ -33,4 +33,9 @@ public interface IPositionService
     /// 删除哨位
     /// </summary>
     Task DeleteAsync(int id);
+
+    /// <summary>
+    /// 搜索哨位
+    /// </summary>
+    Task<List<PositionDto>> SearchAsync(string keyword);
 }

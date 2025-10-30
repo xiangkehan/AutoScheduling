@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:dto="using:AutoScheduling3.DTOs"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
@@ -53,7 +54,7 @@
                       SelectedItem="{x:Bind ViewModel.SelectedItem, Mode=TwoWay}"
                       SelectionMode="Single">
                 <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="local:PositionDto">
+                    <DataTemplate x:DataType="dto:PositionDto">
                         <Grid Padding="12,8">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>

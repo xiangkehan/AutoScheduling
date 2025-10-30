@@ -1,13 +1,15 @@
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Models;
 using AutoScheduling3.Data.Interfaces;
+using System; // 添加以支持 ArgumentNullException
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq; // 添加以支持 LINQ 扩展
 
 namespace AutoScheduling3.DTOs.Mappers;
 
 /// <summary>
-/// 哨位数据映射器 - Model 与 DTO 互转
+/// 哨位数据映射器 - Model 与 DTO互转
 /// </summary>
 public class PositionMapper
 {
@@ -48,6 +50,7 @@ public class PositionMapper
         // 加载技能名称
         if (model.RequiredSkillIds.Count > 0)
         {
+            // 使用接口方法批量获取技能
             var skills = await _skillRepository.GetByIdsAsync(model.RequiredSkillIds);
             dto.RequiredSkillNames = skills.Select(s => s.Name).ToList();
         }

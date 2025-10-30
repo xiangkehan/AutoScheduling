@@ -200,5 +200,60 @@ CREATE TABLE IF NOT EXISTS Skills (
             var result = await cmd.ExecuteScalarAsync();
             return Convert.ToInt32(result) > 0;
         }
+
+        /// <summary>
+        /// 按名称搜索技能
+        /// </summary>
+        public async Task<List<Skill>> SearchByNameAsync(string keyword)
+        {
+            var list = new List<Skill>();
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT Id, Name, Description, IsActive, CreatedAt, UpdatedAt FROM Skills WHERE Name LIKE @keyword ORDER BY Id";
+            cmd.Parameters.AddWithValue("@keyword", $"%{keyword}%");
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new Skill
+                {
+                    Id = reader.GetInt32(0),
+                    Name = reader.GetString(1),
+                    Description = reader.GetString(2),
+                    IsActive = reader.IsDBNull(3) ? true : reader.GetInt32(3) == 1,
+                    CreatedAt = reader.IsDBNull(4) ? DateTime.Now : DateTime.Parse(reader.GetString(4)),
+                    UpdatedAt = reader.IsDBNull(5) ? DateTime.Now : DateTime.Parse(reader.GetString(5))
+                });
+            }
+
+            return list;
+        }
+
+        /// <summary>
+        /// 检查指定名称的技能是否存在（可排除某个ID）
+        /// </summary>
+        public async Task<bool> NameExistsAsync(string name, int? excludeId = null)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            if (excludeId.HasValue)
+            {
+                cmd.CommandText = "SELECT COUNT(1) FROM Skills WHERE Name = @name AND Id != @excludeId";
+                cmd.Parameters.AddWithValue("@name", name);
+                cmd.Parameters.AddWithValue("@excludeId", excludeId.Value);
+            }
+            else
+            {
+                cmd.CommandText = "SELECT COUNT(1) FROM Skills WHERE Name = @name";
+                cmd.Parameters.AddWithValue("@name", name);
+            }
+
+            var result = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(result) > 0;
+        }
     }
 }

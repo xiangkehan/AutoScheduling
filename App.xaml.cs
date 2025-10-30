@@ -1,3 +1,4 @@
+using System; // 添加此 using 指令
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using AutoScheduling3.Data;

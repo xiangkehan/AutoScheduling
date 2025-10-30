@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Generic; // 添加以支持 IEnumerable<T>
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 

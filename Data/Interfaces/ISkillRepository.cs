@@ -20,6 +20,11 @@ public interface ISkillRepository
     Task<Skill?> GetByIdAsync(int id);
 
     /// <summary>
+    /// 批量获取技能
+    /// </summary>
+    Task<List<Skill>> GetByIdsAsync(List<int> ids); // 新增批量方法以供 Mapper 使用
+
+    /// <summary>
     /// 创建技能
     /// </summary>
     Task<int> CreateAsync(Skill skill);

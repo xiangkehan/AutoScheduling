@@ -1,5 +1,10 @@
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Models;
+using AutoScheduling3.Data.Interfaces; // 修正命名空间引用
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AutoScheduling3.DTOs.Mappers;
 
@@ -65,12 +70,12 @@ public class PersonnelMapper
         {
             Name = dto.Name,
             PositionId = dto.PositionId,
-            SkillIds = dto.SkillIds,
+            SkillIds = dto.SkillIds ?? new List<int>(),
             IsAvailable = dto.IsAvailable,
             IsRetired = false,
             RecentShiftIntervalCount = dto.RecentShiftIntervalCount,
             RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount,
-            RecentPeriodShiftIntervals = dto.RecentPeriodShiftIntervals?.ToList() ?? new List<int>(new int[12])
+            RecentPeriodShiftIntervals = dto.RecentPeriodShiftIntervals ?? new int[12]
         };
     }
 
@@ -86,9 +91,10 @@ public class PersonnelMapper
         model.PositionId = dto.PositionId;
         model.SkillIds = dto.SkillIds;
         model.IsAvailable = dto.IsAvailable;
+        model.IsRetired = dto.IsRetired;
         model.RecentShiftIntervalCount = dto.RecentShiftIntervalCount;
         model.RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount;
-        model.RecentPeriodShiftIntervals = dto.RecentPeriodShiftIntervals?.ToList() ?? new List<int>(new int[12]);
+        model.RecentPeriodShiftIntervals = dto.RecentPeriodShiftIntervals ?? new int[12];
     }
 
     /// <summary>
