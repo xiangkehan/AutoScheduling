@@ -3,14 +3,26 @@
     x:Class="AutoScheduling3.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:AutoScheduling3">
+    xmlns:local="using:AutoScheduling3"
+    xmlns:conv="using:AutoScheduling3.Converters">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
-            <!-- Other app resources here -->
+
+            <!-- 缺失的空值到可见性转换器 -->
+            <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+
+            <!-- 缺失的 GridViewItem 样式 (无悬停特效的占位样式，可按需再精细化) -->
+            <Style x:Key="GridViewItemStyleWithoutHover" TargetType="GridViewItem">
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
