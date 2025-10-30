@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoScheduling3.Models;
 using AutoScheduling3.SchedulingEngine.Core;
@@ -24,29 +25,33 @@ namespace AutoScheduling3.SchedulingEngine
         }
 
         /// <summary>
-        /// 执行排班算法
+        /// 执行排班算法（支持取消）
         /// </summary>
-        public async Task<Schedule> ExecuteAsync()
+        public async Task<Schedule> ExecuteAsync(CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // 第1步：预处理阶段
             await PreprocessAsync();
+            cancellationToken.ThrowIfCancellationRequested();
 
             // 第2步：初始化可行性张量
             InitializeTensor();
+            cancellationToken.ThrowIfCancellationRequested();
 
             // 第3步：应用初始约束
             ApplyInitialConstraints();
+            cancellationToken.ThrowIfCancellationRequested();
 
             // 第4步：初始化MRV策略和评分计算器
             InitializeStrategies();
+            cancellationToken.ThrowIfCancellationRequested();
 
             // 第5步：执行分配循环（MRV策略）
-            PerformAssignmentsWithMRV();
+            PerformAssignmentsWithMRV(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
 
             // 第6步：生成结果
-            var schedule = GenerateSchedule();
-
-            return schedule;
+            return GenerateSchedule();
         }
 
         /// <summary>
@@ -65,9 +70,7 @@ namespace AutoScheduling3.SchedulingEngine
         /// </summary>
         private void InitializeTensor()
         {
-            int positionCount = _context.Positions.Count;
-            int personCount = _context.Personals.Count;
-            _tensor = new FeasibilityTensor(positionCount, 12, personCount);
+            _tensor = new FeasibilityTensor(_context.Positions.Count, 12, _context.Personals.Count);
         }
 
         /// <summary>
@@ -77,65 +80,47 @@ namespace AutoScheduling3.SchedulingEngine
         {
             if (_tensor == null) return;
 
-            // 应用人员可用性约束
+            // 人员可用性
             for (int z = 0; z < _context.Personals.Count; z++)
             {
                 var person = _context.Personals[z];
                 if (!person.IsAvailable || person.IsRetired)
-                {
                     _tensor.SetPersonInfeasible(z);
-                }
             }
 
-            // 应用技能匹配约束
+            // 技能匹配
             for (int x = 0; x < _context.Positions.Count; x++)
             {
                 var position = _context.Positions[x];
                 var requiredSkills = position.RequiredSkillIds;
-
                 for (int z = 0; z < _context.Personals.Count; z++)
                 {
                     var person = _context.Personals[z];
-                    // 检查人员是否拥有所有必需技能
                     bool hasAllSkills = requiredSkills.All(skillId => person.SkillIds.Contains(skillId));
                     if (!hasAllSkills)
-                    {
                         _tensor.SetPersonInfeasibleForPosition(z, x);
-                    }
                 }
             }
 
-            // 应用定岗规则约束
+            // 定岗规则
             foreach (var rule in _context.FixedPositionRules.Where(r => r.IsEnabled))
             {
-                if (!_context.PersonIdToIdx.ContainsKey(rule.PersonalId))
-                    continue;
-
+                if (!_context.PersonIdToIdx.ContainsKey(rule.PersonalId)) continue;
                 int personIdx = _context.PersonIdToIdx[rule.PersonalId];
-
-                // 如果限定了哨位
                 if (rule.AllowedPositionIds.Count > 0)
                 {
                     for (int x = 0; x < _context.Positions.Count; x++)
                     {
                         int posId = _context.PositionIdxToId[x];
                         if (!rule.AllowedPositionIds.Contains(posId))
-                        {
                             _tensor.SetPersonInfeasibleForPosition(personIdx, x);
-                        }
                     }
                 }
-
-                // 如果限定了时段
                 if (rule.AllowedPeriods.Count > 0)
                 {
                     for (int y = 0; y < 12; y++)
-                    {
                         if (!rule.AllowedPeriods.Contains(y))
-                        {
                             _tensor.SetPersonInfeasibleForPeriod(personIdx, y);
-                        }
-                    }
                 }
             }
         }
@@ -146,7 +131,6 @@ namespace AutoScheduling3.SchedulingEngine
         private void InitializeStrategies()
         {
             if (_tensor == null) return;
-
             _mrvStrategy = new MRVStrategy(_tensor, _context);
             _scoreCalculator = new ScoreCalculator(_context);
         }
@@ -154,23 +138,21 @@ namespace AutoScheduling3.SchedulingEngine
         /// <summary>
         /// 执行分配循环（使用MRV策略 - 增强版）
         /// </summary>
-        private void PerformAssignmentsWithMRV()
+        private void PerformAssignmentsWithMRV(CancellationToken cancellationToken)
         {
-            if (_tensor == null || _mrvStrategy == null || _scoreCalculator == null) 
-                return;
-
+            if (_tensor == null || _mrvStrategy == null || _scoreCalculator == null) return;
             var currentDate = _context.StartDate.Date;
             int totalDays = (_context.EndDate.Date - _context.StartDate.Date).Days + 1;
-            int assignmentCount = 0;
 
             // 遍历每一天
             for (int day = 0; day < totalDays; day++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var date = currentDate.AddDays(day);
-
                 // 每天处理12个时段 × N个哨位
                 for (int slotIdx = 0; slotIdx < _tensor.PositionCount * 12; slotIdx++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     // 使用MRV策略选择下一个要分配的位置
                     var (posIdx, periodIdx) = _mrvStrategy.SelectNextSlot();
 
@@ -182,7 +164,7 @@ namespace AutoScheduling3.SchedulingEngine
 
                     // 获取可行人员
                     var feasiblePersons = _tensor.GetFeasiblePersons(posIdx, periodIdx);
-                    
+
                     if (feasiblePersons.Length == 0)
                     {
                         // 无可行人员，标记为已分配（跳过）
@@ -198,12 +180,9 @@ namespace AutoScheduling3.SchedulingEngine
                     {
                         // 执行分配
                         AssignPersonEnhanced(posIdx, periodIdx, bestPersonIdx, date);
-                        assignmentCount++;
                     }
                 }
             }
-
-            Console.WriteLine($"排班完成：共分配 {assignmentCount} 个班次");
         }
 
         /// <summary>
@@ -211,9 +190,7 @@ namespace AutoScheduling3.SchedulingEngine
         /// </summary>
         private void AssignPersonEnhanced(int positionIdx, int periodIdx, int personIdx, DateTime date)
         {
-            if (_tensor == null || _mrvStrategy == null || _scoreCalculator == null) 
-                return;
-
+            if (_tensor == null || _mrvStrategy == null || _scoreCalculator == null) return;
             // 记录分配
             _context.RecordAssignment(date, periodIdx, positionIdx, personIdx);
 
@@ -228,26 +205,15 @@ namespace AutoScheduling3.SchedulingEngine
             _tensor.SetOtherPositionsInfeasibleForPersonPeriod(personIdx, periodIdx, positionIdx);
 
             // 时段不连续：相邻时段不能连续上哨
-            if (periodIdx > 0)
-            {
-                _tensor.SetPersonInfeasibleForPeriod(personIdx, periodIdx - 1);
-            }
-            if (periodIdx < 11)
-            {
-                _tensor.SetPersonInfeasibleForPeriod(personIdx, periodIdx + 1);
-            }
+            if (periodIdx > 0) _tensor.SetPersonInfeasibleForPeriod(personIdx, periodIdx - 1);
+            if (periodIdx < 11) _tensor.SetPersonInfeasibleForPeriod(personIdx, periodIdx + 1);
 
             // 夜哨唯一：同一晚上只能上一个夜哨
             int[] nightPeriods = { 11, 0, 1, 2 };
             if (nightPeriods.Contains(periodIdx))
             {
                 foreach (var np in nightPeriods)
-                {
-                    if (np != periodIdx)
-                    {
-                        _tensor.SetPersonInfeasibleForPeriod(personIdx, np);
-                    }
-                }
+                    if (np != periodIdx) _tensor.SetPersonInfeasibleForPeriod(personIdx, np);
             }
 
             // 更新MRV候选人员数缓存
@@ -269,15 +235,12 @@ namespace AutoScheduling3.SchedulingEngine
                 PositionIds = _context.Positions.Select(p => p.Id).ToList(),
                 Shifts = new List<SingleShift>()
             };
-
             // 遍历所有分配记录，生成SingleShift
             foreach (var kvp in _context.Assignments)
             {
                 var date = kvp.Key;
                 var assignments = kvp.Value;
-
                 for (int periodIdx = 0; periodIdx < 12; periodIdx++)
-                {
                     for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
                     {
                         int personIdx = assignments[periodIdx, posIdx];
@@ -285,10 +248,8 @@ namespace AutoScheduling3.SchedulingEngine
                         {
                             int positionId = _context.PositionIdxToId[posIdx];
                             int personalId = _context.PersonIdxToId[personIdx];
-
                             var startTime = date.AddHours(periodIdx * 2);
                             var endTime = startTime.AddHours(2);
-
                             schedule.Shifts.Add(new SingleShift
                             {
                                 PositionId = positionId,
@@ -298,7 +259,6 @@ namespace AutoScheduling3.SchedulingEngine
                             });
                         }
                     }
-                }
             }
 
             return schedule;

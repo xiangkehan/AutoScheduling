@@ -45,6 +45,7 @@ public class SchedulingService : ISchedulingService
  {
  if (request == null) throw new ArgumentNullException(nameof(request));
  ValidateRequest(request);
+ cancellationToken.ThrowIfCancellationRequested();
 
  // 构建上下文
  var context = new SchedulingContext
@@ -55,6 +56,7 @@ public class SchedulingService : ISchedulingService
  StartDate = request.StartDate.Date,
  EndDate = request.EndDate.Date
  };
+ cancellationToken.ThrowIfCancellationRequested();
 
  if (request.UseActiveHolidayConfig)
  {
@@ -66,6 +68,7 @@ public class SchedulingService : ISchedulingService
  var allConfigs = await _constraintRepo.GetAllHolidayConfigsAsync();
  context.HolidayConfig = allConfigs.FirstOrDefault(c => c.Id == request.HolidayConfigId.Value);
  }
+ cancellationToken.ThrowIfCancellationRequested();
 
  if (request.EnabledFixedRuleIds?.Count >0)
  {
@@ -76,6 +79,7 @@ public class SchedulingService : ISchedulingService
  {
  context.FixedPositionRules = await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly: true);
  }
+ cancellationToken.ThrowIfCancellationRequested();
 
  if (request.EnabledManualAssignmentIds?.Count >0)
  {
@@ -86,18 +90,21 @@ public class SchedulingService : ISchedulingService
  {
  context.ManualAssignments = await _constraintRepo.GetManualAssignmentsByDateRangeAsync(request.StartDate, request.EndDate, enabledOnly: true);
  }
+ cancellationToken.ThrowIfCancellationRequested();
 
  context.LastConfirmedSchedule = await _historyMgmt.GetLastConfirmedScheduleAsync();
+ cancellationToken.ThrowIfCancellationRequested();
 
  // 执行算法
  var scheduler = new GreedyScheduler(context);
- var modelSchedule = await scheduler.ExecuteAsync();
+ var modelSchedule = await scheduler.ExecuteAsync(cancellationToken);
  modelSchedule.Title = request.Title;
  modelSchedule.StartDate = request.StartDate.Date;
  modelSchedule.EndDate = request.EndDate.Date;
  modelSchedule.CreatedAt = DateTime.UtcNow;
  modelSchedule.PersonalIds = request.PersonnelIds;
  modelSchedule.PositionIds = request.PositionIds;
+ cancellationToken.ThrowIfCancellationRequested();
 
  // 保存缓冲
  int bufferId = await _historyMgmt.AddToBufferAsync(modelSchedule);
