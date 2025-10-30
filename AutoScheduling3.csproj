@@ -12,10 +12,7 @@
  <WinUISDKReferences>false</WinUISDKReferences>
  <EnableMsixTooling>true</EnableMsixTooling>
  <Nullable>enable</Nullable>
- <!-- Restore implicit XAML item inclusion (remove EnableDefaultPageItems)-->
  </PropertyGroup>
-
- <!-- Remove explicit Page includes to let WinUI source generator handle UserControls -->
 
  <ItemGroup>
  <Content Include="Assets\SplashScreen.scale-200.png" />
@@ -42,7 +39,7 @@
  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
  <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6584" />
  <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.250916003" />
- <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.0" />
+ <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
  </ItemGroup>
  <ItemGroup>
  <Folder Include="SchedulingEngine\" />

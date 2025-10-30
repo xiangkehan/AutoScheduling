@@ -78,7 +78,7 @@ public partial class TemplateViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var templatesTask = _templateService.GetAllTemplatesAsync();
+            var templatesTask = _templateService.GetAllAsync();
             var personnelTask = _personnelService.GetAllAsync();
             var positionsTask = _positionService.GetAllAsync();
 
@@ -90,7 +90,7 @@ public partial class TemplateViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowErrorAsync("Failed to load templates.", ex.Message);
+            await _dialogService.ShowErrorAsync("Failed to load templates.", ex);
         }
         finally
         {
@@ -140,7 +140,7 @@ public partial class TemplateViewModel : ObservableObject
                     EnabledFixedRuleIds = SelectedTemplate.EnabledFixedRuleIds,
                     EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds
                 };
-                var newTemplate = await _templateService.CreateTemplateAsync(createDto);
+                var newTemplate = await _templateService.CreateAsync(createDto);
                 Templates.Add(newTemplate);
                 SelectedTemplate = newTemplate;
             }
@@ -159,12 +159,12 @@ public partial class TemplateViewModel : ObservableObject
                     EnabledFixedRuleIds = SelectedTemplate.EnabledFixedRuleIds,
                     EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds
                 };
-                await _templateService.UpdateTemplateAsync(SelectedTemplate.Id, updateDto);
+                await _templateService.UpdateAsync(SelectedTemplate.Id, updateDto);
                 // Refresh the list to show changes
                 var index = Templates.ToList().FindIndex(t => t.Id == SelectedTemplate.Id);
                 if (index != -1)
                 {
-                    Templates[index] = await _templateService.GetTemplateByIdAsync(SelectedTemplate.Id);
+                    Templates[index] = await _templateService.GetByIdAsync(SelectedTemplate.Id) ?? Templates[index];
                 }
             }
             await _dialogService.ShowSuccessAsync("Template saved successfully.");
@@ -172,7 +172,7 @@ public partial class TemplateViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowErrorAsync("Failed to save template.", ex.Message);
+            await _dialogService.ShowErrorAsync("Failed to save template.", ex);
         }
         finally
         {
@@ -191,7 +191,7 @@ public partial class TemplateViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            await _templateService.DeleteTemplateAsync(SelectedTemplate.Id);
+            await _templateService.DeleteAsync(SelectedTemplate.Id);
             Templates.Remove(SelectedTemplate);
             SelectedTemplate = null;
             IsDetailPaneOpen = false;
@@ -199,7 +199,7 @@ public partial class TemplateViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowErrorAsync("Failed to delete template.", ex.Message);
+            await _dialogService.ShowErrorAsync("Failed to delete template.", ex);
         }
         finally
         {
@@ -218,7 +218,21 @@ public partial class TemplateViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var duplicatedTemplate = await _templateService.DuplicateTemplateAsync(SelectedTemplate.Id, newName);
+            var duplicateCreateDto = new CreateTemplateDto
+            {
+                Name = newName,
+                Description = SelectedTemplate.Description,
+                TemplateType = SelectedTemplate.TemplateType,
+                IsDefault = false,
+                PersonnelIds = SelectedTemplate.PersonnelIds.ToList(),
+                PositionIds = SelectedTemplate.PositionIds.ToList(),
+                HolidayConfigId = SelectedTemplate.HolidayConfigId,
+                UseActiveHolidayConfig = SelectedTemplate.UseActiveHolidayConfig,
+                EnabledFixedRuleIds = SelectedTemplate.EnabledFixedRuleIds.ToList(),
+                EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds.ToList()
+            };
+
+            var duplicatedTemplate = await _templateService.CreateAsync(duplicateCreateDto);
             Templates.Add(duplicatedTemplate);
             SelectedTemplate = duplicatedTemplate;
             IsDetailPaneOpen = true;
@@ -226,7 +240,7 @@ public partial class TemplateViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowErrorAsync("Failed to duplicate template.", ex.Message);
+            await _dialogService.ShowErrorAsync("Failed to duplicate template.", ex);
         }
         finally
         {

@@ -61,6 +61,9 @@ public class PersonnelDto
     /// 各时段班次间隔计数（12个时段）
     /// </summary>
     public int[] RecentPeriodShiftIntervals { get; set; } = new int[12];
+
+    // 新增:兼容旧 XAML绑定的 IsActive 属性（在职且可用）
+    public bool IsActive => IsAvailable && !IsRetired;
 }
 
 /// <summary>

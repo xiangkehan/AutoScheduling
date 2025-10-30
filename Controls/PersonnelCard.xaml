@@ -4,7 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:dto="using:AutoScheduling3.DTOs"
     mc:Ignorable="d"
     Width="200"
     Height="140"
@@ -39,15 +38,16 @@
         </StackPanel>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="4" Margin="0,8,0,0">
-            <ToolTipService.ToolTip>
-                <TextBlock Text="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='在职|离职'}"/>
-            </ToolTipService.ToolTip>
-            <Border Width="16" Height="16" CornerRadius="8" Background="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Green|Gray'}"/>
-
-            <ToolTipService.ToolTip>
-                <TextBlock Text="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='可用|不可用'}"/>
-            </ToolTipService.ToolTip>
-            <Border Width="16" Height="16" CornerRadius="8" Background="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Green|Orange'}"/>
+            <Border Width="16" Height="16" CornerRadius="8" Background="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Green|Gray'}">
+                <ToolTipService.ToolTip>
+                    <TextBlock Text="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='在职|离职'}"/>
+                </ToolTipService.ToolTip>
+            </Border>
+            <Border Width="16" Height="16" CornerRadius="8" Background="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Green|Orange'}">
+                <ToolTipService.ToolTip>
+                    <TextBlock Text="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='可用|不可用'}"/>
+                </ToolTipService.ToolTip>
+            </Border>
         </StackPanel>
     </Grid>
 </UserControl>

@@ -5,7 +5,6 @@
     xmlns:local="using:AutoScheduling3.Views.Scheduling"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:dto="using:AutoScheduling3.DTOs"
     xmlns:viewmodels="using:AutoScheduling3.ViewModels.Scheduling"
     mc:Ignorable="d"
@@ -118,15 +117,16 @@
             </SplitView.Pane>
             <SplitView.Content>
                 <Grid>
-                    <controls:AdaptiveGridView
-                        ItemsSource="{Binding Templates}"
-                        SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}"
-                        SelectionMode="Single"
-                        Padding="12"
-                        ItemHeight="200"
-                        DesiredWidth="300"
-                        StretchContentForSingleRow="False">
-                        <controls:AdaptiveGridView.ItemTemplate>
+                    <GridView ItemsSource="{Binding Templates}"
+                              SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}"
+                              SelectionMode="Single"
+                              Padding="12">
+                        <GridView.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapGrid ItemWidth="300" ItemHeight="200"/>
+                            </ItemsPanelTemplate>
+                        </GridView.ItemsPanel>
+                        <GridView.ItemTemplate>
                             <DataTemplate x:DataType="dto:SchedulingTemplateDto">
                                 <Grid Margin="4">
                                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -137,7 +137,9 @@
                                             <TextBlock Text="{x:Bind Name}" Style="{ThemeResource SubtitleTextBlockStyle}" MaxLines="2" TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Text="{x:Bind Description}" Style="{ThemeResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" MaxLines="3" TextTrimming="CharacterEllipsis"/>
                                             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                                                <controls:Badge Content="{x:Bind TemplateType}"/>
+                                                <Border Background="{ThemeResource SystemAccentColor}" CornerRadius="4" Padding="6,2">
+                                                    <TextBlock Text="{x:Bind TemplateType}" Foreground="White" FontSize="12"/>
+                                                </Border>
                                                 <FontIcon Glyph="&#xE734;" Visibility="{x:Bind IsDefault, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" Foreground="{ThemeResource SystemAccentColor}"/>
                                             </StackPanel>
                                             <Grid Margin="0,8,0,0">
@@ -159,8 +161,8 @@
                                     </Border>
                                 </Grid>
                             </DataTemplate>
-                        </controls:AdaptiveGridView.ItemTemplate>
-                    </controls:AdaptiveGridView>
+                        </GridView.ItemTemplate>
+                    </GridView>
                     <ProgressRing IsActive="{Binding IsLoading}" VerticalAlignment="Center" HorizontalAlignment="Center" Width="50" Height="50"/>
                     <TextBlock Text="No templates found. Create one to get started."
                                Visibility="{Binding Templates.Count, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=invert, Mode=OneWay}"
