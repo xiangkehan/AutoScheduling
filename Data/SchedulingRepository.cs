@@ -8,8 +8,7 @@ using AutoScheduling3.Models;
 namespace AutoScheduling3.Data
 {
     /// <summary>
-    /// 统一管理排班相关（Schedule 与 SingleShift）数据访问。
-    /// 设计：Schedule 表包含人员ID集合、哨位ID集合（JSON），其排班结果的单次班次存储在 SingleShifts 表中，使用 ScheduleId 关联。
+    /// 排班与班次数据访问仓储
     /// </summary>
     public class SchedulingRepository
     {

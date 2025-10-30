@@ -200,5 +200,5 @@ public class SchedulingRequestDto
     /// 启用的手动指定ID列表（可选，将根据日期范围过滤）
     /// </summary>
     public List<int>? EnabledManualAssignmentIds { get; set; }
-    public int? HolidayConfigId { get; internal set; }
+    public int? HolidayConfigId { get; set; }
 }

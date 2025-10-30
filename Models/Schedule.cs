@@ -33,6 +33,21 @@ namespace AutoScheduling3.Models
         /// </summary>
         public List<SingleShift> Shifts { get; set; } = new();
 
+        /// <summary>
+        /// 排班开始日期（日期部分，UTC）
+        /// </summary>
+        public DateTime StartDate { get; set; }
+
+        /// <summary>
+        /// 排班结束日期（日期部分，UTC）
+        /// </summary>
+        public DateTime EndDate { get; set; }
+
+        /// <summary>
+        /// 创建时间（UTC）
+        /// </summary>
+        public DateTime CreatedAt { get; set; }
+
         public override string ToString() => $"Schedule[{Id}] {Title} Shifts={Shifts.Count}";
     }
 }

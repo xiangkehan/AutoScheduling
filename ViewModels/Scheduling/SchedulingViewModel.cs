@@ -68,6 +68,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
  [ObservableProperty]
  private bool _isLoadingInitial;
 
+ // 新增: 是否使用活动假日配置 & 手动选择的假日配置Id
+ [ObservableProperty] private bool _useActiveHolidayConfig = true;
+ [ObservableProperty] private int? _selectedHolidayConfigId;
+
  // 命令
  public IAsyncRelayCommand LoadDataCommand { get; }
  public IRelayCommand NextStepCommand { get; }
@@ -128,7 +132,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
  private bool CanExecuteScheduling()
  {
- if (CurrentStep !=5) return false;
+ if (CurrentStep !=5 || IsExecuting) return false; // 增加避免重复触发
  return ValidateStep1(out _) && ValidateStep2(out _) && ValidateStep3(out _);
  }
 
@@ -177,6 +181,12 @@ namespace AutoScheduling3.ViewModels.Scheduling
  if (SelectedPersonnels == null || SelectedPersonnels.Count ==0)
  {
  error = "至少选择一名人员";
+ return false;
+ }
+ //过滤不可用人员
+ if (SelectedPersonnels.Any(p => !p.IsAvailable || p.IsRetired))
+ {
+ error = "存在不可用或已退役人员，请移除";
  return false;
  }
  error = string.Empty;
@@ -262,7 +272,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
  EndDate = EndDate.DateTime.Date,
  PersonnelIds = SelectedPersonnels.Select(p => p.Id).ToList(),
  PositionIds = SelectedPositions.Select(p => p.Id).ToList(),
- UseActiveHolidayConfig = true, //先固定；后续可由 UI 控制
+ UseActiveHolidayConfig = UseActiveHolidayConfig,
+ HolidayConfigId = UseActiveHolidayConfig ? null : SelectedHolidayConfigId,
  EnabledFixedRuleIds = _enabledFixedRules?.Count >0 ? new List<int>(_enabledFixedRules) : null,
  EnabledManualAssignmentIds = _enabledManualAssignments?.Count >0 ? new List<int>(_enabledManualAssignments) : null
  };
@@ -280,6 +291,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
  EnabledFixedRules.Clear();
  EnabledManualAssignments.Clear();
  ResultSchedule = null;
+ SelectedHolidayConfigId = null;
+ UseActiveHolidayConfig = true;
  RefreshCommandStates();
  }
  #endregion
@@ -290,6 +303,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
  partial void OnEndDateChanged(DateTimeOffset value) => RefreshCommandStates();
  partial void OnSelectedPersonnelsChanged(ObservableCollection<PersonnelDto> value) => RefreshCommandStates();
  partial void OnSelectedPositionsChanged(ObservableCollection<PositionDto> value) => RefreshCommandStates();
+ partial void OnUseActiveHolidayConfigChanged(bool value) => RefreshCommandStates();
+ partial void OnSelectedHolidayConfigIdChanged(int? value) => RefreshCommandStates();
  #endregion
  }
 }
