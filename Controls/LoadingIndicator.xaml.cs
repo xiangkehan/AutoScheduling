@@ -1,5 +1,5 @@
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls; // ensure UserControl
 
 namespace AutoScheduling3.Controls
 {
@@ -25,7 +25,7 @@ namespace AutoScheduling3.Controls
 
         public LoadingIndicator()
         {
-            this.InitializeComponent();
+            InitializeComponent();
         }
 
         private static void OnIsLoadingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

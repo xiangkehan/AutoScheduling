@@ -71,7 +71,7 @@ namespace AutoScheduling3.Controls
 
         public ErrorState()
         {
-            this.InitializeComponent();
+            InitializeComponent();
         }
 
         private static void OnIsVisibleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

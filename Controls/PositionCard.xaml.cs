@@ -17,7 +17,7 @@ namespace AutoScheduling3.Controls
 
         public PositionCard()
         {
-            this.InitializeComponent();
+            InitializeComponent();
         }
     }
 }

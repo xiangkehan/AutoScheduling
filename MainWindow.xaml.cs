@@ -3,7 +3,6 @@ using Microsoft.UI.Xaml.Controls;
 using AutoScheduling3.Views.DataManagement;
 using AutoScheduling3.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using AutoScheduling3.Views.Scheduling;
 
 namespace AutoScheduling3
 {
@@ -25,22 +24,16 @@ namespace AutoScheduling3
         /// </summary>
         private void InitializeNavigation()
         {
-            _navigationService = App.Services.GetRequiredService<NavigationService>();
+            _navigationService = ((App)Application.Current).ServiceProvider.GetRequiredService<NavigationService>();
             _navigationService.Initialize(ContentFrame);
 
-            // 注册页面
+            // 注册页面 (仅已有的 DataManagement 页面)
             _navigationService.RegisterPage("Personnel", typeof(PersonnelPage));
             _navigationService.RegisterPage("Position", typeof(PositionPage));
             _navigationService.RegisterPage("Skill", typeof(SkillPage));
-            _navigationService.RegisterPage("Scheduling", typeof(CreateSchedulingPage)); // 假设创建是主入口
-            _navigationService.RegisterPage("SchedulingCreate", typeof(CreateSchedulingPage));
-            _navigationService.RegisterPage("SchedulingResult", typeof(ScheduleResultPage));
-            _navigationService.RegisterPage("SchedulingTemplates", typeof(TemplatePage));
-            _navigationService.RegisterPage("SchedulingDrafts", typeof(DraftsPage));
-            // 更多页面可以后续添加
 
-            // 默认导航到人员管理页面
-            _navigationService.Navigate("Personnel");
+            // 正确调用 NavigateTo 使用 key
+            _navigationService.NavigateTo("Personnel");
         }
 
         /// <summary>
@@ -53,7 +46,7 @@ namespace AutoScheduling3
                 var tag = item.Tag?.ToString();
                 if (!string.IsNullOrEmpty(tag))
                 {
-                    _navigationService.Navigate(tag);
+                    _navigationService.NavigateTo(tag);
                 }
             }
         }

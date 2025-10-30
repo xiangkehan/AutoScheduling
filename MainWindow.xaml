@@ -37,29 +37,6 @@
                     <FontIcon Glyph="&#xE82F;"/>
                 </NavigationViewItem.Icon>
             </NavigationViewItem>
-            
-            <!-- 排班管理 -->
-            <NavigationViewItemHeader Content="排班管理"/>
-            <NavigationViewItem Content="创建排班" Tag="SchedulingCreate">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE8F4;"/>
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem Content="排班模板" Tag="SchedulingTemplates">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE8D2;"/>
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem Content="草稿箱" Tag="SchedulingDrafts">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE74E;"/>
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem Content="排班历史" Tag="History">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE81C;"/>
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
         </NavigationView.MenuItems>
 
         <NavigationView.PaneFooter>
