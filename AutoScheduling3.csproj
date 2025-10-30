@@ -13,6 +13,9 @@
  <EnableMsixTooling>true</EnableMsixTooling>
  <Nullable>enable</Nullable>
  </PropertyGroup>
+ <ItemGroup>
+   <Page Remove="Controls\ScheduleGridControl.xaml" />
+ </ItemGroup>
 
  <ItemGroup>
  <Content Include="Assets\SplashScreen.scale-200.png" />
@@ -43,6 +46,11 @@
  </ItemGroup>
  <ItemGroup>
  <Folder Include="SchedulingEngine\" />
+ </ItemGroup>
+ <ItemGroup>
+   <None Update="Controls\ScheduleGridControl.xaml">
+     <Generator>MSBuild:Compile</Generator>
+   </None>
  </ItemGroup>
 
  <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">

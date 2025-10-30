@@ -5,8 +5,9 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Width="200"
-    Height="140"
+    x:Name="Root"
+    Width="180"
+    Height="120"
     CornerRadius="8"
     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -38,16 +39,35 @@
         </StackPanel>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="4" Margin="0,8,0,0">
-            <Border Width="16" Height="16" CornerRadius="8" Background="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Green|Gray'}">
-                <ToolTipService.ToolTip>
-                    <TextBlock Text="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='在职|离职'}"/>
-                </ToolTipService.ToolTip>
+            <Border Width="40" Height="20" CornerRadius="10" Background="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Accent|Gray'}" Padding="6,2">
+                <TextBlock Text="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='在职|离职'}" FontSize="10" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" HorizontalAlignment="Center"/>
             </Border>
-            <Border Width="16" Height="16" CornerRadius="8" Background="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Green|Orange'}">
-                <ToolTipService.ToolTip>
-                    <TextBlock Text="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='可用|不可用'}"/>
-                </ToolTipService.ToolTip>
+            <Border Width="40" Height="20" CornerRadius="10" Background="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Accent|Orange'}" Padding="6,2">
+                <TextBlock Text="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='可用|忙碌'}" FontSize="10" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" HorizontalAlignment="Center"/>
             </Border>
+            <StackPanel Orientation="Horizontal" Spacing="4" Visibility="{x:Bind ShowActions, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" VerticalAlignment="Center">
+                <Button Style="{StaticResource ButtonRevealStyle}" Content="编辑" FontSize="10" MinWidth="44"/>
+                <Button Style="{StaticResource ButtonRevealStyle}" Content="删除" FontSize="10" MinWidth="44"/>
+            </StackPanel>
         </StackPanel>
     </Grid>
+    <UserControl.Resources>
+        <Style TargetType="UserControl">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="UserControl">
+                        <Grid>
+                            <ContentPresenter />
+                            <Border x:Name="SelectionBorder" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="2" CornerRadius="8" Opacity="0" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="local:PersonnelCard.IsSelected" Value="True">
+                                <Setter Target="SelectionBorder.Opacity" Value="1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
 </UserControl>
