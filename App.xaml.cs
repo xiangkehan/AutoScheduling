@@ -19,10 +19,7 @@ namespace AutoScheduling3
     {
         private Window? _window;
 
-        /// <summary>
-        /// 依赖注入服务提供者
-        /// </summary>
-        public static IServiceProvider Services { get; private set; } = null!;
+        public IServiceProvider ServiceProvider { get; private set; }
 
         /// <summary>
         /// 主窗口实例
@@ -42,6 +39,15 @@ namespace AutoScheduling3
         {
             InitializeComponent();
             ConfigureServices();
+            UnhandledException += App_UnhandledException;
+        }
+
+        private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+        {
+            // Log the exception
+            System.Diagnostics.Debug.WriteLine($"Unhandled exception: {e.Exception}");
+            // Optionally, prevent the application from crashing
+            e.Handled = true;
         }
 
         /// <summary>
@@ -81,11 +87,12 @@ namespace AutoScheduling3
             services.AddTransient<PositionViewModel>();
             services.AddTransient<SkillViewModel>();
             services.AddTransient<TemplateViewModel>();
+            services.AddTransient<SchedulingViewModel>();
 
-            Services = services.BuildServiceProvider();
+            ServiceProvider = services.BuildServiceProvider();
 
             // 初始化数据库
-            InitializeDatabaseAsync().GetAwaiter().GetResult();
+            // InitializeDatabaseAsync().GetAwaiter().GetResult(); // This causes a deadlock
         }
 
         /// <summary>
@@ -95,12 +102,12 @@ namespace AutoScheduling3
         {
             try
             {
-                var personalRepo = Services.GetRequiredService<IPersonalRepository>() as PersonalRepository;
-                var positionRepo = Services.GetRequiredService<IPositionRepository>() as PositionLocationRepository;
-                var skillRepo = Services.GetRequiredService<ISkillRepository>() as SkillRepository;
-                var templateRepo = Services.GetRequiredService<ITemplateRepository>() as SchedulingTemplateRepository;
-                var schedulingRepo = Services.GetRequiredService<SchedulingRepository>();
-                var constraintRepo = Services.GetRequiredService<ConstraintRepository>();
+                var personalRepo = ServiceProvider.GetRequiredService<IPersonalRepository>() as PersonalRepository;
+                var positionRepo = ServiceProvider.GetRequiredService<IPositionRepository>() as PositionLocationRepository;
+                var skillRepo = ServiceProvider.GetRequiredService<ISkillRepository>() as SkillRepository;
+                var templateRepo = ServiceProvider.GetRequiredService<ITemplateRepository>() as SchedulingTemplateRepository;
+                var schedulingRepo = ServiceProvider.GetRequiredService<SchedulingRepository>();
+                var constraintRepo = ServiceProvider.GetRequiredService<ConstraintRepository>();
 
                 if (personalRepo != null) await personalRepo.InitAsync();
                 if (positionRepo != null) await positionRepo.InitAsync();
@@ -120,8 +127,19 @@ namespace AutoScheduling3
         /// Invoked when the application is launched.
         /// </summary>
         /// <param name="args">Details about the launch request and process.</param>
-        protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
+            try
+            {
+                await InitializeDatabaseAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log or handle the exception as needed
+                System.Diagnostics.Debug.WriteLine($"Database initialization failed: {ex.Message}");
+                // You might want to show an error dialog to the user here
+            }
+
             _window = new MainWindow();
             MainWindow = _window;
             _window.Activate();

@@ -40,7 +40,7 @@ public class NavigationService
     /// <summary>
     /// 导航到指定页面
     /// </summary>
-    public bool Navigate(string pageKey, object? parameter = null)
+    public bool NavigateTo(string pageKey, object? parameter = null)
     {
         if (_frame == null)
             throw new InvalidOperationException("导航服务未初始化，请先调用 Initialize 方法");

@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using AutoScheduling3.Views.DataManagement;
 using AutoScheduling3.Helpers;
 using Microsoft.Extensions.DependencyInjection;
+using AutoScheduling3.Views.Scheduling;
 
 namespace AutoScheduling3
 {
@@ -31,6 +32,11 @@ namespace AutoScheduling3
             _navigationService.RegisterPage("Personnel", typeof(PersonnelPage));
             _navigationService.RegisterPage("Position", typeof(PositionPage));
             _navigationService.RegisterPage("Skill", typeof(SkillPage));
+            _navigationService.RegisterPage("Scheduling", typeof(CreateSchedulingPage)); // 假设创建是主入口
+            _navigationService.RegisterPage("SchedulingCreate", typeof(CreateSchedulingPage));
+            _navigationService.RegisterPage("SchedulingResult", typeof(ScheduleResultPage));
+            _navigationService.RegisterPage("SchedulingTemplates", typeof(TemplatePage));
+            _navigationService.RegisterPage("SchedulingDrafts", typeof(DraftsPage));
             // 更多页面可以后续添加
 
             // 默认导航到人员管理页面

@@ -11,18 +11,25 @@ public class NullToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, string language)
     {
-        // 如果参数是 "Inverse"，则反转逻辑
-        bool inverse = parameter is string param && param.Equals("Inverse", StringComparison.OrdinalIgnoreCase);
+        bool inverse = parameter is string param && param.Equals("invert", StringComparison.OrdinalIgnoreCase);
 
-        bool isNull = value == null;
-
-        if (inverse)
+        bool isNullOrEmpty;
+        if (value is System.Collections.ICollection collection)
         {
-            return isNull ? Visibility.Visible : Visibility.Collapsed;
+            isNullOrEmpty = collection.Count == 0;
         }
         else
         {
-            return isNull ? Visibility.Collapsed : Visibility.Visible;
+            isNullOrEmpty = value == null;
+        }
+
+        if (inverse)
+        {
+            return isNullOrEmpty ? Visibility.Visible : Visibility.Collapsed;
+        }
+        else
+        {
+            return isNullOrEmpty ? Visibility.Collapsed : Visibility.Visible;
         }
     }
 

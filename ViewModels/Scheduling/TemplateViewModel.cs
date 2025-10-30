@@ -7,269 +7,280 @@ using AutoScheduling3.Helpers;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
+using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AutoScheduling3.ViewModels.Scheduling;
 
 /// <summary>
 /// 排班模板管理 ViewModel
 /// </summary>
-public partial class TemplateViewModel : ListViewModelBase<SchedulingTemplateDto>
+public partial class TemplateViewModel : ObservableObject
 {
     private readonly ITemplateService _templateService;
     private readonly IPersonnelService _personnelService;
     private readonly IPositionService _positionService;
     private readonly DialogService _dialogService;
+    private readonly NavigationService _navigationService;
 
-    private bool _isEditing;
-    private CreateTemplateDto _newTemplate = new();
-    private UpdateTemplateDto? _editingTemplate;
+    [ObservableProperty]
+    private ObservableCollection<SchedulingTemplateDto> _templates = new();
 
-    /// <summary>
-    /// 是否正在编辑模式
-    /// </summary>
-    public bool IsEditing
-    {
-        get => _isEditing;
-        set => SetProperty(ref _isEditing, value);
-    }
+    [ObservableProperty]
+    private SchedulingTemplateDto _selectedTemplate;
 
-    /// <summary>
-    /// 新建模板DTO
-    /// </summary>
-    public CreateTemplateDto NewTemplate
-    {
-        get => _newTemplate;
-        set => SetProperty(ref _newTemplate, value);
-    }
+    [ObservableProperty]
+    private bool _isLoading;
 
-    /// <summary>
-    /// 编辑中的模板DTO
-    /// </summary>
-    public UpdateTemplateDto? EditingTemplate
-    {
-        get => _editingTemplate;
-        set => SetProperty(ref _editingTemplate, value);
-    }
+    [ObservableProperty]
+    private bool _isLoadingDetails;
 
-    /// <summary>
-    /// 可选人员列表
-    /// </summary>
-    public ObservableCollection<PersonnelDto> AvailablePersonnel { get; } = new();
+    [ObservableProperty]
+    private bool _isDetailPaneOpen;
 
-    /// <summary>
-    /// 可选哨位列表
-    /// </summary>
-    public ObservableCollection<PositionDto> AvailablePositions { get; } = new();
+    [ObservableProperty]
+    private string _searchKeyword;
+
+    [ObservableProperty]
+    private ObservableCollection<string> _searchSuggestions = new();
+
+    [ObservableProperty]
+    private ObservableCollection<PersonnelDto> _availablePersonnel = new();
+
+    [ObservableProperty]
+    private ObservableCollection<PositionDto> _availablePositions = new();
+
+    [ObservableProperty]
+    private ObservableCollection<PersonnelDto> _selectedPersonnel = new();
+
+    [ObservableProperty]
+    private ObservableCollection<PositionDto> _selectedPositions = new();
+
+    public List<string> TemplateTypes { get; } = new List<string> { "regular", "holiday", "special" };
 
     public TemplateViewModel(
         ITemplateService templateService,
         IPersonnelService personnelService,
         IPositionService positionService,
-        DialogService dialogService)
+        DialogService dialogService,
+        NavigationService navigationService)
     {
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
-        _personnelService = personnelService ?? throw new ArgumentNullException(nameof(personnelService));
-        _positionService = positionService ?? throw new ArgumentNullException(nameof(positionService));
-        _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
-
-        CreateCommand = new AsyncRelayCommand(CreateTemplateAsync);
-        EditCommand = new AsyncRelayCommand(StartEditAsync, () => SelectedItem != null);
-        SaveCommand = new AsyncRelayCommand(SaveTemplateAsync, () => IsEditing);
-        CancelCommand = new RelayCommand(CancelEdit, () => IsEditing);
-        DeleteCommand = new AsyncRelayCommand(DeleteTemplateAsync, () => SelectedItem != null);
-        UseTemplateCommand = new AsyncRelayCommand(UseTemplateAsync, () => SelectedItem != null);
+        _templateService = templateService;
+        _personnelService = personnelService;
+        _positionService = positionService;
+        _dialogService = dialogService;
+        _navigationService = navigationService;
     }
 
-    /// <summary>
-    /// 创建命令
-    /// </summary>
-    public IAsyncRelayCommand CreateCommand { get; }
-
-    /// <summary>
-    /// 编辑命令
-    /// </summary>
-    public IAsyncRelayCommand EditCommand { get; }
-
-    /// <summary>
-    /// 保存命令
-    /// </summary>
-    public IAsyncRelayCommand SaveCommand { get; }
-
-    /// <summary>
-    /// 取消命令
-    /// </summary>
-    public IRelayCommand CancelCommand { get; }
-
-    /// <summary>
-    /// 删除命令
-    /// </summary>
-    public IAsyncRelayCommand DeleteCommand { get; }
-
-    /// <summary>
-    /// 使用模板命令
-    /// </summary>
-    public IAsyncRelayCommand UseTemplateCommand { get; }
-
-    /// <summary>
-    /// 加载数据
-    /// </summary>
-    public override async Task LoadDataAsync()
+    [RelayCommand]
+    private async Task LoadTemplatesAsync()
     {
-        await ExecuteAsync(async () =>
+        IsLoading = true;
+        try
         {
-            // 加载模板列表
-            var templates = await _templateService.GetAllAsync();
+            var templatesTask = _templateService.GetAllTemplatesAsync();
+            var personnelTask = _personnelService.GetAllAsync();
+            var positionsTask = _positionService.GetAllAsync();
 
-            ClearItems();
-            AddRange(templates);
+            await Task.WhenAll(templatesTask, personnelTask, positionsTask);
 
-            // 加载可选项
-            var personnel = await _personnelService.GetAllAsync();
-            AvailablePersonnel.Clear();
-            foreach (var p in personnel)
-            {
-                AvailablePersonnel.Add(p);
-            }
-
-            var positions = await _positionService.GetAllAsync();
-            AvailablePositions.Clear();
-            foreach (var pos in positions)
-            {
-                AvailablePositions.Add(pos);
-            }
-        }, "正在加载模板数据...");
-    }
-
-    /// <summary>
-    /// 创建模板
-    /// </summary>
-    private async Task CreateTemplateAsync()
-    {
-        await ExecuteAsync(async () =>
+            Templates = new ObservableCollection<SchedulingTemplateDto>(templatesTask.Result);
+            AvailablePersonnel = new ObservableCollection<PersonnelDto>(personnelTask.Result);
+            AvailablePositions = new ObservableCollection<PositionDto>(positionsTask.Result);
+        }
+        catch (Exception ex)
         {
-            var created = await _templateService.CreateAsync(NewTemplate);
-            AddItem(created);
-
-            // 重置表单
-            NewTemplate = new CreateTemplateDto();
-
-            await _dialogService.ShowSuccessAsync("模板创建成功！");
-        }, "正在创建模板...");
-    }
-
-    /// <summary>
-    /// 开始编辑
-    /// </summary>
-    private async Task StartEditAsync()
-    {
-        if (SelectedItem == null)
-            return;
-
-        await ExecuteAsync(async () =>
+            await _dialogService.ShowErrorAsync("Failed to load templates.", ex.Message);
+        }
+        finally
         {
-            EditingTemplate = new UpdateTemplateDto
-            {
-                Name = SelectedItem.Name,
-                Description = SelectedItem.Description,
-                TemplateType = SelectedItem.TemplateType,
-                IsDefault = SelectedItem.IsDefault,
-                PersonnelIds = new List<int>(SelectedItem.PersonnelIds),
-                PositionIds = new List<int>(SelectedItem.PositionIds),
-                HolidayConfigId = SelectedItem.HolidayConfigId,
-                UseActiveHolidayConfig = SelectedItem.UseActiveHolidayConfig,
-                EnabledFixedRuleIds = new List<int>(SelectedItem.EnabledFixedRuleIds),
-                EnabledManualAssignmentIds = new List<int>(SelectedItem.EnabledManualAssignmentIds)
-            };
-
-            IsEditing = true;
-            await Task.CompletedTask;
-        });
+            IsLoading = false;
+        }
     }
 
-    /// <summary>
-    /// 保存编辑
-    /// </summary>
+    [RelayCommand]
+    private void CreateTemplate()
+    {
+        SelectedTemplate = new SchedulingTemplateDto 
+        { 
+            Id = -1, // Indicates a new template
+            Name = "New Template",
+            PersonnelIds = new List<int>(),
+            PositionIds = new List<int>(),
+            EnabledFixedRuleIds = new List<int>(),
+            EnabledManualAssignmentIds = new List<int>(),
+            CreatedAt = DateTime.Now
+        };
+        IsDetailPaneOpen = true;
+    }
+
+    [RelayCommand]
     private async Task SaveTemplateAsync()
     {
-        if (SelectedItem == null || EditingTemplate == null)
-            return;
+        if (SelectedTemplate == null) return;
 
-        await ExecuteAsync(async () =>
+        SelectedTemplate.PersonnelIds = SelectedPersonnel.Select(p => p.Id).ToList();
+        SelectedTemplate.PositionIds = SelectedPositions.Select(p => p.Id).ToList();
+
+        IsLoadingDetails = true;
+        try
         {
-            await _templateService.UpdateAsync(SelectedItem.Id, EditingTemplate);
-            
-            // 重新加载数据
-            await LoadDataAsync();
-
-            IsEditing = false;
-            EditingTemplate = null;
-
-            await _dialogService.ShowSuccessAsync("模板信息已更新！");
-        }, "正在保存...");
+            if (SelectedTemplate.Id == -1) // New template
+            {
+                var createDto = new CreateTemplateDto
+                {
+                    Name = SelectedTemplate.Name,
+                    Description = SelectedTemplate.Description,
+                    TemplateType = SelectedTemplate.TemplateType,
+                    IsDefault = SelectedTemplate.IsDefault,
+                    PersonnelIds = SelectedTemplate.PersonnelIds,
+                    PositionIds = SelectedTemplate.PositionIds,
+                    HolidayConfigId = SelectedTemplate.HolidayConfigId,
+                    UseActiveHolidayConfig = SelectedTemplate.UseActiveHolidayConfig,
+                    EnabledFixedRuleIds = SelectedTemplate.EnabledFixedRuleIds,
+                    EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds
+                };
+                var newTemplate = await _templateService.CreateTemplateAsync(createDto);
+                Templates.Add(newTemplate);
+                SelectedTemplate = newTemplate;
+            }
+            else // Existing template
+            {
+                var updateDto = new UpdateTemplateDto
+                {
+                    Name = SelectedTemplate.Name,
+                    Description = SelectedTemplate.Description,
+                    TemplateType = SelectedTemplate.TemplateType,
+                    IsDefault = SelectedTemplate.IsDefault,
+                    PersonnelIds = SelectedTemplate.PersonnelIds,
+                    PositionIds = SelectedTemplate.PositionIds,
+                    HolidayConfigId = SelectedTemplate.HolidayConfigId,
+                    UseActiveHolidayConfig = SelectedTemplate.UseActiveHolidayConfig,
+                    EnabledFixedRuleIds = SelectedTemplate.EnabledFixedRuleIds,
+                    EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds
+                };
+                await _templateService.UpdateTemplateAsync(SelectedTemplate.Id, updateDto);
+                // Refresh the list to show changes
+                var index = Templates.ToList().FindIndex(t => t.Id == SelectedTemplate.Id);
+                if (index != -1)
+                {
+                    Templates[index] = await _templateService.GetTemplateByIdAsync(SelectedTemplate.Id);
+                }
+            }
+            await _dialogService.ShowSuccessAsync("Template saved successfully.");
+            IsDetailPaneOpen = false;
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Failed to save template.", ex.Message);
+        }
+        finally
+        {
+            IsLoadingDetails = false;
+        }
     }
 
-    /// <summary>
-    /// 取消编辑
-    /// </summary>
-    private void CancelEdit()
-    {
-        IsEditing = false;
-        EditingTemplate = null;
-    }
-
-    /// <summary>
-    /// 删除模板
-    /// </summary>
+    [RelayCommand]
     private async Task DeleteTemplateAsync()
     {
-        if (SelectedItem == null)
-            return;
+        if (SelectedTemplate == null) return;
 
-        var confirmed = await _dialogService.ShowConfirmAsync(
-            "确认删除",
-            $"确定要删除模板 '{SelectedItem.Name}' 吗？此操作无法撤销。");
+        var confirm = await _dialogService.ShowConfirmAsync("Delete Template", $"Are you sure you want to delete '{SelectedTemplate.Name}'?");
+        if (!confirm) return;
 
-        if (!confirmed)
-            return;
-
-        await ExecuteAsync(async () =>
+        IsLoading = true;
+        try
         {
-            await _templateService.DeleteAsync(SelectedItem.Id);
-            RemoveItem(SelectedItem);
-            SelectedItem = null;
-
-            await _dialogService.ShowSuccessAsync("模板已删除！");
-        }, "正在删除...");
+            await _templateService.DeleteTemplateAsync(SelectedTemplate.Id);
+            Templates.Remove(SelectedTemplate);
+            SelectedTemplate = null;
+            IsDetailPaneOpen = false;
+            await _dialogService.ShowSuccessAsync("Template deleted.");
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Failed to delete template.", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
-    /// <summary>
-    /// 使用模板创建排班
-    /// </summary>
-    private async Task UseTemplateAsync()
+    [RelayCommand]
+    private async Task DuplicateTemplateAsync()
     {
-        if (SelectedItem == null)
-            return;
+        if (SelectedTemplate == null) return;
+        
+        var newName = await _dialogService.ShowInputDialogAsync("Duplicate Template", "Enter a name for the new template:", $"{SelectedTemplate.Name} (Copy)");
+        if (string.IsNullOrWhiteSpace(newName)) return;
 
-        // 此处应该打开一个对话框让用户输入排班参数
-        // 简化实现：直接使用默认参数
-        var useDto = new UseTemplateDto
+        IsLoading = true;
+        try
         {
-            TemplateId = SelectedItem.Id,
-            StartDate = DateTime.Today,
-            EndDate = DateTime.Today.AddDays(7),
-            Title = $"使用模板'{SelectedItem.Name}'创建的排班"
-        };
-
-        await ExecuteAsync(async () =>
+            var duplicatedTemplate = await _templateService.DuplicateTemplateAsync(SelectedTemplate.Id, newName);
+            Templates.Add(duplicatedTemplate);
+            SelectedTemplate = duplicatedTemplate;
+            IsDetailPaneOpen = true;
+            await _dialogService.ShowSuccessAsync("Template duplicated successfully.");
+        }
+        catch (Exception ex)
         {
-            var schedule = await _templateService.UseTemplateAsync(useDto);
-            await _dialogService.ShowSuccessAsync($"已使用模板创建排班，排班ID: {schedule.Id}");
-        }, "正在创建排班...");
+            await _dialogService.ShowErrorAsync("Failed to duplicate template.", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
-    protected override void OnError(Exception exception)
+    [RelayCommand]
+    private void UseTemplate()
     {
-        base.OnError(exception);
-        _ = _dialogService.ShowErrorAsync("操作失败", exception);
+        if (SelectedTemplate == null) return;
+        _navigationService.NavigateTo("CreateScheduling", SelectedTemplate.Id);
+    }
+
+    partial void OnSelectedTemplateChanged(SchedulingTemplateDto value)
+    {
+        IsDetailPaneOpen = value != null;
+        if (value != null)
+        {
+            UpdateSelectedPersonnelAndPositions();
+        }
+    }
+
+    private void UpdateSelectedPersonnelAndPositions()
+    {
+        if (SelectedTemplate == null)
+        {
+            SelectedPersonnel.Clear();
+            SelectedPositions.Clear();
+            return;
+        }
+
+        var personnel = AvailablePersonnel.Where(p => SelectedTemplate.PersonnelIds.Contains(p.Id));
+        SelectedPersonnel = new ObservableCollection<PersonnelDto>(personnel);
+
+        var positions = AvailablePositions.Where(p => SelectedTemplate.PositionIds.Contains(p.Id));
+        SelectedPositions = new ObservableCollection<PositionDto>(positions);
+    }
+
+    partial void OnSearchKeywordChanged(string value)
+    {
+        // This is a simple implementation. A more robust solution would use debouncing.
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            // Reload all templates or use a cached full list
+            _ = LoadTemplatesAsync();
+        }
+        else
+        {
+            var filtered = Templates.Where(t => t.Name.Contains(value, StringComparison.OrdinalIgnoreCase)).ToList();
+            Templates = new ObservableCollection<SchedulingTemplateDto>(filtered);
+            // In a real app, you'd fetch from the service:
+            // var searchResult = await _templateService.SearchByNameAsync(value);
+            // Templates = new ObservableCollection<SchedulingTemplateDto>(searchResult);
+        }
     }
 }

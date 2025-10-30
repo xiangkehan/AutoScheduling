@@ -120,4 +120,39 @@ public class DialogService
         _ = dialog.ShowAsync();
         return dialog;
     }
+
+    /// <summary>
+    /// 显示输入对话框
+    /// </summary>
+    public async Task<string> ShowInputDialogAsync(string title, string message, string defaultText = "")
+    {
+        var inputTextBox = new TextBox
+        {
+            AcceptsReturn = false,
+            Height = 32,
+            Text = defaultText,
+            SelectionStart = defaultText.Length
+        };
+        var dialog = new ContentDialog
+        {
+            Content = new StackPanel
+            {
+                Children =
+                {
+                    new TextBlock { Text = message, Margin = new Microsoft.UI.Xaml.Thickness(0,0,0,12) },
+                    inputTextBox
+                }
+            },
+            Title = title,
+            IsSecondaryButtonEnabled = true,
+            PrimaryButtonText = "OK",
+            SecondaryButtonText = "Cancel",
+            XamlRoot = App.MainWindow?.Content?.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            return inputTextBox.Text;
+        else
+            return null;
+    }
 }
