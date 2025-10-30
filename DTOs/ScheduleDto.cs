@@ -34,6 +34,11 @@ public class ScheduleDto
     public List<ShiftDto> Shifts { get; set; } = new();
 
     /// <summary>
+    /// 冲突/约束提示集合（前端面板展示）
+    /// </summary>
+    public List<ConflictDto> Conflicts { get; set; } = new();
+
+    /// <summary>
     /// 创建时间
     /// </summary>
     public DateTime CreatedAt { get; set; }
@@ -201,4 +206,45 @@ public class SchedulingRequestDto
     /// </summary>
     public List<int>? EnabledManualAssignmentIds { get; set; }
     public int? HolidayConfigId { get; set; }
+}
+
+/// <summary>
+/// 冲突/约束提示 DTO
+/// </summary>
+public class ConflictDto
+{
+    /// <summary>
+    /// 冲突类型：hard / soft / info / unassigned
+    /// </summary>
+    public string Type { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 冲突描述
+    /// </summary>
+    public string Message { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 相关哨位ID
+    /// </summary>
+    public int? PositionId { get; set; }
+
+    /// <summary>
+    /// 相关人员ID
+    /// </summary>
+    public int? PersonnelId { get; set; }
+
+    /// <summary>
+    /// 开始时间
+    /// </summary>
+    public DateTime? StartTime { get; set; }
+
+    /// <summary>
+    /// 结束时间
+    /// </summary>
+    public DateTime? EndTime { get; set; }
+
+    /// <summary>
+    /// 时段索引
+    /// </summary>
+    public int? PeriodIndex { get; set; }
 }

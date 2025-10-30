@@ -57,19 +57,16 @@ public class SchedulingService : ISchedulingService
  EndDate = request.EndDate.Date
  };
  cancellationToken.ThrowIfCancellationRequested();
-
  if (request.UseActiveHolidayConfig)
  {
  context.HolidayConfig = await _constraintRepo.GetActiveHolidayConfigAsync();
  }
  else if (request.HolidayConfigId.HasValue)
  {
- // 如果后续实现按ID获取，可在此加载指定配置
  var allConfigs = await _constraintRepo.GetAllHolidayConfigsAsync();
  context.HolidayConfig = allConfigs.FirstOrDefault(c => c.Id == request.HolidayConfigId.Value);
  }
  cancellationToken.ThrowIfCancellationRequested();
-
  if (request.EnabledFixedRuleIds?.Count >0)
  {
  var allRules = await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly: true);
@@ -80,7 +77,6 @@ public class SchedulingService : ISchedulingService
  context.FixedPositionRules = await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly: true);
  }
  cancellationToken.ThrowIfCancellationRequested();
-
  if (request.EnabledManualAssignmentIds?.Count >0)
  {
  var manualRange = await _constraintRepo.GetManualAssignmentsByDateRangeAsync(request.StartDate, request.EndDate, enabledOnly: true);
@@ -91,7 +87,6 @@ public class SchedulingService : ISchedulingService
  context.ManualAssignments = await _constraintRepo.GetManualAssignmentsByDateRangeAsync(request.StartDate, request.EndDate, enabledOnly: true);
  }
  cancellationToken.ThrowIfCancellationRequested();
-
  context.LastConfirmedSchedule = await _historyMgmt.GetLastConfirmedScheduleAsync();
  cancellationToken.ThrowIfCancellationRequested();
 
@@ -177,7 +172,6 @@ public class SchedulingService : ISchedulingService
  histories = histories.Where(h => h.ConfirmTime.Date >= startDate.Value.Date).ToList();
  if (endDate.HasValue)
  histories = histories.Where(h => h.ConfirmTime.Date <= endDate.Value.Date).ToList();
-
  return histories.Select(h => new ScheduleSummaryDto
  {
  Id = h.Schedule.Id,
@@ -208,6 +202,12 @@ public class SchedulingService : ISchedulingService
 
  private static ScheduleDto MapToScheduleDto(Schedule schedule, DateTime? confirmedAt, DateTime? createdAtOverride = null)
  {
+ var positionNames = new Dictionary<int, string>();
+ var personnelNames = new Dictionary<int, string>();
+ foreach (var pid in schedule.PositionIds)
+ positionNames[pid] = string.Empty;
+ foreach (var perId in schedule.PersonalIds)
+ personnelNames[perId] = string.Empty;
  return new ScheduleDto
  {
  Id = schedule.Id,
@@ -219,7 +219,9 @@ public class SchedulingService : ISchedulingService
  Id = s.Id,
  ScheduleId = s.ScheduleId,
  PositionId = s.PositionId,
+ PositionName = positionNames.TryGetValue(s.PositionId, out var pname) ? pname : string.Empty,
  PersonnelId = s.PersonalId,
+ PersonnelName = personnelNames.TryGetValue(s.PersonalId, out var pername) ? pername : string.Empty,
  StartTime = s.StartTime,
  EndTime = s.EndTime,
  PeriodIndex = CalcPeriodIndex(s.StartTime)
@@ -233,8 +235,7 @@ public class SchedulingService : ISchedulingService
 
  private static int CalcPeriodIndex(DateTime startTime)
  {
- // 简单按小时映射到12 段（2小时一个段）
  int hour = startTime.Hour;
- return hour /2; //0-11
+ return hour /2;
  }
 }

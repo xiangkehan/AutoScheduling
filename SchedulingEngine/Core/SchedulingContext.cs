@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq; // added for LINQ operations
 using AutoScheduling3.Models;
 using AutoScheduling3.Models.Constraints;
 
@@ -58,7 +59,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
         }
 
         /// <summary>
-        /// 初始化人员评分状态
+        /// 初始化人员评分状态（包含历史整合）
         /// </summary>
         public void InitializePersonScoreStates()
         {
@@ -71,6 +72,33 @@ namespace AutoScheduling3.SchedulingEngine.Core
                     person.RecentPeriodShiftIntervals
                 );
                 PersonScoreStates[person.Id] = state;
+            }
+            IntegrateHistoryIntoScoreStates();
+        }
+
+        /// <summary>
+        /// 根据最近一次已确认排班整合历史信息（设置最后分配日期与时段）
+        /// </summary>
+        private void IntegrateHistoryIntoScoreStates()
+        {
+            if (LastConfirmedSchedule == null) return;
+            // 找到每个人员最近的一个班次
+            var lastByPerson = new Dictionary<int, SingleShift>();
+            foreach (var shift in LastConfirmedSchedule.Shifts)
+            {
+                if (!lastByPerson.TryGetValue(shift.PersonalId, out var existing) || shift.StartTime > existing.StartTime)
+                {
+                    lastByPerson[shift.PersonalId] = shift;
+                }
+            }
+            foreach (var kvp in lastByPerson)
+            {
+                if (PersonScoreStates.TryGetValue(kvp.Key, out var state))
+                {
+                    var lastShift = kvp.Value;
+                    state.LastAssignedDate = lastShift.StartTime.Date;
+                    state.LastAssignedPeriod = lastShift.StartTime.Hour / 2; //2小时一个时段
+                }
             }
         }
 
