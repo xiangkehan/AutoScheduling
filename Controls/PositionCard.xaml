@@ -14,7 +14,7 @@
     BorderThickness="1"
     Padding="12">
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <Grid x:Name="LayoutRoot" RowDefinitions="Auto,Auto,*,Auto">
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
             <FontIcon Glyph="&#xE806;" FontSize="16"/>
             <TextBlock Text="{x:Bind Position.Name, Mode=OneWay}" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
@@ -45,25 +45,7 @@
                 <Button Style="{StaticResource ButtonRevealStyle}" Content="É¾³ý" FontSize="10" MinWidth="44"/>
             </StackPanel>
         </StackPanel>
-    </Grid>
 
-    <UserControl.Resources>
-        <Style TargetType="UserControl">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="UserControl">
-                        <Grid>
-                            <ContentPresenter />
-                            <Border x:Name="SelectionBorder" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="2" CornerRadius="8" Opacity="0" />
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="local:PositionCard.IsSelected" Value="True">
-                                <Setter Target="SelectionBorder.Opacity" Value="1" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </UserControl.Resources>
+        <Border x:Name="SelectionBorder" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="2" CornerRadius="8" Opacity="0" />
+    </Grid>
 </UserControl>
