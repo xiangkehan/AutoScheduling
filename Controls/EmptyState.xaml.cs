@@ -57,16 +57,7 @@ namespace AutoScheduling3.Controls
 
         public EmptyState()
         {
-            // Manual XAML load fallback: ensure component tree if InitializeComponent not generated
-            if (Content == null)
-            {
-                var xaml = @"<StackPanel xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' Spacing='16' Padding='24'>
-                    <FontIcon Glyph='{x:Bind IconGlyph, Mode=OneWay}' FontSize='64' HorizontalAlignment='Center' />
-                    <TextBlock Text='{x:Bind Title, Mode=OneWay}' HorizontalAlignment='Center' FontSize='16' FontWeight='SemiBold' />
-                    <TextBlock Text='{x:Bind Subtitle, Mode=OneWay}' HorizontalAlignment='Center' FontSize='13' TextWrapping='Wrap' TextAlignment='Center' />
-                </StackPanel>";
-                Content = (UIElement)XamlReader.Load(xaml);
-            }
+            InitializeComponent(); 
         }
 
         private static void OnIsVisibleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

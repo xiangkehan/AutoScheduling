@@ -19,6 +19,7 @@
     </Page.Resources>
 
     <Grid>
+        <!-- Main content visible when Schedule not null -->
         <Grid Visibility="{x:Bind ViewModel.Schedule, Converter={StaticResource NullToVisibilityConverter}, Mode=OneWay}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -34,7 +35,7 @@
                             <TextBlock Text="{x:Bind ViewModel.Schedule.Title, Mode=OneWay, FallbackValue='Schedule Result'}" Style="{ThemeResource TitleTextBlockStyle}"/>
                             <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
                                 <Run Text="{x:Bind ViewModel.Schedule.StartDate, Mode=OneWay, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
-                                <Run Text="to"/>
+                                <Run Text=" to "/>
                                 <Run Text="{x:Bind ViewModel.Schedule.EndDate, Mode=OneWay, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
                             </TextBlock>
                         </StackPanel>
@@ -43,11 +44,11 @@
                     <AppBarToggleButton Icon="Flag" Label="Conflicts" IsChecked="{x:Bind ViewModel.IsConflictPaneOpen, Mode=TwoWay}"/>
                     <AppBarSeparator/>
                     <AppBarElementContainer>
-                        <RadioButtons Header="View Mode" SelectedIndex="{x:Bind (int)ViewModel.CurrentViewMode, Mode=TwoWay}">
-                            <RadioButton Content="Grid"/>
-                            <RadioButton Content="List"/>
-                            <RadioButton Content="By Personnel"/>
-                        </RadioButtons>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <RadioButton Content="Grid" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Grid}"/>
+                            <RadioButton Content="List" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=List}"/>
+                            <RadioButton Content="By Personnel" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=ByPersonnel}"/>
+                        </StackPanel>
                     </AppBarElementContainer>
                 </CommandBar>
             </StackPanel>
@@ -59,7 +60,7 @@
                        DisplayMode="Inline"
                        OpenPaneLength="360">
                 <SplitView.Pane>
-                    <Grid BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1,0,0,0}" Padding="12">
+                    <Grid BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1,0,0,0" Padding="12">
                         <StackPanel Spacing="8">
                             <TextBlock Text="Conflicts and Warnings" Style="{ThemeResource SubtitleTextBlockStyle}"/>
                             <ListView ItemsSource="{x:Bind ViewModel.Conflicts, Mode=OneWay}" SelectionMode="None">
@@ -77,15 +78,15 @@
                         <!-- Grid View -->
                         <controls:ScheduleGridControl
                             Schedule="{x:Bind ViewModel.Schedule, Mode=OneWay}"
-                            Visibility="{x:Bind (int)ViewModel.CurrentViewMode, Mode=OneWay, ConverterParameter=0, Converter={StaticResource IntToVisibilityConverter}}"/>
+                            Visibility="{x:Bind ViewModel.CurrentViewMode, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0}"/>
 
                         <!-- List View (Placeholder) -->
-                        <Grid Visibility="{x:Bind (int)ViewModel.CurrentViewMode, Mode=OneWay, ConverterParameter=1, Converter={StaticResource IntToVisibilityConverter}}">
+                        <Grid Visibility="{x:Bind ViewModel.CurrentViewMode, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=1}">
                             <TextBlock Text="List View - To be implemented" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
 
                         <!-- By Personnel View (Placeholder) -->
-                        <Grid Visibility="{x:Bind (int)ViewModel.CurrentViewMode, Mode=OneWay, ConverterParameter=2, Converter={StaticResource IntToVisibilityConverter}}">
+                        <Grid Visibility="{x:Bind ViewModel.CurrentViewMode, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=2}">
                             <TextBlock Text="View By Personnel - To be implemented" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                     </Grid>
@@ -97,7 +98,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                     <Button Content="Back" Command="{x:Bind ViewModel.BackCommand}"/>
                     <Button Content="Reschedule" Command="{x:Bind ViewModel.RescheduleCommand}"/>
-                    <Button Content="Confirm Schedule" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.ConfirmCommand}" IsEnabled="{x:Bind ViewModel.Schedule.IsConfirmed, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True}"/>
+                    <Button Content="Confirm Schedule" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.ConfirmCommand}" IsEnabled="{x:Bind ViewModel.Schedule.ConfirmedAt, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
                 </StackPanel>
             </Grid>
         </Grid>
@@ -108,7 +109,7 @@
 
         <!-- Empty State -->
         <TextBlock Text="No schedule loaded."
-                   Visibility="{x:Bind ViewModel.Schedule, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=invert, Mode=OneWay]}"
+                   Visibility="{x:Bind ViewModel.Schedule, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=invert, Mode=OneWay}"
                    HorizontalAlignment="Center" VerticalAlignment="Center" Style="{ThemeResource SubtitleTextBlockStyle}"/>
     </Grid>
 </Page>

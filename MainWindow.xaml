@@ -37,6 +37,36 @@
                     <FontIcon Glyph="&#xE82F;"/>
                 </NavigationViewItem.Icon>
             </NavigationViewItem>
+
+            <NavigationViewItemSeparator/>
+
+            <!-- 排班流程 -->
+            <NavigationViewItemHeader Content="排班流程"/>
+            <NavigationViewItem Content="创建排班" Tag="CreateScheduling">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE710;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="模板管理" Tag="TemplateManage">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE736;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="草稿箱" Tag="Drafts">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE74C;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+
+            <NavigationViewItemSeparator/>
+
+            <!-- 历史与分析 -->
+            <NavigationViewItemHeader Content="历史与分析"/>
+            <NavigationViewItem Content="历史记录" Tag="History">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE81C;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
         </NavigationView.MenuItems>
 
         <NavigationView.PaneFooter>

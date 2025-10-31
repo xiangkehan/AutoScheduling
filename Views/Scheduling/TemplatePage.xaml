@@ -1,16 +1,16 @@
 <Page
-    x:Class="AutoScheduling3.Views.Scheduling.TemplatePage"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:dto="using:AutoScheduling3.DTOs"
-    xmlns:models="using:AutoScheduling3.Models.Constraints"
-    xmlns:converters="using:AutoScheduling3.Converters"
-    xmlns:viewmodels="using:AutoScheduling3.ViewModels.Scheduling"
-    mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-    d:DataContext="{d:DesignInstance Type=viewmodels:TemplateViewModel, IsDesignTimeCreatable=True}">
+ x:Class="AutoScheduling3.Views.Scheduling.TemplatePage"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+ xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+ xmlns:dto="using:AutoScheduling3.DTOs"
+ xmlns:models="using:AutoScheduling3.Models.Constraints"
+ xmlns:converters="using:AutoScheduling3.Converters"
+ xmlns:viewmodels="using:AutoScheduling3.ViewModels.Scheduling"
+ mc:Ignorable="d"
+ Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+ d:DataContext="{d:DesignInstance Type=viewmodels:TemplateViewModel, IsDesignTimeCreatable=True}">
 
     <Page.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" Inverted="False"/>
@@ -21,13 +21,13 @@
         <DataTemplate x:Key="PersonnelListItemTemplate" x:DataType="dto:PersonnelDto">
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
-                <TextBlock Text="{x:Bind Title}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Text="{x:Bind PositionName}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
         </DataTemplate>
         <DataTemplate x:Key="PositionListItemTemplate" x:DataType="dto:PositionDto">
             <StackPanel>
                 <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
-                <TextBlock Text="{x:Bind LocationName}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                <TextBlock Text="{x:Bind Location}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
             </StackPanel>
         </DataTemplate>
     </Page.Resources>
@@ -50,12 +50,12 @@
         </CommandBar>
 
         <SplitView Grid.Row="1"
-                   IsPaneOpen="{Binding IsDetailPaneOpen, Mode=TwoWay}"
-                   PanePlacement="Right"
-                   DisplayMode="Inline"
-                   OpenPaneLength="500">
+ IsPaneOpen="{Binding IsDetailPaneOpen, Mode=TwoWay}"
+ PanePlacement="Right"
+ DisplayMode="Inline"
+ OpenPaneLength="500">
             <SplitView.Pane>
-                <Grid BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1,0,0,0}">
+                <Grid BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1,0,0,0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Padding="16" Spacing="16" Visibility="{Binding SelectedTemplate, Converter={StaticResource NullToVisibilityConverter}}">
                             <TextBlock Text="{Binding SelectedTemplate.Name, FallbackValue='Select a Template'}" Style="{ThemeResource TitleTextBlockStyle}"/>
@@ -67,7 +67,14 @@
                                 <ToggleSwitch Header="Default Template" IsOn="{Binding SelectedTemplate.IsDefault, Mode=TwoWay}"/>
                             </StackPanel>
 
-                            <Expander Header="{Binding SelectedPersonnel.Count, FallbackValue=0, StringFormat='Participating Personnel ({0})'}" IsExpanded="True">
+                            <Expander IsExpanded="True">
+                                <Expander.Header>
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Participating Personnel ("/>
+                                        <TextBlock Text="{Binding SelectedPersonnel.Count}"/>
+                                        <TextBlock Text=")"/>
+                                    </StackPanel>
+                                </Expander.Header>
                                 <Grid MinHeight="200">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -83,7 +90,14 @@
                                 </Grid>
                             </Expander>
 
-                            <Expander Header="{Binding SelectedPositions.Count, FallbackValue=0, StringFormat='Participating Positions ({0})'}" IsExpanded="True">
+                            <Expander IsExpanded="True">
+                                <Expander.Header>
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Participating Positions ("/>
+                                        <TextBlock Text="{Binding SelectedPositions.Count}"/>
+                                        <TextBlock Text=")"/>
+                                    </StackPanel>
+                                </Expander.Header>
                                 <Grid MinHeight="200">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -101,17 +115,15 @@
 
                             <Expander Header="Constraint Configuration" IsExpanded="True">
                                 <StackPanel Spacing="12">
-                                    <!-- Holiday Config -->
                                     <StackPanel Spacing="8">
                                         <TextBlock Text="Holiday Configuration" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
                                         <ToggleSwitch IsOn="{Binding SelectedTemplate.UseActiveHolidayConfig, Mode=TwoWay}" OffContent="Use a specific configuration" OnContent="Use the active configuration"/>
                                         <ComboBox Header="Holiday Configuration" ItemsSource="{Binding HolidayConfigs}"
-                                                  SelectedValue="{Binding SelectedTemplate.HolidayConfigId, Mode=TwoWay, FallbackValue=-1}"
-                                                  SelectedValuePath="Id" DisplayMemberPath="ConfigName"
-                                                  IsEnabled="{Binding SelectedTemplate.UseActiveHolidayConfig, Converter={StaticResource InvertedBoolToVisibilityConverter}, Mode=OneWay}"/>
+ SelectedValue="{Binding SelectedTemplate.HolidayConfigId, Mode=TwoWay, FallbackValue=-1}"
+ SelectedValuePath="Id" DisplayMemberPath="ConfigName"
+ IsEnabled="{Binding SelectedTemplate.UseActiveHolidayConfig, Converter={StaticResource InvertedBoolToVisibilityConverter}, Mode=OneWay}"/>
                                     </StackPanel>
 
-                                    <!-- Fixed Position Rules -->
                                     <StackPanel Spacing="8">
                                         <TextBlock Text="Fixed Position Rules" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
                                         <ListView ItemsSource="{Binding FixedPositionRules}" SelectionMode="None" MaxHeight="200">
@@ -140,10 +152,10 @@
             <SplitView.Content>
                 <Grid>
                     <GridView ItemsSource="{Binding Templates}"
-                              SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}"
-                              SelectionMode="Single"
-                              IsItemClickEnabled="True"
-                              Padding="12">
+                        SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}"
+                        SelectionMode="Single"
+                        IsItemClickEnabled="True"
+                        Padding="12">
                         <GridView.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <ItemsWrapGrid Orientation="Horizontal" ItemWidth="300" ItemHeight="200"/>
@@ -163,10 +175,7 @@
                                                 <Border Background="{ThemeResource SystemAccentColorLight2}" CornerRadius="4" Padding="6,2">
                                                     <TextBlock Text="{x:Bind TemplateType}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" FontSize="12"/>
                                                 </Border>
-                                                <ToolTipService.ToolTip>
-                                                    <TextBlock Text="Default Template"/>
-                                                </ToolTipService.ToolTip>
-                                                <FontIcon Glyph="&#xE734;" Visibility="{x:Bind IsDefault, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" Foreground="{ThemeResource SystemAccentColor}"/>
+                                                <FontIcon Glyph="&#xE734;" Visibility="{x:Bind IsDefault, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" Foreground="{ThemeResource SystemAccentColor}" ToolTipService.ToolTip="Default Template"/>
                                             </StackPanel>
                                             <Grid Margin="0,8,0,0">
                                                 <Grid.ColumnDefinitions>
@@ -191,8 +200,8 @@
                     </GridView>
                     <ProgressRing IsActive="{Binding IsLoading}" VerticalAlignment="Center" HorizontalAlignment="Center" Width="50" Height="50"/>
                     <TextBlock Text="No templates found. Create one to get started."
-                               Visibility="{Binding Templates.Count, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=invert, Mode=OneWay}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+ Visibility="{Binding Templates.Count, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=invert, Mode=OneWay}"
+ HorizontalAlignment="Center" VerticalAlignment="Center" Style="{ThemeResource SubtitleTextBlockStyle}"/>
                 </Grid>
             </SplitView.Content>
         </SplitView>

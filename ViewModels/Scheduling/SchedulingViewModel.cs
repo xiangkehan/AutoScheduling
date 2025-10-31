@@ -23,13 +23,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private readonly NavigationService _navigation_service; // 保持原导航服务字段名
         private Microsoft.UI.Xaml.Controls.ContentDialog? _progressDialog; //进度对话框引用
 
-        // 第5步汇总数据结构
-        public class SummarySection
-        {
-            public string Header { get; set; } = string.Empty;
-            public List<string> Lines { get; set; } = new();
-        }
-
         [ObservableProperty]
         private int _currentStep = 1;
 

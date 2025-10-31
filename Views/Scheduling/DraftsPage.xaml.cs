@@ -12,7 +12,7 @@ namespace AutoScheduling3.Views.Scheduling
         public DraftsPage()
         {
             this.InitializeComponent();
-            ViewModel = (Application.Current as App).ServiceProvider.GetRequiredService<DraftsViewModel>();
+            ViewModel = (App.Current as App).ServiceProvider.GetRequiredService<DraftsViewModel>();
             this.DataContext = ViewModel;
             this.Name = "DraftsPage"; // For ElementName binding
         }

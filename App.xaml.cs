@@ -11,6 +11,9 @@ using AutoScheduling3.Data;
 using AutoScheduling3.DTOs.Mappers;
 using System;
 using WinRT.Interop;
+using AutoScheduling3.ViewModels.DataManagement;
+using AutoScheduling3.ViewModels.History;
+using AutoScheduling3.History;
 
 namespace AutoScheduling3
 {
@@ -27,6 +30,11 @@ namespace AutoScheduling3
         /// 主窗口实例
         /// </summary>
         public static Window? MainWindow { get; private set; }
+
+        /// <summary>
+        /// 主窗口句柄
+        /// </summary>
+        public static nint MainWindowHandle { get; private set; }
 
         /// <summary>
         /// 数据库路径
@@ -66,6 +74,7 @@ namespace AutoScheduling3
             services.AddSingleton<ITemplateRepository>(sp => new SchedulingTemplateRepository(DatabasePath));
             services.AddSingleton(sp => new SchedulingRepository(DatabasePath));
             services.AddSingleton(sp => new ConstraintRepository(DatabasePath));
+            services.AddSingleton(sp => new HistoryManagement(DatabasePath));
 
             // 注册 Mappers
             services.AddSingleton<PersonnelMapper>();
@@ -78,6 +87,7 @@ namespace AutoScheduling3
             services.AddSingleton<IPositionService, PositionService>();
             services.AddSingleton<ISkillService, SkillService>();
             services.AddSingleton<ITemplateService, TemplateService>();
+            services.AddSingleton<IHistoryService, HistoryService>();
             services.AddSingleton<ISchedulingService>(sp =>
             {
                 var svc = new SchedulingService(DatabasePath);
@@ -96,6 +106,8 @@ namespace AutoScheduling3
             services.AddTransient<TemplateViewModel>();
             services.AddTransient<SchedulingViewModel>();
             services.AddTransient<ScheduleResultViewModel>();
+            services.AddTransient<HistoryViewModel>();
+            services.AddTransient<HistoryDetailViewModel>();
 
             ServiceProvider = services.BuildServiceProvider();
         }
@@ -114,6 +126,7 @@ namespace AutoScheduling3
                 var schedulingRepo = ServiceProvider.GetRequiredService<SchedulingRepository>();
                 var constraintRepo = ServiceProvider.GetRequiredService<ConstraintRepository>();
                 var schedulingService = ServiceProvider.GetRequiredService<ISchedulingService>() as SchedulingService;
+                var historyManagement = ServiceProvider.GetRequiredService<HistoryManagement>();
 
                 if (personalRepo != null) await personalRepo.InitAsync();
                 if (positionRepo != null) await positionRepo.InitAsync();
@@ -121,6 +134,7 @@ namespace AutoScheduling3
                 if (templateRepo != null) await templateRepo.InitAsync();
                 if (schedulingRepo != null) await schedulingRepo.InitAsync();
                 if (constraintRepo != null) await constraintRepo.InitAsync();
+                if (historyManagement != null) await historyManagement.InitAsync();
                 if (schedulingService != null) await schedulingService.InitializeAsync();
             }
             catch (System.Exception ex)
@@ -150,5 +164,8 @@ namespace AutoScheduling3
             MainWindowHandle = WindowNative.GetWindowHandle(_window);
             _window.Activate();
         }
+
+        // 在 App 类中添加 MainWindowHandle 字段
+        
     }
 }

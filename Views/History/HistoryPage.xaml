@@ -1,0 +1,134 @@
+<Page
+    x:Class="AutoScheduling3.Views.History.HistoryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:AutoScheduling3.Controls"
+    xmlns:converters="using:AutoScheduling3.Converters"
+    xmlns:dto="using:AutoScheduling3.DTOs"
+    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
+    mc:Ignorable="d"
+    x:Name="HistoryPage">
+
+    <Page.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Padding="16" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                <TextBox PlaceholderText="搜索名称" Width="200" Text="{x:Bind ViewModel.Keyword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <CalendarDatePicker Header="开始日期" PlaceholderText="选择日期" Date="{x:Bind ViewModel.StartDate, Mode=TwoWay}" />
+                <CalendarDatePicker Header="结束日期" PlaceholderText="选择日期" Date="{x:Bind ViewModel.EndDate, Mode=TwoWay}" />
+                <Button Content="搜索" Command="{x:Bind ViewModel.SearchCommand}" Style="{ThemeResource AccentButtonStyle}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Command="{x:Bind ViewModel.SwitchViewCommand}" CommandParameter="Timeline">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <FontIcon Glyph="&#xE8A3;" />
+                        <TextBlock Text="时间线" />
+                    </StackPanel>
+                </Button>
+                <Button Command="{x:Bind ViewModel.SwitchViewCommand}" CommandParameter="List">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <FontIcon Glyph="&#xE8A4;" />
+                        <TextBlock Text="列表" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <controls:LoadingIndicator IsLoading="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
+            <controls:EmptyState IsVisible="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" Title="暂无历史记录" Subtitle="还没有任何已确认的排班记录。" />
+
+            <!-- Timeline View -->
+            <ScrollViewer Visibility="{x:Bind ViewModel.IsTimelineView, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ItemsRepeater ItemsSource="{x:Bind ViewModel.GroupedHistorySchedules, Mode=OneWay}">
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="16">
+                                <TextBlock Text="{Binding Key}" Style="{ThemeResource TitleTextBlockStyle}" />
+                                <ItemsRepeater ItemsSource="{Binding}">
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate x:DataType="dto:HistoryScheduleDto">
+                                            <toolkit:Card Margin="0,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" Padding="16" Spacing="4" VerticalAlignment="Center">
+                                                        <FontIcon Glyph="&#xE787;" FontSize="24" />
+                                                        <TextBlock Text="{x:Bind ConfirmTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='MM-dd'}" HorizontalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Padding="16" Spacing="4">
+                                                        <TextBlock Text="{x:Bind Name}" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="16">
+                                                            <TextBlock>
+                                                                <Run Text="人员数:" />
+                                                                <Run Text="{x:Bind NumberOfPersonnel}" />
+                                                            </TextBlock>
+                                                            <TextBlock>
+                                                                <Run Text="哨位数:" />
+                                                                <Run Text="{x:Bind NumberOfPositions}" />
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{x:Bind ConfirmTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd HH:mm'}" Style="{ThemeResource CaptionTextBlockStyle}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2" Padding="16" Spacing="8" VerticalAlignment="Center">
+                                                        <Button Content="查看详情" Command="{Binding DataContext.ViewDetailCommand, ElementName=HistoryPage}" CommandParameter="{x:Bind Id}" />
+                                                        <Button Content="导出" />
+                                                        <Button Content="对比" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </toolkit:Card>
+                                        </DataTemplate>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </ScrollViewer>
+
+            <!-- List View -->
+            <toolkit:DataGrid
+                ItemsSource="{x:Bind ViewModel.HistorySchedules, Mode=OneWay}"
+                AutoGenerateColumns="False"
+                Visibility="{x:Bind ViewModel.IsListView, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                Margin="16">
+                <toolkit:DataGrid.Columns>
+                    <toolkit:DataGridTextColumn Header="确认日期" Binding="{Binding ConfirmTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd HH:mm'}" />
+                    <toolkit:DataGridTextColumn Header="排班表名称" Binding="{Binding Name}" />
+                    <toolkit:DataGridTextColumn Header="日期范围" Binding="{Binding StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}" />
+                    <toolkit:DataGridTextColumn Header="人员数" Binding="{Binding NumberOfPersonnel}" />
+                    <toolkit:DataGridTextColumn Header="哨位数" Binding="{Binding NumberOfPositions}" />
+                    <toolkit:DataGridTemplateColumn Header="操作">
+                        <toolkit:DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="dto:HistoryScheduleDto">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="查看详情" Command="{Binding DataContext.ViewDetailCommand, ElementName=HistoryPage}" CommandParameter="{x:Bind Id}" />
+                                    <Button Content="导出" />
+                                    <Button Content="对比" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </toolkit:DataGridTemplateColumn.CellTemplate>
+                    </toolkit:DataGridTemplateColumn>
+                </toolkit:DataGrid.Columns>
+            </toolkit:DataGrid>
+        </Grid>
+    </Grid>
+</Page>

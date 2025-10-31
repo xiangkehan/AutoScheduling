@@ -15,10 +15,7 @@ namespace AutoScheduling3.Views.Scheduling
         public CreateSchedulingPage()
         {
             this.InitializeComponent();
-            ViewModel = (Application.Current as App).ServiceProvider.GetRequiredService<SchedulingViewModel>();
-            // The DataContext is set in XAML for x:Bind to work.
-            // If you need to set it here, ensure it's what you intend.
-            // this.DataContext = ViewModel;
+            ViewModel = (App.Current as App).ServiceProvider.GetRequiredService<SchedulingViewModel>();
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -42,8 +39,8 @@ namespace AutoScheduling3.Views.Scheduling
 
         private void AddPersonnel_Click(object sender, RoutedEventArgs e)
         {
-            var selectedItems = AvailablePersonnelList.SelectedItems.Cast<PersonnelDto>().ToList();
-            if (selectedItems.Any())
+            var selectedItems = AvailablePersonnelList?.SelectedItems.Cast<PersonnelDto>().ToList();
+            if (selectedItems != null && selectedItems.Any())
             {
                 foreach (var item in selectedItems)
                 {
@@ -57,8 +54,8 @@ namespace AutoScheduling3.Views.Scheduling
 
         private void RemovePersonnel_Click(object sender, RoutedEventArgs e)
         {
-            var selectedItems = SelectedPersonnelList.SelectedItems.Cast<PersonnelDto>().ToList();
-            if (selectedItems.Any())
+            var selectedItems = SelectedPersonnelList?.SelectedItems.Cast<PersonnelDto>().ToList();
+            if (selectedItems != null && selectedItems.Any())
             {
                 foreach (var item in selectedItems)
                 {
@@ -69,8 +66,8 @@ namespace AutoScheduling3.Views.Scheduling
 
         private void AddPosition_Click(object sender, RoutedEventArgs e)
         {
-            var selectedItems = AvailablePositionsList.SelectedItems.Cast<PositionDto>().ToList();
-            if (selectedItems.Any())
+            var selectedItems = AvailablePositionsList?.SelectedItems.Cast<PositionDto>().ToList();
+            if (selectedItems != null && selectedItems.Any())
             {
                 foreach (var item in selectedItems)
                 {
@@ -84,8 +81,8 @@ namespace AutoScheduling3.Views.Scheduling
 
         private void RemovePosition_Click(object sender, RoutedEventArgs e)
         {
-            var selectedItems = SelectedPositionsList.SelectedItems.Cast<PositionDto>().ToList();
-            if (selectedItems.Any())
+            var selectedItems = SelectedPositionsList?.SelectedItems.Cast<PositionDto>().ToList();
+            if (selectedItems != null && selectedItems.Any())
             {
                 foreach (var item in selectedItems)
                 {

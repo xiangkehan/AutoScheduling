@@ -6,26 +6,23 @@ namespace AutoScheduling3.Converters;
 
 /// <summary>
 /// 布尔值到可见性的转换器
+/// 支持通过 Inverted 属性或 "Inverse" 参数反转逻辑。
 /// </summary>
 public class BoolToVisibilityConverter : IValueConverter
 {
+    // 新增：供 XAML直接设置的反转属性
+    public bool Inverted { get; set; }
+
     public object Convert(object value, Type targetType, object parameter, string language)
     {
         if (value is bool boolValue)
         {
-            // 如果参数是 "Inverse"，则反转逻辑
-            bool inverse = parameter is string param && param.Equals("Inverse", StringComparison.OrdinalIgnoreCase);
-            
-            if (inverse)
-            {
-                return boolValue ? Visibility.Collapsed : Visibility.Visible;
-            }
-            else
-            {
-                return boolValue ? Visibility.Visible : Visibility.Collapsed;
-            }
+            bool inverseByParam = parameter is string param && param.Equals("Inverse", StringComparison.OrdinalIgnoreCase);
+            bool inverse = Inverted || inverseByParam;
+            return inverse
+                ? (boolValue ? Visibility.Collapsed : Visibility.Visible)
+                : (boolValue ? Visibility.Visible : Visibility.Collapsed);
         }
-
         return Visibility.Collapsed;
     }
 
@@ -33,18 +30,12 @@ public class BoolToVisibilityConverter : IValueConverter
     {
         if (value is Visibility visibility)
         {
-            bool inverse = parameter is string param && param.Equals("Inverse", StringComparison.OrdinalIgnoreCase);
-            
-            if (inverse)
-            {
-                return visibility == Visibility.Collapsed;
-            }
-            else
-            {
-                return visibility == Visibility.Visible;
-            }
+            bool inverseByParam = parameter is string param && param.Equals("Inverse", StringComparison.OrdinalIgnoreCase);
+            bool inverse = Inverted || inverseByParam;
+            return inverse
+                ? visibility == Visibility.Collapsed
+                : visibility == Visibility.Visible;
         }
-
         return false;
     }
 }

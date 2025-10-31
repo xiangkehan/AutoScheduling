@@ -4,6 +4,7 @@ using AutoScheduling3.Views.DataManagement;
 using AutoScheduling3.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using AutoScheduling3.Views.Scheduling;
+using AutoScheduling3.Views.History;
 
 namespace AutoScheduling3
 {
@@ -38,6 +39,8 @@ namespace AutoScheduling3
             _navigationService.RegisterPage("TemplateManage", typeof(TemplatePage));
             _navigationService.RegisterPage("ScheduleResult", typeof(ScheduleResultPage));
             _navigationService.RegisterPage("Drafts", typeof(DraftsPage));
+            _navigationService.RegisterPage("History", typeof(HistoryPage));
+            _navigationService.RegisterPage("HistoryDetail", typeof(HistoryDetailPage));
 
             // 默认导航
             _navigationService.NavigateTo("Personnel");

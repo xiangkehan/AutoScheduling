@@ -1,15 +1,17 @@
 using System;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.Helpers;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Collections.Generic;
 using Windows.Storage.Pickers;
 using Windows.Storage;
 using WinRT.Interop;
+using AutoScheduling3.Models;
+using AutoScheduling3.ViewModels.Base;
 
 namespace AutoScheduling3.ViewModels.Scheduling
 {
@@ -18,30 +20,53 @@ namespace AutoScheduling3.ViewModels.Scheduling
     /// <summary>
     /// 排班结果页面 ViewModel：加载排班详情、确认、导出、返回等
     /// </summary>
-    [ObservableObject]
-    public partial class ScheduleResultViewModel
+    public partial class ScheduleResultViewModel : ViewModelBase
     {
         private readonly ISchedulingService _schedulingService;
         private readonly DialogService _dialogService;
         private readonly NavigationService _navigationService;
 
-        [ObservableProperty]
         private ScheduleDto _schedule;
+        public ScheduleDto Schedule
+        {
+            get => _schedule;
+            set => SetProperty(ref _schedule, value);
+        }
 
-        [ObservableProperty]
         private bool _isLoading;
+        public bool IsLoading
+        {
+            get => _isLoading;
+            set => SetProperty(ref _isLoading, value);
+        }
 
-        [ObservableProperty]
         private bool _isConfirming;
+        public bool IsConfirming
+        {
+            get => _isConfirming;
+            set => SetProperty(ref _isConfirming, value);
+        }
 
-        [ObservableProperty]
         private ScheduleViewMode _currentViewMode = ScheduleViewMode.Grid;
+        public ScheduleViewMode CurrentViewMode
+        {
+            get => _currentViewMode;
+            set => SetProperty(ref _currentViewMode, value);
+        }
 
-        [ObservableProperty]
         private bool _isConflictPaneOpen = true;
+        public bool IsConflictPaneOpen
+        {
+            get => _isConflictPaneOpen;
+            set => SetProperty(ref _isConflictPaneOpen, value);
+        }
 
-        [ObservableProperty]
         private ObservableCollection<ConflictDto> _conflicts = new();
+        public ObservableCollection<ConflictDto> Conflicts
+        {
+            get => _conflicts;
+            set => SetProperty(ref _conflicts, value);
+        }
 
         public IAsyncRelayCommand<int> LoadScheduleCommand { get; }
         public IAsyncRelayCommand ConfirmCommand { get; }

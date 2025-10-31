@@ -1,0 +1,110 @@
+<Page
+    x:Class="AutoScheduling3.Views.History.HistoryDetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:AutoScheduling3.Controls"
+    xmlns:converters="using:AutoScheduling3.Converters"
+    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
+    xmlns:charts="using:CommunityToolkit.WinUI.Controls.Charts"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <converters:DateTimeFormatConverter x:Key="DateTimeFormatConverter" />
+    </Page.Resources>
+
+    <Grid Padding="16">
+        <controls:LoadingIndicator IsLoading="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
+
+        <ScrollViewer>
+            <StackPanel Spacing="16">
+                <!-- Basic Info Card -->
+                <toolkit:Card>
+                    <StackPanel Padding="16" Spacing="8">
+                        <TextBlock Text="{x:Bind ViewModel.ScheduleDetail.Name, Mode=OneWay}" Style="{ThemeResource TitleTextBlockStyle}" />
+                        <TextBlock Style="{ThemeResource SubtitleTextBlockStyle}">
+                            <Run Text="{x:Bind ViewModel.ScheduleDetail.StartDate, Mode=OneWay, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}" />
+                            <Run Text=" to " />
+                            <Run Text="{x:Bind ViewModel.ScheduleDetail.EndDate, Mode=OneWay, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}" />
+                        </TextBlock>
+                        <TextBlock Text="{x:Bind ViewModel.ScheduleDetail.ConfirmTime, Mode=OneWay, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd HH:mm:ss'}" Style="{ThemeResource CaptionTextBlockStyle}" />
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                            <TextBlock Text="参与人员:" FontWeight="SemiBold" />
+                            <ItemsRepeater ItemsSource="{x:Bind ViewModel.ScheduleDetail.PersonnelNames, Mode=OneWay}">
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" Margin="0,0,8,0" />
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="参与哨位:" FontWeight="SemiBold" />
+                            <ItemsRepeater ItemsSource="{x:Bind ViewModel.ScheduleDetail.PositionNames, Mode=OneWay}">
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" Margin="0,0,8,0" />
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                        </StackPanel>
+                    </StackPanel>
+                </toolkit:Card>
+
+                <!-- Schedule Grid (Read-only) -->
+                <TextBlock Text="排班表网格" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <!-- Placeholder for the read-only schedule grid -->
+                <Border Height="300" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <TextBlock Text="Read-only Schedule Grid will be here" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+
+                <!-- Statistics Panel -->
+                <TextBlock Text="统计信息" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Spacing="8">
+                        <toolkit:Card>
+                            <StackPanel Padding="16">
+                                <TextBlock Text="总班次数" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                                <TextBlock Text="{x:Bind ViewModel.ScheduleDetail.Statistics.TotalShifts, Mode=OneWay}" Style="{ThemeResource HeaderTextBlockStyle}" />
+                            </StackPanel>
+                        </toolkit:Card>
+                        <toolkit:Card>
+                            <StackPanel Padding="16">
+                                <TextBlock Text="人均班次" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                                <TextBlock Text="{x:Bind ViewModel.ScheduleDetail.Statistics.AverageShiftsPerPerson, Mode=OneWay, StringFormat='{}{0:F2}'}" Style="{ThemeResource HeaderTextBlockStyle}" />
+                            </StackPanel>
+                        </toolkit:Card>
+                        
+                        <TextBlock Text="各时段分布" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,16,0,0" />
+                        <charts:BarChart ItemsSource="{x:Bind ViewModel.ScheduleDetail.Statistics.ShiftsPerTimeSlot, Mode=OneWay}">
+                            <charts:BarChart.XAxis>
+                                <charts:Axis Title="时段" />
+                            </charts:BarChart.XAxis>
+                            <charts:BarChart.YAxis>
+                                <charts:Axis Title="班次数" />
+                            </charts:BarChart.YAxis>
+                        </charts:BarChart>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="8">
+                        <TextBlock Text="人员负载" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                        <charts:BarChart ItemsSource="{x:Bind ViewModel.ScheduleDetail.Statistics.ShiftsPerPerson, Mode=OneWay}" Orientation="Horizontal">
+                            <charts:BarChart.XAxis>
+                                <charts:Axis Title="班次数" />
+                            </charts:BarChart.XAxis>
+                            <charts:BarChart.YAxis>
+                                <charts:Axis Title="人员" />
+                            </charts:BarChart.YAxis>
+                        </charts:BarChart>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

@@ -18,7 +18,8 @@
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <SymbolIcon Symbol="Contact"/>
                 <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
-                <TextBlock Text="{x:Bind Title}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <!-- Title property not present; use PositionName -->
+                <TextBlock Text="{x:Bind PositionName}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
         </DataTemplate>
 
@@ -26,7 +27,8 @@
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <SymbolIcon Symbol="MapPin"/>
                 <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
-                <TextBlock Text="{x:Bind LocationName}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <!-- LocationName not present; use Location -->
+                <TextBlock Text="{x:Bind Location}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
         </DataTemplate>
     </Page.Resources>
@@ -40,9 +42,9 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="24,24,24,12">
-            <TextBlock Text="´´½¨ÅÅ°à" Style="{ThemeResource TitleTextBlockStyle}"/>
-            <TextBlock Text="Í¨¹ý·Ö²½Ïòµ¼Íê³ÉÅÅ°à²ÎÊýÅäÖÃ²¢Ö´ÐÐÅÅ°à" Style="{ThemeResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-            <InfoBar Title="´ÓÄ£°å¼ÓÔØ" Message="ÒÑ¼ÓÔØÄ£°å£¬ÇëÈ·ÈÏÈÕÆÚºÍÃû³ÆºóÖ±½Ó½øÈëµÚ5²½Ö´ÐÐÅÅ°à" Severity="Success"
+            <TextBlock Text="åˆ›å»ºæŽ’ç­" Style="{ThemeResource TitleTextBlockStyle}"/>
+            <TextBlock Text="é€šè¿‡åˆ†æ­¥å‘å¯¼å®ŒæˆæŽ’ç­å‚æ•°é…ç½®å¹¶æ‰§è¡ŒæŽ’ç­" Style="{ThemeResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <InfoBar Title="ä»Žæ¨¡æ¿åŠ è½½" Message="å·²åŠ è½½æ¨¡æ¿ï¼Œè¯·ç¡®è®¤æ—¥æœŸå’Œåç§°åŽç›´æŽ¥è¿›å…¥ç¬¬5æ­¥æ‰§è¡ŒæŽ’ç­" Severity="Success"
                      IsOpen="{x:Bind ViewModel.TemplateApplied, Mode=OneWay}" Margin="0,12,0,0"/>
         </StackPanel>
 
@@ -52,17 +54,17 @@
                 <!-- Step 1: Basic Info -->
                 <Grid Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=1, Mode=OneWay}">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="²½Öè 1: Ñ¡ÔñÊ±¼ä·¶Î§ºÍÃû³Æ" Style="{ThemeResource SubtitleTextBlockStyle}"/>
-                        <TextBox Header="ÅÅ°à±íÃû³Æ" Text="{x:Bind ViewModel.ScheduleTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="ÀýÈç£º2024Äê5ÔÂ³£¹æÅÅ°à"/>
-                        <CalendarDatePicker Header="¿ªÊ¼ÈÕÆÚ" Date="{x:Bind ViewModel.StartDate, Mode=TwoWay}"/>
-                        <CalendarDatePicker Header="½áÊøÈÕÆÚ" Date="{x:Bind ViewModel.EndDate, Mode=TwoWay}"/>
+                        <TextBlock Text="æ­¥éª¤ 1: é€‰æ‹©æ—¶é—´èŒƒå›´å’Œåç§°" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                        <TextBox Header="æŽ’ç­è¡¨åç§°" Text="{x:Bind ViewModel.ScheduleTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="ä¾‹å¦‚ï¼š2024å¹´5æœˆå¸¸è§„æŽ’ç­"/>
+                        <CalendarDatePicker Header="å¼€å§‹æ—¥æœŸ" Date="{x:Bind ViewModel.StartDate, Mode=TwoWay}"/>
+                        <CalendarDatePicker Header="ç»“æŸæ—¥æœŸ" Date="{x:Bind ViewModel.EndDate, Mode=TwoWay}"/>
                     </StackPanel>
                 </Grid>
 
                 <!-- Step 2: Select Personnel -->
                 <Grid Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=2, Mode=OneWay}">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="²½Öè 2: Ñ¡Ôñ²ÎÓëÈËÔ±" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                        <TextBlock Text="æ­¥éª¤ 2: é€‰æ‹©å‚ä¸Žäººå‘˜" Style="{ThemeResource SubtitleTextBlockStyle}"/>
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -70,20 +72,20 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <!-- Available -->
-                            <ListView Grid.Column="0" Header="¿ÉÓÃÈËÔ±" ItemsSource="{x:Bind ViewModel.AvailablePersonnels, Mode=OneWay}"
+                            <ListView Grid.Column="0" Header="å¯ç”¨äººå‘˜" ItemsSource="{x:Bind ViewModel.AvailablePersonnels, Mode=OneWay}"
                                       SelectionMode="Multiple" ItemTemplate="{StaticResource PersonnelListViewTemplate}" MinHeight="300"
-                                      x:Name="AvailablePersonnelList"/>
+                                      x:Name="AvailablePersonnelList" x:FieldModifier="public"/>
                             <!-- Buttons -->
                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
-                                <Button Content="&gt;&gt;" ToolTipService.ToolTip="Ìí¼ÓÑ¡ÖÐ"
+                                <Button Content="&gt;&gt;" ToolTipService.ToolTip="æ·»åŠ é€‰ä¸­"
                                         Click="AddPersonnel_Click"/>
-                                <Button Content="&lt;&lt;" ToolTipService.ToolTip="ÒÆ³ýÑ¡ÖÐ"
+                                <Button Content="&lt;&lt;" ToolTipService.ToolTip="ç§»é™¤é€‰ä¸­"
                                         Click="RemovePersonnel_Click"/>
                             </StackPanel>
                             <!-- Selected -->
-                            <ListView Grid.Column="2" Header="ÒÑÑ¡ÈËÔ±" ItemsSource="{x:Bind ViewModel.SelectedPersonnels, Mode=OneWay}"
+                            <ListView Grid.Column="2" Header="å·²é€‰äººå‘˜" ItemsSource="{x:Bind ViewModel.SelectedPersonnels, Mode=OneWay}"
                                       SelectionMode="Multiple" ItemTemplate="{StaticResource PersonnelListViewTemplate}" MinHeight="300"
-                                      x:Name="SelectedPersonnelList"/>
+                                      x:Name="SelectedPersonnelList" x:FieldModifier="public"/>
                         </Grid>
                     </StackPanel>
                 </Grid>
@@ -91,7 +93,7 @@
                 <!-- Step 3: Select Positions -->
                 <Grid Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=3, Mode=OneWay}">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="²½Öè 3: Ñ¡Ôñ²ÎÓëÉÚÎ»" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                        <TextBlock Text="æ­¥éª¤ 3: é€‰æ‹©å‚ä¸Žå“¨ä½" Style="{ThemeResource SubtitleTextBlockStyle}"/>
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -99,20 +101,20 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <!-- Available -->
-                            <ListView Grid.Column="0" Header="¿ÉÓÃÉÚÎ»" ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
+                            <ListView Grid.Column="0" Header="å¯ç”¨å“¨ä½" ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
                                       SelectionMode="Multiple" ItemTemplate="{StaticResource PositionListViewTemplate}" MinHeight="300"
-                                      x:Name="AvailablePositionsList"/>
+                                      x:Name="AvailablePositionsList" x:FieldModifier="public"/>
                             <!-- Buttons -->
                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
-                                <Button Content="&gt;&gt;" ToolTipService.ToolTip="Ìí¼ÓÑ¡ÖÐ"
+                                <Button Content="&gt;&gt;" ToolTipService.ToolTip="æ·»åŠ é€‰ä¸­"
                                         Click="AddPosition_Click"/>
-                                <Button Content="&lt;&lt;" ToolTipService.ToolTip="ÒÆ³ýÑ¡ÖÐ"
+                                <Button Content="&lt;&lt;" ToolTipService.ToolTip="ç§»é™¤é€‰ä¸­"
                                         Click="RemovePosition_Click"/>
                             </StackPanel>
                             <!-- Selected -->
-                            <ListView Grid.Column="2" Header="ÒÑÑ¡ÉÚÎ»" ItemsSource="{x:Bind ViewModel.SelectedPositions, Mode=OneWay}"
+                            <ListView Grid.Column="2" Header="å·²é€‰å“¨ä½" ItemsSource="{x:Bind ViewModel.SelectedPositions, Mode=OneWay}"
                                       SelectionMode="Multiple" ItemTemplate="{StaticResource PositionListViewTemplate}" MinHeight="300"
-                                      x:Name="SelectedPositionsList"/>
+                                      x:Name="SelectedPositionsList" x:FieldModifier="public"/>
                         </Grid>
                     </StackPanel>
                 </Grid>
@@ -120,23 +122,23 @@
                 <!-- Step 4: Configure Constraints -->
                 <Grid Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=4, Mode=OneWay}">
                     <StackPanel Spacing="24">
-                        <TextBlock Text="²½Öè 4: ÅäÖÃÔ¼Êø" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                        <TextBlock Text="æ­¥éª¤ 4: é…ç½®çº¦æŸ" Style="{ThemeResource SubtitleTextBlockStyle}"/>
                         <ProgressRing IsActive="{x:Bind ViewModel.IsLoadingConstraints, Mode=OneWay}" HorizontalAlignment="Center"/>
 
-                        <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.IsLoadingConstraints, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True, Mode=OneWay}">
+                        <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.IsLoadingConstraints, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}">
                             <!-- Holiday Config -->
                             <StackPanel Spacing="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Padding="12" CornerRadius="{StaticResource ControlCornerRadius}">
-                                <TextBlock Text="ÐÝÏ¢ÈÕÅäÖÃ" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
-                                <ToggleSwitch IsOn="{x:Bind ViewModel.UseActiveHolidayConfig, Mode=TwoWay}" OffContent="Ê¹ÓÃ×Ô¶¨ÒåÅäÖÃ" OnContent="Ê¹ÓÃµ±Ç°»î¶¯ÅäÖÃ"/>
-                                <ComboBox Header="Ñ¡ÔñÒ»¸öÐÝÏ¢ÈÕÅäÖÃ" ItemsSource="{x:Bind ViewModel.HolidayConfigs, Mode=OneWay}"
+                                <TextBlock Text="ä¼‘æ¯æ—¥é…ç½®" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
+                                <ToggleSwitch IsOn="{x:Bind ViewModel.UseActiveHolidayConfig, Mode=TwoWay}" OffContent="ä½¿ç”¨è‡ªå®šä¹‰é…ç½®" OnContent="ä½¿ç”¨å½“å‰æ´»åŠ¨é…ç½®"/>
+                                <ComboBox Header="é€‰æ‹©ä¸€ä¸ªä¼‘æ¯æ—¥é…ç½®" ItemsSource="{x:Bind ViewModel.HolidayConfigs, Mode=OneWay}"
                                           SelectedValue="{x:Bind ViewModel.SelectedHolidayConfigId, Mode=TwoWay, FallbackValue=-1}"
                                           SelectedValuePath="Id" DisplayMemberPath="ConfigName"
-                                          IsEnabled="{x:Bind ViewModel.UseActiveHolidayConfig, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True, Mode=OneWay}"/>
+                                          IsEnabled="{x:Bind ViewModel.UseActiveHolidayConfig, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}"/>
                             </StackPanel>
 
                             <!-- Fixed Position Rules -->
                             <StackPanel Spacing="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Padding="12" CornerRadius="{StaticResource ControlCornerRadius}">
-                                <TextBlock Text="¶¨¸Ú¹æÔò" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
+                                <TextBlock Text="å®šå²—è§„åˆ™" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
                                 <ListView ItemsSource="{x:Bind ViewModel.FixedPositionRules, Mode=OneWay}" SelectionMode="None" MaxHeight="200">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="models:FixedPositionRule">
@@ -148,7 +150,7 @@
 
                             <!-- Manual Assignments -->
                             <StackPanel Spacing="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Padding="12" CornerRadius="{StaticResource ControlCornerRadius}">
-                                <TextBlock Text="ÊÖ¶¯Ö¸¶¨" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
+                                <TextBlock Text="æ‰‹åŠ¨æŒ‡å®š" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
                                 <ListView ItemsSource="{x:Bind ViewModel.ManualAssignments, Mode=OneWay}" SelectionMode="None" MaxHeight="200">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="models:ManualAssignment">
@@ -172,10 +174,10 @@
                 <!-- Step 5: Summary -->
                 <Grid Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=5, Mode=OneWay}">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="²½Öè 5: È·ÈÏ²ÎÊý²¢Ö´ÐÐ" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                        <TextBlock Text="æ­¥éª¤ 5: ç¡®è®¤å‚æ•°å¹¶æ‰§è¡Œ" Style="{ThemeResource SubtitleTextBlockStyle}"/>
                         <ItemsRepeater ItemsSource="{x:Bind ViewModel.SummarySections, Mode=OneWay}">
                             <ItemsRepeater.ItemTemplate>
-                                <DataTemplate x:DataType="viewmodels:SchedulingViewModel+SummarySection">
+                                <DataTemplate x:DataType="viewmodels:SummarySection">
                                     <InfoBar Title="{x:Bind Header}" Severity="Informational" IsOpen="True" Margin="0,0,0,8">
                                         <InfoBar.Content>
                                             <ItemsRepeater ItemsSource="{x:Bind Lines}">
@@ -203,20 +205,20 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Button Content="È¡Ïû" Command="{x:Bind ViewModel.CancelCommand}" Grid.Column="0"/>
+            <Button Content="å–æ¶ˆ" Command="{x:Bind ViewModel.CancelCommand}" Grid.Column="0"/>
 
             <StackPanel Orientation="Horizontal" Spacing="8" Grid.Column="2">
-                <Button Content="ÉÏÒ»²½" Command="{x:Bind ViewModel.PreviousStepCommand}"/>
-                <Button Content="ÏÂÒ»²½" Command="{x:Bind ViewModel.NextStepCommand}" Style="{ThemeResource AccentButtonStyle}"
-                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=5, Mode=OneWay, ConverterParameterInverted=True}"/>
-                <Button Content="±£´æÎªÄ£°å" Command="{x:Bind ViewModel.SaveAsTemplateCommand}"
+                <Button Content="ä¸Šä¸€æ­¥" Command="{x:Bind ViewModel.PreviousStepCommand}"/>
+                <Button Content="ä¸‹ä¸€æ­¥" Command="{x:Bind ViewModel.NextStepCommand}" Style="{ThemeResource AccentButtonStyle}"
                         Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=5, Mode=OneWay}"/>
-                <Button Content="¿ªÊ¼ÅÅ°à" Command="{x:Bind ViewModel.ExecuteSchedulingCommand}" Style="{ThemeResource AccentButtonStyle}"
+                <Button Content="ä¿å­˜ä¸ºæ¨¡æ¿" Command="{x:Bind ViewModel.SaveAsTemplateCommand}"
+                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=5, Mode=OneWay}"/>
+                <Button Content="å¼€å§‹æŽ’ç­" Command="{x:Bind ViewModel.ExecuteSchedulingCommand}" Style="{ThemeResource AccentButtonStyle}"
                         Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=5, Mode=OneWay}">
                     <Button.Flyout>
                         <Flyout>
                             <StackPanel Spacing="8">
-                                <TextBlock Text="ÕýÔÚÖ´ÐÐÅÅ°à..." Style="{ThemeResource BodyStrongTextBlockStyle}"/>
+                                <TextBlock Text="æ­£åœ¨æ‰§è¡ŒæŽ’ç­..." Style="{ThemeResource BodyStrongTextBlockStyle}"/>
                                 <ProgressRing IsActive="{x:Bind ViewModel.IsExecuting, Mode=OneWay}"/>
                             </StackPanel>
                         </Flyout>

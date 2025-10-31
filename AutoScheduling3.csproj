@@ -15,6 +15,7 @@
  </PropertyGroup>
  <ItemGroup>
    <Page Remove="Controls\ScheduleGridControl.xaml" />
+   <Page Remove="Views\History\HistoryDetailPage.xaml" />
  </ItemGroup>
 
  <ItemGroup>
@@ -35,20 +36,26 @@
  <ProjectCapability Include="Msix" />
  </ItemGroup>
  <ItemGroup>
+ <PackageReference Include="CommunityToolkit.WinUI.Controls.DataGrid" Version="8.0.240901" />
+ <PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.0.240901" />
+ <PackageReference Include="CommunityToolkit.WinUI.Controls.Charts" Version="8.0.240901" />
  <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
  <PackageReference Include="MathNet.Numerics.MKL.Win-x64" Version="3.0.0" />
  <PackageReference Include="MathNet.Numerics.Providers.OpenBLAS" Version="5.0.0" />
  <PackageReference Include="Microsoft.Data.Sqlite" Version="7.0.10" />
- <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
- <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6584" />
- <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.250916003" />
- <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+ <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+ <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.757" />
+ <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240428000" />
+ <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
  </ItemGroup>
  <ItemGroup>
  <Folder Include="SchedulingEngine\" />
  </ItemGroup>
  <ItemGroup>
    <None Update="Controls\ScheduleGridControl.xaml">
+     <Generator>MSBuild:Compile</Generator>
+   </None>
+   <None Update="Views\History\HistoryDetailPage.xaml">
      <Generator>MSBuild:Compile</Generator>
    </None>
  </ItemGroup>
