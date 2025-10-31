@@ -4,9 +4,120 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:conv="using:AutoScheduling3.Converters"
     mc:Ignorable="d">
 
-    <Grid>
-        <TextBlock Text="Compare Page" FontSize="48" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+    <Page.Resources>
+        <conv:EnumEqualsToVisibilityConverter x:Key="EnumEqualsToVisibilityConverter"/>
+        <conv:DiffTypeToColorConverter x:Key="DiffTypeToColorConverter"/>
+    </Page.Resources>
+
+    <Grid Padding="16" RowDefinitions="Auto,*,Auto">
+        <!-- Top selection bar -->
+        <StackPanel Orientation="Horizontal" Spacing="12">
+            <TextBlock Text="选择排班表1:" VerticalAlignment="Center"/>
+            <ComboBox Width="200" ItemsSource="{Binding Schedules}" SelectedItem="{Binding SelectedSchedule1}" DisplayMemberPath="Name"/>
+            <TextBlock Text="选择排班表2:" VerticalAlignment="Center"/>
+            <ComboBox Width="200" ItemsSource="{Binding Schedules}" SelectedItem="{Binding SelectedSchedule2}" DisplayMemberPath="Name"/>
+            <Button Content="开始对比" Command="{Binding CompareCommand}"/>
+            <ComboBox Width="140" SelectedItem="{Binding Mode}" ItemsSource="{Binding Modes}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- Main content -->
+        <Grid Grid.Row="1">
+            <Grid.Resources>
+                <SolidColorBrush x:Key="AddedBrush" Color="#DFF6DD"/>
+                <SolidColorBrush x:Key="RemovedBrush" Color="#FDE7E9"/>
+                <SolidColorBrush x:Key="ChangedBrush" Color="#FFF4CE"/>
+            </Grid.Resources>
+
+            <!-- Side by Side -->
+            <Grid x:Name="SideBySidePanel" Visibility="{Binding Mode, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=SideBySide}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="8" CornerRadius="4">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ScheduleDetail1.Name}" FontSize="20" FontWeight="Bold"/>
+                        <ItemsControl ItemsSource="{Binding ScheduleDetail1.Shifts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="8" CornerRadius="4" Grid.Column="2">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ScheduleDetail2.Name}" FontSize="20" FontWeight="Bold"/>
+                        <ItemsControl ItemsSource="{Binding ScheduleDetail2.Shifts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Diff Highlight -->
+            <ScrollViewer x:Name="DiffPanel" Visibility="{Binding Mode, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=DiffHighlight}">
+                <ItemsControl ItemsSource="{Binding Differences}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="6" Margin="0,4,0,0" CornerRadius="4">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding DiffType, Converter={StaticResource DiffTypeToColorConverter}}"/>
+                                </Border.Background>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="Day: {Binding DayIndex}"/>
+                                    <TextBlock Text="Pos: {Binding PositionId}"/>
+                                    <TextBlock Text="左:{Binding PersonLeft}"/>
+                                    <TextBlock Text="右:{Binding PersonRight}"/>
+                                    <TextBlock Text="{Binding DiffType}" FontWeight="Bold"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Statistics -->
+            <StackPanel x:Name="StatisticsPanel" Visibility="{Binding Mode, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Statistics}" Spacing="12">
+                <TextBlock Text="统计对比" FontSize="20" FontWeight="Bold"/>
+                <StackPanel Orientation="Horizontal" Spacing="24">
+                    <StackPanel>
+                        <TextBlock Text="排班表1" FontWeight="Bold"/>
+                        <TextBlock Text="总班次: {Binding ScheduleDetail1.Statistics.TotalShifts}"/>
+                        <TextBlock Text="人均班次: {Binding ScheduleDetail1.Statistics.AverageShiftsPerPerson}"/>
+                        <TextBlock Text="休息日班次: {Binding ScheduleDetail1.Statistics.WeekendShifts}"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="排班表2" FontWeight="Bold"/>
+                        <TextBlock Text="总班次: {Binding ScheduleDetail2.Statistics.TotalShifts}"/>
+                        <TextBlock Text="人均班次: {Binding ScheduleDetail2.Statistics.AverageShiftsPerPerson}"/>
+                        <TextBlock Text="休息日班次: {Binding ScheduleDetail2.Statistics.WeekendShifts}"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+
+        <!-- Bottom summary -->
+        <Border Grid.Row="2" Margin="0,12,0,0" Padding="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="4">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock Text="差异总数:"/>
+                <TextBlock Text="{Binding Differences.Count}" FontWeight="Bold"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Page>

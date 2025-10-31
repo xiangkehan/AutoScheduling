@@ -85,7 +85,8 @@ namespace AutoScheduling3.Services
                 NumberOfPositions = schedule.PositionIds.Count,
                 Personnel = (await _personnelMapper.ToDtoListAsync(personnel)).ToList(),
                 Positions = positions.Select(p => _positionMapper.ToDto(p)).ToList(),
-                Statistics = new ScheduleStatisticsDto()
+                Statistics = new ScheduleStatisticsDto(),
+                Shifts = schedule.Shifts.ToList()
             };
 
             detailDto.Statistics.TotalShifts = schedule.Shifts.Count;
