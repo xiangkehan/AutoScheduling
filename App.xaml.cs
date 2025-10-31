@@ -76,7 +76,12 @@ namespace AutoScheduling3
             services.AddSingleton<IPositionService, PositionService>();
             services.AddSingleton<ISkillService, SkillService>();
             services.AddSingleton<ITemplateService, TemplateService>();
-            services.AddSingleton(sp => new Services.SchedulingService(DatabasePath));
+            services.AddSingleton<ISchedulingService>(sp =>
+            {
+                var svc = new SchedulingService(DatabasePath);
+                // 初始化数据库所需的内部结构（延迟到 OnLaunched 中统一处理）
+                return svc;
+            });
 
             // 注册 Helpers
             services.AddSingleton<NavigationService>();
@@ -88,11 +93,9 @@ namespace AutoScheduling3
             services.AddTransient<SkillViewModel>();
             services.AddTransient<TemplateViewModel>();
             services.AddTransient<SchedulingViewModel>();
+            services.AddTransient<ScheduleResultViewModel>();
 
             ServiceProvider = services.BuildServiceProvider();
-
-            // 初始化数据库
-            // InitializeDatabaseAsync().GetAwaiter().GetResult(); // This causes a deadlock
         }
 
         /// <summary>
@@ -108,6 +111,7 @@ namespace AutoScheduling3
                 var templateRepo = ServiceProvider.GetRequiredService<ITemplateRepository>() as SchedulingTemplateRepository;
                 var schedulingRepo = ServiceProvider.GetRequiredService<SchedulingRepository>();
                 var constraintRepo = ServiceProvider.GetRequiredService<ConstraintRepository>();
+                var schedulingService = ServiceProvider.GetRequiredService<ISchedulingService>() as SchedulingService;
 
                 if (personalRepo != null) await personalRepo.InitAsync();
                 if (positionRepo != null) await positionRepo.InitAsync();
@@ -115,6 +119,7 @@ namespace AutoScheduling3
                 if (templateRepo != null) await templateRepo.InitAsync();
                 if (schedulingRepo != null) await schedulingRepo.InitAsync();
                 if (constraintRepo != null) await constraintRepo.InitAsync();
+                if (schedulingService != null) await schedulingService.InitializeAsync();
             }
             catch (System.Exception ex)
             {
@@ -135,9 +140,7 @@ namespace AutoScheduling3
             }
             catch (Exception ex)
             {
-                // Log or handle the exception as needed
                 System.Diagnostics.Debug.WriteLine($"Database initialization failed: {ex.Message}");
-                // You might want to show an error dialog to the user here
             }
 
             _window = new MainWindow();

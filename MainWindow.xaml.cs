@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using AutoScheduling3.Views.DataManagement;
 using AutoScheduling3.Helpers;
 using Microsoft.Extensions.DependencyInjection;
+using AutoScheduling3.Views.Scheduling;
 
 namespace AutoScheduling3
 {
@@ -27,12 +28,18 @@ namespace AutoScheduling3
             _navigationService = ((App)Application.Current).ServiceProvider.GetRequiredService<NavigationService>();
             _navigationService.Initialize(ContentFrame);
 
-            // 注册页面 (仅已有的 DataManagement 页面)
+            // 数据管理页面注册
             _navigationService.RegisterPage("Personnel", typeof(PersonnelPage));
             _navigationService.RegisterPage("Position", typeof(PositionPage));
             _navigationService.RegisterPage("Skill", typeof(SkillPage));
 
-            // 正确调用 NavigateTo 使用 key
+            // 排班流程相关页面注册
+            _navigationService.RegisterPage("CreateScheduling", typeof(CreateSchedulingPage));
+            _navigationService.RegisterPage("TemplateManage", typeof(TemplatePage));
+            _navigationService.RegisterPage("ScheduleResult", typeof(ScheduleResultPage));
+            _navigationService.RegisterPage("Drafts", typeof(DraftsPage));
+
+            // 默认导航
             _navigationService.NavigateTo("Personnel");
         }
 
