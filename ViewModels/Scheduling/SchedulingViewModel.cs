@@ -9,6 +9,7 @@ using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.Helpers;
 using System.Collections.Generic;
 using AutoScheduling3.Models.Constraints; // 新增约束模型引用
+using CommunityToolkit.Mvvm.Input.Internals;
 
 namespace AutoScheduling3.ViewModels.Scheduling
 {
@@ -85,7 +86,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         public IRelayCommand PreviousStepCommand { get; }
         public IAsyncRelayCommand ExecuteSchedulingCommand { get; }
         public IRelayCommand CancelCommand { get; }
-        public IAsyncRelayCommand LoadTemplateCommand { get; }
+        public IAsyncRelayCommand<int> LoadTemplateCommand { get; }
         public IAsyncRelayCommand LoadConstraintsCommand { get; }
         public IAsyncRelayCommand SaveAsTemplateCommand { get; }
 
@@ -112,6 +113,17 @@ namespace AutoScheduling3.ViewModels.Scheduling
             LoadTemplateCommand = new AsyncRelayCommand<int>(LoadTemplateAsync);
             LoadConstraintsCommand = new AsyncRelayCommand(LoadConstraintsAsync);
             SaveAsTemplateCommand = new AsyncRelayCommand(SaveAsTemplateAsync, CanSaveTemplate);
+
+            // Listen to property changes to refresh command states
+            PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName is nameof(CurrentStep) or nameof(ScheduleTitle) or nameof(StartDate) or nameof(EndDate) or nameof(IsExecuting))
+                {
+                    RefreshCommandStates();
+                }
+            };
+            SelectedPersonnels.CollectionChanged += (s, e) => RefreshCommandStates();
+            SelectedPositions.CollectionChanged += (s, e) => RefreshCommandStates();
         }
 
         private void NextStep()
@@ -122,10 +134,20 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 if (TemplateApplied && CurrentStep == 1)
                 {
                     CurrentStep = 5;
+                    BuildSummarySections(); // Build summary when jumping to step 5
                 }
                 else
                 {
                     CurrentStep++;
+                }
+
+                if (CurrentStep == 4 && !IsLoadingConstraints && FixedPositionRules.Count == 0)
+                {
+                    _ = LoadConstraintsAsync();
+                }
+                if (CurrentStep == 5)
+                {
+                    BuildSummarySections();
                 }
                 RefreshCommandStates();
             }
@@ -151,7 +173,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
             1 => ValidateStep1(out _),
             2 => ValidateStep2(out _),
             3 => ValidateStep3(out _),
-            4 => true,
+            4 => true, // Constraints step is always navigable if reached
+            5 => false, // Cannot go next from summary
             _ => false
         };
         private bool CanExecuteScheduling() => CurrentStep == 5 && !IsExecuting && ValidateStep1(out _) && ValidateStep2(out _) && ValidateStep3(out _);
@@ -206,7 +229,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
             finally
             {
                 IsLoadingInitial = false;
-                RefreshCommandStates();
             }
         }
 
@@ -224,6 +246,12 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 HolidayConfigs = new ObservableCollection<HolidayConfig>(configsTask.Result);
                 FixedPositionRules = new ObservableCollection<FixedPositionRule>(rulesTask.Result);
                 ManualAssignments = new ObservableCollection<ManualAssignment>(manualTask.Result);
+
+                // After loading, re-evaluate which ones are enabled based on the template or previous state
+                if (TemplateApplied)
+                {
+                    ApplyTemplateConstraints();
+                }
             }
             catch (Exception ex)
             {
@@ -233,7 +261,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
             finally
             {
                 IsLoadingConstraints = false;
-                RefreshCommandStates();
             }
         }
 
@@ -250,6 +277,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             // 显示进度对话框
             _progressDialog = _dialogService.ShowLoadingDialog("正在生成排班，请稍候...");
             IsExecuting = true;
+            RefreshCommandStates();
             try
             {
                 var schedule = await _schedulingService.ExecuteSchedulingAsync(request);
@@ -269,6 +297,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     try { _progressDialog.Hide(); } catch { }
                     _progressDialog = null;
                 }
+                RefreshCommandStates();
             }
         }
         private SchedulingRequestDto BuildSchedulingRequest() => new()
@@ -280,8 +309,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
             PositionIds = SelectedPositions.Select(p => p.Id).ToList(),
             UseActiveHolidayConfig = UseActiveHolidayConfig,
             HolidayConfigId = UseActiveHolidayConfig ? null : SelectedHolidayConfigId,
-            EnabledFixedRuleIds = EnabledFixedRules?.Count > 0 ? new List<int>(EnabledFixedRules) : null,
-            EnabledManualAssignmentIds = EnabledManualAssignments?.Count > 0 ? new List<int>(EnabledManualAssignments) : null
+            EnabledFixedRuleIds = FixedPositionRules.Where(r => r.IsEnabled).Select(r => r.Id).ToList(),
+            EnabledManualAssignmentIds = ManualAssignments.Where(a => a.IsEnabled).Select(a => a.Id).ToList()
         };
 
         private void CancelWizard()
@@ -292,6 +321,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
             SelectedPositions.Clear();
             EnabledFixedRules.Clear();
             EnabledManualAssignments.Clear();
+            FixedPositionRules.Clear();
+            ManualAssignments.Clear();
+            HolidayConfigs.Clear();
             ResultSchedule = null;
             SelectedHolidayConfigId = null;
             UseActiveHolidayConfig = true;
@@ -303,6 +335,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
         private async Task LoadTemplateAsync(int templateId)
         {
+            IsLoadingInitial = true;
             try
             {
                 var template = await _templateService.GetByIdAsync(templateId);
@@ -312,20 +345,25 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     return;
                 }
                 LoadedTemplateId = template.Id;
-                //预填人员/哨位
+
+                // Load base data first
                 if (AvailablePersonnels.Count == 0 || AvailablePositions.Count == 0)
                     await LoadInitialDataAsync();
+
+                // Pre-fill selections
                 var selectedPers = AvailablePersonnels.Where(p => template.PersonnelIds.Contains(p.Id)).ToList();
                 var selectedPos = AvailablePositions.Where(p => template.PositionIds.Contains(p.Id)).ToList();
                 SelectedPersonnels = new ObservableCollection<PersonnelDto>(selectedPers);
                 SelectedPositions = new ObservableCollection<PositionDto>(selectedPos);
-                //约束
+
+                // Store constraint IDs to be applied after they are loaded
                 UseActiveHolidayConfig = template.UseActiveHolidayConfig;
                 SelectedHolidayConfigId = template.HolidayConfigId;
-                EnabledFixedRules = template.EnabledFixedRuleIds?.ToList() ?? new();
-                EnabledManualAssignments = template.EnabledManualAssignmentIds?.ToList() ?? new();
+                _enabledFixedRules = template.EnabledFixedRuleIds?.ToList() ?? new();
+                _enabledManualAssignments = template.EnabledManualAssignmentIds?.ToList() ?? new();
+
                 TemplateApplied = true;
-                CurrentStep = 1; // 保持在第1步仅需填日期和标题
+                CurrentStep = 1; // Stay on step 1
                 RefreshCommandStates();
                 await _dialogService.ShowSuccessAsync("模板已加载，请选择日期范围后直接执行排班");
             }
@@ -333,9 +371,27 @@ namespace AutoScheduling3.ViewModels.Scheduling
             {
                 await _dialogService.ShowErrorAsync("加载模板失败", ex);
             }
+            finally
+            {
+                IsLoadingInitial = false;
+            }
         }
 
-        private bool CanSaveTemplate() => SelectedPersonnels.Count > 0 && SelectedPositions.Count > 0 && ValidateStep1(out _);
+        private void ApplyTemplateConstraints()
+        {
+            if (!TemplateApplied) return;
+
+            foreach (var rule in FixedPositionRules)
+            {
+                rule.IsEnabled = _enabledFixedRules.Contains(rule.Id);
+            }
+            foreach (var assignment in ManualAssignments)
+            {
+                assignment.IsEnabled = _enabledManualAssignments.Contains(assignment.Id);
+            }
+        }
+
+        private bool CanSaveTemplate() => SelectedPersonnels.Count > 0 && SelectedPositions.Count > 0;
         private async Task SaveAsTemplateAsync()
         {
             if (!CanSaveTemplate()) { await _dialogService.ShowWarningAsync("当前配置不完整，无法保存为模板"); return; }
@@ -377,8 +433,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 PositionIds = SelectedPositions.Select(p => p.Id).ToList(),
                 HolidayConfigId = UseActiveHolidayConfig ? null : SelectedHolidayConfigId,
                 UseActiveHolidayConfig = UseActiveHolidayConfig,
-                EnabledFixedRuleIds = EnabledFixedRules?.ToList() ?? new List<int>(),
-                EnabledManualAssignmentIds = EnabledManualAssignments?.ToList() ?? new List<int>()
+                EnabledFixedRuleIds = FixedPositionRules.Where(r => r.IsEnabled).Select(r => r.Id).ToList(),
+                EnabledManualAssignmentIds = ManualAssignments.Where(a => a.IsEnabled).Select(a => a.Id).ToList()
             };
             try
             {
@@ -415,8 +471,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
             //约束
             var cons = new SummarySection { Header = "约束配置" };
             cons.Lines.Add(UseActiveHolidayConfig ? "休息日配置: 使用当前活动配置" : $"休息日配置: 自定义配置ID={SelectedHolidayConfigId}");
-            cons.Lines.Add($"启用定岗规则: {(EnabledFixedRules.Count == 0 ? "无" : string.Join(",", EnabledFixedRules))}");
-            cons.Lines.Add($"启用手动指定: {(EnabledManualAssignments.Count == 0 ? "无" : string.Join(",", EnabledManualAssignments))}");
+            var enabledRulesCount = FixedPositionRules.Count(r => r.IsEnabled);
+            var enabledAssignmentsCount = ManualAssignments.Count(a => a.IsEnabled);
+            cons.Lines.Add($"启用定岗规则: {enabledRulesCount} 条");
+            cons.Lines.Add($"启用手动指定: {enabledAssignmentsCount} 条");
             sections.Add(cons);
             // 模板信息
             if (TemplateApplied && LoadedTemplateId.HasValue)
@@ -430,7 +488,12 @@ namespace AutoScheduling3.ViewModels.Scheduling
         // 属性变更回调
         partial void OnCurrentStepChanged(int value)
         {
-            if (value == 5)
+            RefreshCommandStates();
+            if (value == 4 && !IsLoadingConstraints && FixedPositionRules.Count == 0)
+            {
+                _ = LoadConstraintsAsync();
+            }
+            else if (value == 5)
             {
                 BuildSummarySections();
             }
@@ -438,15 +501,17 @@ namespace AutoScheduling3.ViewModels.Scheduling
         partial void OnScheduleTitleChanged(string value) => RefreshCommandStates();
         partial void OnStartDateChanged(DateTimeOffset value)
         {
+            if (EndDate < value) EndDate = value;
             RefreshCommandStates();
-            if (TemplateApplied || CurrentStep >= 4)
+            if (CurrentStep >= 4)
                 _ = LoadConstraintsAsync();
             if (CurrentStep == 5) BuildSummarySections();
         }
         partial void OnEndDateChanged(DateTimeOffset value)
         {
+            if (value < StartDate) value = StartDate;
             RefreshCommandStates();
-            if (TemplateApplied || CurrentStep >= 4)
+            if (CurrentStep >= 4)
                 _ = LoadConstraintsAsync();
             if (CurrentStep == 5) BuildSummarySections();
         }

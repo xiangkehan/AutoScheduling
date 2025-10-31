@@ -1,14 +1,16 @@
 using System; // 添加此 using 指令
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
-using AutoScheduling3.Data;
-using AutoScheduling3.Data.Interfaces;
-using AutoScheduling3.DTOs.Mappers;
-using AutoScheduling3.Helpers;
+using Microsoft.UI.Xaml.Controls;
 using AutoScheduling3.Services;
 using AutoScheduling3.Services.Interfaces;
-using AutoScheduling3.ViewModels.DataManagement;
+using AutoScheduling3.Helpers;
 using AutoScheduling3.ViewModels.Scheduling;
+using AutoScheduling3.Data.Interfaces;
+using AutoScheduling3.Data;
+using AutoScheduling3.DTOs.Mappers;
+using System;
+using WinRT.Interop;
 
 namespace AutoScheduling3
 {
@@ -145,6 +147,7 @@ namespace AutoScheduling3
 
             _window = new MainWindow();
             MainWindow = _window;
+            MainWindowHandle = WindowNative.GetWindowHandle(_window);
             _window.Activate();
         }
     }

@@ -8,6 +8,8 @@ using CommunityToolkit.Mvvm.Input;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.Helpers;
+using AutoScheduling3.Models.Constraints;
+using System.Collections.Generic;
 
 namespace AutoScheduling3.ViewModels.Scheduling
 {
@@ -20,6 +22,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
  private readonly ITemplateService _templateService;
  private readonly IPersonnelService _personnelService;
  private readonly IPositionService _positionService;
+ private readonly ISchedulingService _schedulingService;
  private readonly DialogService _dialogService;
  private readonly NavigationService _navigationService;
 
@@ -39,8 +42,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
  {
  if (SetProperty(ref _selectedTemplate, value))
  {
- IsDetailPaneOpen = value != null && value.Id !=0;
- UpdateSelectedPersonnelAndPositions();
+ IsDetailPaneOpen = value != null;
+ if (value != null)
+ {
+ LoadDetailsForSelectedTemplate();
+ }
  RefreshCommandStates();
  }
  }
@@ -64,15 +70,23 @@ namespace AutoScheduling3.ViewModels.Scheduling
  public ObservableCollection<PersonnelDto> SelectedPersonnel
  {
  get => _selectedPersonnel;
- private set => SetProperty(ref _selectedPersonnel, value);
+ set => SetProperty(ref _selectedPersonnel, value);
  }
 
  private ObservableCollection<PositionDto> _selectedPositions = new();
  public ObservableCollection<PositionDto> SelectedPositions
  {
  get => _selectedPositions;
- private set => SetProperty(ref _selectedPositions, value);
+ set => SetProperty(ref _selectedPositions, value);
  }
+
+ // Constraint Properties
+ private ObservableCollection<HolidayConfig> _holidayConfigs = new();
+ public ObservableCollection<HolidayConfig> HolidayConfigs { get => _holidayConfigs; set => SetProperty(ref _holidayConfigs, value); }
+
+ private ObservableCollection<FixedPositionRule> _fixedPositionRules = new();
+ public ObservableCollection<FixedPositionRule> FixedPositionRules { get => _fixedPositionRules; set => SetProperty(ref _fixedPositionRules, value); }
+
 
  private bool _isLoading;
  public bool IsLoading { get => _isLoading; set { if (SetProperty(ref _isLoading, value)) RefreshCommandStates(); } }
@@ -167,12 +181,14 @@ namespace AutoScheduling3.ViewModels.Scheduling
  ITemplateService templateService,
  IPersonnelService personnelService,
  IPositionService positionService,
+ ISchedulingService schedulingService,
  DialogService dialogService,
  NavigationService navigationService)
  {
  _templateService = templateService;
  _personnelService = personnelService;
  _positionService = positionService;
+ _schedulingService = schedulingService;
  _dialogService = dialogService;
  _navigationService = navigationService;
 
@@ -198,16 +214,23 @@ namespace AutoScheduling3.ViewModels.Scheduling
  var tplTask = _templateService.GetAllAsync();
  var perTask = _personnelService.GetAllAsync();
  var posTask = _positionService.GetAllAsync();
- await Task.WhenAll(tplTask, perTask, posTask);
+ var holidayConfigsTask = _schedulingService.GetHolidayConfigsAsync();
+ var fixedRulesTask = _schedulingService.GetFixedPositionRulesAsync(false); // Load all rules
+
+ await Task.WhenAll(tplTask, perTask, posTask, holidayConfigsTask, fixedRulesTask);
+
  _allTemplates = tplTask.Result.OrderByDescending(t => t.IsDefault).ThenByDescending(t => t.UsageCount).ToList();
  AvailablePersonnel = new ObservableCollection<PersonnelDto>(perTask.Result);
  AvailablePositions = new ObservableCollection<PositionDto>(posTask.Result);
- CurrentPage =1;
+ HolidayConfigs = new ObservableCollection<HolidayConfig>(holidayConfigsTask.Result);
+ FixedPositionRules = new ObservableCollection<FixedPositionRule>(fixedRulesTask.Result);
+
+ CurrentPage = 1;
  RefreshPagedView();
  }
  catch (Exception ex)
  {
- await _dialogService.ShowErrorAsync("加载模板失败", ex);
+ await _dialogService.ShowErrorAsync("加载模板或约束失败", ex);
  }
  finally
  {
@@ -234,8 +257,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
  {
  SelectedTemplate = new SchedulingTemplateDto
  {
- Id = -1,
- Name = "New Template",
+ Id = 0, // Use 0 for new unsaved item
+ Name = "新模板",
  TemplateType = string.IsNullOrWhiteSpace(TypeFilter) ? "regular" : TypeFilter,
  PersonnelIds = new List<int>(),
  PositionIds = new List<int>(),
@@ -244,18 +267,22 @@ namespace AutoScheduling3.ViewModels.Scheduling
  UseActiveHolidayConfig = true,
  CreatedAt = DateTime.Now
  };
- IsDetailPaneOpen = true;
  }
 
  private async Task SaveTemplateAsync()
  {
  if (SelectedTemplate == null) return;
+
+ // Update DTO from UI state before saving
  SelectedTemplate.PersonnelIds = SelectedPersonnel.Select(p => p.Id).ToList();
  SelectedTemplate.PositionIds = SelectedPositions.Select(p => p.Id).ToList();
+ SelectedTemplate.EnabledFixedRuleIds = FixedPositionRules.Where(r => r.IsEnabled).Select(r => r.Id).ToList();
+ // Manual assignments are not edited here. Keep existing values.
+
  IsLoadingDetails = true;
  try
  {
- if (SelectedTemplate.Id == -1)
+ if (SelectedTemplate.Id == 0) // New template
  {
  var createDto = new CreateTemplateDto
  {
@@ -268,13 +295,14 @@ namespace AutoScheduling3.ViewModels.Scheduling
  HolidayConfigId = SelectedTemplate.HolidayConfigId,
  UseActiveHolidayConfig = SelectedTemplate.UseActiveHolidayConfig,
  EnabledFixedRuleIds = SelectedTemplate.EnabledFixedRuleIds,
- EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds
+ EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds // Keep original
  };
  var newTpl = await _templateService.CreateAsync(createDto);
  _allTemplates.Add(newTpl);
- SelectedTemplate = newTpl;
+ RefreshPagedView(); // Refresh list
+ SelectedTemplate = newTpl; // Select the newly created item
  }
- else
+ else // Existing template
  {
  var updateDto = new UpdateTemplateDto
  {
@@ -287,20 +315,20 @@ namespace AutoScheduling3.ViewModels.Scheduling
  HolidayConfigId = SelectedTemplate.HolidayConfigId,
  UseActiveHolidayConfig = SelectedTemplate.UseActiveHolidayConfig,
  EnabledFixedRuleIds = SelectedTemplate.EnabledFixedRuleIds,
- EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds
+ EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds // Keep original
  };
  await _templateService.UpdateAsync(SelectedTemplate.Id, updateDto);
  var latest = await _templateService.GetByIdAsync(SelectedTemplate.Id);
  if (latest != null)
  {
  var idx = _allTemplates.FindIndex(t => t.Id == latest.Id);
- if (idx >=0) _allTemplates[idx] = latest; else _allTemplates.Add(latest);
- SelectedTemplate = latest;
+ if (idx >= 0) _allTemplates[idx] = latest;
+ RefreshPagedView(); // Refresh list
+ SelectedTemplate = latest; // Reselect with updated data
  }
  }
  await _dialogService.ShowSuccessAsync("模板已保存");
  IsDetailPaneOpen = false;
- RefreshPagedView();
  }
  catch (Exception ex)
  {
@@ -430,19 +458,29 @@ namespace AutoScheduling3.ViewModels.Scheduling
  }
  }
 
- private bool CanModifySelected() => SelectedTemplate != null && SelectedTemplate.Id >0;
- private bool CanSaveSelected() => SelectedTemplate != null && !string.IsNullOrWhiteSpace(SelectedTemplate.Name);
+ private bool CanModifySelected() => SelectedTemplate != null && SelectedTemplate.Id != 0;
+ private bool CanSaveSelected() => SelectedTemplate != null && !string.IsNullOrWhiteSpace(SelectedTemplate.Name) && SelectedPersonnel.Count > 0 && SelectedPositions.Count > 0;
 
- private void UpdateSelectedPersonnelAndPositions()
+ private void LoadDetailsForSelectedTemplate()
  {
  if (SelectedTemplate == null)
  {
  SelectedPersonnel.Clear();
  SelectedPositions.Clear();
+ foreach (var rule in FixedPositionRules) rule.IsEnabled = false;
  return;
  }
+
+ // Update personnel and positions
  SelectedPersonnel = new ObservableCollection<PersonnelDto>(AvailablePersonnel.Where(p => SelectedTemplate.PersonnelIds.Contains(p.Id)));
  SelectedPositions = new ObservableCollection<PositionDto>(AvailablePositions.Where(p => SelectedTemplate.PositionIds.Contains(p.Id)));
+
+ // Update constraints
+ foreach (var rule in FixedPositionRules)
+ {
+ rule.IsEnabled = SelectedTemplate.EnabledFixedRuleIds.Contains(rule.Id);
+ }
+ // Note: HolidayConfigId and UseActiveHolidayConfig are bound directly to SelectedTemplate properties.
  }
 
  private void RefreshCommandStates()

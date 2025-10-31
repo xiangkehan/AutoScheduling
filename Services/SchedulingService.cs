@@ -11,6 +11,7 @@ using AutoScheduling3.SchedulingEngine;
 using AutoScheduling3.SchedulingEngine.Core;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.DTOs;
+using System.Text;
 
 namespace AutoScheduling3.Services;
 
@@ -197,10 +198,62 @@ public class SchedulingService : ISchedulingService
         }).ToList();
     }
 
-    public Task<byte[]> ExportScheduleAsync(int id, string format)
+    public async Task<byte[]> ExportScheduleAsync(int id, string format)
     {
-        // 占位：后续实现 Excel / PDF 导出
-        throw new NotImplementedException("Export not implemented yet");
+        var scheduleDto = await GetScheduleByIdAsync(id);
+        if (scheduleDto == null)
+        {
+            throw new ArgumentException("Schedule not found", nameof(id));
+        }
+
+        if (format.Equals("excel", StringComparison.OrdinalIgnoreCase) || format.Equals("csv", StringComparison.OrdinalIgnoreCase))
+        {
+            return await GenerateCsvAsync(scheduleDto);
+        }
+
+        throw new NotImplementedException($"Export format '{format}' is not supported.");
+    }
+
+    private async Task<byte[]> GenerateCsvAsync(ScheduleDto schedule)
+    {
+        var sb = new StringBuilder();
+
+        // Header Row: Dates
+        sb.Append("Position/Date");
+        for (var date = schedule.StartDate.Date; date <= schedule.EndDate.Date; date = date.AddDays(1))
+        {
+            sb.Append($",{date:yyyy-MM-dd}");
+        }
+        sb.AppendLine();
+
+        // Data Rows: One row per position
+        var shiftsByPositionAndDate = schedule.Shifts
+            .ToLookup(s => s.PositionId);
+
+        var allPositions = await _positionRepo.GetByIdsAsync(schedule.PositionIds);
+        var positionDict = allPositions.ToDictionary(p => p.Id);
+
+        foreach (var positionId in schedule.PositionIds)
+        {
+            if (!positionDict.TryGetValue(positionId, out var position)) continue;
+
+            sb.Append($"\"{position.Name}\"");
+
+            for (var date = schedule.StartDate.Date; date <= schedule.EndDate.Date; date = date.AddDays(1))
+            {
+                var shiftsForDay = shiftsByPositionAndDate[positionId]
+                    .Where(s => s.StartTime.Date == date)
+                    .OrderBy(s => s.StartTime)
+                    .Select(s => $"{s.PersonnelName}({s.StartTime:HH:mm}-{s.EndTime:HH:mm})")
+                    .ToList();
+
+                var cellValue = string.Join(" | ", shiftsForDay);
+                sb.Append($",\"{cellValue}\"");
+            }
+            sb.AppendLine();
+        }
+
+        return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
     // === 新增接口实现：供前端向导加载约束数据 ===

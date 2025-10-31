@@ -168,8 +168,8 @@ public class TemplateService : ITemplateService
             var exists = await _personnelRepository.ExistsAsync(personnelId);
             if (!exists)
             {
-                result.IsValid = false;
-                result.Warnings.Add(new ValidationMessage { Message = $"人员 ID {personnelId} 不存在", ResourceId = personnelId });
+                // This is a warning, not a fatal error. The template is still "valid" but has issues.
+                result.Warnings.Add(new ValidationMessage { Message = $"参与人员 ID {personnelId} 已不存在或被删除。", ResourceId = personnelId });
             }
         }
 
@@ -179,8 +179,8 @@ public class TemplateService : ITemplateService
             var exists = await _positionRepository.ExistsAsync(positionId);
             if (!exists)
             {
-                result.IsValid = false;
-                result.Warnings.Add(new ValidationMessage { Message = $"哨位 ID {positionId} 不存在", ResourceId = positionId });
+                // This is a warning, not a fatal error.
+                result.Warnings.Add(new ValidationMessage { Message = $"参与哨位 ID {positionId} 已不存在或被删除。", ResourceId = positionId });
             }
         }
 
@@ -194,6 +194,13 @@ public class TemplateService : ITemplateService
         {
             result.IsValid = false;
             result.Errors.Add(new ValidationMessage { Message = "模板必须包含至少一个哨位" });
+        }
+
+        // The template is only truly invalid if it has critical errors.
+        // The presence of warnings does not make it invalid.
+        if (result.Errors.Any())
+        {
+            result.IsValid = false;
         }
 
         return result;
@@ -214,7 +221,9 @@ public class TemplateService : ITemplateService
         var validationResult = await ValidateAsync(dto.TemplateId);
         if (!validationResult.IsValid)
         {
-            throw new InvalidOperationException($"模板验证失败: {string.Join("; ", validationResult.Errors)}");
+            // We throw an exception only for fatal errors. Warnings are allowed.
+            var errorMessages = validationResult.Errors.Select(e => e.Message);
+            throw new InvalidOperationException($"模板验证失败: {string.Join("; ", errorMessages)}");
         }
 
         // 构建排班请求
