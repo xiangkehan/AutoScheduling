@@ -62,6 +62,16 @@ public class TemplateService : ITemplateService
     {
         await ValidateCreateDtoAsync(dto);
 
+        // 名称唯一校验
+        var nameExists = await _templateRepository.ExistsByNameAsync(dto.Name, null);
+        if (nameExists) throw new ArgumentException("模板名称已存在，请使用其他名称", nameof(dto.Name));
+
+        // 默认模板唯一（同类型只能一个）
+        if (dto.IsDefault)
+        {
+            await _templateRepository.ClearDefaultForTypeAsync(dto.TemplateType);
+        }
+
         var model = _mapper.ToModel(dto);
         var id = await _templateRepository.CreateAsync(model);
 
@@ -82,6 +92,16 @@ public class TemplateService : ITemplateService
         var existingTemplate = await _templateRepository.GetByIdAsync(id);
         if (existingTemplate == null)
             throw new ArgumentException($"模板 ID {id} 不存在", nameof(id));
+
+        // 名称唯一（排除自身）
+        var nameExists = await _templateRepository.ExistsByNameAsync(dto.Name, id);
+        if (nameExists) throw new ArgumentException("模板名称已存在，请使用其他名称", nameof(dto.Name));
+
+        // 默认模板唯一
+        if (dto.IsDefault && !existingTemplate.IsDefault)
+        {
+            await _templateRepository.ClearDefaultForTypeAsync(dto.TemplateType);
+        }
 
         _mapper.UpdateModel(existingTemplate, dto);
         await _templateRepository.UpdateAsync(existingTemplate);

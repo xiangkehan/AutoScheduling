@@ -47,16 +47,24 @@ public class SchedulingService : ISchedulingService
  ValidateRequest(request);
  cancellationToken.ThrowIfCancellationRequested();
 
+ // 并行加载基础数据
+ var personalsTask = _personalRepo.GetByIdsAsync(request.PersonnelIds);
+ var positionsTask = _positionRepo.GetByIdsAsync(request.PositionIds);
+ var skillsTask = _skillRepo.GetAllAsync();
+ await Task.WhenAll(personalsTask, positionsTask, skillsTask);
+
  // 构建上下文
  var context = new SchedulingContext
  {
- Personals = await _personalRepo.GetByIdsAsync(request.PersonnelIds),
- Positions = await _positionRepo.GetByIdsAsync(request.PositionIds),
- Skills = await _skillRepo.GetAllAsync(),
+ Personals = personalsTask.Result,
+ Positions = positionsTask.Result,
+ Skills = skillsTask.Result,
  StartDate = request.StartDate.Date,
  EndDate = request.EndDate.Date
  };
  cancellationToken.ThrowIfCancellationRequested();
+
+ //休息日配置
  if (request.UseActiveHolidayConfig)
  {
  context.HolidayConfig = await _constraintRepo.GetActiveHolidayConfigAsync();
@@ -67,6 +75,8 @@ public class SchedulingService : ISchedulingService
  context.HolidayConfig = allConfigs.FirstOrDefault(c => c.Id == request.HolidayConfigId.Value);
  }
  cancellationToken.ThrowIfCancellationRequested();
+
+ // 定岗规则
  if (request.EnabledFixedRuleIds?.Count >0)
  {
  var allRules = await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly: true);
@@ -77,6 +87,8 @@ public class SchedulingService : ISchedulingService
  context.FixedPositionRules = await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly: true);
  }
  cancellationToken.ThrowIfCancellationRequested();
+
+ // 手动指定
  if (request.EnabledManualAssignmentIds?.Count >0)
  {
  var manualRange = await _constraintRepo.GetManualAssignmentsByDateRangeAsync(request.StartDate, request.EndDate, enabledOnly: true);
@@ -87,6 +99,8 @@ public class SchedulingService : ISchedulingService
  context.ManualAssignments = await _constraintRepo.GetManualAssignmentsByDateRangeAsync(request.StartDate, request.EndDate, enabledOnly: true);
  }
  cancellationToken.ThrowIfCancellationRequested();
+
+ // 最近历史排班（用于间隔评分等）
  context.LastConfirmedSchedule = await _historyMgmt.GetLastConfirmedScheduleAsync();
  cancellationToken.ThrowIfCancellationRequested();
 
@@ -101,10 +115,11 @@ public class SchedulingService : ISchedulingService
  modelSchedule.PositionIds = request.PositionIds;
  cancellationToken.ThrowIfCancellationRequested();
 
- // 保存缓冲
- int bufferId = await _historyMgmt.AddToBufferAsync(modelSchedule);
+ // 保存至缓冲区（草稿）
+ _ = await _historyMgmt.AddToBufferAsync(modelSchedule);
+
  // 映射 DTO（草稿未确认）
- return MapToScheduleDto(modelSchedule, confirmedAt: null);
+ return await MapToScheduleDtoAsync(modelSchedule, confirmedAt: null);
  }
 
  public async Task<List<ScheduleSummaryDto>> GetDraftsAsync()
@@ -126,28 +141,24 @@ public class SchedulingService : ISchedulingService
 
  public async Task<ScheduleDto?> GetScheduleByIdAsync(int id)
  {
- // 在缓冲区中查找
  var buffers = await _historyMgmt.GetAllBufferSchedulesAsync();
  var buffer = buffers.FirstOrDefault(b => b.Schedule.Id == id);
  if (buffer.Schedule != null)
  {
- return MapToScheduleDto(buffer.Schedule, confirmedAt: null, createdAtOverride: buffer.CreateTime);
+ return await MapToScheduleDtoAsync(buffer.Schedule, confirmedAt: null, createdAtOverride: buffer.CreateTime);
  }
 
- // 在历史记录中查找
  var histories = await _historyMgmt.GetAllHistorySchedulesAsync();
  var history = histories.FirstOrDefault(h => h.Schedule.Id == id);
  if (history.Schedule != null)
  {
- // 历史记录没有保存创建时间，使用 ConfirmTime作为 CreatedAt近似
- return MapToScheduleDto(history.Schedule, confirmedAt: history.ConfirmTime, createdAtOverride: history.ConfirmTime);
+ return await MapToScheduleDtoAsync(history.Schedule, confirmedAt: history.ConfirmTime, createdAtOverride: history.ConfirmTime);
  }
  return null;
  }
 
  public async Task ConfirmScheduleAsync(int id)
  {
- // 缓冲区的 ID 与 ScheduleId 不同，需要找到对应 bufferId
  var buffers = await _historyMgmt.GetAllBufferSchedulesAsync();
  var buffer = buffers.FirstOrDefault(b => b.Schedule.Id == id);
  if (buffer.Schedule == null)
@@ -192,23 +203,30 @@ public class SchedulingService : ISchedulingService
  throw new NotImplementedException("Export not implemented yet");
  }
 
+ // === 新增接口实现：供前端向导加载约束数据 ===
+ public async Task<List<HolidayConfig>> GetHolidayConfigsAsync() => await _constraintRepo.GetAllHolidayConfigsAsync();
+ public async Task<List<FixedPositionRule>> GetFixedPositionRulesAsync(bool enabledOnly = true) => await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly);
+ public async Task<List<ManualAssignment>> GetManualAssignmentsAsync(DateTime startDate, DateTime endDate, bool enabledOnly = true) => await _constraintRepo.GetManualAssignmentsByDateRangeAsync(startDate, endDate, enabledOnly);
+
  private static void ValidateRequest(SchedulingRequestDto request)
  {
  if (string.IsNullOrWhiteSpace(request.Title)) throw new ArgumentException("排班标题不能为空", nameof(request));
  if (request.StartDate.Date > request.EndDate.Date) throw new ArgumentException("开始日期不能晚于结束日期", nameof(request));
  if (request.PersonnelIds == null || request.PersonnelIds.Count ==0) throw new ArgumentException("至少选择一名人员", nameof(request));
  if (request.PositionIds == null || request.PositionIds.Count ==0) throw new ArgumentException("至少选择一个哨位", nameof(request));
+ var spanDays = (request.EndDate.Date - request.StartDate.Date).Days +1;
+ if (spanDays >365) throw new ArgumentException("排班周期不能超过365天", nameof(request.EndDate));
  }
 
- private static ScheduleDto MapToScheduleDto(Schedule schedule, DateTime? confirmedAt, DateTime? createdAtOverride = null)
+ private async Task<ScheduleDto> MapToScheduleDtoAsync(Schedule schedule, DateTime? confirmedAt, DateTime? createdAtOverride = null)
  {
- var positionNames = new Dictionary<int, string>();
- var personnelNames = new Dictionary<int, string>();
- foreach (var pid in schedule.PositionIds)
- positionNames[pid] = string.Empty;
- foreach (var perId in schedule.PersonalIds)
- personnelNames[perId] = string.Empty;
- return new ScheduleDto
+ // 加载名称映射
+ var positions = await _positionRepo.GetByIdsAsync(schedule.PositionIds);
+ var personals = await _personalRepo.GetByIdsAsync(schedule.PersonalIds);
+ var positionNames = positions.ToDictionary(p => p.Id, p => p.Name);
+ var personnelNames = personals.ToDictionary(p => p.Id, p => p.Name);
+
+ var dto = new ScheduleDto
  {
  Id = schedule.Id,
  Title = schedule.Title,
@@ -229,13 +247,46 @@ public class SchedulingService : ISchedulingService
  CreatedAt = createdAtOverride ?? schedule.CreatedAt,
  ConfirmedAt = confirmedAt,
  StartDate = schedule.StartDate,
- EndDate = schedule.EndDate
+ EndDate = schedule.EndDate,
+ Conflicts = GenerateBasicConflicts(schedule)
  };
+ return dto;
  }
 
- private static int CalcPeriodIndex(DateTime startTime)
+ private List<ConflictDto> GenerateBasicConflicts(Schedule schedule)
  {
- int hour = startTime.Hour;
- return hour /2;
+ var conflicts = new List<ConflictDto>();
+ // 未分配冲突：扫描全部日期、时段、哨位组合
+ int totalDays = (schedule.EndDate.Date - schedule.StartDate.Date).Days +1;
+ var assignedTriples = schedule.Shifts
+ .GroupBy(s => (Date: s.StartTime.Date, Period: CalcPeriodIndex(s.StartTime), Pos: s.PositionId))
+ .Select(g => g.Key)
+ .ToHashSet();
+ for (int d =0; d < totalDays; d++)
+ {
+ var date = schedule.StartDate.Date.AddDays(d);
+ for (int period =0; period <12; period++)
+ {
+ foreach (var posId in schedule.PositionIds)
+ {
+ if (!assignedTriples.Contains((date, period, posId)))
+ {
+ var slotStart = date.AddHours(period *2);
+ conflicts.Add(new ConflictDto
+ {
+ Type = "unassigned",
+ Message = "该时段未分配人员",
+ PositionId = posId,
+ StartTime = slotStart,
+ EndTime = slotStart.AddHours(2),
+ PeriodIndex = period
+ });
  }
+ }
+ }
+ }
+ return conflicts;
+ }
+
+ private static int CalcPeriodIndex(DateTime startTime) => startTime.Hour /2;
 }

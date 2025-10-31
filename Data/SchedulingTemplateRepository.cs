@@ -264,6 +264,30 @@ WHERE Id = @id
         await cmd.ExecuteNonQueryAsync();
     }
 
+    public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = excludeId.HasValue
+            ? "SELECT COUNT(1) FROM SchedulingTemplates WHERE Name = @name AND Id <> @exclude"
+            : "SELECT COUNT(1) FROM SchedulingTemplates WHERE Name = @name";
+        cmd.Parameters.AddWithValue("@name", name);
+        if (excludeId.HasValue) cmd.Parameters.AddWithValue("@exclude", excludeId.Value);
+        var result = await cmd.ExecuteScalarAsync();
+        return Convert.ToInt32(result) >0;
+    }
+
+    public async Task ClearDefaultForTypeAsync(string templateType)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE SchedulingTemplates SET IsDefault =0 WHERE TemplateType = @type";
+        cmd.Parameters.AddWithValue("@type", templateType);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
     /// <summary>
     /// 从 DataReader 读取模板对象
     /// </summary>

@@ -53,4 +53,14 @@ public interface ITemplateRepository
     /// 更新模板使用记录
     /// </summary>
     Task UpdateUsageAsync(int id);
+
+    /// <summary>
+    /// 检查名称是否已存在（排除指定ID用于更新）
+    /// </summary>
+    Task<bool> ExistsByNameAsync(string name, int? excludeId = null);
+
+    /// <summary>
+    /// 清除同类型的默认模板标记
+    /// </summary>
+    Task ClearDefaultForTypeAsync(string templateType);
 }
