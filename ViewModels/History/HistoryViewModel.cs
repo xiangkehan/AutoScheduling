@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using AutoScheduling3.Helpers;
 
 namespace AutoScheduling3.ViewModels.History
 {
@@ -39,6 +40,15 @@ namespace AutoScheduling3.ViewModels.History
 
         [ObservableProperty]
         private bool _isSortAscending = false;
+
+        [ObservableProperty]
+        private int _currentPage =1;
+
+        [ObservableProperty]
+        private int _pageSize =20;
+
+        [ObservableProperty]
+        private int _totalPages =1;
 
         public List<string> SortByOptions { get; } = new List<string> { "Time", "Name" };
 
@@ -77,25 +87,28 @@ namespace AutoScheduling3.ViewModels.History
             };
 
             var result = await _historyService.GetHistorySchedulesAsync(options);
+            var list = result.ToList();
+            TotalPages = Math.Max(1, (int)Math.Ceiling(list.Count / (double)PageSize));
+            if (CurrentPage > TotalPages) CurrentPage = TotalPages;
+            var pageItems = list.Skip((CurrentPage -1) * PageSize).Take(PageSize).ToList();
 
-            // Clear existing items and add new ones
             Items.Clear();
-            foreach (var item in result)
+            foreach (var item in pageItems)
             {
                 Items.Add(item);
             }
 
-            GroupData();
+            GroupData(list);
 
             IsLoading = false;
             IsLoaded = true;
-            IsEmpty = Items.Count == 0;
+            IsEmpty = Items.Count ==0;
         }
 
-        private void GroupData()
+        private void GroupData(List<HistoryScheduleDto> allItems)
         {
             GroupedHistorySchedules.Clear();
-            var grouped = Items
+            var grouped = allItems
                 .GroupBy(h => new { h.ConfirmTime.Year, h.ConfirmTime.Month })
                 .OrderByDescending(g => g.Key.Year)
                 .ThenByDescending(g => g.Key.Month)
@@ -119,20 +132,79 @@ namespace AutoScheduling3.ViewModels.History
                 SelectedSortBy = sortBy;
                 IsSortAscending = false;
             }
+            CurrentPage =1;
             await LoadDataAsync();
         }
 
         [RelayCommand]
         private async Task SearchAsync()
         {
+            CurrentPage =1;
             await LoadDataAsync();
+        }
+
+        [RelayCommand]
+        private async Task ApplyDateRangeAsync()
+        {
+            CurrentPage =1;
+            await LoadDataAsync();
+        }
+
+        [RelayCommand]
+        private async Task GoToPageAsync(int page)
+        {
+            if (page <1 || page > TotalPages) return;
+            CurrentPage = page;
+            await LoadDataAsync();
+        }
+
+        [RelayCommand]
+        private async Task PrevPageAsync()
+        {
+            if (CurrentPage >1)
+            {
+                CurrentPage--;
+                await LoadDataAsync();
+            }
+        }
+
+        [RelayCommand]
+        private async Task NextPageAsync()
+        {
+            if (CurrentPage < TotalPages)
+            {
+                CurrentPage++;
+                await LoadDataAsync();
+            }
         }
 
         [RelayCommand]
         private void ViewDetail(int scheduleId)
         {
-            var navigationService = (App.Current as App).ServiceProvider.GetRequiredService<Helpers.NavigationService>();
+            var navigationService = (App.Current as App).ServiceProvider.GetRequiredService<NavigationService>();
             navigationService.NavigateTo("HistoryDetail", scheduleId);
+        }
+
+        [RelayCommand]
+        private async Task ExportAsync(int scheduleId)
+        {
+            var detail = await _historyService.GetHistoryScheduleDetailAsync(scheduleId);
+            if (detail == null) return;
+            var json = System.Text.Json.JsonSerializer.Serialize(detail);
+            try
+            {
+                var dp = new Windows.ApplicationModel.DataTransfer.DataPackage();
+                dp.SetText(json);
+                Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dp);
+            }
+            catch { }
+        }
+
+        [RelayCommand]
+        private void Compare(int scheduleId)
+        {
+            var navigationService = (App.Current as App).ServiceProvider.GetRequiredService<NavigationService>();
+            navigationService.NavigateTo("Compare", scheduleId);
         }
     }
 

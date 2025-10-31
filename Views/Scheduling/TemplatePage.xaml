@@ -39,12 +39,12 @@
         </Grid.RowDefinitions>
 
         <CommandBar Grid.Row="0" Background="Transparent" DefaultLabelPosition="Right">
-            <AppBarButton Icon="Add" Label="New Template" Command="{Binding CreateTemplateCommand}"/>
+            <AppBarButton Icon="Add" Label="新建模板" Command="{Binding CreateTemplateCommand}"/>
             <AppBarSeparator/>
-            <AppBarButton Icon="Refresh" Label="Refresh" Command="{Binding LoadTemplatesCommand}"/>
+            <AppBarButton Icon="Refresh" Label="刷新" Command="{Binding LoadTemplatesCommand}"/>
             <CommandBar.Content>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <AutoSuggestBox QueryIcon="Find" PlaceholderText="Search templates..." Text="{Binding SearchKeyword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DefaultAutoSuggestBoxStyle}" MinWidth="250"/>
+                    <AutoSuggestBox QueryIcon="Find" PlaceholderText="搜索模板..." Text="{Binding SearchKeyword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DefaultAutoSuggestBoxStyle}" MinWidth="250"/>
                 </StackPanel>
             </CommandBar.Content>
         </CommandBar>

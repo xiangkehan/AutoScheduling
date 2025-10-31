@@ -40,6 +40,11 @@ namespace AutoScheduling3
             _navigationService.RegisterPage("ScheduleResult", typeof(ScheduleResultPage));
             _navigationService.RegisterPage("Drafts", typeof(DraftsPage));
 
+            // 历史页面注册
+            _navigationService.RegisterPage("History", typeof(HistoryPage));
+            _navigationService.RegisterPage("Compare", typeof(ComparePage));
+            // 如果存在详情页面，可在此注册: _navigationService.RegisterPage("HistoryDetail", typeof(HistoryDetailPage));
+
             // 默认导航
             _navigationService.NavigateTo("Personnel");
         }

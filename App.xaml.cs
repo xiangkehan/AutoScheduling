@@ -103,6 +103,7 @@ namespace AutoScheduling3
             services.AddTransient<HistoryViewModel>();
             services.AddTransient<HistoryDetailViewModel>();
             services.AddTransient<DraftsViewModel>(); // 新增 DraftsViewModel 注册
+            services.AddTransient<CompareViewModel>();
 
             ServiceProvider = services.BuildServiceProvider();
         }

@@ -44,12 +44,24 @@ namespace AutoScheduling3.Services
             if (!string.IsNullOrEmpty(options.Keyword))
                 query = query.Where(h => h.Schedule.Title.Contains(options.Keyword, StringComparison.OrdinalIgnoreCase));
 
-            query = (options.SortBy, options.IsAscending) switch
+            // 排序逻辑：Time 或 Name
+            if (string.Equals(options.SortBy, "Time", StringComparison.OrdinalIgnoreCase))
             {
-                ("Title", true) => query.OrderBy(h => h.Schedule.Title),
-                ("Title", false) => query.OrderByDescending(h => h.Schedule.Title),
-                _ => query.OrderByDescending(h => h.ConfirmTime)
-            };
+                query = options.IsAscending
+                    ? query.OrderBy(h => h.ConfirmTime)
+                    : query.OrderByDescending(h => h.ConfirmTime);
+            }
+            else if (string.Equals(options.SortBy, "Name", StringComparison.OrdinalIgnoreCase) || string.Equals(options.SortBy, "Title", StringComparison.OrdinalIgnoreCase))
+            {
+                query = options.IsAscending
+                    ? query.OrderBy(h => h.Schedule.Title)
+                    : query.OrderByDescending(h => h.Schedule.Title);
+            }
+            else
+            {
+                // 默认按时间倒序
+                query = query.OrderByDescending(h => h.ConfirmTime);
+            }
 
             return query.Select(h => new HistoryScheduleDto
             {

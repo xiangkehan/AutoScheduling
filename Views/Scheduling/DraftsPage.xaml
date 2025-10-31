@@ -20,8 +20,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="24,24,24,12">
-            <TextBlock Text="²Ý¸åÏä" Style="{ThemeResource TitleTextBlockStyle}"/>
-            <TextBlock Text="²é¿´¡¢È·ÈÏ»òÉ¾³ýÎ´Íê³ÉµÄÅÅ°à²Ý¸å" Style="{ThemeResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBlock Text="è‰ç¨¿ç®±" Style="{ThemeResource TitleTextBlockStyle}"/>
+            <TextBlock Text="æŸ¥çœ‹ã€ç¡®è®¤æˆ–åˆ é™¤æœªå®Œæˆçš„æŽ’ç­è‰ç¨¿" Style="{ThemeResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
 
         <Grid Grid.Row="1" Padding="24,0,24,24">
@@ -39,11 +39,11 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="2*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="ÅÅ°à±íÃû³Æ" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="1" Text="ÈÕÆÚ·¶Î§" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="2" Text="ÈËÔ±Êý" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                            <TextBlock Grid.Column="3" Text="ÉÚÎ»Êý" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                            <TextBlock Grid.Column="4" Text="²Ù×÷" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                            <TextBlock Grid.Column="0" Text="æŽ’ç­è¡¨åç§°" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1" Text="æ—¥æœŸèŒƒå›´" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="2" Text="äººå‘˜æ•°" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Text="å“¨ä½æ•°" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="4" Text="æ“ä½œ" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                         </Grid>
                     </DataTemplate>
                 </ListView.HeaderTemplate>
@@ -61,14 +61,14 @@
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
                                 <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}">
-                                    <Run Text="´´½¨ÓÚ:"/>
+                                    <Run Text="åˆ›å»ºäºŽ:"/>
                                     <Run Text="{x:Bind CreatedAt, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd HH:mm'}"/>
                                 </TextBlock>
                             </StackPanel>
 
                             <TextBlock Grid.Column="1" VerticalAlignment="Center">
                                 <Run Text="{x:Bind StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
-                                <Run Text="ÖÁ"/>
+                                <Run Text="è‡³"/>
                                 <Run Text="{x:Bind EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
                             </TextBlock>
 
@@ -76,9 +76,9 @@
                             <TextBlock Grid.Column="3" Text="{x:Bind PositionCount}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 
                             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                                <Button Content="²é¿´" Command="{Binding DataContext.ViewDraftCommand, ElementName=DraftsPage}" CommandParameter="{x:Bind Id}"/>
-                                <Button Content="È·ÈÏ" Style="{ThemeResource AccentButtonStyle}" Command="{Binding DataContext.ConfirmDraftCommand, ElementName=DraftsPage}" CommandParameter="{x:Bind Id}"/>
-                                <AppBarButton Icon="Delete" Label="É¾³ý" Command="{Binding DataContext.DeleteDraftCommand, ElementName=DraftsPage}" CommandParameter="{x:Bind Id}"/>
+                                <Button Content="æŸ¥çœ‹" Command="{Binding DataContext.ViewDraftCommand, ElementName=DraftsPage}" CommandParameter="{x:Bind Id}"/>
+                                <Button Content="ç¡®è®¤" Style="{ThemeResource AccentButtonStyle}" Command="{Binding DataContext.ConfirmDraftCommand, ElementName=DraftsPage}" CommandParameter="{x:Bind Id}"/>
+                                <AppBarButton Icon="Delete" Label="åˆ é™¤" Command="{Binding DataContext.DeleteDraftCommand, ElementName=DraftsPage}" CommandParameter="{x:Bind Id}"/>
                             </StackPanel>
                         </Grid>
                     </DataTemplate>
