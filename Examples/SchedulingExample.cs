@@ -7,6 +7,9 @@ using AutoScheduling3.Models.Constraints;
 using AutoScheduling3.Services;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Services.Interfaces;
+using AutoScheduling3.Data;
+using AutoScheduling3.Data.Interfaces;
+using AutoScheduling3.History;
 
 namespace AutoScheduling3.Examples
 {
@@ -19,7 +22,13 @@ namespace AutoScheduling3.Examples
 
         public SchedulingExample()
         {
-            _service = new SchedulingService("scheduling_example.db");
+            string db = "scheduling_example.db"; // 手动装配依赖用于示例
+            var personalRepo = new PersonalRepository(db);
+            var positionRepo = new PositionLocationRepository(db);
+            var skillRepo = new SkillRepository(db);
+            var constraintRepo = new ConstraintRepository(db);
+            var historyMgmt = new HistoryManagement(db);
+            _service = new SchedulingService(personalRepo, positionRepo, skillRepo, constraintRepo, historyMgmt);
             ((SchedulingService)_service).InitializeAsync().GetAwaiter().GetResult();
         }
 

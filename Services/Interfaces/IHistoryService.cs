@@ -9,6 +9,7 @@ namespace AutoScheduling3.Services.Interfaces
     {
         Task<IEnumerable<HistoryScheduleDto>> GetHistorySchedulesAsync(HistoryQueryOptions options);
         Task<HistoryScheduleDetailDto> GetHistoryScheduleDetailAsync(int scheduleId);
+        Task<Tuple<HistoryScheduleDetailDto, HistoryScheduleDetailDto>> GetSchedulesForComparisonAsync(int scheduleId1, int scheduleId2);
     }
 
     public class HistoryQueryOptions

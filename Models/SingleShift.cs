@@ -24,7 +24,7 @@ namespace AutoScheduling3.Models
         /// <summary>
         /// 人员ID (Personal.Id)
         /// </summary>
-        public int PersonId { get; set; }
+        public int PersonalId { get; set; } // renamed from PersonId
 
         /// <summary>
         /// 班次开始时间（UTC）
@@ -36,6 +36,11 @@ namespace AutoScheduling3.Models
         /// </summary>
         public DateTime EndTime { get; set; }
 
-        public override string ToString() => $"Shift[{Id}] Pos={PositionId} Person={PersonId} {StartTime:o} -> {EndTime:o}";
+        /// <summary>
+        /// 从排班开始日期的天数索引 (0-based)
+        /// </summary>
+        public int DayIndex { get; set; }
+
+        public override string ToString() => $"Shift[{Id}] Pos={PositionId} Person={PersonalId} {StartTime:o} -> {EndTime:o}";
     }
 }

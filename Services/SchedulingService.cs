@@ -12,34 +12,40 @@ using AutoScheduling3.SchedulingEngine.Core;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.DTOs;
 using System.Text;
+using AutoScheduling3.Data.Interfaces;
 
 namespace AutoScheduling3.Services;
 
 public class SchedulingService : ISchedulingService
 {
-    private readonly PersonalRepository _personalRepo;
-    private readonly PositionLocationRepository _positionRepo;
-    private readonly SkillRepository _skillRepo;
-    private readonly ConstraintRepository _constraintRepo;
-    private readonly HistoryManagement _historyMgmt;
+    private readonly IPersonalRepository _personalRepo;
+    private readonly IPositionRepository _positionRepo;
+    private readonly ISkillRepository _skillRepo;
+    private readonly IConstraintRepository _constraintRepo;
+    private readonly IHistoryManagement _historyMgmt;
 
-    public SchedulingService(string dbPath)
+    public SchedulingService(IPersonalRepository personalRepo, IPositionRepository positionRepo, ISkillRepository skillRepo, IConstraintRepository constraintRepo, IHistoryManagement historyMgmt)
     {
-        if (string.IsNullOrWhiteSpace(dbPath)) throw new ArgumentNullException(nameof(dbPath));
-        _personalRepo = new PersonalRepository(dbPath);
-        _positionRepo = new PositionLocationRepository(dbPath);
-        _skillRepo = new SkillRepository(dbPath);
-        _constraintRepo = new ConstraintRepository(dbPath);
-        _historyMgmt = new HistoryManagement(dbPath);
+        _personalRepo = personalRepo;
+        _positionRepo = positionRepo;
+        _skillRepo = skillRepo;
+        _constraintRepo = constraintRepo;
+        _historyMgmt = historyMgmt;
     }
 
     public async Task InitializeAsync()
     {
-        await _personalRepo.InitAsync();
-        await _positionRepo.InitAsync();
-        await _skillRepo.InitAsync();
-        await _constraintRepo.InitAsync();
-        await _historyMgmt.InitAsync();
+        // 如果具体实现支持 InitAsync 可调用 (反射检测)
+        var initMethods = new object[]{ _personalRepo, _positionRepo, _skillRepo, _constraintRepo, _historyMgmt };
+        foreach (var svc in initMethods)
+        {
+            var mi = svc.GetType().GetMethod("InitAsync");
+            if (mi != null)
+            {
+                var task = mi.Invoke(svc, null) as Task;
+                if (task != null) await task;
+            }
+        }
     }
 
     public async Task<ScheduleDto> ExecuteSchedulingAsync(SchedulingRequestDto request, CancellationToken cancellationToken = default)
@@ -49,8 +55,8 @@ public class SchedulingService : ISchedulingService
         cancellationToken.ThrowIfCancellationRequested();
 
         // 并行加载基础数据
-        var personalsTask = _personalRepo.GetByIdsAsync(request.PersonnelIds);
-        var positionsTask = _positionRepo.GetByIdsAsync(request.PositionIds);
+        var personalsTask = (_personalRepo as PersonalRepository)?.GetByIdsAsync(request.PersonnelIds) ?? _personalRepo.GetPersonnelByIdsAsync(request.PersonnelIds);
+        var positionsTask = (_positionRepo as PositionLocationRepository)?.GetByIdsAsync(request.PositionIds) ?? _positionRepo.GetPositionsByIdsAsync(request.PositionIds);
         var skillsTask = _skillRepo.GetAllAsync();
         await Task.WhenAll(personalsTask, positionsTask, skillsTask);
 
@@ -230,7 +236,7 @@ public class SchedulingService : ISchedulingService
         var shiftsByPositionAndDate = schedule.Shifts
             .ToLookup(s => s.PositionId);
 
-        var allPositions = await _positionRepo.GetByIdsAsync(schedule.PositionIds);
+        var allPositions = await _positionRepo.GetPositionsByIdsAsync(schedule.PositionIds);
         var positionDict = allPositions.ToDictionary(p => p.Id);
 
         foreach (var positionId in schedule.PositionIds)
@@ -274,8 +280,8 @@ public class SchedulingService : ISchedulingService
     private async Task<ScheduleDto> MapToScheduleDtoAsync(Schedule schedule, DateTime? confirmedAt, DateTime? createdAtOverride = null)
     {
         // 加载名称映射
-        var positions = await _positionRepo.GetByIdsAsync(schedule.PositionIds);
-        var personals = await _personalRepo.GetByIdsAsync(schedule.PersonalIds);
+        var positions = await _positionRepo.GetPositionsByIdsAsync(schedule.PositionIds);
+        var personals = await _personalRepo.GetPersonnelByIdsAsync(schedule.PersonalIds);
         var positionNames = positions.ToDictionary(p => p.Id, p => p.Name);
         var personnelNames = personals.ToDictionary(p => p.Id, p => p.Name);
 

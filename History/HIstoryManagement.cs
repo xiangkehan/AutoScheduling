@@ -1,21 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using AutoScheduling3.Models;
-using AutoScheduling3.Data;
 
 namespace AutoScheduling3.History
 {
     /// <summary>
     /// 历史管理类：负责管理排哨历史记录，包括已确认的历史和缓冲区
     /// </summary>
-    public class HistoryManagement
+    public class HistoryManagement : IHistoryManagement
     {
         private readonly string _connectionString;
-        private readonly SchedulingRepository _schedulingRepo;
+        private readonly Data.SchedulingRepository _schedulingRepo;
 
         /// <summary>
         /// 构造函数
@@ -24,7 +22,7 @@ namespace AutoScheduling3.History
         public HistoryManagement(string dbPath)
         {
             _connectionString = new SqliteConnectionStringBuilder { DataSource = dbPath }.ToString();
-            _schedulingRepo = new SchedulingRepository(dbPath);
+            _schedulingRepo = new Data.SchedulingRepository(dbPath);
         }
 
         /// <summary>
@@ -345,6 +343,19 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
 
             int scheduleId = Convert.ToInt32(result);
             return await _schedulingRepo.GetScheduleAsync(scheduleId);
+        }
+
+        /// <summary>
+        /// 通过排班ID获取单个历史记录项
+        /// </summary>
+        /// <param name="scheduleId">排班ID</param>
+        /// <returns>历史记录项，如果未找到则返回null</returns>
+        public async Task<(Schedule Schedule, DateTime ConfirmTime)?> GetHistoryScheduleByScheduleIdAsync(int scheduleId)
+        {
+            var all = await GetAllHistorySchedulesAsync();
+            var item = all.FirstOrDefault(h => h.Schedule.Id == scheduleId);
+            if (item.Schedule == null) return null;
+            return item;
         }
     }
 }

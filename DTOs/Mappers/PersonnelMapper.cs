@@ -59,6 +59,12 @@ public class PersonnelMapper
         return dto;
     }
 
+    // Added sync wrapper for LINQ Select usage scenarios
+    /// <summary>
+    /// Model转DTO（同步）
+    /// </summary>
+    public PersonnelDto ToDto(Personal model) => ToDtoAsync(model).GetAwaiter().GetResult();
+
     /// <summary>
     /// DTO转Model（创建）
     /// </summary>

@@ -12,7 +12,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoScheduling3.ViewModels.History
 {
-    [ObservableObject]
     public partial class HistoryViewModel : ListViewModelBase<HistoryScheduleDto>
     {
         private readonly IHistoryService _historyService;
@@ -35,11 +34,18 @@ namespace AutoScheduling3.ViewModels.History
         [ObservableProperty]
         private bool _isListView = false;
 
+        [ObservableProperty]
+        private string _selectedSortBy = "Time";
+
+        [ObservableProperty]
+        private bool _isSortAscending = false;
+
+        public List<string> SortByOptions { get; } = new List<string> { "Time", "Name" };
+
         public HistoryViewModel(IHistoryService historyService)
         {
             _historyService = historyService;
             Title = "ÀúÊ·¼ÇÂ¼";
-            Items = new ObservableCollection<HistoryScheduleDto>();
             GroupedHistorySchedules = new ObservableCollection<GroupedHistorySchedule>();
         }
 
@@ -58,7 +64,7 @@ namespace AutoScheduling3.ViewModels.History
             }
         }
 
-        public override async Task LoadAsync()
+        public override async Task LoadDataAsync()
         {
             IsLoading = true;
             var options = new HistoryQueryOptions
@@ -66,12 +72,13 @@ namespace AutoScheduling3.ViewModels.History
                 StartDate = StartDate?.Date,
                 EndDate = EndDate?.Date,
                 Keyword = Keyword,
-                SortBy = "Time",
-                IsAscending = false
+                SortBy = SelectedSortBy,
+                IsAscending = IsSortAscending
             };
 
             var result = await _historyService.GetHistorySchedulesAsync(options);
 
+            // Clear existing items and add new ones
             Items.Clear();
             foreach (var item in result)
             {
@@ -101,9 +108,24 @@ namespace AutoScheduling3.ViewModels.History
         }
 
         [RelayCommand]
+        private async Task SortAsync(string sortBy)
+        {
+            if (SelectedSortBy == sortBy)
+            {
+                IsSortAscending = !IsSortAscending;
+            }
+            else
+            {
+                SelectedSortBy = sortBy;
+                IsSortAscending = false;
+            }
+            await LoadDataAsync();
+        }
+
+        [RelayCommand]
         private async Task SearchAsync()
         {
-            await LoadAsync();
+            await LoadDataAsync();
         }
 
         [RelayCommand]

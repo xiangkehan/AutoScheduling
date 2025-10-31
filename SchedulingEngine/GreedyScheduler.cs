@@ -270,7 +270,8 @@ namespace AutoScheduling3.SchedulingEngine
  PersonalId = personalId,
  StartTime = DateTime.SpecifyKind(startTime, DateTimeKind.Utc),
  EndTime = DateTime.SpecifyKind(endTime, DateTimeKind.Utc),
- ScheduleId = schedule.Id
+ ScheduleId = schedule.Id,
+ DayIndex = (date.Date - _context.StartDate.Date).Days
  });
  }
  }

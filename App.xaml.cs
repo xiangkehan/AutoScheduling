@@ -9,7 +9,6 @@ using AutoScheduling3.ViewModels.Scheduling;
 using AutoScheduling3.Data.Interfaces;
 using AutoScheduling3.Data;
 using AutoScheduling3.DTOs.Mappers;
-using System;
 using WinRT.Interop;
 using AutoScheduling3.ViewModels.DataManagement;
 using AutoScheduling3.ViewModels.History;
@@ -71,10 +70,10 @@ namespace AutoScheduling3
             services.AddSingleton<IPersonalRepository>(sp => new PersonalRepository(DatabasePath));
             services.AddSingleton<IPositionRepository>(sp => new PositionLocationRepository(DatabasePath));
             services.AddSingleton<ISkillRepository>(sp => new SkillRepository(DatabasePath));
+            services.AddSingleton<IConstraintRepository>(sp => new ConstraintRepository(DatabasePath));
             services.AddSingleton<ITemplateRepository>(sp => new SchedulingTemplateRepository(DatabasePath));
             services.AddSingleton(sp => new SchedulingRepository(DatabasePath));
-            services.AddSingleton(sp => new ConstraintRepository(DatabasePath));
-            services.AddSingleton(sp => new HistoryManagement(DatabasePath));
+            services.AddSingleton<IHistoryManagement>(sp => new HistoryManagement(DatabasePath));
 
             // 注册 Mappers
             services.AddSingleton<PersonnelMapper>();
@@ -88,12 +87,7 @@ namespace AutoScheduling3
             services.AddSingleton<ISkillService, SkillService>();
             services.AddSingleton<ITemplateService, TemplateService>();
             services.AddSingleton<IHistoryService, HistoryService>();
-            services.AddSingleton<ISchedulingService>(sp =>
-            {
-                var svc = new SchedulingService(DatabasePath);
-                // 初始化数据库所需的内部结构（延迟到 OnLaunched 中统一处理）
-                return svc;
-            });
+            services.AddSingleton<ISchedulingService, SchedulingService>();
 
             // 注册 Helpers
             services.AddSingleton<NavigationService>();
@@ -108,6 +102,7 @@ namespace AutoScheduling3
             services.AddTransient<ScheduleResultViewModel>();
             services.AddTransient<HistoryViewModel>();
             services.AddTransient<HistoryDetailViewModel>();
+            services.AddTransient<DraftsViewModel>(); // 新增 DraftsViewModel 注册
 
             ServiceProvider = services.BuildServiceProvider();
         }
@@ -119,27 +114,38 @@ namespace AutoScheduling3
         {
             try
             {
-                var personalRepo = ServiceProvider.GetRequiredService<IPersonalRepository>() as PersonalRepository;
-                var positionRepo = ServiceProvider.GetRequiredService<IPositionRepository>() as PositionLocationRepository;
-                var skillRepo = ServiceProvider.GetRequiredService<ISkillRepository>() as SkillRepository;
-                var templateRepo = ServiceProvider.GetRequiredService<ITemplateRepository>() as SchedulingTemplateRepository;
-                var schedulingRepo = ServiceProvider.GetRequiredService<SchedulingRepository>();
-                var constraintRepo = ServiceProvider.GetRequiredService<ConstraintRepository>();
-                var schedulingService = ServiceProvider.GetRequiredService<ISchedulingService>() as SchedulingService;
-                var historyManagement = ServiceProvider.GetRequiredService<HistoryManagement>();
+                // 初始化所有带 InitAsync 方法的组件
+                var initTargets = new object[]{
+                    ServiceProvider.GetRequiredService<IPersonalRepository>(),
+                    ServiceProvider.GetRequiredService<IPositionRepository>(),
+                    ServiceProvider.GetRequiredService<ISkillRepository>(),
+                    ServiceProvider.GetRequiredService<IConstraintRepository>(),
+                    ServiceProvider.GetRequiredService<ITemplateRepository>(),
+                    ServiceProvider.GetRequiredService<IHistoryManagement>(),
+                    ServiceProvider.GetRequiredService<ISchedulingService>()
+                };
 
-                if (personalRepo != null) await personalRepo.InitAsync();
-                if (positionRepo != null) await positionRepo.InitAsync();
-                if (skillRepo != null) await skillRepo.InitAsync();
-                if (templateRepo != null) await templateRepo.InitAsync();
-                if (schedulingRepo != null) await schedulingRepo.InitAsync();
-                if (constraintRepo != null) await constraintRepo.InitAsync();
-                if (historyManagement != null) await historyManagement.InitAsync();
-                if (schedulingService != null) await schedulingService.InitializeAsync();
+                foreach(var target in initTargets)
+                {
+                    var mi = target.GetType().GetMethod("InitAsync");
+                    if(mi != null)
+                    {
+                        var task = mi.Invoke(target, null) as System.Threading.Tasks.Task;
+                        if(task != null) await task;
+                    }
+                }
+
+                // SchedulingService 自身可能定义 InitializeAsync 调度资源
+                var schedulingService = ServiceProvider.GetRequiredService<ISchedulingService>();
+                var initServiceMi = schedulingService.GetType().GetMethod("InitializeAsync");
+                if(initServiceMi != null)
+                {
+                    var tsk = initServiceMi.Invoke(schedulingService, null) as System.Threading.Tasks.Task;
+                    if(tsk != null) await tsk;
+                }
             }
-            catch (System.Exception ex)
+            catch(Exception ex)
             {
-                // 日志记录或错误处理
                 System.Diagnostics.Debug.WriteLine($"数据库初始化失败: {ex.Message}");
             }
         }

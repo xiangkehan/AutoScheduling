@@ -4,13 +4,14 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using AutoScheduling3.Models.Constraints;
+using AutoScheduling3.Data.Interfaces;
 
 namespace AutoScheduling3.Data
 {
     /// <summary>
     /// 约束数据访问层：管理定岗规则、手动指定和休息日配置的 CRUD 操作
     /// </summary>
-    public class ConstraintRepository
+    public class ConstraintRepository : IConstraintRepository
     {
         private readonly string _connectionString;
         private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.General);

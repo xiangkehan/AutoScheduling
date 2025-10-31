@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using AutoScheduling3.Models;
+using System.Linq; // LINQ for Any Distinct
 
 namespace AutoScheduling3.Data
 {
@@ -40,6 +41,7 @@ CREATE TABLE IF NOT EXISTS SingleShifts (
     PersonalId INTEGER NOT NULL,
     StartTime TEXT NOT NULL, -- ISO 8601
     EndTime TEXT NOT NULL,   -- ISO 8601
+    DayIndex INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (ScheduleId) REFERENCES Schedules(Id) ON DELETE CASCADE
 );
 ";
@@ -168,12 +170,13 @@ CREATE TABLE IF NOT EXISTS SingleShifts (
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "INSERT INTO SingleShifts (ScheduleId, PositionId, PersonalId, StartTime, EndTime) VALUES (@sid,@pos,@pid,@start,@end); SELECT last_insert_rowid();";
+            cmd.CommandText = "INSERT INTO SingleShifts (ScheduleId, PositionId, PersonalId, StartTime, EndTime, DayIndex) VALUES (@sid,@pos,@pid,@start,@end,@dayIndex); SELECT last_insert_rowid();";
             cmd.Parameters.AddWithValue("@sid", shift.ScheduleId);
             cmd.Parameters.AddWithValue("@pos", shift.PositionId);
             cmd.Parameters.AddWithValue("@pid", shift.PersonalId);
             cmd.Parameters.AddWithValue("@start", shift.StartTime.ToUniversalTime().ToString("o"));
             cmd.Parameters.AddWithValue("@end", shift.EndTime.ToUniversalTime().ToString("o"));
+            cmd.Parameters.AddWithValue("@dayIndex", shift.DayIndex);
             var obj = await cmd.ExecuteScalarAsync();
             shift.Id = Convert.ToInt32(obj);
             return shift.Id;
@@ -184,7 +187,7 @@ CREATE TABLE IF NOT EXISTS SingleShifts (
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT Id, ScheduleId, PositionId, PersonalId, StartTime, EndTime FROM SingleShifts WHERE Id=@id";
+            cmd.CommandText = "SELECT Id, ScheduleId, PositionId, PersonalId, StartTime, EndTime, DayIndex FROM SingleShifts WHERE Id=@id";
             cmd.Parameters.AddWithValue("@id", id);
             using var reader = await cmd.ExecuteReaderAsync();
             if (!await reader.ReadAsync()) return null;
@@ -203,12 +206,13 @@ CREATE TABLE IF NOT EXISTS SingleShifts (
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "UPDATE SingleShifts SET ScheduleId=@sid, PositionId=@pos, PersonalId=@pid, StartTime=@start, EndTime=@end WHERE Id=@id";
+            cmd.CommandText = "UPDATE SingleShifts SET ScheduleId=@sid, PositionId=@pos, PersonalId=@pid, StartTime=@start, EndTime=@end, DayIndex=@dayIndex WHERE Id=@id";
             cmd.Parameters.AddWithValue("@sid", shift.ScheduleId);
             cmd.Parameters.AddWithValue("@pos", shift.PositionId);
             cmd.Parameters.AddWithValue("@pid", shift.PersonalId);
             cmd.Parameters.AddWithValue("@start", shift.StartTime.ToUniversalTime().ToString("o"));
             cmd.Parameters.AddWithValue("@end", shift.EndTime.ToUniversalTime().ToString("o"));
+            cmd.Parameters.AddWithValue("@dayIndex", shift.DayIndex);
             cmd.Parameters.AddWithValue("@id", shift.Id);
             await cmd.ExecuteNonQueryAsync();
         }
@@ -229,12 +233,13 @@ CREATE TABLE IF NOT EXISTS SingleShifts (
         {
             var cmd = conn.CreateCommand();
             cmd.Transaction = tx;
-            cmd.CommandText = "INSERT INTO SingleShifts (ScheduleId, PositionId, PersonalId, StartTime, EndTime) VALUES (@sid,@pos,@pid,@start,@end);";
+            cmd.CommandText = "INSERT INTO SingleShifts (ScheduleId, PositionId, PersonalId, StartTime, EndTime, DayIndex) VALUES (@sid,@pos,@pid,@start,@end,@dayIndex);";
             cmd.Parameters.AddWithValue("@sid", shift.ScheduleId);
             cmd.Parameters.AddWithValue("@pos", shift.PositionId);
             cmd.Parameters.AddWithValue("@pid", shift.PersonalId);
             cmd.Parameters.AddWithValue("@start", shift.StartTime.ToUniversalTime().ToString("o"));
             cmd.Parameters.AddWithValue("@end", shift.EndTime.ToUniversalTime().ToString("o"));
+            cmd.Parameters.AddWithValue("@dayIndex", shift.DayIndex);
             await cmd.ExecuteNonQueryAsync();
             // fetch id
             var idCmd = conn.CreateCommand();
@@ -248,7 +253,7 @@ CREATE TABLE IF NOT EXISTS SingleShifts (
         {
             var list = new List<SingleShift>();
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT Id, ScheduleId, PositionId, PersonalId, StartTime, EndTime FROM SingleShifts WHERE ScheduleId=@sid ORDER BY StartTime";
+            cmd.CommandText = "SELECT Id, ScheduleId, PositionId, PersonalId, StartTime, EndTime, DayIndex FROM SingleShifts WHERE ScheduleId=@sid ORDER BY StartTime";
             cmd.Parameters.AddWithValue("@sid", scheduleId);
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -267,7 +272,8 @@ CREATE TABLE IF NOT EXISTS SingleShifts (
                 PositionId = reader.GetInt32(2),
                 PersonalId = reader.GetInt32(3),
                 StartTime = DateTime.Parse(reader.GetString(4)).ToUniversalTime(),
-                EndTime = DateTime.Parse(reader.GetString(5)).ToUniversalTime()
+                EndTime = DateTime.Parse(reader.GetString(5)).ToUniversalTime(),
+                DayIndex = reader.GetInt32(6)
             };
         }
         #endregion

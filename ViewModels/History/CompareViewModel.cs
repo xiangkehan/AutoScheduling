@@ -60,13 +60,10 @@ namespace AutoScheduling3.ViewModels.History
 
             IsLoading = true;
 
-            var task1 = _historyService.GetHistoryScheduleDetailAsync(SelectedSchedule1.Id);
-            var task2 = _historyService.GetHistoryScheduleDetailAsync(SelectedSchedule2.Id);
+            var result = await _historyService.GetSchedulesForComparisonAsync(SelectedSchedule1.Id, SelectedSchedule2.Id);
 
-            await Task.WhenAll(task1, task2);
-
-            ScheduleDetail1 = await task1;
-            ScheduleDetail2 = await task2;
+            ScheduleDetail1 = result.Item1;
+            ScheduleDetail2 = result.Item2;
 
             // TODO: Implement comparison logic here
 

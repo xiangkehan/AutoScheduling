@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using AutoScheduling3.Models;
 using AutoScheduling3.Data.Interfaces;
+using System.Linq; // for Any Distinct
 
 namespace AutoScheduling3.Data
 {
