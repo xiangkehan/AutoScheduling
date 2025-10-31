@@ -286,5 +286,30 @@ WHERE Id = @id";
 
             return list;
         }
+
+        public async Task<List<Personal>> GetPersonnelByIdsAsync(IEnumerable<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return new List<Personal>();
+
+            var list = new List<Personal>();
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var idsStr = string.Join(",", ids.Distinct());
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = $@"
+SELECT Id, Name, PositionId, SkillIds, IsAvailable, IsRetired,
+       RecentShiftIntervalCount, RecentHolidayShiftIntervalCount, RecentPeriodShiftIntervals
+FROM Personals WHERE Id IN ({idsStr})";
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapPerson(reader));
+            }
+
+            return list;
+        }
     }
 }

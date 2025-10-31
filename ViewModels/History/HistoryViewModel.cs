@@ -8,15 +8,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoScheduling3.ViewModels.History
 {
-    public partial class HistoryViewModel : ListViewModelBase
+    [ObservableObject]
+    public partial class HistoryViewModel : ListViewModelBase<HistoryScheduleDto>
     {
         private readonly IHistoryService _historyService;
-
-        [ObservableProperty]
-        private ObservableCollection<HistoryScheduleDto> _historySchedules;
 
         [ObservableProperty]
         private ObservableCollection<GroupedHistorySchedule> _groupedHistorySchedules;
@@ -40,7 +39,7 @@ namespace AutoScheduling3.ViewModels.History
         {
             _historyService = historyService;
             Title = "ÀúÊ·¼ÇÂ¼";
-            HistorySchedules = new ObservableCollection<HistoryScheduleDto>();
+            Items = new ObservableCollection<HistoryScheduleDto>();
             GroupedHistorySchedules = new ObservableCollection<GroupedHistorySchedule>();
         }
 
@@ -73,23 +72,23 @@ namespace AutoScheduling3.ViewModels.History
 
             var result = await _historyService.GetHistorySchedulesAsync(options);
 
-            HistorySchedules.Clear();
+            Items.Clear();
             foreach (var item in result)
             {
-                HistorySchedules.Add(item);
+                Items.Add(item);
             }
 
             GroupData();
 
             IsLoading = false;
             IsLoaded = true;
-            IsEmpty = HistorySchedules.Count == 0;
+            IsEmpty = Items.Count == 0;
         }
 
         private void GroupData()
         {
             GroupedHistorySchedules.Clear();
-            var grouped = HistorySchedules
+            var grouped = Items
                 .GroupBy(h => new { h.ConfirmTime.Year, h.ConfirmTime.Month })
                 .OrderByDescending(g => g.Key.Year)
                 .ThenByDescending(g => g.Key.Month)

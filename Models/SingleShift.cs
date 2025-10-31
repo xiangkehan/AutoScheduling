@@ -24,7 +24,7 @@ namespace AutoScheduling3.Models
         /// <summary>
         /// 人员ID (Personal.Id)
         /// </summary>
-        public int PersonalId { get; set; }
+        public int PersonId { get; set; }
 
         /// <summary>
         /// 班次开始时间（UTC）
@@ -36,6 +36,6 @@ namespace AutoScheduling3.Models
         /// </summary>
         public DateTime EndTime { get; set; }
 
-        public override string ToString() => $"Shift[{Id}] Pos={PositionId} Person={PersonalId} {StartTime:o} -> {EndTime:o}";
+        public override string ToString() => $"Shift[{Id}] Pos={PositionId} Person={PersonId} {StartTime:o} -> {EndTime:o}";
     }
 }

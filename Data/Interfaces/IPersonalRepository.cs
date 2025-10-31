@@ -48,4 +48,9 @@ public interface IPersonalRepository
     /// 检查人员是否存在
     /// </summary>
     Task<bool> ExistsAsync(int id);
+
+    /// <summary>
+    /// 根据ID列表获取人员
+    /// </summary>
+    Task<List<Personal>> GetPersonnelByIdsAsync(IEnumerable<int> ids);
 }

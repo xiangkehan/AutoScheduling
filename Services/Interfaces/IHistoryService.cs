@@ -1,6 +1,7 @@
 using AutoScheduling3.DTOs;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System;
 
 namespace AutoScheduling3.Services.Interfaces
 {
@@ -14,8 +15,8 @@ namespace AutoScheduling3.Services.Interfaces
     {
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
-        public string Keyword { get; set; }
-        public string SortBy { get; set; } // "Time" or "Name"
+        public string? Keyword { get; set; }
+        public string SortBy { get; set; } = "Time";
         public bool IsAscending { get; set; }
     }
 }

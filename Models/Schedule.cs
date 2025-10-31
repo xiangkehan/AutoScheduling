@@ -5,8 +5,7 @@ using System.ComponentModel.DataAnnotations;
 namespace AutoScheduling3.Models
 {
     /// <summary>
-    /// 排班表：包含数据库ID、表头（名称/描述）、排班结果（单次排班集合）。
-    /// 人员组与哨位列表通过引用集合的方式存储：人员ID集合、哨位ID集合。
+    /// 数据库中的排班表模型
     /// </summary>
     public class Schedule
     {

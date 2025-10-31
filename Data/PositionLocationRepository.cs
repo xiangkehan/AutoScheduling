@@ -205,5 +205,27 @@ CREATE TABLE IF NOT EXISTS Positions (
                 RequiredSkillIds = skillIds
             };
         }
+
+        public async Task<List<PositionLocation>> GetPositionsByIdsAsync(IEnumerable<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return new List<PositionLocation>();
+
+            var list = new List<PositionLocation>();
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var idsStr = string.Join(",", ids.Distinct());
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = $"SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds FROM Positions WHERE Id IN ({idsStr})";
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(MapPosition(reader));
+            }
+
+            return list;
+        }
     }
 }

@@ -43,4 +43,9 @@ public interface IPositionRepository
     /// 按名称搜索哨位
     /// </summary>
     Task<List<PositionLocation>> SearchByNameAsync(string keyword);
+
+    /// <summary>
+    /// 根据ID列表获取哨位
+    /// </summary>
+    Task<List<PositionLocation>> GetPositionsByIdsAsync(IEnumerable<int> ids);
 }
