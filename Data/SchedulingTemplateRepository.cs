@@ -35,8 +35,14 @@ CREATE TABLE IF NOT EXISTS SchedulingTemplates (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     Name TEXT NOT NULL,
     Description TEXT DEFAULT '',
+    TemplateType TEXT NOT NULL DEFAULT 'regular',
+    IsDefault INTEGER NOT NULL DEFAULT 0,
     PersonnelIds TEXT NOT NULL DEFAULT '[]',
     PositionIds TEXT NOT NULL DEFAULT '[]',
+    HolidayConfigId INTEGER,
+    UseActiveHolidayConfig INTEGER NOT NULL DEFAULT 0,
+    EnabledFixedRuleIds TEXT NOT NULL DEFAULT '[]',
+    EnabledManualAssignmentIds TEXT NOT NULL DEFAULT '[]',
     DurationDays INTEGER NOT NULL DEFAULT 1,
     StrategyConfig TEXT NOT NULL DEFAULT '{}',
     UsageCount INTEGER NOT NULL DEFAULT 0,
@@ -47,6 +53,8 @@ CREATE TABLE IF NOT EXISTS SchedulingTemplates (
 );
 CREATE INDEX IF NOT EXISTS idx_template_active ON SchedulingTemplates(IsActive);
 CREATE INDEX IF NOT EXISTS idx_template_usage ON SchedulingTemplates(UsageCount);
+CREATE INDEX IF NOT EXISTS idx_template_type ON SchedulingTemplates(TemplateType);
+CREATE INDEX IF NOT EXISTS idx_template_default ON SchedulingTemplates(IsDefault);
 ";
         await cmd.ExecuteNonQueryAsync();
     }
@@ -59,8 +67,9 @@ CREATE INDEX IF NOT EXISTS idx_template_usage ON SchedulingTemplates(UsageCount)
 
         var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-SELECT Id, Name, Description, PersonnelIds, PositionIds, DurationDays, StrategyConfig,
-       UsageCount, IsActive, CreatedAt, UpdatedAt, LastUsedAt
+SELECT Id, Name, Description, TemplateType, IsDefault, PersonnelIds, PositionIds, 
+       HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds,
+       DurationDays, StrategyConfig, UsageCount, IsActive, CreatedAt, UpdatedAt, LastUsedAt
 FROM SchedulingTemplates
 WHERE IsActive = 1
 ORDER BY UsageCount DESC, Name
@@ -82,8 +91,9 @@ ORDER BY UsageCount DESC, Name
 
         var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-SELECT Id, Name, Description, PersonnelIds, PositionIds, DurationDays, StrategyConfig,
-       UsageCount, IsActive, CreatedAt, UpdatedAt, LastUsedAt
+SELECT Id, Name, Description, TemplateType, IsDefault, PersonnelIds, PositionIds, 
+       HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds,
+       DurationDays, StrategyConfig, UsageCount, IsActive, CreatedAt, UpdatedAt, LastUsedAt
 FROM SchedulingTemplates
 WHERE Id = @id
 ";
@@ -106,17 +116,25 @@ WHERE Id = @id
         var cmd = conn.CreateCommand();
         cmd.CommandText = @"
 INSERT INTO SchedulingTemplates 
-(Name, Description, PersonnelIds, PositionIds, DurationDays, StrategyConfig,
- UsageCount, IsActive, CreatedAt, UpdatedAt, LastUsedAt)
+(Name, Description, TemplateType, IsDefault, PersonnelIds, PositionIds, HolidayConfigId, 
+ UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds, DurationDays, 
+ StrategyConfig, UsageCount, IsActive, CreatedAt, UpdatedAt, LastUsedAt)
 VALUES 
-(@name, @desc, @personnelIds, @positionIds, @durationDays, @strategyConfig,
- @usageCount, @isActive, @createdAt, @updatedAt, @lastUsedAt);
+(@name, @desc, @templateType, @isDefault, @personnelIds, @positionIds, @holidayConfigId,
+ @useActiveHolidayConfig, @enabledFixedRuleIds, @enabledManualAssignmentIds, @durationDays, 
+ @strategyConfig, @usageCount, @isActive, @createdAt, @updatedAt, @lastUsedAt);
 SELECT last_insert_rowid();
 ";
         cmd.Parameters.AddWithValue("@name", template.Name);
         cmd.Parameters.AddWithValue("@desc", template.Description ?? string.Empty);
+        cmd.Parameters.AddWithValue("@templateType", template.TemplateType ?? "regular");
+        cmd.Parameters.AddWithValue("@isDefault", template.IsDefault ? 1 : 0);
         cmd.Parameters.AddWithValue("@personnelIds", JsonSerializer.Serialize(template.PersonnelIds, _jsonOptions));
         cmd.Parameters.AddWithValue("@positionIds", JsonSerializer.Serialize(template.PositionIds, _jsonOptions));
+        cmd.Parameters.AddWithValue("@holidayConfigId", template.HolidayConfigId ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@useActiveHolidayConfig", template.UseActiveHolidayConfig ? 1 : 0);
+        cmd.Parameters.AddWithValue("@enabledFixedRuleIds", JsonSerializer.Serialize(template.EnabledFixedRuleIds, _jsonOptions));
+        cmd.Parameters.AddWithValue("@enabledManualAssignmentIds", JsonSerializer.Serialize(template.EnabledManualAssignmentIds, _jsonOptions));
         cmd.Parameters.AddWithValue("@durationDays", template.DurationDays);
         cmd.Parameters.AddWithValue("@strategyConfig", template.StrategyConfig ?? string.Empty);
         cmd.Parameters.AddWithValue("@usageCount", template.UsageCount);
@@ -137,15 +155,24 @@ SELECT last_insert_rowid();
         var cmd = conn.CreateCommand();
         cmd.CommandText = @"
 UPDATE SchedulingTemplates 
-SET Name = @name, Description = @desc, PersonnelIds = @personnelIds, PositionIds = @positionIds,
-    DurationDays = @durationDays, StrategyConfig = @strategyConfig, UsageCount = @usageCount,
-    IsActive = @isActive, UpdatedAt = @updatedAt, LastUsedAt = @lastUsedAt
+SET Name = @name, Description = @desc, TemplateType = @templateType, IsDefault = @isDefault,
+    PersonnelIds = @personnelIds, PositionIds = @positionIds, HolidayConfigId = @holidayConfigId,
+    UseActiveHolidayConfig = @useActiveHolidayConfig, EnabledFixedRuleIds = @enabledFixedRuleIds,
+    EnabledManualAssignmentIds = @enabledManualAssignmentIds, DurationDays = @durationDays, 
+    StrategyConfig = @strategyConfig, UsageCount = @usageCount, IsActive = @isActive, 
+    UpdatedAt = @updatedAt, LastUsedAt = @lastUsedAt
 WHERE Id = @id
 ";
         cmd.Parameters.AddWithValue("@name", template.Name);
         cmd.Parameters.AddWithValue("@desc", template.Description ?? string.Empty);
+        cmd.Parameters.AddWithValue("@templateType", template.TemplateType ?? "regular");
+        cmd.Parameters.AddWithValue("@isDefault", template.IsDefault ? 1 : 0);
         cmd.Parameters.AddWithValue("@personnelIds", JsonSerializer.Serialize(template.PersonnelIds, _jsonOptions));
         cmd.Parameters.AddWithValue("@positionIds", JsonSerializer.Serialize(template.PositionIds, _jsonOptions));
+        cmd.Parameters.AddWithValue("@holidayConfigId", template.HolidayConfigId ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@useActiveHolidayConfig", template.UseActiveHolidayConfig ? 1 : 0);
+        cmd.Parameters.AddWithValue("@enabledFixedRuleIds", JsonSerializer.Serialize(template.EnabledFixedRuleIds, _jsonOptions));
+        cmd.Parameters.AddWithValue("@enabledManualAssignmentIds", JsonSerializer.Serialize(template.EnabledManualAssignmentIds, _jsonOptions));
         cmd.Parameters.AddWithValue("@durationDays", template.DurationDays);
         cmd.Parameters.AddWithValue("@strategyConfig", template.StrategyConfig ?? string.Empty);
         cmd.Parameters.AddWithValue("@usageCount", template.UsageCount);
@@ -189,10 +216,11 @@ WHERE Id = @id
 
         var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-SELECT Id, Name, Description, PersonnelIds, PositionIds, DurationDays, StrategyConfig,
-       UsageCount, IsActive, CreatedAt, UpdatedAt, LastUsedAt
+SELECT Id, Name, Description, TemplateType, IsDefault, PersonnelIds, PositionIds, 
+       HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds,
+       DurationDays, StrategyConfig, UsageCount, IsActive, CreatedAt, UpdatedAt, LastUsedAt
 FROM SchedulingTemplates
-WHERE IsActive = 1
+WHERE IsActive = 1 AND IsDefault = 1
 ORDER BY UsageCount DESC
 LIMIT 1
 ";
@@ -214,10 +242,11 @@ LIMIT 1
 
         var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-SELECT Id, Name, Description, PersonnelIds, PositionIds, DurationDays, StrategyConfig,
-       UsageCount, IsActive, CreatedAt, UpdatedAt, LastUsedAt
+SELECT Id, Name, Description, TemplateType, IsDefault, PersonnelIds, PositionIds, 
+       HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds,
+       DurationDays, StrategyConfig, UsageCount, IsActive, CreatedAt, UpdatedAt, LastUsedAt
 FROM SchedulingTemplates
-WHERE IsActive = 1
+WHERE IsActive = 1 AND TemplateType = @type
 ORDER BY UsageCount DESC, Name
 ";
         cmd.Parameters.AddWithValue("@type", templateType);
@@ -268,7 +297,7 @@ WHERE Id = @id
         using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "UPDATE SchedulingTemplates SET IsActive = 0 WHERE IsActive = 1";
+        cmd.CommandText = "UPDATE SchedulingTemplates SET IsDefault = 0 WHERE TemplateType = @type";
         cmd.Parameters.AddWithValue("@type", templateType);
         await cmd.ExecuteNonQueryAsync();
     }
@@ -283,15 +312,21 @@ WHERE Id = @id
             Id = reader.GetInt32(0),
             Name = reader.GetString(1),
             Description = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
-            PersonnelIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(3), _jsonOptions) ?? new(),
-            PositionIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(4), _jsonOptions) ?? new(),
-            DurationDays = reader.GetInt32(5),
-            StrategyConfig = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
-            UsageCount = reader.GetInt32(7),
-            IsActive = reader.GetInt32(8) == 1,
-            CreatedAt = DateTime.Parse(reader.GetString(9)),
-            UpdatedAt = DateTime.Parse(reader.GetString(10)),
-            LastUsedAt = reader.IsDBNull(11) ? null : DateTime.Parse(reader.GetString(11))
+            TemplateType = reader.IsDBNull(3) ? "regular" : reader.GetString(3),
+            IsDefault = reader.GetInt32(4) == 1,
+            PersonnelIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(5), _jsonOptions) ?? new(),
+            PositionIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(6), _jsonOptions) ?? new(),
+            HolidayConfigId = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+            UseActiveHolidayConfig = reader.GetInt32(8) == 1,
+            EnabledFixedRuleIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(9), _jsonOptions) ?? new(),
+            EnabledManualAssignmentIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(10), _jsonOptions) ?? new(),
+            DurationDays = reader.GetInt32(11),
+            StrategyConfig = reader.IsDBNull(12) ? string.Empty : reader.GetString(12),
+            UsageCount = reader.GetInt32(13),
+            IsActive = reader.GetInt32(14) == 1,
+            CreatedAt = DateTime.Parse(reader.GetString(15)),
+            UpdatedAt = DateTime.Parse(reader.GetString(16)),
+            LastUsedAt = reader.IsDBNull(17) ? null : DateTime.Parse(reader.GetString(17))
         };
     }
 }
