@@ -13,6 +13,7 @@ using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.DTOs;
 using System.Text;
 using AutoScheduling3.Data.Interfaces;
+using AutoScheduling3.SchedulingEngine.Core;
 
 namespace AutoScheduling3.Services;
 
@@ -33,10 +34,16 @@ public class SchedulingService : ISchedulingService
         _historyMgmt = historyMgmt;
     }
 
+    /// <summary>
+    /// 初始化排班服务 - 对应需求3.1, 4.1
+    /// </summary>
     public async Task InitializeAsync()
     {
+        // 初始化历史管理系统 - 对应需求4.1, 4.2
+        await _historyMgmt.InitAsync();
+        
         // 如果具体实现支持 InitAsync 可调用 (反射检测)
-        var initMethods = new object[]{ _personalRepo, _positionRepo, _skillRepo, _constraintRepo, _historyMgmt };
+        var initMethods = new object[]{ _personalRepo, _positionRepo, _skillRepo, _constraintRepo };
         foreach (var svc in initMethods)
         {
             var mi = svc.GetType().GetMethod("InitAsync");
@@ -555,6 +562,189 @@ public class SchedulingService : ISchedulingService
         }
 
         return overworkedPersonnel;
+    }
+
+    #endregion
+
+    #region 排班引擎集成 - 对应需求3.1, 3.2
+
+    /// <summary>
+    /// 验证排班引擎的可用性和配置
+    /// </summary>
+    private async Task ValidateSchedulingEngineAsync()
+    {
+        // 验证排班引擎依赖的组件是否正常
+        try
+        {
+            // 测试约束验证器
+            var testContext = new SchedulingContext
+            {
+                Personals = new List<Personal>(),
+                Positions = new List<PositionLocation>(),
+                Skills = new List<Skill>(),
+                StartDate = DateTime.Today,
+                EndDate = DateTime.Today
+            };
+            
+            var constraintValidator = new ConstraintValidator(testContext);
+            var softConstraintCalculator = new SoftConstraintCalculator(testContext);
+            
+            // 验证组件初始化成功
+            if (constraintValidator == null || softConstraintCalculator == null)
+            {
+                throw new InvalidOperationException("排班引擎组件初始化失败");
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"排班引擎验证失败: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// 获取排班引擎状态信息
+    /// </summary>
+    public async Task<Dictionary<string, object>> GetSchedulingEngineStatusAsync()
+    {
+        var status = new Dictionary<string, object>();
+        
+        try
+        {
+            await ValidateSchedulingEngineAsync();
+            status["EngineStatus"] = "Available";
+            status["LastCheck"] = DateTime.UtcNow;
+            
+            // 获取历史管理状态
+            var lastConfirmed = await _historyMgmt.GetLastConfirmedScheduleAsync();
+            status["LastConfirmedSchedule"] = lastConfirmed?.Id ?? 0;
+            
+            // 获取缓冲区状态
+            var buffers = await _historyMgmt.GetAllBufferSchedulesAsync();
+            status["BufferCount"] = buffers.Count;
+            
+            // 获取约束配置状态
+            var holidayConfig = await _constraintRepo.GetActiveHolidayConfigAsync();
+            status["ActiveHolidayConfig"] = holidayConfig?.Id ?? 0;
+            
+            var fixedRules = await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly: true);
+            status["ActiveFixedRules"] = fixedRules.Count;
+            
+        }
+        catch (Exception ex)
+        {
+            status["EngineStatus"] = "Error";
+            status["ErrorMessage"] = ex.Message;
+            status["LastCheck"] = DateTime.UtcNow;
+        }
+        
+        return status;
+    }
+
+    #endregion
+
+    #region 历史管理集成 - 对应需求4.1, 4.2, 4.3, 4.4
+
+    /// <summary>
+    /// 获取排班统计信息 - 对应需求4.1, 4.2
+    /// </summary>
+    public async Task<ScheduleStatisticsDto> GetScheduleStatisticsAsync()
+    {
+        var histories = await _historyMgmt.GetAllHistorySchedulesAsync();
+        var buffers = await _historyMgmt.GetAllBufferSchedulesAsync();
+        
+        var statistics = new ScheduleStatisticsDto
+        {
+            TotalSchedules = histories.Count + buffers.Count,
+            ConfirmedSchedules = histories.Count,
+            DraftSchedules = buffers.Count,
+            LastScheduleDate = histories.Any() ? histories.Max(h => h.ConfirmTime) : DateTime.MinValue
+        };
+        
+        // 计算人员班次统计
+        var personnelShiftCounts = new Dictionary<int, int>();
+        var timeSlotDistribution = new Dictionary<int, double>();
+        
+        foreach (var (schedule, _) in histories)
+        {
+            foreach (var shift in schedule.Shifts)
+            {
+                // 人员班次计数
+                if (!personnelShiftCounts.ContainsKey(shift.PersonalId))
+                    personnelShiftCounts[shift.PersonalId] = 0;
+                personnelShiftCounts[shift.PersonalId]++;
+                
+                // 时段分布统计
+                var periodIndex = CalcPeriodIndex(shift.StartTime);
+                if (!timeSlotDistribution.ContainsKey(periodIndex))
+                    timeSlotDistribution[periodIndex] = 0;
+                timeSlotDistribution[periodIndex]++;
+            }
+        }
+        
+        // 计算时段分布百分比
+        var totalShifts = timeSlotDistribution.Values.Sum();
+        if (totalShifts > 0)
+        {
+            var normalizedDistribution = new Dictionary<int, double>();
+            foreach (var kvp in timeSlotDistribution)
+            {
+                normalizedDistribution[kvp.Key] = kvp.Value / totalShifts * 100;
+            }
+            statistics.TimeSlotDistribution = normalizedDistribution;
+        }
+        
+        statistics.PersonnelShiftCounts = personnelShiftCounts;
+        
+        return statistics;
+    }
+
+    /// <summary>
+    /// 批量确认多个草稿排班 - 对应需求4.3, 4.4
+    /// </summary>
+    public async Task ConfirmMultipleSchedulesAsync(List<int> scheduleIds)
+    {
+        if (scheduleIds == null || !scheduleIds.Any())
+            throw new ArgumentException("排班ID列表不能为空", nameof(scheduleIds));
+        
+        var buffers = await _historyMgmt.GetAllBufferSchedulesAsync();
+        var validBuffers = buffers.Where(b => scheduleIds.Contains(b.Schedule.Id)).ToList();
+        
+        if (validBuffers.Count != scheduleIds.Count)
+        {
+            var foundIds = validBuffers.Select(b => b.Schedule.Id).ToList();
+            var missingIds = scheduleIds.Except(foundIds).ToList();
+            throw new InvalidOperationException($"以下排班ID在草稿中未找到: {string.Join(", ", missingIds)}");
+        }
+        
+        // 按创建时间顺序确认
+        var sortedBuffers = validBuffers.OrderBy(b => b.CreateTime).ToList();
+        
+        foreach (var buffer in sortedBuffers)
+        {
+            await ValidateScheduleForConfirmationAsync(buffer.Schedule);
+            await _historyMgmt.ConfirmBufferScheduleAsync(buffer.BufferId);
+        }
+    }
+
+    /// <summary>
+    /// 清理过期的草稿排班 - 对应需求4.2
+    /// </summary>
+    public async Task CleanupExpiredDraftsAsync(int daysToKeep = 7)
+    {
+        var buffers = await _historyMgmt.GetAllBufferSchedulesAsync();
+        var cutoffDate = DateTime.UtcNow.AddDays(-daysToKeep);
+        
+        var expiredBuffers = buffers.Where(b => b.CreateTime < cutoffDate).ToList();
+        
+        foreach (var buffer in expiredBuffers)
+        {
+            await _historyMgmt.DeleteBufferScheduleAsync(buffer.BufferId);
+        }
+        
+        if (expiredBuffers.Any())
+        {
+            System.Diagnostics.Debug.WriteLine($"已清理 {expiredBuffers.Count} 个过期草稿排班");
+        }
     }
 
     #endregion

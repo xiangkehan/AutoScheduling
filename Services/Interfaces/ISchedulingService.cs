@@ -63,4 +63,26 @@ public interface ISchedulingService
  /// 获取指定日期范围内的手动指定
  /// </summary>
  Task<List<ManualAssignment>> GetManualAssignmentsAsync(DateTime startDate, DateTime endDate, bool enabledOnly = true);
+
+ // === 新增：排班引擎集成方法 ===
+
+ /// <summary>
+ /// 获取排班引擎状态信息
+ /// </summary>
+ Task<Dictionary<string, object>> GetSchedulingEngineStatusAsync();
+
+ /// <summary>
+ /// 获取排班统计信息
+ /// </summary>
+ Task<ScheduleStatisticsDto> GetScheduleStatisticsAsync();
+
+ /// <summary>
+ /// 批量确认多个草稿排班
+ /// </summary>
+ Task ConfirmMultipleSchedulesAsync(List<int> scheduleIds);
+
+ /// <summary>
+ /// 清理过期的草稿排班
+ /// </summary>
+ Task CleanupExpiredDraftsAsync(int daysToKeep = 7);
 }
