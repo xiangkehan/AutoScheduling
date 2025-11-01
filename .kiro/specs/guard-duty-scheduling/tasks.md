@@ -21,17 +21,21 @@
 
 
 
-  - [-] 2.1 创建核心数据模型类
+  - [x] 2.1 创建核心数据模型类
+
 
     - 实现 Personal、PositionLocation、Skill、Schedule、SingleShift 等模型类
     - 添加数据验证特性和属性
     - _需求: 1.1, 2.1, 2.2_
 
-  - [ ] 2.2 实现 Repository 接口和基础实现
+
+  - [x] 2.2 实现 Repository 接口和基础实现
+
     - 创建 IPersonalRepository、IPositionLocationRepository、ISkillRepository 等接口
     - 实现 SQLite 数据访问的具体 Repository 类
     - 添加基础的 CRUD 操作方法
     - _需求: 1.2, 2.1, 2.2_
+
 
   - [ ] 2.3 创建数据库初始化和迁移逻辑
     - 实现数据库表创建脚本
@@ -39,7 +43,8 @@
     - 创建数据库版本管理机制
     - _需求: 1.2, 2.1_
 
-  - [ ]* 2.4 编写 Repository 层单元测试
+  - [ ] 2.4 编写 Repository 层单元测试
+
     - 测试 CRUD 操作的正确性
     - 测试数据验证和约束
     - _需求: 1.2, 2.1, 2.2_

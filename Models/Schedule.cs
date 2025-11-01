@@ -5,48 +5,64 @@ using System.ComponentModel.DataAnnotations;
 namespace AutoScheduling3.Models
 {
     /// <summary>
-    /// Êı¾İ¿âÖĞµÄÅÅ°à±íÄ£ĞÍ
+    /// æ’ç­è¡¨æ•°æ®æ¨¡å‹ï¼šåŒ…å«æ•°æ®åº“IDã€äººå‘˜ç»„ã€å“¨ä½IDå’Œè¡¨å¤´çš„æ’ç­è¡¨
+    /// éœ€æ±‚: 3.1, 3.2
     /// </summary>
     public class Schedule
     {
+        /// <summary>
+        /// æ•°æ®åº“ä¸»é”®ID
+        /// </summary>
         [Key]
         public int Id { get; set; }
 
         /// <summary>
-        /// ±íÍ·£¨Ãû³Æ»òÃèÊö£©
+        /// è¡¨å¤´ï¼ˆæ’ç­åç§°æˆ–æè¿°ï¼‰
         /// </summary>
-        public string Title { get; set; } = string.Empty;
+        [Required]
+        [StringLength(200, MinimumLength = 1)]
+        public string Header { get; set; } = string.Empty;
 
         /// <summary>
-        /// ÈËÔ±ID¼¯ºÏ
+        /// äººå‘˜IDé›†åˆ
         /// </summary>
-        public List<int> PersonalIds { get; set; } = new();
+        public List<int> PersonnelIds { get; set; } = new List<int>();
 
         /// <summary>
-        /// ÉÚÎ»ID¼¯ºÏ
+        /// å“¨ä½IDé›†åˆ
         /// </summary>
-        public List<int> PositionIds { get; set; } = new();
+        public List<int> PositionIds { get; set; } = new List<int>();
 
         /// <summary>
-        /// ÅÅ°à½á¹û£¨µ¥´ÎÅÅ°à¼¯ºÏ£©
+        /// æ’ç­ç»“æœï¼ˆå•æ¬¡æ’ç­é›†åˆï¼‰
         /// </summary>
-        public List<SingleShift> Shifts { get; set; } = new();
+        public List<SingleShift> Results { get; set; } = new List<SingleShift>();
 
         /// <summary>
-        /// ÅÅ°à¿ªÊ¼ÈÕÆÚ£¨ÈÕÆÚ²¿·Ö£¬UTC£©
+        /// æ’ç­å¼€å§‹æ—¥æœŸï¼ˆæ—¥æœŸéƒ¨åˆ†ï¼ŒUTCï¼‰
         /// </summary>
         public DateTime StartDate { get; set; }
 
         /// <summary>
-        /// ÅÅ°à½áÊøÈÕÆÚ£¨ÈÕÆÚ²¿·Ö£¬UTC£©
+        /// æ’ç­ç»“æŸæ—¥æœŸï¼ˆæ—¥æœŸéƒ¨åˆ†ï¼ŒUTCï¼‰
         /// </summary>
         public DateTime EndDate { get; set; }
 
         /// <summary>
-        /// ´´½¨Ê±¼ä£¨UTC£©
+        /// æ˜¯å¦å·²ç¡®è®¤å®æ–½
         /// </summary>
-        public DateTime CreatedAt { get; set; }
+        public bool IsConfirmed { get; set; } = false;
 
-        public override string ToString() => $"Schedule[{Id}] {Title} Shifts={Shifts.Count}";
+        /// <summary>
+        /// åˆ›å»ºæ—¶é—´ï¼ˆUTCï¼‰
+        /// </summary>
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// æ›´æ–°æ—¶é—´ï¼ˆUTCï¼‰
+        /// </summary>
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        public override string ToString() => $"Schedule[{Id}] {Header} Results={Results.Count}";
     }
 }

@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
 
 namespace AutoScheduling3.Models
@@ -10,6 +7,7 @@ namespace AutoScheduling3.Models
     /// <summary>
     /// 人员数据模型：表示一个人员的基本信息，用于通过 SQLite 存储。
     /// 包含：数据库ID、人员名称、人员职位、人员技能（技能数据id集合）、人员可用性、是否退役、最近班次间隔数、最近节假日班次间隔数、最近某一时段班次间隔数（12个时段）
+    /// 需求: 2.1, 2.2
     /// </summary>
     public class Personal
     {
@@ -22,12 +20,15 @@ namespace AutoScheduling3.Models
         /// <summary>
         /// 人员名称
         /// </summary>
+        [Required]
+        [StringLength(100, MinimumLength = 1)]
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// 人员职位ID（可用于关联到 PositionLocation.Id）
+        /// 人员职位描述
         /// </summary>
-        public int PositionId { get; set; }
+        [StringLength(200)]
+        public string Position { get; set; } = string.Empty;
 
         /// <summary>
         /// 人员拥有的技能ID集合（对应 Skill.Id）
@@ -47,22 +48,34 @@ namespace AutoScheduling3.Models
         /// <summary>
         /// 最近班次间隔数（整数）
         /// </summary>
-        public int RecentShiftIntervalCount { get; set; } = 0;
+        [Range(0, int.MaxValue)]
+        public int RecentShiftInterval { get; set; } = 0;
 
         /// <summary>
         /// 最近节假日班次间隔数（整数）
         /// </summary>
-        public int RecentHolidayShiftIntervalCount { get; set; } = 0;
+        [Range(0, int.MaxValue)]
+        public int RecentHolidayShiftInterval { get; set; } = 0;
 
         /// <summary>
         /// 最近某一时段班次间隔数，对应12个时段（索引0-11）
         /// 使用数组保证长度为12，默认值为0。
         /// </summary>
-        public int[] RecentPeriodShiftIntervals { get; set; } = new int[12];
+        public int[] RecentTimeSlotIntervals { get; set; } = new int[12];
+
+        /// <summary>
+        /// 创建时间
+        /// </summary>
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// 更新时间
+        /// </summary>
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         public override string ToString()
         {
-            return $"[{Id}] {Name} (PositionId={PositionId})";
+            return $"[{Id}] {Name} ({Position})";
         }
     }
 }
