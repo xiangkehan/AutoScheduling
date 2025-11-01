@@ -30,6 +30,17 @@ namespace AutoScheduling3.Models
         public string Description { get; set; } = string.Empty;
 
         /// <summary>
+        /// 模板类型（regular/holiday/special）
+        /// </summary>
+        [StringLength(50)]
+        public string TemplateType { get; set; } = "regular";
+
+        /// <summary>
+        /// 是否为默认模板
+        /// </summary>
+        public bool IsDefault { get; set; } = false;
+
+        /// <summary>
         /// 人员ID集合
         /// </summary>
         public List<int> PersonnelIds { get; set; } = new List<int>();
@@ -38,6 +49,26 @@ namespace AutoScheduling3.Models
         /// 哨位ID集合
         /// </summary>
         public List<int> PositionIds { get; set; } = new List<int>();
+
+        /// <summary>
+        /// 休息日配置ID（可选）
+        /// </summary>
+        public int? HolidayConfigId { get; set; }
+
+        /// <summary>
+        /// 是否使用当前活动配置
+        /// </summary>
+        public bool UseActiveHolidayConfig { get; set; } = false;
+
+        /// <summary>
+        /// 启用的定岗规则ID
+        /// </summary>
+        public List<int> EnabledFixedRuleIds { get; set; } = new List<int>();
+
+        /// <summary>
+        /// 启用的手动指定ID
+        /// </summary>
+        public List<int> EnabledManualAssignmentIds { get; set; } = new List<int>();
 
         /// <summary>
         /// 排班天数

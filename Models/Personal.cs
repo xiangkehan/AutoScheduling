@@ -25,10 +25,9 @@ namespace AutoScheduling3.Models
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// 人员职位描述
+        /// 人员职位ID（对应 Position.Id）
         /// </summary>
-        [StringLength(200)]
-        public string Position { get; set; } = string.Empty;
+        public int PositionId { get; set; }
 
         /// <summary>
         /// 人员拥有的技能ID集合（对应 Skill.Id）
@@ -46,22 +45,22 @@ namespace AutoScheduling3.Models
         public bool IsRetired { get; set; } = false;
 
         /// <summary>
-        /// 最近班次间隔数（整数）
+        /// 最近班次间隔计数（整数）
         /// </summary>
         [Range(0, int.MaxValue)]
-        public int RecentShiftInterval { get; set; } = 0;
+        public int RecentShiftIntervalCount { get; set; } = 0;
 
         /// <summary>
-        /// 最近节假日班次间隔数（整数）
+        /// 最近节假日班次间隔计数（整数）
         /// </summary>
         [Range(0, int.MaxValue)]
-        public int RecentHolidayShiftInterval { get; set; } = 0;
+        public int RecentHolidayShiftIntervalCount { get; set; } = 0;
 
         /// <summary>
         /// 最近某一时段班次间隔数，对应12个时段（索引0-11）
         /// 使用数组保证长度为12，默认值为0。
         /// </summary>
-        public int[] RecentTimeSlotIntervals { get; set; } = new int[12];
+        public int[] RecentPeriodShiftIntervals { get; set; } = new int[12];
 
         /// <summary>
         /// 创建时间

@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
             try
             {
                 // 保存排班表
-                int scheduleId = await _schedulingRepo.AddScheduleAsync(schedule);
+                int scheduleId = await _schedulingRepo.CreateAsync(schedule);
 
                 // 添加到缓冲区
                 var cmd = conn.CreateCommand();
@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
                 int scheduleId = reader.GetInt32(0);
                 DateTime confirmTime = DateTime.Parse(reader.GetString(1)).ToUniversalTime();
 
-                var schedule = await _schedulingRepo.GetScheduleAsync(scheduleId);
+                var schedule = await _schedulingRepo.GetByIdAsync(scheduleId);
                 if (schedule != null)
                 {
                     result.Add((schedule, confirmTime));
@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
                 int scheduleId = reader.GetInt32(1);
                 DateTime createTime = DateTime.Parse(reader.GetString(2)).ToUniversalTime();
 
-                var schedule = await _schedulingRepo.GetScheduleAsync(scheduleId);
+                var schedule = await _schedulingRepo.GetByIdAsync(scheduleId);
                 if (schedule != null)
                 {
                     result.Add((schedule, createTime, bufferId));
@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
                 // 删除对应的排班记录
                 foreach (var scheduleId in scheduleIds)
                 {
-                    await _schedulingRepo.DeleteScheduleAsync(scheduleId);
+                    await _schedulingRepo.DeleteAsync(scheduleId);
                 }
                 
                 await tx.CommitAsync();
@@ -271,7 +271,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
                 await historyCmd.ExecuteNonQueryAsync();
 
                 // 从排班表中删除
-                await _schedulingRepo.DeleteScheduleAsync(scheduleId);
+                await _schedulingRepo.DeleteAsync(scheduleId);
 
                 await tx.CommitAsync();
             }
@@ -313,7 +313,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
                     await bufferCmd.ExecuteNonQueryAsync();
 
                     // 从排班表中删除
-                    await _schedulingRepo.DeleteScheduleAsync(scheduleId);
+                    await _schedulingRepo.DeleteAsync(scheduleId);
                 }
 
                 await tx.CommitAsync();
@@ -342,7 +342,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
                 return null;
 
             int scheduleId = Convert.ToInt32(result);
-            return await _schedulingRepo.GetScheduleAsync(scheduleId);
+            return await _schedulingRepo.GetByIdAsync(scheduleId);
         }
 
         /// <summary>
