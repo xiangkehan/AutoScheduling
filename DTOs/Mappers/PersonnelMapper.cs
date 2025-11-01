@@ -1,6 +1,6 @@
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Models;
-using AutoScheduling3.Data.Interfaces; // 修正命名空间引用
+using AutoScheduling3.Data.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,138 +9,82 @@ using System.Threading.Tasks;
 namespace AutoScheduling3.DTOs.Mappers;
 
 /// <summary>
-/// 人员数据映射器
+/// 人员数据映射器 - Model 与 DTO 互转
+/// 需求: 2.1, 2.2
 /// </summary>
 public class PersonnelMapper
 {
-    private readonly IPositionRepository _positionRepo;
-    private readonly ISkillRepository _skillRepo;
+    private readonly ISkillRepository _skillRepository;
+    private readonly IPositionRepository _positionRepository;
 
-    public PersonnelMapper(IPositionRepository positionRepo, ISkillRepository skillRepo)
+    public PersonnelMapper(ISkillRepository skillRepository, IPositionRepository positionRepository)
     {
-        _positionRepo = positionRepo ?? throw new ArgumentNullException(nameof(positionRepo));
-        _skillRepo = skillRepo ?? throw new ArgumentNullException(nameof(skillRepo));
+        _skillRepository = skillRepository ?? throw new ArgumentNullException(nameof(skillRepository));
+        _positionRepository = positionRepository ?? throw new ArgumentNullException(nameof(positionRepository));
     }
 
     /// <summary>
-    /// Model转DTO
+    /// Model 转 DTO（同步版本，不加载关联名称）
     /// </summary>
-    public async Task<PersonnelDto> ToDtoAsync(Personal model)
+    public PersonnelDto ToDto(Personal model)
     {
-        if (model == null) throw new ArgumentNullException(nameof(model));
+        if (model == null)
+            throw new ArgumentNullException(nameof(model));
 
-        var dto = new PersonnelDto
+        return new PersonnelDto
         {
             Id = model.Id,
             Name = model.Name,
             PositionId = model.PositionId,
-            SkillIds = model.SkillIds?.ToList() ?? new List<int>(),
+            PositionName = string.Empty, // 需要异步加载
+            SkillIds = new List<int>(model.SkillIds),
+            SkillNames = new List<string>(), // 需要异步加载
             IsAvailable = model.IsAvailable,
             IsRetired = model.IsRetired,
             RecentShiftIntervalCount = model.RecentShiftIntervalCount,
             RecentHolidayShiftIntervalCount = model.RecentHolidayShiftIntervalCount,
-            RecentPeriodShiftIntervals = model.RecentPeriodShiftIntervals?.ToArray() ?? new int[12]
+            RecentPeriodShiftIntervals = (int[])model.RecentPeriodShiftIntervals.Clone()
         };
+    }
+
+    /// <summary>
+    /// Model 转 DTO（异步版本，加载关联名称）
+    /// </summary>
+    public async Task<PersonnelDto> ToDtoAsync(Personal model)
+    {
+        var dto = ToDto(model);
 
         // 加载职位名称
-        var position = await _positionRepo.GetByIdAsync(model.PositionId);
-        dto.PositionName = position?.Name ?? "未知职位";
+        if (model.PositionId > 0)
+        {
+            var position = await _positionRepository.GetByIdAsync(model.PositionId);
+            dto.PositionName = position?.Name ?? "未知职位";
+        }
 
         // 加载技能名称
         if (model.SkillIds != null && model.SkillIds.Count > 0)
         {
-            var allSkills = await _skillRepo.GetAllAsync();
-            dto.SkillNames = allSkills
-                .Where(s => model.SkillIds.Contains(s.Id))
-                .Select(s => s.Name)
-                .ToList();
+            var skills = await _skillRepository.GetByIdsAsync(model.SkillIds);
+            dto.SkillNames = skills.Select(s => s.Name).ToList();
         }
 
         return dto;
     }
 
-    // Added sync wrapper for LINQ Select usage scenarios
     /// <summary>
-    /// Model转DTO（同步）
+    /// 批量转换 PersonnelDto（异步版本，加载关联名称）
     /// </summary>
-    public PersonnelDto ToDto(Personal model) => ToDtoAsync(model).GetAwaiter().GetResult();
-
-    /// <summary>
-    /// DTO转Model（创建）
-    /// </summary>
-    public Personal ToModel(CreatePersonnelDto dto)
+    public async Task<List<PersonnelDto>> ToDtoListAsync(IEnumerable<Personal> models)
     {
-        if (dto == null) throw new ArgumentNullException(nameof(dto));
+        if (models == null)
+            return new List<PersonnelDto>();
 
-        return new Personal
-        {
-            Name = dto.Name,
-            PositionId = dto.PositionId,
-            SkillIds = dto.SkillIds ?? new List<int>(),
-            IsAvailable = dto.IsAvailable,
-            IsRetired = false,
-            RecentShiftIntervalCount = dto.RecentShiftIntervalCount,
-            RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount,
-            RecentPeriodShiftIntervals = dto.RecentPeriodShiftIntervals ?? new int[12]
-        };
+        var tasks = models.Select(m => ToDtoAsync(m));
+        return (await Task.WhenAll(tasks)).ToList();
     }
 
     /// <summary>
-    /// DTO转Model（完整PersonnelDto）
-    /// </summary>
-    public Personal ToModel(PersonnelDto dto)
-    {
-        if (dto == null) throw new ArgumentNullException(nameof(dto));
-
-        return new Personal
-        {
-            Id = dto.Id,
-            Name = dto.Name,
-            PositionId = dto.PositionId,
-            SkillIds = dto.SkillIds ?? new List<int>(),
-            IsAvailable = dto.IsAvailable,
-            IsRetired = dto.IsRetired,
-            RecentShiftIntervalCount = dto.RecentShiftIntervalCount,
-            RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount,
-            RecentPeriodShiftIntervals = dto.RecentPeriodShiftIntervals ?? new int[12],
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-    }
-
-    /// <summary>
-    /// 更新Model（从UpdateDTO）
-    /// </summary>
-    public void UpdateModel(Personal model, UpdatePersonnelDto dto)
-    {
-        if (model == null) throw new ArgumentNullException(nameof(model));
-        if (dto == null) throw new ArgumentNullException(nameof(dto));
-
-        model.Name = dto.Name;
-        model.PositionId = dto.PositionId;
-        model.SkillIds = dto.SkillIds;
-        model.IsAvailable = dto.IsAvailable;
-        model.IsRetired = dto.IsRetired;
-        model.RecentShiftIntervalCount = dto.RecentShiftIntervalCount;
-        model.RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount;
-        model.RecentPeriodShiftIntervals = dto.RecentPeriodShiftIntervals ?? new int[12];
-    }
-
-    /// <summary>
-    /// 批量转换（异步版本，加载关联名称）
-    /// </summary>
-    public async Task<List<PersonnelDto>> ToDtoListAsync(List<Personal> models)
-    {
-        var dtos = new List<PersonnelDto>();
-        foreach (var model in models)
-        {
-            dtos.Add(await ToDtoAsync(model));
-        }
-        return dtos;
-    }
-
-    /// <summary>
-    /// 批量转换（同步版本，不加载关联名称）
+    /// 批量转换 PersonnelDto（同步版本）
     /// </summary>
     public List<PersonnelDto> ToDtoList(IEnumerable<Personal> models)
     {
@@ -151,13 +95,87 @@ public class PersonnelMapper
     }
 
     /// <summary>
-    /// 批量转换 Model（从DTO列表）
+    /// CreatePersonnelDto 转 Personal Model
     /// </summary>
-    public List<Personal> ToModelList(IEnumerable<PersonnelDto> dtos)
+    public Personal ToModel(CreatePersonnelDto dto)
     {
-        if (dtos == null)
-            return new List<Personal>();
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
 
-        return dtos.Select(ToModel).ToList();
+        return new Personal
+        {
+            Name = dto.Name,
+            PositionId = dto.PositionId,
+            SkillIds = new List<int>(dto.SkillIds),
+            IsAvailable = dto.IsAvailable,
+            IsRetired = false, // 新创建的人员默认未退役
+            RecentShiftIntervalCount = dto.RecentShiftIntervalCount,
+            RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount,
+            RecentPeriodShiftIntervals = (int[])dto.RecentPeriodShiftIntervals.Clone(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// UpdatePersonnelDto 转 Personal Model（更新现有模型）
+    /// </summary>
+    public void UpdateModel(Personal model, UpdatePersonnelDto dto)
+    {
+        if (model == null)
+            throw new ArgumentNullException(nameof(model));
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        model.Name = dto.Name;
+        model.PositionId = dto.PositionId;
+        model.SkillIds = new List<int>(dto.SkillIds);
+        model.IsAvailable = dto.IsAvailable;
+        model.IsRetired = dto.IsRetired;
+        model.RecentShiftIntervalCount = dto.RecentShiftIntervalCount;
+        model.RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount;
+        model.RecentPeriodShiftIntervals = (int[])dto.RecentPeriodShiftIntervals.Clone();
+        model.UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// PersonnelDto 转 UpdatePersonnelDto
+    /// </summary>
+    public UpdatePersonnelDto ToUpdateDto(PersonnelDto dto)
+    {
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        return new UpdatePersonnelDto
+        {
+            Name = dto.Name,
+            PositionId = dto.PositionId,
+            SkillIds = new List<int>(dto.SkillIds),
+            IsAvailable = dto.IsAvailable,
+            IsRetired = dto.IsRetired,
+            RecentShiftIntervalCount = dto.RecentShiftIntervalCount,
+            RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount,
+            RecentPeriodShiftIntervals = (int[])dto.RecentPeriodShiftIntervals.Clone()
+        };
+    }
+
+    /// <summary>
+    /// PersonnelDto 转 CreatePersonnelDto
+    /// </summary>
+    public CreatePersonnelDto ToCreateDto(PersonnelDto dto)
+    {
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        return new CreatePersonnelDto
+        {
+            Name = dto.Name,
+            PositionId = dto.PositionId,
+            SkillIds = new List<int>(dto.SkillIds),
+            IsAvailable = dto.IsAvailable,
+            RecentShiftIntervalCount = dto.RecentShiftIntervalCount,
+            RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount,
+            RecentPeriodShiftIntervals = (int[])dto.RecentPeriodShiftIntervals.Clone()
+        };
     }
 }
