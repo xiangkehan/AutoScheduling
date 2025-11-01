@@ -46,6 +46,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonnelMapper>();
         services.AddSingleton<PositionMapper>();
         services.AddSingleton<SkillMapper>();
+        services.AddSingleton<ConstraintMapper>();
         services.AddSingleton<TemplateMapper>();
 
         return services;
@@ -62,6 +63,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPersonnelService, PersonnelService>();
         services.AddSingleton<IPositionService, PositionService>();
         services.AddSingleton<ISkillService, SkillService>();
+        services.AddSingleton<IConstraintService, ConstraintService>();
         services.AddSingleton<ITemplateService, TemplateService>();
         services.AddSingleton<IHistoryService, HistoryService>();
         services.AddSingleton<ISchedulingService, SchedulingService>();

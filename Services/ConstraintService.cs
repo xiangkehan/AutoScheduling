@@ -1,4 +1,6 @@
 using AutoScheduling3.Data.Interfaces;
+using AutoScheduling3.DTOs;
+using AutoScheduling3.DTOs.Mappers;
 using AutoScheduling3.Models.Constraints;
 using AutoScheduling3.Services.Interfaces;
 using System;
@@ -16,15 +18,18 @@ public class ConstraintService : IConstraintService
     private readonly IConstraintRepository _constraintRepository;
     private readonly IPersonalRepository _personnelRepository;
     private readonly IPositionRepository _positionRepository;
+    private readonly ConstraintMapper _constraintMapper;
 
     public ConstraintService(
         IConstraintRepository constraintRepository,
         IPersonalRepository personnelRepository,
-        IPositionRepository positionRepository)
+        IPositionRepository positionRepository,
+        ConstraintMapper constraintMapper)
     {
         _constraintRepository = constraintRepository ?? throw new ArgumentNullException(nameof(constraintRepository));
         _personnelRepository = personnelRepository ?? throw new ArgumentNullException(nameof(personnelRepository));
         _positionRepository = positionRepository ?? throw new ArgumentNullException(nameof(positionRepository));
+        _constraintMapper = constraintMapper ?? throw new ArgumentNullException(nameof(constraintMapper));
     }
 
     #region 定岗规则管理
@@ -284,6 +289,76 @@ public class ConstraintService : IConstraintService
             config.IsActive = false;
             await _constraintRepository.UpdateHolidayConfigAsync(config);
         }
+    }
+
+    #endregion
+
+    #region DTO-based methods for UI integration
+
+    public async Task<List<FixedAssignmentDto>> GetAllFixedAssignmentDtosAsync(bool enabledOnly = true)
+    {
+        var rules = await GetAllFixedPositionRulesAsync(enabledOnly);
+        return await _constraintMapper.ToFixedAssignmentDtoListAsync(rules);
+    }
+
+    public async Task<List<FixedAssignmentDto>> GetFixedAssignmentDtosByPersonAsync(int personalId)
+    {
+        var rules = await GetFixedPositionRulesByPersonAsync(personalId);
+        return await _constraintMapper.ToFixedAssignmentDtoListAsync(rules);
+    }
+
+    public async Task<int> CreateFixedAssignmentAsync(CreateFixedAssignmentDto dto)
+    {
+        var rule = _constraintMapper.ToFixedPositionRule(dto);
+        return await CreateFixedPositionRuleAsync(rule);
+    }
+
+    public async Task UpdateFixedAssignmentAsync(int id, UpdateFixedAssignmentDto dto)
+    {
+        var rule = _constraintMapper.ToFixedPositionRule(dto, id);
+        await UpdateFixedPositionRuleAsync(rule);
+    }
+
+    public async Task<List<ManualAssignmentDto>> GetManualAssignmentDtosByDateRangeAsync(DateTime startDate, DateTime endDate, bool enabledOnly = true)
+    {
+        var assignments = await GetManualAssignmentsByDateRangeAsync(startDate, endDate, enabledOnly);
+        return await _constraintMapper.ToManualAssignmentDtoListAsync(assignments);
+    }
+
+    public async Task<int> CreateManualAssignmentAsync(CreateManualAssignmentDto dto)
+    {
+        var assignment = _constraintMapper.ToManualAssignment(dto);
+        return await _constraintRepository.AddManualAssignmentAsync(assignment);
+    }
+
+    public async Task UpdateManualAssignmentAsync(int id, UpdateManualAssignmentDto dto)
+    {
+        var assignment = _constraintMapper.ToManualAssignment(dto, id);
+        await _constraintRepository.UpdateManualAssignmentAsync(assignment);
+    }
+
+    public async Task<List<HolidayConfigDto>> GetAllHolidayConfigDtosAsync()
+    {
+        var configs = await GetAllHolidayConfigsAsync();
+        return _constraintMapper.ToHolidayConfigDtoList(configs);
+    }
+
+    public async Task<HolidayConfigDto?> GetActiveHolidayConfigDtoAsync()
+    {
+        var config = await GetActiveHolidayConfigAsync();
+        return config != null ? _constraintMapper.ToHolidayConfigDto(config) : null;
+    }
+
+    public async Task<int> CreateHolidayConfigAsync(CreateHolidayConfigDto dto)
+    {
+        var config = _constraintMapper.ToHolidayConfig(dto);
+        return await _constraintRepository.AddHolidayConfigAsync(config);
+    }
+
+    public async Task UpdateHolidayConfigAsync(int id, UpdateHolidayConfigDto dto)
+    {
+        var config = _constraintMapper.ToHolidayConfig(dto, id);
+        await _constraintRepository.UpdateHolidayConfigAsync(config);
     }
 
     #endregion
