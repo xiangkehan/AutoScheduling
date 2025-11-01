@@ -38,4 +38,14 @@ public interface IPersonnelService
     /// 搜索人员
     /// </summary>
     Task<List<PersonnelDto>> SearchAsync(string keyword);
+
+    /// <summary>
+    /// 获取可用人员（在职且可用）
+    /// </summary>
+    Task<List<PersonnelDto>> GetAvailablePersonnelAsync();
+
+    /// <summary>
+    /// 验证人员技能匹配
+    /// </summary>
+    Task<bool> ValidatePersonnelSkillsAsync(int personnelId, int positionId);
 }

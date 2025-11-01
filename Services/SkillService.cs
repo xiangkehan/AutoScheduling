@@ -15,11 +15,19 @@ namespace AutoScheduling3.Services;
 public class SkillService : ISkillService
 {
     private readonly ISkillRepository _repository;
+    private readonly IPersonalRepository _personnelRepository;
+    private readonly IPositionRepository _positionRepository;
     private readonly SkillMapper _mapper;
 
-    public SkillService(ISkillRepository repository, SkillMapper mapper)
+    public SkillService(
+        ISkillRepository repository, 
+        IPersonalRepository personnelRepository,
+        IPositionRepository positionRepository,
+        SkillMapper mapper)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _personnelRepository = personnelRepository ?? throw new ArgumentNullException(nameof(personnelRepository));
+        _positionRepository = positionRepository ?? throw new ArgumentNullException(nameof(positionRepository));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
     }
 

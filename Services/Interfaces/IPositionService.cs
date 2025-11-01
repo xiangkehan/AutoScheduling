@@ -38,4 +38,9 @@ public interface IPositionService
     /// 搜索哨位
     /// </summary>
     Task<List<PositionDto>> SearchAsync(string keyword);
+
+    /// <summary>
+    /// 验证哨位数据完整性
+    /// </summary>
+    Task<bool> ValidatePositionDataAsync(PositionDto position);
 }
