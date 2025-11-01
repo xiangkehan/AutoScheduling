@@ -118,6 +118,29 @@ public class PersonnelMapper
     }
 
     /// <summary>
+    /// PersonnelDto 转 Personal Model（用于更新现有模型）
+    /// </summary>
+    public Personal ToModel(PersonnelDto dto)
+    {
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        return new Personal
+        {
+            Id = dto.Id,
+            Name = dto.Name,
+            PositionId = dto.PositionId,
+            SkillIds = new List<int>(dto.SkillIds),
+            IsAvailable = dto.IsAvailable,
+            IsRetired = dto.IsRetired,
+            RecentShiftIntervalCount = dto.RecentShiftIntervalCount,
+            RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount,
+            RecentPeriodShiftIntervals = (int[])dto.RecentPeriodShiftIntervals.Clone(),
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
     /// UpdatePersonnelDto 转 Personal Model（更新现有模型）
     /// </summary>
     public void UpdateModel(Personal model, UpdatePersonnelDto dto)

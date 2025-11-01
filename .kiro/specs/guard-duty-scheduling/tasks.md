@@ -59,6 +59,9 @@
 
 
 
+
+
+
     - 创建 PersonnelMapper、PositionMapper、ScheduleMapper 等
     - 实现双向转换方法 (ToDto/ToModel)
     - _需求: 2.1, 2.2, 3.1_
@@ -247,22 +250,28 @@
     - 创建 ComparisonPage.xaml，支持两个排班表的对比
     - 实现差异高亮和统计对比
     - _需求: 4.1, 4.2, 4.3, 4.4_
+- [x] 3. 完善映射器实现（优先级：高）
 
-- [-] 3. 完善映射器实现（优先级：高）
+- [x] 3. 完善映射器实现（优先级：高）
 
 
 
-  - [ ] 3.2 完成 PersonnelMapper 实现
+
+  - [x] 3.2 完成 PersonnelMapper 实现
+
     - 实现 PersonnelMapper 的 ToDtoAsync 和 ToDtoListAsync 方法
     - 添加技能名称映射和验证逻辑
     - _需求: 2.1, 2.2_
 
-  - [ ] 3.3 完成 PositionMapper 实现
+  - [x] 3.3 完成 PositionMapper 实现
+
     - 实现 PositionMapper 的完整映射逻辑
     - 添加技能要求的双向转换
     - _需求: 1.1, 2.2_
 
-  - [ ] 3.4 完成 ScheduleMapper 实现
+  - [x] 3.4 完成 ScheduleMapper 实现
+
+
     - 实现 ScheduleMapper 的复杂对象映射
     - 处理 SingleShift 集合的映射和验证
     - _需求: 3.1, 3.2_

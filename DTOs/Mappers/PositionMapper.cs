@@ -1,15 +1,16 @@
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Models;
 using AutoScheduling3.Data.Interfaces;
-using System; // 添加以支持 ArgumentNullException
-using System.Threading.Tasks;
+using System;
 using System.Collections.Generic;
-using System.Linq; // 添加以支持 LINQ 扩展
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AutoScheduling3.DTOs.Mappers;
 
 /// <summary>
-/// 哨位数据映射器 - Model 与 DTO互转
+/// 哨位数据映射器 - Model 与 DTO 互转
+/// 需求: 1.1, 2.2
 /// </summary>
 public class PositionMapper
 {
@@ -21,7 +22,7 @@ public class PositionMapper
     }
 
     /// <summary>
-    /// Model 转 DTO（同步版本，不加载技能名称）
+    /// Model 转 DTO（同步版本，不加载关联名称）
     /// </summary>
     public PositionDto ToDto(PositionLocation model)
     {
@@ -36,21 +37,20 @@ public class PositionMapper
             Description = model.Description,
             Requirements = model.Requirements,
             RequiredSkillIds = new List<int>(model.RequiredSkillIds),
-            RequiredSkillNames = new List<string>() // 空列表，需要异步加载
+            RequiredSkillNames = new List<string>() // 需要异步加载
         };
     }
 
     /// <summary>
-    /// Model 转 DTO（异步版本，加载技能名称）
+    /// Model 转 DTO（异步版本，加载关联名称）
     /// </summary>
     public async Task<PositionDto> ToDtoAsync(PositionLocation model)
     {
         var dto = ToDto(model);
 
         // 加载技能名称
-        if (model.RequiredSkillIds.Count > 0)
+        if (model.RequiredSkillIds != null && model.RequiredSkillIds.Count > 0)
         {
-            // 使用接口方法批量获取技能
             var skills = await _skillRepository.GetByIdsAsync(model.RequiredSkillIds);
             dto.RequiredSkillNames = skills.Select(s => s.Name).ToList();
         }
@@ -59,7 +59,30 @@ public class PositionMapper
     }
 
     /// <summary>
-    /// 创建 DTO 转 Model
+    /// 批量转换 PositionDto（异步版本，加载关联名称）
+    /// </summary>
+    public async Task<List<PositionDto>> ToDtoListAsync(IEnumerable<PositionLocation> models)
+    {
+        if (models == null)
+            return new List<PositionDto>();
+
+        var tasks = models.Select(m => ToDtoAsync(m));
+        return (await Task.WhenAll(tasks)).ToList();
+    }
+
+    /// <summary>
+    /// 批量转换 PositionDto（同步版本）
+    /// </summary>
+    public List<PositionDto> ToDtoList(IEnumerable<PositionLocation> models)
+    {
+        if (models == null)
+            return new List<PositionDto>();
+
+        return models.Select(ToDto).ToList();
+    }
+
+    /// <summary>
+    /// CreatePositionDto 转 PositionLocation Model
     /// </summary>
     public PositionLocation ToModel(CreatePositionDto dto)
     {
@@ -72,12 +95,15 @@ public class PositionMapper
             Location = dto.Location,
             Description = dto.Description ?? string.Empty,
             Requirements = dto.Requirements ?? string.Empty,
-            RequiredSkillIds = new List<int>(dto.RequiredSkillIds)
+            RequiredSkillIds = new List<int>(dto.RequiredSkillIds),
+            IsActive = true, // 新创建的哨位默认激活
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
     }
 
     /// <summary>
-    /// DTO 转 Model（完整PositionDto）
+    /// PositionDto 转 PositionLocation Model（用于更新现有模型）
     /// </summary>
     public PositionLocation ToModel(PositionDto dto)
     {
@@ -92,14 +118,12 @@ public class PositionMapper
             Description = dto.Description ?? string.Empty,
             Requirements = dto.Requirements ?? string.Empty,
             RequiredSkillIds = new List<int>(dto.RequiredSkillIds),
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
     }
 
     /// <summary>
-    /// 更新 DTO 到现有 Model
+    /// UpdatePositionDto 转 PositionLocation Model（更新现有模型）
     /// </summary>
     public void UpdateModel(PositionLocation model, UpdatePositionDto dto)
     {
@@ -113,39 +137,42 @@ public class PositionMapper
         model.Description = dto.Description ?? string.Empty;
         model.Requirements = dto.Requirements ?? string.Empty;
         model.RequiredSkillIds = new List<int>(dto.RequiredSkillIds);
+        model.UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
-    /// 批量转换 DTO（同步版本）
+    /// PositionDto 转 UpdatePositionDto
     /// </summary>
-    public List<PositionDto> ToDtoList(IEnumerable<PositionLocation> models)
+    public UpdatePositionDto ToUpdateDto(PositionDto dto)
     {
-        if (models == null)
-            return new List<PositionDto>();
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
 
-        return models.Select(ToDto).ToList();
+        return new UpdatePositionDto
+        {
+            Name = dto.Name,
+            Location = dto.Location,
+            Description = dto.Description,
+            Requirements = dto.Requirements,
+            RequiredSkillIds = new List<int>(dto.RequiredSkillIds)
+        };
     }
 
     /// <summary>
-    /// 批量转换 DTO（异步版本，加载技能名称）
+    /// PositionDto 转 CreatePositionDto
     /// </summary>
-    public async Task<List<PositionDto>> ToDtoListAsync(IEnumerable<PositionLocation> models)
+    public CreatePositionDto ToCreateDto(PositionDto dto)
     {
-        if (models == null)
-            return new List<PositionDto>();
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
 
-        var tasks = models.Select(m => ToDtoAsync(m));
-        return (await Task.WhenAll(tasks)).ToList();
-    }
-
-    /// <summary>
-    /// 批量转换 Model（从DTO列表）
-    /// </summary>
-    public List<PositionLocation> ToModelList(IEnumerable<PositionDto> dtos)
-    {
-        if (dtos == null)
-            return new List<PositionLocation>();
-
-        return dtos.Select(ToModel).ToList();
+        return new CreatePositionDto
+        {
+            Name = dto.Name,
+            Location = dto.Location,
+            Description = dto.Description,
+            Requirements = dto.Requirements,
+            RequiredSkillIds = new List<int>(dto.RequiredSkillIds)
+        };
     }
 }
