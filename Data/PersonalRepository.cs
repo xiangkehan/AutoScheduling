@@ -64,13 +64,13 @@ VALUES (@name, @position, @skillIds, @isAvail, @isRetired, @recentShift, @recent
 SELECT last_insert_rowid();";
             
             cmd.Parameters.AddWithValue("@name", person.Name ?? string.Empty);
-            cmd.Parameters.AddWithValue("@position", person.Position ?? string.Empty);
+            cmd.Parameters.AddWithValue("@position", person.PositionId.ToString());
             cmd.Parameters.AddWithValue("@skillIds", JsonSerializer.Serialize(person.SkillIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@isAvail", person.IsAvailable ? 1 : 0);
             cmd.Parameters.AddWithValue("@isRetired", person.IsRetired ? 1 : 0);
-            cmd.Parameters.AddWithValue("@recentShift", person.RecentShiftInterval);
-            cmd.Parameters.AddWithValue("@recentHoliday", person.RecentHolidayShiftInterval);
-            cmd.Parameters.AddWithValue("@timeSlotIntervals", JsonSerializer.Serialize(person.RecentTimeSlotIntervals, _jsonOptions));
+            cmd.Parameters.AddWithValue("@recentShift", person.RecentShiftIntervalCount);
+            cmd.Parameters.AddWithValue("@recentHoliday", person.RecentHolidayShiftIntervalCount);
+            cmd.Parameters.AddWithValue("@timeSlotIntervals", JsonSerializer.Serialize(person.RecentPeriodShiftIntervals, _jsonOptions));
             cmd.Parameters.AddWithValue("@createdAt", person.CreatedAt.ToString("o"));
             cmd.Parameters.AddWithValue("@updatedAt", person.UpdatedAt.ToString("o"));
 
@@ -179,13 +179,13 @@ UPDATE Personals SET
 WHERE Id = @id";
 
             cmd.Parameters.AddWithValue("@name", person.Name ?? string.Empty);
-            cmd.Parameters.AddWithValue("@position", person.Position ?? string.Empty);
+            cmd.Parameters.AddWithValue("@position", person.PositionId.ToString());
             cmd.Parameters.AddWithValue("@skillIds", JsonSerializer.Serialize(person.SkillIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@isAvail", person.IsAvailable ? 1 : 0);
             cmd.Parameters.AddWithValue("@isRetired", person.IsRetired ? 1 : 0);
-            cmd.Parameters.AddWithValue("@recentShift", person.RecentShiftInterval);
-            cmd.Parameters.AddWithValue("@recentHoliday", person.RecentHolidayShiftInterval);
-            cmd.Parameters.AddWithValue("@timeSlotIntervals", JsonSerializer.Serialize(person.RecentTimeSlotIntervals, _jsonOptions));
+            cmd.Parameters.AddWithValue("@recentShift", person.RecentShiftIntervalCount);
+            cmd.Parameters.AddWithValue("@recentHoliday", person.RecentHolidayShiftIntervalCount);
+            cmd.Parameters.AddWithValue("@timeSlotIntervals", JsonSerializer.Serialize(person.RecentPeriodShiftIntervals, _jsonOptions));
             cmd.Parameters.AddWithValue("@updatedAt", DateTime.UtcNow.ToString("o"));
             cmd.Parameters.AddWithValue("@id", person.Id);
 
@@ -260,13 +260,13 @@ WHERE Id = @id";
             {
                 Id = reader.GetInt32(0),
                 Name = reader.GetString(1),
-                Position = reader.GetString(2),
+                PositionId = int.TryParse(reader.GetString(2), out int posId) ? posId : 0,
                 SkillIds = skillIds,
                 IsAvailable = reader.GetInt32(4) == 1,
                 IsRetired = reader.GetInt32(5) == 1,
-                RecentShiftInterval = reader.GetInt32(6),
-                RecentHolidayShiftInterval = reader.GetInt32(7),
-                RecentTimeSlotIntervals = timeSlotIntervals,
+                RecentShiftIntervalCount = reader.GetInt32(6),
+                RecentHolidayShiftIntervalCount = reader.GetInt32(7),
+                RecentPeriodShiftIntervals = timeSlotIntervals,
                 CreatedAt = reader.IsDBNull(9) ? DateTime.UtcNow : DateTime.Parse(reader.GetString(9)),
                 UpdatedAt = reader.IsDBNull(10) ? DateTime.UtcNow : DateTime.Parse(reader.GetString(10))
             };

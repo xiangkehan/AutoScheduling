@@ -241,8 +241,8 @@ namespace AutoScheduling3.SchedulingEngine
  {
  var schedule = new Schedule
  {
- Title = $"排班表 {_context.StartDate:yyyy-MM-dd} 至 {_context.EndDate:yyyy-MM-dd}",
- PersonalIds = _context.Personals.Select(p => p.Id).ToList(),
+ Header = $"排班表 {_context.StartDate:yyyy-MM-dd} 至 {_context.EndDate:yyyy-MM-dd}",
+ PersonnelIds = _context.Personals.Select(p => p.Id).ToList(),
  PositionIds = _context.Positions.Select(p => p.Id).ToList(),
  Shifts = new List<SingleShift>(),
  StartDate = _context.StartDate.Date,

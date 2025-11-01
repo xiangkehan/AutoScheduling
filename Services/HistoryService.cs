@@ -42,9 +42,9 @@ namespace AutoScheduling3.Services
             if (options.EndDate.HasValue)
                 query = query.Where(h => h.ConfirmTime.Date <= options.EndDate.Value.Date);
             if (!string.IsNullOrEmpty(options.Keyword))
-                query = query.Where(h => h.Schedule.Title.Contains(options.Keyword, StringComparison.OrdinalIgnoreCase));
+                query = query.Where(h => h.Schedule.Header.Contains(options.Keyword, StringComparison.OrdinalIgnoreCase));
 
-            // ÅÅÐòÂß¼­£ºTime »ò Name
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½Time ï¿½ï¿½ Name
             if (string.Equals(options.SortBy, "Time", StringComparison.OrdinalIgnoreCase))
             {
                 query = options.IsAscending
@@ -54,23 +54,23 @@ namespace AutoScheduling3.Services
             else if (string.Equals(options.SortBy, "Name", StringComparison.OrdinalIgnoreCase) || string.Equals(options.SortBy, "Title", StringComparison.OrdinalIgnoreCase))
             {
                 query = options.IsAscending
-                    ? query.OrderBy(h => h.Schedule.Title)
-                    : query.OrderByDescending(h => h.Schedule.Title);
+                    ? query.OrderBy(h => h.Schedule.Header)
+                    : query.OrderByDescending(h => h.Schedule.Header);
             }
             else
             {
-                // Ä¬ÈÏ°´Ê±¼äµ¹Ðò
+                // Ä¬ï¿½Ï°ï¿½Ê±ï¿½äµ¹ï¿½ï¿½
                 query = query.OrderByDescending(h => h.ConfirmTime);
             }
 
             return query.Select(h => new HistoryScheduleDto
             {
                 Id = h.Schedule.Id,
-                Name = h.Schedule.Title,
+                Name = h.Schedule.Header,
                 StartDate = h.Schedule.StartDate,
                 EndDate = h.Schedule.EndDate,
                 ConfirmTime = h.ConfirmTime,
-                NumberOfPersonnel = h.Schedule.PersonalIds.Count,
+                NumberOfPersonnel = h.Schedule.PersonnelIds.Count,
                 NumberOfPositions = h.Schedule.PositionIds.Count
             }).ToList();
         }
@@ -82,32 +82,32 @@ namespace AutoScheduling3.Services
                 return null;
             var schedule = historyItem.Value.Schedule;
             var confirmTime = historyItem.Value.ConfirmTime;
-            var personnel = await _personalRepository.GetPersonnelByIdsAsync(schedule.PersonalIds);
+            var personnel = await _personalRepository.GetPersonnelByIdsAsync(schedule.PersonnelIds);
             var positions = await _positionRepository.GetPositionsByIdsAsync(schedule.PositionIds);
             var holidayConfig = await _constraintRepository.GetActiveHolidayConfigAsync();
 
             var detailDto = new HistoryScheduleDetailDto
             {
                 Id = schedule.Id,
-                Name = schedule.Title,
+                Name = schedule.Header,
                 StartDate = schedule.StartDate,
                 EndDate = schedule.EndDate,
                 ConfirmTime = confirmTime,
-                NumberOfPersonnel = schedule.PersonalIds.Count,
+                NumberOfPersonnel = schedule.PersonnelIds.Count,
                 NumberOfPositions = schedule.PositionIds.Count,
                 Personnel = (await _personnelMapper.ToDtoListAsync(personnel)).ToList(),
                 Positions = positions.Select(p => _positionMapper.ToDto(p)).ToList(),
                 Statistics = new ScheduleStatisticsDto(),
-                Shifts = schedule.Shifts.ToList()
+                Shifts = schedule.Results.ToList()
             };
 
-            detailDto.Statistics.TotalShifts = schedule.Shifts.Count;
-            detailDto.Statistics.AverageShiftsPerPerson = schedule.PersonalIds.Any() ? (double)schedule.Shifts.Count / schedule.PersonalIds.Count :0;
+            detailDto.Statistics.TotalShifts = schedule.Results.Count;
+            detailDto.Statistics.AverageShiftsPerPerson = schedule.PersonnelIds.Any() ? (double)schedule.Results.Count / schedule.PersonnelIds.Count : 0;
             detailDto.Statistics.WeekendShifts = holidayConfig != null
-                ? schedule.Shifts.Count(s => holidayConfig.IsHoliday(schedule.StartDate.AddDays(s.DayIndex)))
+                ? schedule.Results.Count(s => holidayConfig.IsHoliday(schedule.StartDate.AddDays(s.DayIndex)))
                 : 0;
-            detailDto.Statistics.ShiftsPerPerson = schedule.Shifts
-                .GroupBy(s => s.PersonalId)
+            detailDto.Statistics.ShiftsPerPerson = schedule.Results
+                .GroupBy(s => s.PersonnelId)
                 .ToDictionary(g => personnel.FirstOrDefault(p => p.Id == g.Key)?.Name ?? "Unknown", g => g.Count());
 
             return detailDto;

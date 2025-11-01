@@ -27,7 +27,7 @@ namespace AutoScheduling3.Tests
                 var person = new Personal
                 {
                     Name = "测试人员",
-                    Position = "测试职位",
+                    PositionId = 1, // 使用职位ID而不是职位名称
                     IsAvailable = true,
                     IsRetired = false
                 };
@@ -40,11 +40,11 @@ namespace AutoScheduling3.Tests
                 if (retrieved == null || retrieved.Name != person.Name) return false;
 
                 // 测试更新
-                retrieved.Position = "更新职位";
+                retrieved.PositionId = 2; // 更新职位ID
                 await repo.UpdateAsync(retrieved);
 
                 var updated = await repo.GetByIdAsync(id);
-                if (updated == null || updated.Position != "更新职位") return false;
+                if (updated == null || updated.PositionId != 2) return false;
 
                 // 测试删除
                 await repo.DeleteAsync(id);
@@ -164,7 +164,7 @@ namespace AutoScheduling3.Tests
                 var person = new Personal
                 {
                     Name = "", // 空名称应该被处理
-                    Position = "测试职位"
+                    PositionId = 1 // 使用职位ID
                 };
 
                 var id = await repo.CreateAsync(person);
@@ -172,8 +172,8 @@ namespace AutoScheduling3.Tests
                 
                 // 验证数据完整性
                 return retrieved != null && 
-                       retrieved.RecentTimeSlotIntervals != null && 
-                       retrieved.RecentTimeSlotIntervals.Length == 12;
+                       retrieved.RecentPeriodShiftIntervals != null && 
+                       retrieved.RecentPeriodShiftIntervals.Length == 12;
             }
             catch
             {

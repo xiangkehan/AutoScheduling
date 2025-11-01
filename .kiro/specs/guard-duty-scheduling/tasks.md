@@ -12,6 +12,9 @@
 
 
 
+
+
+
   - 配置依赖注入容器，注册所有服务和仓储接口
   - 创建基础的 ViewModelBase 类和通用服务接口
   - 设置项目结构和命名空间
@@ -55,12 +58,15 @@
     - _需求: 1.2, 2.1, 2.2_
 
 - [ ] 3. 实现 DTO 和映射层
+
   - [ ] 3.1 创建数据传输对象 (DTOs)
+
     - 实现 PersonnelDto、PositionDto、SkillDto、ScheduleDto 等
     - 添加验证特性和序列化配置
     - _需求: 2.1, 2.2, 3.1_
 
   - [ ] 3.2 实现 Model 到 DTO 的映射器
+
     - 创建 PersonnelMapper、PositionMapper、ScheduleMapper 等
     - 实现双向转换方法 (ToDto/ToModel)
     - _需求: 2.1, 2.2, 3.1_

@@ -114,11 +114,11 @@ public class SchedulingService : ISchedulingService
         // 执行算法
         var scheduler = new GreedyScheduler(context);
         var modelSchedule = await scheduler.ExecuteAsync(cancellationToken);
-        modelSchedule.Title = request.Title;
+        modelSchedule.Header = request.Title;
         modelSchedule.StartDate = request.StartDate.Date;
         modelSchedule.EndDate = request.EndDate.Date;
         modelSchedule.CreatedAt = DateTime.UtcNow;
-        modelSchedule.PersonalIds = request.PersonnelIds;
+        modelSchedule.PersonnelIds = request.PersonnelIds;
         modelSchedule.PositionIds = request.PositionIds;
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -135,10 +135,10 @@ public class SchedulingService : ISchedulingService
         return buffers.Select(b => new ScheduleSummaryDto
         {
             Id = b.Schedule.Id,
-            Title = b.Schedule.Title,
+            Title = b.Schedule.Header,
             StartDate = b.Schedule.StartDate,
             EndDate = b.Schedule.EndDate,
-            PersonnelCount = b.Schedule.PersonalIds.Count,
+            PersonnelCount = b.Schedule.PersonnelIds.Count,
             PositionCount = b.Schedule.PositionIds.Count,
             ShiftCount = b.Schedule.Shifts.Count,
             CreatedAt = b.CreateTime,
@@ -193,10 +193,10 @@ public class SchedulingService : ISchedulingService
         return histories.Select(h => new ScheduleSummaryDto
         {
             Id = h.Schedule.Id,
-            Title = h.Schedule.Title,
+            Title = h.Schedule.Header,
             StartDate = h.Schedule.StartDate,
             EndDate = h.Schedule.EndDate,
-            PersonnelCount = h.Schedule.PersonalIds.Count,
+            PersonnelCount = h.Schedule.PersonnelIds.Count,
             PositionCount = h.Schedule.PositionIds.Count,
             ShiftCount = h.Schedule.Shifts.Count,
             CreatedAt = h.Schedule.CreatedAt == default ? h.ConfirmTime : h.Schedule.CreatedAt,
@@ -281,15 +281,15 @@ public class SchedulingService : ISchedulingService
     {
         // 加载名称映射
         var positions = await _positionRepo.GetPositionsByIdsAsync(schedule.PositionIds);
-        var personals = await _personalRepo.GetPersonnelByIdsAsync(schedule.PersonalIds);
+        var personals = await _personalRepo.GetPersonnelByIdsAsync(schedule.PersonnelIds);
         var positionNames = positions.ToDictionary(p => p.Id, p => p.Name);
         var personnelNames = personals.ToDictionary(p => p.Id, p => p.Name);
 
         var dto = new ScheduleDto
         {
             Id = schedule.Id,
-            Title = schedule.Title,
-            PersonnelIds = schedule.PersonalIds.ToList(),
+            Title = schedule.Header,
+            PersonnelIds = schedule.PersonnelIds.ToList(),
             PositionIds = schedule.PositionIds.ToList(),
             Shifts = schedule.Shifts.Select(s => new ShiftDto
             {

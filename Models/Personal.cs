@@ -74,7 +74,7 @@ namespace AutoScheduling3.Models
 
         public override string ToString()
         {
-            return $"[{Id}] {Name} ({Position})";
+            return $"[{Id}] {Name} (PositionId: {PositionId})";
         }
     }
 }
