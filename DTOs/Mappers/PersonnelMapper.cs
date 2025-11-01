@@ -86,6 +86,29 @@ public class PersonnelMapper
     }
 
     /// <summary>
+    /// DTO转Model（完整PersonnelDto）
+    /// </summary>
+    public Personal ToModel(PersonnelDto dto)
+    {
+        if (dto == null) throw new ArgumentNullException(nameof(dto));
+
+        return new Personal
+        {
+            Id = dto.Id,
+            Name = dto.Name,
+            PositionId = dto.PositionId,
+            SkillIds = dto.SkillIds ?? new List<int>(),
+            IsAvailable = dto.IsAvailable,
+            IsRetired = dto.IsRetired,
+            RecentShiftIntervalCount = dto.RecentShiftIntervalCount,
+            RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount,
+            RecentPeriodShiftIntervals = dto.RecentPeriodShiftIntervals ?? new int[12],
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
     /// 更新Model（从UpdateDTO）
     /// </summary>
     public void UpdateModel(Personal model, UpdatePersonnelDto dto)
@@ -104,7 +127,7 @@ public class PersonnelMapper
     }
 
     /// <summary>
-    /// 批量转换
+    /// 批量转换（异步版本，加载关联名称）
     /// </summary>
     public async Task<List<PersonnelDto>> ToDtoListAsync(List<Personal> models)
     {
@@ -114,5 +137,27 @@ public class PersonnelMapper
             dtos.Add(await ToDtoAsync(model));
         }
         return dtos;
+    }
+
+    /// <summary>
+    /// 批量转换（同步版本，不加载关联名称）
+    /// </summary>
+    public List<PersonnelDto> ToDtoList(IEnumerable<Personal> models)
+    {
+        if (models == null)
+            return new List<PersonnelDto>();
+
+        return models.Select(ToDto).ToList();
+    }
+
+    /// <summary>
+    /// 批量转换 Model（从DTO列表）
+    /// </summary>
+    public List<Personal> ToModelList(IEnumerable<PersonnelDto> dtos)
+    {
+        if (dtos == null)
+            return new List<Personal>();
+
+        return dtos.Select(ToModel).ToList();
     }
 }

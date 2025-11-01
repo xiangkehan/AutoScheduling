@@ -49,6 +49,25 @@ public class SkillMapper
     }
 
     /// <summary>
+    /// DTO 转 Model（完整SkillDto）
+    /// </summary>
+    public Skill ToModel(SkillDto dto)
+    {
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        return new Skill
+        {
+            Id = dto.Id,
+            Name = dto.Name,
+            Description = dto.Description ?? string.Empty,
+            IsActive = dto.IsActive,
+            CreatedAt = dto.CreatedAt,
+            UpdatedAt = dto.UpdatedAt
+        };
+    }
+
+    /// <summary>
     /// 更新 DTO 到现有 Model
     /// </summary>
     public void UpdateModel(Skill model, UpdateSkillDto dto)

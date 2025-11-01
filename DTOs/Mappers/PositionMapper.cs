@@ -77,6 +77,28 @@ public class PositionMapper
     }
 
     /// <summary>
+    /// DTO 转 Model（完整PositionDto）
+    /// </summary>
+    public PositionLocation ToModel(PositionDto dto)
+    {
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        return new PositionLocation
+        {
+            Id = dto.Id,
+            Name = dto.Name,
+            Location = dto.Location,
+            Description = dto.Description ?? string.Empty,
+            Requirements = dto.Requirements ?? string.Empty,
+            RequiredSkillIds = new List<int>(dto.RequiredSkillIds),
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
     /// 更新 DTO 到现有 Model
     /// </summary>
     public void UpdateModel(PositionLocation model, UpdatePositionDto dto)
@@ -114,5 +136,16 @@ public class PositionMapper
 
         var tasks = models.Select(m => ToDtoAsync(m));
         return (await Task.WhenAll(tasks)).ToList();
+    }
+
+    /// <summary>
+    /// 批量转换 Model（从DTO列表）
+    /// </summary>
+    public List<PositionLocation> ToModelList(IEnumerable<PositionDto> dtos)
+    {
+        if (dtos == null)
+            return new List<PositionLocation>();
+
+        return dtos.Select(ToModel).ToList();
     }
 }

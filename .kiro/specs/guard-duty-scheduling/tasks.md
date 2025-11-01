@@ -35,18 +35,27 @@
     - 测试数据验证和约束
     - _需求: 1.2, 2.1, 2.2_
 
-- [-] 3. 实现 DTO 和映射层
+- [x] 3. 实现 DTO 和映射层
+
+
 
 
 
   - [x] 3.1 创建数据传输对象 (DTOs)
 
 
+
+
+
+
     - 实现 PersonnelDto、PositionDto、SkillDto、ScheduleDto 等
     - 添加验证特性和序列化配置
     - _需求: 2.1, 2.2, 3.1_
 
-  - [-] 3.2 实现 Model 到 DTO 的映射器
+  - [ ] 3.2 实现 Model 到 DTO 的映射器
+
+
+
 
     - 创建 PersonnelMapper、PositionMapper、ScheduleMapper 等
     - 实现双向转换方法 (ToDto/ToModel)

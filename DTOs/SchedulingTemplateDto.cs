@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace AutoScheduling3.DTOs;
 
@@ -11,71 +13,96 @@ public class SchedulingTemplateDto
     /// <summary>
     /// 模板ID
     /// </summary>
+    [JsonPropertyName("id")]
     public int Id { get; set; }
 
     /// <summary>
     /// 模板名称
     /// </summary>
+    [Required(ErrorMessage = "模板名称不能为空")]
+    [StringLength(100, MinimumLength = 1, ErrorMessage = "模板名称长度必须在1-100字符之间")]
+    [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// 模板描述
     /// </summary>
+    [StringLength(500, ErrorMessage = "模板描述长度不能超过500字符")]
+    [JsonPropertyName("description")]
     public string? Description { get; set; }
 
     /// <summary>
     /// 模板类型（regular/holiday/special）
     /// </summary>
+    [Required(ErrorMessage = "模板类型不能为空")]
+    [RegularExpression("^(regular|holiday|special)$", ErrorMessage = "模板类型必须是 regular、holiday 或 special")]
+    [JsonPropertyName("templateType")]
     public string TemplateType { get; set; } = "regular";
 
     /// <summary>
     /// 是否为默认模板
     /// </summary>
+    [JsonPropertyName("isDefault")]
     public bool IsDefault { get; set; }
 
     /// <summary>
     /// 参与人员ID列表
     /// </summary>
+    [Required(ErrorMessage = "人员列表不能为空")]
+    [MinLength(1, ErrorMessage = "至少需要选择一名人员")]
+    [JsonPropertyName("personnelIds")]
     public List<int> PersonnelIds { get; set; } = new();
 
     /// <summary>
     /// 参与哨位ID列表
     /// </summary>
+    [Required(ErrorMessage = "哨位列表不能为空")]
+    [MinLength(1, ErrorMessage = "至少需要选择一个哨位")]
+    [JsonPropertyName("positionIds")]
     public List<int> PositionIds { get; set; } = new();
 
     /// <summary>
     /// 休息日配置ID（可选）
     /// </summary>
+    [JsonPropertyName("holidayConfigId")]
     public int? HolidayConfigId { get; set; }
 
     /// <summary>
     /// 是否使用当前活动配置
     /// </summary>
+    [JsonPropertyName("useActiveHolidayConfig")]
     public bool UseActiveHolidayConfig { get; set; }
 
     /// <summary>
     /// 启用的定岗规则ID
     /// </summary>
+    [JsonPropertyName("enabledFixedRuleIds")]
     public List<int> EnabledFixedRuleIds { get; set; } = new();
 
     /// <summary>
     /// 启用的手动指定ID
     /// </summary>
+    [JsonPropertyName("enabledManualAssignmentIds")]
     public List<int> EnabledManualAssignmentIds { get; set; } = new();
 
     /// <summary>
     /// 创建时间
     /// </summary>
+    [Required(ErrorMessage = "创建时间不能为空")]
+    [JsonPropertyName("createdAt")]
     public DateTime CreatedAt { get; set; }
 
     /// <summary>
     /// 最后使用时间
     /// </summary>
+    [JsonPropertyName("lastUsedAt")]
     public DateTime? LastUsedAt { get; set; }
 
     /// <summary>
     /// 使用次数
     /// </summary>
+    [Range(0, int.MaxValue, ErrorMessage = "使用次数不能为负数")]
+    [JsonPropertyName("usageCount")]
     public int UsageCount { get; set; }
 }
 
@@ -87,51 +114,70 @@ public class CreateTemplateDto
     /// <summary>
     /// 模板名称（必填，1-100字符）
     /// </summary>
+    [Required(ErrorMessage = "模板名称不能为空")]
+    [StringLength(100, MinimumLength = 1, ErrorMessage = "模板名称长度必须在1-100字符之间")]
+    [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// 模板描述（可选，最多500字符）
     /// </summary>
+    [StringLength(500, ErrorMessage = "模板描述长度不能超过500字符")]
+    [JsonPropertyName("description")]
     public string? Description { get; set; }
 
     /// <summary>
     /// 模板类型（必选：regular/holiday/special）
     /// </summary>
+    [Required(ErrorMessage = "模板类型不能为空")]
+    [RegularExpression("^(regular|holiday|special)$", ErrorMessage = "模板类型必须是 regular、holiday 或 special")]
+    [JsonPropertyName("templateType")]
     public string TemplateType { get; set; } = "regular";
 
     /// <summary>
     /// 是否设为默认
     /// </summary>
+    [JsonPropertyName("isDefault")]
     public bool IsDefault { get; set; }
 
     /// <summary>
     /// 参与人员ID列表（至少1人）
     /// </summary>
+    [Required(ErrorMessage = "人员列表不能为空")]
+    [MinLength(1, ErrorMessage = "至少需要选择一名人员")]
+    [JsonPropertyName("personnelIds")]
     public List<int> PersonnelIds { get; set; } = new();
 
     /// <summary>
     /// 参与哨位ID列表（至少1个）
     /// </summary>
+    [Required(ErrorMessage = "哨位列表不能为空")]
+    [MinLength(1, ErrorMessage = "至少需要选择一个哨位")]
+    [JsonPropertyName("positionIds")]
     public List<int> PositionIds { get; set; } = new();
 
     /// <summary>
     /// 休息日配置ID
     /// </summary>
+    [JsonPropertyName("holidayConfigId")]
     public int? HolidayConfigId { get; set; }
 
     /// <summary>
     /// 是否使用活动配置
     /// </summary>
+    [JsonPropertyName("useActiveHolidayConfig")]
     public bool UseActiveHolidayConfig { get; set; }
 
     /// <summary>
     /// 启用的定岗规则ID
     /// </summary>
+    [JsonPropertyName("enabledFixedRuleIds")]
     public List<int> EnabledFixedRuleIds { get; set; } = new();
 
     /// <summary>
     /// 启用的手动指定ID
     /// </summary>
+    [JsonPropertyName("enabledManualAssignmentIds")]
     public List<int> EnabledManualAssignmentIds { get; set; } = new();
 }
 

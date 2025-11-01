@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace AutoScheduling3.DTOs;
 
@@ -11,20 +12,41 @@ public class SkillDto
     /// <summary>
     /// 技能ID
     /// </summary>
+    [JsonPropertyName("id")]
     public int Id { get; set; }
 
     /// <summary>
     /// 技能名称
     /// </summary>
+    [Required(ErrorMessage = "技能名称不能为空")]
+    [StringLength(50, MinimumLength = 1, ErrorMessage = "技能名称长度必须在1-50字符之间")]
+    [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// 技能描述
     /// </summary>
+    [StringLength(200, ErrorMessage = "技能描述长度不能超过200字符")]
+    [JsonPropertyName("description")]
     public string? Description { get; set; }
-    public bool IsActive { get; internal set; }
-    public DateTime CreatedAt { get; internal set; }
-    public DateTime UpdatedAt { get; internal set; }
+
+    /// <summary>
+    /// 是否激活
+    /// </summary>
+    [JsonPropertyName("isActive")]
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// 创建时间
+    /// </summary>
+    [JsonPropertyName("createdAt")]
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// 更新时间
+    /// </summary>
+    [JsonPropertyName("updatedAt")]
+    public DateTime UpdatedAt { get; set; }
 }
 
 /// <summary>
