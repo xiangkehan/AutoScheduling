@@ -133,8 +133,8 @@ namespace AutoScheduling3.ViewModels.History
                     leftMap.TryGetValue(key, out var leftList);
                     rightMap.TryGetValue(key, out var rightList);
 
-                    var leftPersons = leftList?.Select(s => s.PersonalId).OrderBy(i => i).ToList() ?? new List<int>();
-                    var rightPersons = rightList?.Select(s => s.PersonalId).OrderBy(i => i).ToList() ?? new List<int>();
+                    var leftPersons = leftList?.Select(s => s.PersonnelId).OrderBy(i => i).ToList() ?? new List<int>();
+                    var rightPersons = rightList?.Select(s => s.PersonnelId).OrderBy(i => i).ToList() ?? new List<int>();
 
                     if (!leftPersons.Any() && rightPersons.Any())
                     {

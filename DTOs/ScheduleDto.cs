@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace AutoScheduling3.DTOs;
 
@@ -169,26 +170,34 @@ public class SchedulingRequestDto
     /// <summary>
     /// 排班表名称（必填，1-100字符）
     /// </summary>
+    [Required(ErrorMessage = "排班表名称不能为空")]
+    [StringLength(100, MinimumLength = 1, ErrorMessage = "排班表名称长度必须在1-100字符之间")]
     public string Title { get; set; } = string.Empty;
 
     /// <summary>
     /// 开始日期（必填，不早于今天）
     /// </summary>
+    [Required(ErrorMessage = "开始日期不能为空")]
     public DateTime StartDate { get; set; }
 
     /// <summary>
     /// 结束日期（必填，不早于开始日期）
     /// </summary>
+    [Required(ErrorMessage = "结束日期不能为空")]
     public DateTime EndDate { get; set; }
 
     /// <summary>
     /// 参与人员ID列表（必填，至少1人）
     /// </summary>
+    [Required(ErrorMessage = "人员列表不能为空")]
+    [MinLength(1, ErrorMessage = "至少需要选择一名人员")]
     public List<int> PersonnelIds { get; set; } = new();
 
     /// <summary>
     /// 参与哨位ID列表（必填，至少1个）
     /// </summary>
+    [Required(ErrorMessage = "哨位列表不能为空")]
+    [MinLength(1, ErrorMessage = "至少需要选择一个哨位")]
     public List<int> PositionIds { get; set; } = new();
 
     /// <summary>

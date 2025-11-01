@@ -9,38 +9,8 @@ namespace AutoScheduling3.Data.Interfaces
     /// 排班仓储接口：管理排班历史和缓冲区
     /// 需求: 1.2, 2.1, 2.2, 4.1, 4.2, 4.3, 4.4
     /// </summary>
-    public interface ISchedulingRepository
+    public interface ISchedulingRepository : IRepository<Schedule>
     {
-        /// <summary>
-        /// 获取所有排班表
-        /// </summary>
-        Task<List<Schedule>> GetAllAsync();
-
-        /// <summary>
-        /// 根据ID获取排班表
-        /// </summary>
-        Task<Schedule?> GetByIdAsync(int id);
-
-        /// <summary>
-        /// 创建排班表
-        /// </summary>
-        Task<int> CreateAsync(Schedule schedule);
-
-        /// <summary>
-        /// 更新排班表
-        /// </summary>
-        Task UpdateAsync(Schedule schedule);
-
-        /// <summary>
-        /// 删除排班表
-        /// </summary>
-        Task DeleteAsync(int id);
-
-        /// <summary>
-        /// 检查排班表是否存在
-        /// </summary>
-        Task<bool> ExistsAsync(int id);
-
         /// <summary>
         /// 获取历史缓冲区中的排班表（未确认）
         /// </summary>

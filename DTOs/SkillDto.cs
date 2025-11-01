@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace AutoScheduling3.DTOs;
 
@@ -34,11 +35,14 @@ public class CreateSkillDto
     /// <summary>
     /// 技能名称（必填，1-50字符，唯一）
     /// </summary>
+    [Required(ErrorMessage = "技能名称不能为空")]
+    [StringLength(50, MinimumLength = 1, ErrorMessage = "技能名称长度必须在1-50字符之间")]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// 技能描述（可选，最多200字符）
     /// </summary>
+    [StringLength(200, ErrorMessage = "技能描述长度不能超过200字符")]
     public string? Description { get; set; }
 }
 
@@ -50,11 +54,15 @@ public class UpdateSkillDto
     /// <summary>
     /// 技能名称（必填，1-50字符，唯一）
     /// </summary>
+    [Required(ErrorMessage = "技能名称不能为空")]
+    [StringLength(50, MinimumLength = 1, ErrorMessage = "技能名称长度必须在1-50字符之间")]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// 技能描述（可选，最多200字符）
     /// </summary>
+    [StringLength(200, ErrorMessage = "技能描述长度不能超过200字符")]
     public string? Description { get; set; }
+    
     public bool IsActive { get; internal set; }
 }
