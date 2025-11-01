@@ -13,6 +13,7 @@ using WinRT.Interop;
 using AutoScheduling3.ViewModels.DataManagement;
 using AutoScheduling3.ViewModels.History;
 using AutoScheduling3.History;
+using AutoScheduling3.Extensions;
 
 namespace AutoScheduling3
 {
@@ -66,55 +67,26 @@ namespace AutoScheduling3
         {
             var services = new ServiceCollection();
 
-            // 注册 Repositories
-            services.AddSingleton<IPersonalRepository>(sp => new PersonalRepository(DatabasePath));
-            services.AddSingleton<IPositionRepository>(sp => new PositionLocationRepository(DatabasePath));
-            services.AddSingleton<ISkillRepository>(sp => new SkillRepository(DatabasePath));
-            services.AddSingleton<IConstraintRepository>(sp => new ConstraintRepository(DatabasePath));
-            services.AddSingleton<ITemplateRepository>(sp => new SchedulingTemplateRepository(DatabasePath));
-            services.AddSingleton(sp => new SchedulingRepository(DatabasePath));
-            services.AddSingleton<IHistoryManagement>(sp => new HistoryManagement(DatabasePath));
-
-            // 注册 Mappers
-            services.AddSingleton<PersonnelMapper>();
-            services.AddSingleton<PositionMapper>();
-            services.AddSingleton<SkillMapper>();
-            services.AddSingleton<TemplateMapper>();
-
-            // 注册 Services
-            services.AddSingleton<IPersonnelService, PersonnelService>();
-            services.AddSingleton<IPositionService, PositionService>();
-            services.AddSingleton<ISkillService, SkillService>();
-            services.AddSingleton<ITemplateService, TemplateService>();
-            services.AddSingleton<IHistoryService, HistoryService>();
-            services.AddSingleton<ISchedulingService, SchedulingService>();
-
-            // 注册 Helpers
-            services.AddSingleton<NavigationService>();
-            services.AddSingleton<DialogService>();
-
-            // 注册 ViewModels
-            services.AddTransient<PersonnelViewModel>();
-            services.AddTransient<PositionViewModel>();
-            services.AddTransient<SkillViewModel>();
-            services.AddTransient<TemplateViewModel>();
-            services.AddTransient<SchedulingViewModel>();
-            services.AddTransient<ScheduleResultViewModel>();
-            services.AddTransient<HistoryViewModel>();
-            services.AddTransient<HistoryDetailViewModel>();
-            services.AddTransient<DraftsViewModel>(); // 新增 DraftsViewModel 注册
-            services.AddTransient<CompareViewModel>();
+            // 使用扩展方法注册所有服务
+            services.AddApplicationServices(DatabasePath);
 
             ServiceProvider = services.BuildServiceProvider();
+            
+            // 初始化服务定位器
+            ServiceLocator.Initialize(ServiceProvider);
         }
 
         /// <summary>
-        /// 初始化数据库
+        /// 初始化应用程序服务
         /// </summary>
-        private async System.Threading.Tasks.Task InitializeDatabaseAsync()
+        private async System.Threading.Tasks.Task InitializeServicesAsync()
         {
             try
             {
+                // 首先初始化配置服务
+                var configService = ServiceProvider.GetRequiredService<IConfigurationService>();
+                await configService.InitializeAsync();
+
                 // 初始化所有带 InitAsync 方法的组件
                 var initTargets = new object[]{
                     ServiceProvider.GetRequiredService<IPersonalRepository>(),
@@ -147,7 +119,7 @@ namespace AutoScheduling3
             }
             catch(Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"数据库初始化失败: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"服务初始化失败: {ex.Message}");
             }
         }
 
@@ -159,11 +131,11 @@ namespace AutoScheduling3
         {
             try
             {
-                await InitializeDatabaseAsync();
+                await InitializeServicesAsync();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Database initialization failed: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Services initialization failed: {ex.Message}");
             }
 
             _window = new MainWindow();
