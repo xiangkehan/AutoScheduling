@@ -9,6 +9,8 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <ResourceDictionary Source="/Themes/ThemeResources.xaml"/>
+                <ResourceDictionary Source="/Themes/AnimationResources.xaml"/>
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
 
@@ -23,6 +25,9 @@
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderBrush" Value="Transparent" />
             </Style>
+
+            <!-- 默认字体大小 -->
+            <x:Double x:Key="DefaultFontSize">14</x:Double>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

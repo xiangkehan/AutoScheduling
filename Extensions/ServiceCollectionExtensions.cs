@@ -80,6 +80,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<NavigationService>();
         services.AddSingleton<DialogService>();
+        services.AddSingleton<IThemeService, ThemeService>();
 
         return services;
     }

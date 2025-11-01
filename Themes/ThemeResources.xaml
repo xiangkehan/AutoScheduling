@@ -1,0 +1,210 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- 主题颜色资源 -->
+    
+    <!-- 浅色主题 -->
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F3F3"/>
+            <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#E1E1E1"/>
+            <SolidColorBrush x:Key="AccentBrush" Color="#0078D4"/>
+            <SolidColorBrush x:Key="AccentHoverBrush" Color="#106EBE"/>
+            <SolidColorBrush x:Key="AccentPressedBrush" Color="#005A9E"/>
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#323130"/>
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#605E5C"/>
+            <SolidColorBrush x:Key="TextDisabledBrush" Color="#A19F9D"/>
+            <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
+            <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
+            <SolidColorBrush x:Key="ErrorBrush" Color="#D13438"/>
+            <SolidColorBrush x:Key="InfoBrush" Color="#0078D4"/>
+        </ResourceDictionary>
+
+        <!-- 深色主题 -->
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#1E1E1E"/>
+            <SolidColorBrush x:Key="CardBackgroundBrush" Color="#2D2D30"/>
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#3F3F46"/>
+            <SolidColorBrush x:Key="AccentBrush" Color="#60CDFF"/>
+            <SolidColorBrush x:Key="AccentHoverBrush" Color="#4FC3F7"/>
+            <SolidColorBrush x:Key="AccentPressedBrush" Color="#29B6F6"/>
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCCCCC"/>
+            <SolidColorBrush x:Key="TextDisabledBrush" Color="#999999"/>
+            <SolidColorBrush x:Key="SuccessBrush" Color="#4CAF50"/>
+            <SolidColorBrush x:Key="WarningBrush" Color="#FF9800"/>
+            <SolidColorBrush x:Key="ErrorBrush" Color="#F44336"/>
+            <SolidColorBrush x:Key="InfoBrush" Color="#2196F3"/>
+        </ResourceDictionary>
+
+        <!-- 高对比度主题 -->
+        <ResourceDictionary x:Key="HighContrast">
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="CardBackgroundBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="AccentBrush" Color="#FFFF00"/>
+            <SolidColorBrush x:Key="AccentHoverBrush" Color="#FFFF00"/>
+            <SolidColorBrush x:Key="AccentPressedBrush" Color="#FFFF00"/>
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="TextDisabledBrush" Color="#808080"/>
+            <SolidColorBrush x:Key="SuccessBrush" Color="#00FF00"/>
+            <SolidColorBrush x:Key="WarningBrush" Color="#FFFF00"/>
+            <SolidColorBrush x:Key="ErrorBrush" Color="#FF0000"/>
+            <SolidColorBrush x:Key="InfoBrush" Color="#00FFFF"/>
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+
+    <!-- 增强的卡片样式 -->
+    <Style x:Key="EnhancedCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource CardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <CompositeTransform/>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Border">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <Border.Shadow>
+                            <ThemeShadow/>
+                        </Border.Shadow>
+                        <ContentPresenter/>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="(UIElement.RenderTransform).(CompositeTransform.ScaleX)" Value="1.02"/>
+                                        <Setter Target="(UIElement.RenderTransform).(CompositeTransform.ScaleY)" Value="1.02"/>
+                                    </VisualState.Setters>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(CompositeTransform.ScaleX)"
+                                                         To="1.02" Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(CompositeTransform.ScaleY)"
+                                                         To="1.02" Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 增强的按钮样式 -->
+    <Style x:Key="EnhancedButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{ThemeResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <CompositeTransform/>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="Background" Value="{ThemeResource AccentHoverBrush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="Background" Value="{ThemeResource AccentPressedBrush}"/>
+                                        <Setter Target="(UIElement.RenderTransform).(CompositeTransform.ScaleX)" Value="0.98"/>
+                                        <Setter Target="(UIElement.RenderTransform).(CompositeTransform.ScaleY)" Value="0.98"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="Background" Value="{ThemeResource TextDisabledBrush}"/>
+                                        <Setter Target="Opacity" Value="0.6"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 响应式网格样式 -->
+    <Style x:Key="ResponsiveGridStyle" TargetType="Grid">
+        <Setter Property="Margin" Value="16"/>
+    </Style>
+
+    <!-- 无障碍文本样式 -->
+    <Style x:Key="AccessibleTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="LineHeight" Value="20"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <!-- 大字体样式（无障碍） -->
+    <Style x:Key="LargeTextStyle" TargetType="TextBlock" BasedOn="{StaticResource AccessibleTextStyle}">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="LineHeight" Value="24"/>
+    </Style>
+
+    <!-- 标题样式 -->
+    <Style x:Key="TitleTextStyle" TargetType="TextBlock" BasedOn="{StaticResource AccessibleTextStyle}">
+        <Setter Property="FontSize" Value="24"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LineHeight" Value="32"/>
+    </Style>
+
+    <!-- 副标题样式 -->
+    <Style x:Key="SubtitleTextStyle" TargetType="TextBlock" BasedOn="{StaticResource AccessibleTextStyle}">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="LineHeight" Value="24"/>
+    </Style>
+
+    <!-- 状态指示器样式 -->
+    <Style x:Key="StatusIndicatorStyle" TargetType="Border">
+        <Setter Property="Width" Value="12"/>
+        <Setter Property="Height" Value="12"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Margin" Value="4"/>
+    </Style>
+
+</ResourceDictionary>

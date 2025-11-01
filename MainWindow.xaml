@@ -17,7 +17,8 @@
                     IsBackEnabled="{x:Bind ContentFrame.CanGoBack, Mode=OneWay}"
                     BackRequested="NavigationView_BackRequested"
                     ItemInvoked="NavigationView_ItemInvoked"
-                    PaneDisplayMode="Left">
+                    PaneDisplayMode="Left"
+                    SizeChanged="NavigationView_SizeChanged">
         
         <NavigationView.MenuItems>
             <!-- 数据管理 -->
