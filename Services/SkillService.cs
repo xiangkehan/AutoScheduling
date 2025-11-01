@@ -57,7 +57,11 @@ public class SkillService : ISkillService
     /// </summary>
     public async Task<SkillDto> CreateAsync(CreateSkillDto dto)
     {
+        // 基础验证
         ValidateCreateDto(dto);
+        
+        // 业务规则验证：检查名称唯一性
+        await ValidateSkillNameUniquenessAsync(dto.Name);
 
         var model = _mapper.ToModel(dto);
         var id = await _repository.CreateAsync(model);
@@ -74,7 +78,11 @@ public class SkillService : ISkillService
         if (id <= 0)
             throw new ArgumentException("无效的技能ID", nameof(id));
 
+        // 基础验证
         ValidateUpdateDto(dto);
+        
+        // 业务规则验证：检查名称唯一性（排除当前记录）
+        await ValidateSkillNameUniquenessAsync(dto.Name, id);
 
         var existingSkill = await _repository.GetByIdAsync(id);
         if (existingSkill == null)
@@ -95,6 +103,9 @@ public class SkillService : ISkillService
         var exists = await _repository.ExistsAsync(id);
         if (!exists)
             throw new ArgumentException($"技能 ID {id} 不存在", nameof(id));
+
+        // 业务规则验证：检查技能是否被使用
+        await ValidateSkillNotInUseAsync(id);
 
         await _repository.DeleteAsync(id);
     }
@@ -174,4 +185,79 @@ public class SkillService : ISkillService
         if (dto.Description != null && dto.Description.Length > 500)
             throw new ArgumentException("技能描述不能超过500个字符", nameof(dto.Description));
     }
+
+    /// <summary>
+    /// 验证技能名称唯一性（业务规则验证）
+    /// </summary>
+    private async Task ValidateSkillNameUniquenessAsync(string name, int? excludeId = null)
+    {
+        var nameExists = await _repository.NameExistsAsync(name, excludeId);
+        if (nameExists)
+            throw new ArgumentException($"技能名称 '{name}' 已存在");
+    }
+
+    /// <summary>
+    /// 验证技能是否被使用（业务规则验证）
+    /// </summary>
+    private async Task ValidateSkillNotInUseAsync(int skillId)
+    {
+        // 检查是否有人员使用此技能
+        var allPersonnel = await _personnelRepository.GetAllAsync();
+        var personnelUsingSkill = allPersonnel.Where(p => 
+            p.SkillIds != null && p.SkillIds.Contains(skillId)).ToList();
+        
+        if (personnelUsingSkill.Any())
+        {
+            var personnelNames = string.Join(", ", personnelUsingSkill.Select(p => p.Name));
+            throw new InvalidOperationException($"无法删除技能，以下人员正在使用此技能: {personnelNames}");
+        }
+
+        // 检查是否有哨位需要此技能
+        var allPositions = await _positionRepository.GetAllAsync();
+        var positionsRequiringSkill = allPositions.Where(p => 
+            p.RequiredSkillIds != null && p.RequiredSkillIds.Contains(skillId)).ToList();
+        
+        if (positionsRequiringSkill.Any())
+        {
+            var positionNames = string.Join(", ", positionsRequiringSkill.Select(p => p.Name));
+            throw new InvalidOperationException($"无法删除技能，以下哨位需要此技能: {positionNames}");
+        }
+    }
+
+    /// <summary>
+    /// 检查技能是否被使用（不抛出异常，返回使用情况）
+    /// </summary>
+    public async Task<SkillUsageInfo> CheckSkillUsageAsync(int skillId)
+    {
+        var usageInfo = new SkillUsageInfo { SkillId = skillId };
+
+        // 检查人员使用情况
+        var allPersonnel = await _personnelRepository.GetAllAsync();
+        usageInfo.UsedByPersonnel = allPersonnel
+            .Where(p => p.SkillIds != null && p.SkillIds.Contains(skillId))
+            .Select(p => new { p.Id, p.Name })
+            .ToList();
+
+        // 检查哨位使用情况
+        var allPositions = await _positionRepository.GetAllAsync();
+        usageInfo.RequiredByPositions = allPositions
+            .Where(p => p.RequiredSkillIds != null && p.RequiredSkillIds.Contains(skillId))
+            .Select(p => new { p.Id, p.Name })
+            .ToList();
+
+        usageInfo.IsInUse = usageInfo.UsedByPersonnel.Any() || usageInfo.RequiredByPositions.Any();
+        
+        return usageInfo;
+    }
+}
+
+/// <summary>
+/// 技能使用情况信息
+/// </summary>
+public class SkillUsageInfo
+{
+    public int SkillId { get; set; }
+    public bool IsInUse { get; set; }
+    public List<dynamic> UsedByPersonnel { get; set; } = new();
+    public List<dynamic> RequiredByPositions { get; set; } = new();
 }

@@ -61,7 +61,7 @@ public class SkillMapper
     }
 
     /// <summary>
-    /// SkillDto 转 Skill Model（完整转换）
+    /// SkillDto 转 Skill Model（用于更新现有模型）
     /// </summary>
     public Skill ToModel(SkillDto dto)
     {
@@ -75,7 +75,7 @@ public class SkillMapper
             Description = dto.Description ?? string.Empty,
             IsActive = dto.IsActive,
             CreatedAt = dto.CreatedAt,
-            UpdatedAt = dto.UpdatedAt
+            UpdatedAt = DateTime.UtcNow
         };
     }
 

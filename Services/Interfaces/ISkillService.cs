@@ -43,4 +43,9 @@ public interface ISkillService
     /// 根据ID列表批量获取技能
     /// </summary>
     Task<List<SkillDto>> GetByIdsAsync(List<int> ids);
+
+    /// <summary>
+    /// 检查技能使用情况
+    /// </summary>
+    Task<SkillUsageInfo> CheckSkillUsageAsync(int skillId);
 }

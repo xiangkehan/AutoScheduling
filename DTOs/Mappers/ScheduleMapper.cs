@@ -140,7 +140,7 @@ public class ScheduleMapper
     }
 
     /// <summary>
-    /// ScheduleDto 转 Schedule Model（完整转换）
+    /// ScheduleDto 转 Schedule Model（用于更新现有模型）
     /// </summary>
     public Schedule ToModel(ScheduleDto dto)
     {
@@ -150,7 +150,7 @@ public class ScheduleMapper
         // 验证日期范围
         ValidateDateRange(dto.StartDate, dto.EndDate);
 
-        var schedule = new Schedule
+        return new Schedule
         {
             Id = dto.Id,
             Header = dto.Title,
@@ -158,18 +158,11 @@ public class ScheduleMapper
             PositionIds = new List<int>(dto.PositionIds),
             StartDate = dto.StartDate,
             EndDate = dto.EndDate,
+            Results = dto.Shifts?.Select(s => ToShiftModel(s, dto.Id)).ToList() ?? new List<SingleShift>(),
             IsConfirmed = dto.ConfirmedAt.HasValue,
             CreatedAt = dto.CreatedAt,
             UpdatedAt = DateTime.UtcNow
         };
-
-        // 转换班次集合
-        if (dto.Shifts != null)
-        {
-            schedule.Results = dto.Shifts.Select(s => ToShiftModel(s, schedule.Id)).ToList();
-        }
-
-        return schedule;
     }
 
     /// <summary>

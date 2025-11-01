@@ -52,6 +52,10 @@ public class SchedulingService : ISchedulingService
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
         ValidateRequest(request);
+        
+        // 业务规则验证
+        await ValidateSchedulingRequestBusinessLogicAsync(request);
+        
         cancellationToken.ThrowIfCancellationRequested();
 
         // 并行加载基础数据
@@ -172,6 +176,10 @@ public class SchedulingService : ISchedulingService
         {
             throw new InvalidOperationException("未找到待确认的草稿排班");
         }
+        
+        // 业务规则验证：确认前的最终检查
+        await ValidateScheduleForConfirmationAsync(buffer.Schedule);
+        
         await _historyMgmt.ConfirmBufferScheduleAsync(buffer.BufferId);
     }
 
@@ -348,4 +356,206 @@ public class SchedulingService : ISchedulingService
     }
 
     private static int CalcPeriodIndex(DateTime startTime) => startTime.Hour / 2;
+
+    #region 业务规则验证
+
+    /// <summary>
+    /// 验证排班请求的业务规则
+    /// </summary>
+    private async Task ValidateSchedulingRequestBusinessLogicAsync(SchedulingRequestDto request)
+    {
+        // 验证人员是否存在且可用
+        var personnelList = await _personalRepo.GetPersonnelByIdsAsync(request.PersonnelIds);
+        var existingPersonnelIds = personnelList.Select(p => p.Id).ToHashSet();
+        var missingPersonnelIds = request.PersonnelIds.Except(existingPersonnelIds).ToList();
+        
+        if (missingPersonnelIds.Any())
+            throw new ArgumentException($"以下人员ID不存在: {string.Join(", ", missingPersonnelIds)}");
+
+        // 检查人员可用性
+        var unavailablePersonnel = personnelList.Where(p => !p.IsAvailable || p.IsRetired).ToList();
+        if (unavailablePersonnel.Any())
+        {
+            var names = string.Join(", ", unavailablePersonnel.Select(p => p.Name));
+            throw new ArgumentException($"以下人员当前不可用: {names}");
+        }
+
+        // 验证哨位是否存在
+        var positionList = await _positionRepo.GetPositionsByIdsAsync(request.PositionIds);
+        var existingPositionIds = positionList.Select(p => p.Id).ToHashSet();
+        var missingPositionIds = request.PositionIds.Except(existingPositionIds).ToList();
+        
+        if (missingPositionIds.Any())
+            throw new ArgumentException($"以下哨位ID不存在: {string.Join(", ", missingPositionIds)}");
+
+        // 验证技能匹配：至少要有一些人员能胜任一些哨位
+        await ValidateSkillCompatibilityAsync(personnelList, positionList);
+
+        // 验证日期范围合理性
+        var daySpan = (request.EndDate.Date - request.StartDate.Date).Days + 1;
+        if (daySpan < 1)
+            throw new ArgumentException("排班周期至少为1天");
+
+        // 验证人员数量与哨位数量的合理性
+        ValidatePersonnelPositionRatio(personnelList.Count, positionList.Count, daySpan);
+    }
+
+    /// <summary>
+    /// 验证技能兼容性
+    /// </summary>
+    private async Task ValidateSkillCompatibilityAsync(List<Personal> personnel, List<PositionLocation> positions)
+    {
+        var incompatiblePositions = new List<string>();
+
+        foreach (var position in positions)
+        {
+            if (position.RequiredSkillIds?.Any() != true)
+                continue; // 无技能要求的哨位跳过
+
+            // 检查是否有人员能胜任此哨位
+            var compatiblePersonnel = personnel.Where(p => 
+                p.SkillIds?.Any() == true && 
+                position.RequiredSkillIds.All(requiredSkill => p.SkillIds.Contains(requiredSkill))
+            ).ToList();
+
+            if (!compatiblePersonnel.Any())
+            {
+                incompatiblePositions.Add(position.Name);
+            }
+        }
+
+        if (incompatiblePositions.Any())
+        {
+            throw new ArgumentException($"以下哨位没有合适的人员能够胜任: {string.Join(", ", incompatiblePositions)}");
+        }
+    }
+
+    /// <summary>
+    /// 验证人员与哨位数量比例的合理性
+    /// </summary>
+    private void ValidatePersonnelPositionRatio(int personnelCount, int positionCount, int daySpan)
+    {
+        // 计算总需求班次数（哨位数 × 天数 × 12个时段）
+        var totalShiftsNeeded = positionCount * daySpan * 12;
+        
+        // 计算理论最大可提供班次数（假设每人每天最多8个时段，即16小时）
+        var maxShiftsAvailable = personnelCount * daySpan * 8;
+        
+        if (totalShiftsNeeded > maxShiftsAvailable)
+        {
+            throw new ArgumentException($"人员数量不足：需要 {totalShiftsNeeded} 个班次，但最多只能提供 {maxShiftsAvailable} 个班次");
+        }
+
+        // 警告：如果人员过少可能导致排班困难
+        var utilizationRate = (double)totalShiftsNeeded / maxShiftsAvailable;
+        if (utilizationRate > 0.8) // 超过80%利用率
+        {
+            // 这里可以记录警告日志，但不抛出异常
+            System.Diagnostics.Debug.WriteLine($"警告：人员利用率过高 ({utilizationRate:P1})，可能导致排班困难");
+        }
+    }
+
+    /// <summary>
+    /// 验证排班结果是否可以确认
+    /// </summary>
+    private async Task ValidateScheduleForConfirmationAsync(Schedule schedule)
+    {
+        if (schedule == null)
+            throw new ArgumentNullException(nameof(schedule));
+
+        // 验证排班是否有未分配的关键时段
+        var criticalUnassignedSlots = await GetCriticalUnassignedSlotsAsync(schedule);
+        if (criticalUnassignedSlots.Any())
+        {
+            var slotDescriptions = criticalUnassignedSlots.Take(5).Select(slot => 
+                $"{slot.Date:MM-dd} {slot.Period * 2:00}:00-{(slot.Period + 1) * 2:00}:00");
+            var message = $"存在未分配的关键时段: {string.Join(", ", slotDescriptions)}";
+            if (criticalUnassignedSlots.Count > 5)
+                message += $" 等共{criticalUnassignedSlots.Count}个时段";
+            
+            throw new InvalidOperationException(message);
+        }
+
+        // 验证是否有人员过度工作
+        var overworkedPersonnel = await GetOverworkedPersonnelAsync(schedule);
+        if (overworkedPersonnel.Any())
+        {
+            var descriptions = overworkedPersonnel.Take(3).Select(p => 
+                $"{p.Name}({p.ShiftCount}班次)");
+            var message = $"以下人员工作量过重: {string.Join(", ", descriptions)}";
+            
+            throw new InvalidOperationException(message);
+        }
+    }
+
+    /// <summary>
+    /// 获取关键未分配时段
+    /// </summary>
+    private async Task<List<(DateTime Date, int Period, int PositionId)>> GetCriticalUnassignedSlotsAsync(Schedule schedule)
+    {
+        var unassignedSlots = new List<(DateTime Date, int Period, int PositionId)>();
+        var assignedSlots = schedule.Shifts
+            .Select(s => (Date: s.StartTime.Date, Period: CalcPeriodIndex(s.StartTime), PositionId: s.PositionId))
+            .ToHashSet();
+
+        var totalDays = (schedule.EndDate.Date - schedule.StartDate.Date).Days + 1;
+        
+        for (int d = 0; d < totalDays; d++)
+        {
+            var date = schedule.StartDate.Date.AddDays(d);
+            
+            // 检查是否为休息日
+            var holidayConfig = await _constraintRepo.GetActiveHolidayConfigAsync();
+            var isHoliday = holidayConfig?.IsHoliday(date) ?? false;
+            
+            for (int period = 0; period < 12; period++)
+            {
+                // 夜间时段（22:00-06:00）在休息日可以不分配
+                var isNightShift = period >= 11 || period <= 2;
+                if (isHoliday && isNightShift)
+                    continue;
+
+                foreach (var positionId in schedule.PositionIds)
+                {
+                    if (!assignedSlots.Contains((date, period, positionId)))
+                    {
+                        unassignedSlots.Add((date, period, positionId));
+                    }
+                }
+            }
+        }
+
+        return unassignedSlots;
+    }
+
+    /// <summary>
+    /// 获取过度工作的人员
+    /// </summary>
+    private async Task<List<(string Name, int ShiftCount)>> GetOverworkedPersonnelAsync(Schedule schedule)
+    {
+        var personnelShiftCounts = schedule.Shifts
+            .GroupBy(s => s.PersonalId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var personnel = await _personalRepo.GetPersonnelByIdsAsync(schedule.PersonnelIds);
+        var personnelNames = personnel.ToDictionary(p => p.Id, p => p.Name);
+
+        var daySpan = (schedule.EndDate.Date - schedule.StartDate.Date).Days + 1;
+        var maxReasonableShifts = daySpan * 4; // 每天最多4个班次（8小时）
+
+        var overworkedPersonnel = new List<(string Name, int ShiftCount)>();
+        
+        foreach (var kvp in personnelShiftCounts)
+        {
+            if (kvp.Value > maxReasonableShifts)
+            {
+                var name = personnelNames.TryGetValue(kvp.Key, out var pName) ? pName : $"ID:{kvp.Key}";
+                overworkedPersonnel.Add((name, kvp.Value));
+            }
+        }
+
+        return overworkedPersonnel;
+    }
+
+    #endregion
 }
