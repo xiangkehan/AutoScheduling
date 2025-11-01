@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 using AutoScheduling3.Models;
 using AutoScheduling3.SchedulingEngine.Core;
 using AutoScheduling3.SchedulingEngine.Strategies;
-using AutoScheduling3.Models.Constraints; // manual assignments
+using AutoScheduling3.Models.Constraints;
 
 namespace AutoScheduling3.SchedulingEngine
 {
     /// <summary>
-    /// 贪心调度器：基于MRV启发式策略的排班算法核心（增强版）
+    /// 贪心调度器：基于MRV启发式策略的排班算法核心 - 对应需求3.1, 3.2, 5.1-5.8, 6.1-6.4, 7.1-7.5
+    /// 按照先哨位再时段的顺序进行人员分配，集成硬约束验证和软约束评分
     /// </summary>
     public class GreedyScheduler
     {
@@ -19,20 +20,32 @@ namespace AutoScheduling3.SchedulingEngine
         private FeasibilityTensor? _tensor;
         private MRVStrategy? _mrvStrategy;
         private ScoreCalculator? _scoreCalculator;
+        
+        // 新增的约束处理组件 - 对应需求5.1-5.8, 6.1-6.4
+        private ConstraintValidator? _constraintValidator;
+        private SoftConstraintCalculator? _softConstraintCalculator;
+        
+        // 算法配置参数
+        private readonly GreedySchedulerConfig _config;
 
-        public GreedyScheduler(SchedulingContext context)
+        public GreedyScheduler(SchedulingContext context, GreedySchedulerConfig? config = null)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _config = config ?? new GreedySchedulerConfig();
         }
 
         /// <summary>
-        /// 执行排班算法（支持取消）
+        /// 执行排班算法（支持取消） - 对应需求3.1, 3.2, 7.5
+        /// 按照先哨位再时段的顺序进行人员分配
         /// </summary>
         public async Task<Schedule> ExecuteAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            
+            // 预处理阶段
             await PreprocessAsync();
             cancellationToken.ThrowIfCancellationRequested();
+            
             // 多天循环处理：每天重建张量与策略，保持跨日评分状态累积
             var currentDate = _context.StartDate.Date;
             int totalDays = (_context.EndDate.Date - _context.StartDate.Date).Days + 1;
@@ -41,15 +54,23 @@ namespace AutoScheduling3.SchedulingEngine
             {
                 var date = currentDate.AddDays(day);
                 cancellationToken.ThrowIfCancellationRequested();
-                InitializeTensor();
-                ApplyInitialConstraints();
-                InitializeStrategies();
-                //预置手动指定分配
+                
+                // 初始化当日排班环境
+                InitializeDailyScheduling();
+                
+                // 应用所有约束条件
+                ApplyAllConstraints(date);
+                
+                // 预置手动指定分配 - 对应需求5.8
                 ApplyManualAssignmentsForDate(date);
+                
                 cancellationToken.ThrowIfCancellationRequested();
-                PerformAssignmentsWithMRV(date, cancellationToken);
-                // 时段与休息日间隔增量：在一天完成后调用一次 Holiday 增量
-                _scoreCalculator?.IncrementHolidayIntervalsIfNeeded(date);
+                
+                // 执行贪心分配算法 - 对应需求7.5
+                await PerformGreedyAssignmentsAsync(date, cancellationToken);
+                
+                // 更新评分状态
+                UpdateDailyScoreStates(date);
             }
 
             return GenerateSchedule();
@@ -63,66 +84,66 @@ namespace AutoScheduling3.SchedulingEngine
             _context.InitializeMappings();
             _context.InitializePersonScoreStates();
             _context.InitializeAssignments();
+            
+            // 初始化约束处理组件
+            _constraintValidator = new ConstraintValidator(_context);
+            _softConstraintCalculator = new SoftConstraintCalculator(_context);
+            
+            // 配置软约束权重
+            _softConstraintCalculator.UpdateWeights(
+                _config.RestWeight, 
+                _config.HolidayWeight, 
+                _config.TimeSlotWeight);
+                
             return Task.CompletedTask;
         }
 
         /// <summary>
-        /// 初始化可行性张量
+        /// 初始化每日排班环境 - 对应需求7.1, 7.2
         /// </summary>
-        private void InitializeTensor()
+        private void InitializeDailyScheduling()
         {
-            _tensor = new FeasibilityTensor(_context.Positions.Count, 12, _context.Personals.Count);
+            // 初始化可行性张量，使用优化操作
+            _tensor = new FeasibilityTensor(_context.Positions.Count, 12, _context.Personals.Count, 
+                _config.UseOptimizedTensor);
         }
 
         /// <summary>
-        /// 应用初始约束
+        /// 应用所有约束条件 - 对应需求5.1-5.8
         /// </summary>
-        private void ApplyInitialConstraints()
+        private void ApplyAllConstraints(DateTime date)
         {
-            if (_tensor == null) return;
+            if (_tensor == null || _constraintValidator == null) return;
 
-            // 人员可用性
-            for (int z = 0; z < _context.Personals.Count; z++)
-            {
-                var person = _context.Personals[z];
-                if (!person.IsAvailable || person.IsRetired)
-                    _tensor.SetPersonInfeasible(z);
-            }
+            // 批量收集约束违反信息
+            var constraintViolations = new List<(int positionIdx, int periodIdx, int[] infeasiblePersons)>();
 
-            // 技能匹配
-            for (int x = 0; x < _context.Positions.Count; x++)
+            for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
             {
-                var position = _context.Positions[x];
-                var requiredSkills = position.RequiredSkillIds;
-                for (int z = 0; z < _context.Personals.Count; z++)
+                for (int periodIdx = 0; periodIdx < 12; periodIdx++)
                 {
-                    var person = _context.Personals[z];
-                    bool hasAllSkills = requiredSkills.All(skillId => person.SkillIds.Contains(skillId));
-                    if (!hasAllSkills)
-                        _tensor.SetPersonInfeasibleForPosition(z, x);
-                }
-            }
+                    var infeasiblePersons = new List<int>();
 
-            // 定岗规则
-            foreach (var rule in _context.FixedPositionRules.Where(r => r.IsEnabled))
-            {
-                if (!_context.PersonIdToIdx.ContainsKey(rule.PersonalId)) continue;
-                int personIdx = _context.PersonIdToIdx[rule.PersonalId];
-                if (rule.AllowedPositionIds.Count > 0)
-                {
-                    for (int x = 0; x < _context.Positions.Count; x++)
+                    for (int personIdx = 0; personIdx < _context.Personals.Count; personIdx++)
                     {
-                        int posId = _context.PositionIdxToId[x];
-                        if (!rule.AllowedPositionIds.Contains(posId))
-                            _tensor.SetPersonInfeasibleForPosition(personIdx, x);
+                        // 使用约束验证器检查所有硬约束
+                        if (!_constraintValidator.ValidateAllConstraints(personIdx, posIdx, periodIdx, date))
+                        {
+                            infeasiblePersons.Add(personIdx);
+                        }
+                    }
+
+                    if (infeasiblePersons.Count > 0)
+                    {
+                        constraintViolations.Add((posIdx, periodIdx, infeasiblePersons.ToArray()));
                     }
                 }
-                if (rule.AllowedPeriods.Count > 0)
-                {
-                    for (int y = 0; y < 12; y++)
-                        if (!rule.AllowedPeriods.Contains(y))
-                            _tensor.SetPersonInfeasibleForPeriod(personIdx, y);
-                }
+            }
+
+            // 批量应用约束 - 对应需求7.4
+            if (constraintViolations.Count > 0)
+            {
+                _tensor.ApplyBatchConstraints(constraintViolations);
             }
         }
 
@@ -137,14 +158,17 @@ namespace AutoScheduling3.SchedulingEngine
         }
 
         /// <summary>
-        /// 应用当日的手动指定分配，先占位、再锁定张量与策略。
+        /// 应用当日的手动指定分配 - 对应需求5.8
         /// </summary>
-        private void ApplyManualAssignmentsForDate(DateTime date)
+        private async void ApplyManualAssignmentsForDate(DateTime date)
         {
-            if (_tensor == null || _mrvStrategy == null || _scoreCalculator == null) return;
+            if (_tensor == null || _constraintValidator == null) return;
+
             var todaysManuals = _context.ManualAssignments
-            .Where(m => m.IsEnabled && m.Date.Date == date.Date)
-            .ToList();
+                .Where(m => m.IsEnabled && m.Date.Date == date.Date)
+                .OrderBy(m => m.PeriodIndex) // 按时段顺序处理
+                .ToList();
+
             foreach (var manual in todaysManuals)
             {
                 // 验证基础索引
@@ -153,88 +177,213 @@ namespace AutoScheduling3.SchedulingEngine
                 int periodIdx = manual.PeriodIndex;
                 if (periodIdx < 0 || periodIdx > 11) continue;
 
-                // 冲突检测：是否已分配或该人员该时段已有其他哨位
-                int existing = _context.GetAssignment(date, periodIdx, posIdx);
-                if (existing >= 0) continue; // 已存在分配
-                                             // 检查一人一哨冲突
-                for (int x = 0; x < _context.Positions.Count; x++)
+                // 使用约束验证器检查手动指定的有效性
+                if (!_constraintValidator.ValidateManualAssignment(personIdx, posIdx, periodIdx, date))
                 {
-                    if (_context.GetAssignment(date, periodIdx, x) == personIdx)
+                    if (_config.LogConstraintViolations)
                     {
-                        // 冲突：该人员此时段已有其他哨位，跳过手动指定
-                        goto SkipManual;
+                        var violations = _constraintValidator.GetConstraintViolations(personIdx, posIdx, periodIdx, date);
+                        await LogConstraintViolationsAsync(manual, violations);
                     }
-                }
-
-                // 在张量中如果此 slot 对该人员不可行（技能/可用性等），跳过
-                var feasiblePersons = _tensor.GetFeasiblePersons(posIdx, periodIdx);
-                if (!feasiblePersons.Contains(personIdx)) goto SkipManual;
-
-                // 执行分配并更新约束
-                AssignPersonEnhanced(posIdx, periodIdx, personIdx, date, isManual: true);
-                continue;
-            SkipManual:
-                ;
-            }
-        }
-
-        private void PerformAssignmentsWithMRV(DateTime date, CancellationToken cancellationToken)
-        {
-            if (_tensor == null || _mrvStrategy == null || _scoreCalculator == null) return;
-            // 每天处理12个时段 × N个哨位
-            // 策略根据 _mrvStrategy 的已分配标记决定结束
-            int maxSlots = _tensor.PositionCount * 12;
-            for (int iteration = 0; iteration < maxSlots; iteration++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var (posIdx, periodIdx) = _mrvStrategy.SelectNextSlot();
-                if (posIdx == -1 || periodIdx == -1)
-                {
-                    break; // 当天结束
-                }
-
-                // 时段推进前，更新休息间隔（仅在进入新时段前一次）
-                _scoreCalculator.IncrementAllIntervalsForPeriod();
-
-                var feasiblePersons = _tensor.GetFeasiblePersons(posIdx, periodIdx);
-                if (feasiblePersons.Length == 0)
-                {
-                    _mrvStrategy.MarkAsAssigned(posIdx, periodIdx);
                     continue;
                 }
-                int bestPersonIdx = _scoreCalculator.SelectBestPerson(feasiblePersons, periodIdx, date);
-                if (bestPersonIdx >= 0)
-                {
-                    AssignPersonEnhanced(posIdx, periodIdx, bestPersonIdx, date);
-                }
+
+                // 检查冲突
+                if (_context.GetAssignment(date, periodIdx, posIdx) >= 0)
+                    continue; // 已存在分配
+
+                // 检查人员时段唯一性
+                if (!_constraintValidator.ValidatePersonTimeSlotUniqueness(personIdx, periodIdx, posIdx, date))
+                    continue;
+
+                // 执行手动分配
+                await AssignPersonAsync(posIdx, periodIdx, personIdx, date, isManual: true);
             }
         }
 
         /// <summary>
-        /// 执行分配并更新约束（增强版）
+        /// 更新每日评分状态
         /// </summary>
-        private void AssignPersonEnhanced(int positionIdx, int periodIdx, int personIdx, DateTime date, bool isManual = false)
+        private void UpdateDailyScoreStates(DateTime date)
+        {
+            if (_scoreCalculator == null) return;
+
+            // 时段与休息日间隔增量：在一天完成后调用
+            _scoreCalculator.IncrementHolidayIntervalsIfNeeded(date);
+        }
+
+        /// <summary>
+        /// 记录分配日志
+        /// </summary>
+        private async Task LogAssignmentAsync(int positionIdx, int periodIdx, int personIdx, DateTime date, bool isManual)
+        {
+            if (!_config.EnableAssignmentLogging) return;
+
+            var positionName = _context.Positions[positionIdx].Name;
+            var personName = _context.Personals[personIdx].Name;
+            var assignmentType = isManual ? "手动" : "自动";
+            
+            var logMessage = $"{date:yyyy-MM-dd} {periodIdx * 2:D2}:00-{(periodIdx * 2 + 2):D2}:00 " +
+                           $"{positionName} -> {personName} ({assignmentType})";
+
+            // 这里可以集成实际的日志系统
+            await Task.Run(() => System.Diagnostics.Debug.WriteLine($"[排班分配] {logMessage}"));
+        }
+
+        /// <summary>
+        /// 记录约束违反日志
+        /// </summary>
+        private async Task LogConstraintViolationsAsync(ManualAssignment manual, List<string> violations)
+        {
+            var logMessage = $"手动指定违反约束: {manual} - 违反项: {string.Join(", ", violations)}";
+            await Task.Run(() => System.Diagnostics.Debug.WriteLine($"[约束违反] {logMessage}"));
+        }
+
+        /// <summary>
+        /// 记录未分配位置
+        /// </summary>
+        private void LogUnassignedSlots(DateTime date, List<(int PositionIdx, int PeriodIdx)> unassignedSlots)
+        {
+            foreach (var (posIdx, periodIdx) in unassignedSlots)
+            {
+                var positionName = _context.Positions[posIdx].Name;
+                var timeRange = $"{periodIdx * 2:D2}:00-{(periodIdx * 2 + 2):D2}:00";
+                System.Diagnostics.Debug.WriteLine($"[未分配] {date:yyyy-MM-dd} {timeRange} {positionName}");
+            }
+        }
+
+        /// <summary>
+        /// 执行贪心分配算法 - 对应需求7.5
+        /// 按照先哨位再时段的顺序进行人员分配
+        /// </summary>
+        private async Task PerformGreedyAssignmentsAsync(DateTime date, CancellationToken cancellationToken)
+        {
+            if (_tensor == null || _softConstraintCalculator == null) return;
+
+            // 初始化MRV策略
+            InitializeStrategies();
+            if (_mrvStrategy == null) return;
+
+            // 按照先哨位再时段的顺序进行分配 - 对应需求7.5
+            int maxSlots = _tensor.PositionCount * 12;
+            int processedSlots = 0;
+
+            for (int iteration = 0; iteration < maxSlots; iteration++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // 使用MRV策略选择下一个分配位置
+                var (posIdx, periodIdx) = _mrvStrategy.SelectNextSlot();
+                if (posIdx == -1 || periodIdx == -1)
+                {
+                    break; // 所有位置已分配或无可行分配
+                }
+
+                // 获取可行人员列表
+                var feasiblePersons = _tensor.GetFeasiblePersons(posIdx, periodIdx);
+                if (feasiblePersons.Length == 0)
+                {
+                    _mrvStrategy.MarkAsAssigned(posIdx, periodIdx);
+                    continue; // 无可行人员，跳过此位置
+                }
+
+                // 使用软约束评分选择最优人员 - 对应需求6.1-6.4
+                int bestPersonIdx = _softConstraintCalculator.SelectBestPerson(feasiblePersons, periodIdx, date);
+                if (bestPersonIdx >= 0)
+                {
+                    // 执行分配并更新约束
+                    await AssignPersonAsync(posIdx, periodIdx, bestPersonIdx, date);
+                    processedSlots++;
+
+                    // 定期让出控制权，避免长时间阻塞
+                    if (processedSlots % _config.YieldInterval == 0)
+                    {
+                        await Task.Yield();
+                    }
+                }
+                else
+                {
+                    _mrvStrategy.MarkAsAssigned(posIdx, periodIdx);
+                }
+            }
+
+            // 检查是否有未分配的位置
+            var unassignedSlots = _mrvStrategy.GetUnassignedWithNoCandidates();
+            if (unassignedSlots.Count > 0 && _config.LogUnassignedSlots)
+            {
+                LogUnassignedSlots(date, unassignedSlots);
+            }
+        }
+
+        /// <summary>
+        /// 执行分配并更新约束（异步增强版）
+        /// </summary>
+        private async Task AssignPersonAsync(int positionIdx, int periodIdx, int personIdx, DateTime date, bool isManual = false)
         {
             if (_tensor == null || _mrvStrategy == null || _scoreCalculator == null) return;
+
+            // 记录分配
             _context.RecordAssignment(date, periodIdx, positionIdx, personIdx);
             _mrvStrategy.MarkAsAssigned(positionIdx, periodIdx);
+
+            // 更新张量约束
             _tensor.SetOthersInfeasibleForSlot(positionIdx, periodIdx, personIdx);
             _tensor.SetOtherPositionsInfeasibleForPersonPeriod(personIdx, periodIdx, positionIdx);
-            // 时段不连续：相邻时段不能连续上哨（仅自动分配时应用，手动指定可覆盖）
+
+            // 应用时段不连续约束 - 对应需求5.2（仅自动分配时应用）
             if (!isManual)
             {
-                if (periodIdx > 0) _tensor.SetPersonInfeasibleForPeriod(personIdx, periodIdx - 1);
-                if (periodIdx < 11) _tensor.SetPersonInfeasibleForPeriod(personIdx, periodIdx + 1);
+                ApplyNonConsecutiveConstraint(personIdx, periodIdx);
             }
-            // 夜哨唯一：同一晚上只能上一个夜哨
+
+            // 应用夜哨唯一约束 - 对应需求5.1
+            ApplyNightShiftUniquenessConstraint(personIdx, periodIdx);
+
+            // 更新MRV策略的候选计数
+            _mrvStrategy.UpdateCandidateCountsAfterAssignment(positionIdx, periodIdx, personIdx);
+
+            // 更新人员评分状态
+            _scoreCalculator.UpdatePersonScoreState(personIdx, periodIdx, date);
+
+            // 异步操作：记录分配日志（如果启用）
+            if (_config.EnableAssignmentLogging)
+            {
+                await LogAssignmentAsync(positionIdx, periodIdx, personIdx, date, isManual);
+            }
+        }
+
+        /// <summary>
+        /// 应用时段不连续约束 - 对应需求5.2
+        /// </summary>
+        private void ApplyNonConsecutiveConstraint(int personIdx, int periodIdx)
+        {
+            if (_tensor == null) return;
+
+            // 相邻时段不能连续上哨
+            if (periodIdx > 0) 
+                _tensor.SetPersonInfeasibleForPeriod(personIdx, periodIdx - 1);
+            if (periodIdx < 11) 
+                _tensor.SetPersonInfeasibleForPeriod(personIdx, periodIdx + 1);
+        }
+
+        /// <summary>
+        /// 应用夜哨唯一约束 - 对应需求5.1
+        /// </summary>
+        private void ApplyNightShiftUniquenessConstraint(int personIdx, int periodIdx)
+        {
+            if (_tensor == null) return;
+
+            // 夜哨时段：23:00-01:00, 01:00-03:00, 03:00-05:00, 05:00-07:00
             int[] nightPeriods = { 11, 0, 1, 2 };
+            
             if (nightPeriods.Contains(periodIdx))
             {
                 foreach (var np in nightPeriods)
-                    if (np != periodIdx) _tensor.SetPersonInfeasibleForPeriod(personIdx, np);
+                {
+                    if (np != periodIdx) 
+                        _tensor.SetPersonInfeasibleForPeriod(personIdx, np);
+                }
             }
-            _mrvStrategy.UpdateCandidateCountsAfterAssignment(positionIdx, periodIdx, personIdx);
-            _scoreCalculator.UpdatePersonScoreState(personIdx, periodIdx, date);
         }
 
         private Schedule GenerateSchedule()
@@ -279,5 +428,63 @@ namespace AutoScheduling3.SchedulingEngine
             }
             return schedule;
         }
+    }
+}
+    }
+
+    /// <summary>
+    /// 贪心调度器配置类
+    /// </summary>
+    public class GreedySchedulerConfig
+    {
+        /// <summary>
+        /// 充分休息得分权重 - 对应需求6.1
+        /// </summary>
+        public double RestWeight { get; set; } = 1.0;
+
+        /// <summary>
+        /// 休息日平衡得分权重 - 对应需求6.2
+        /// </summary>
+        public double HolidayWeight { get; set; } = 1.5;
+
+        /// <summary>
+        /// 时段平衡得分权重 - 对应需求6.3
+        /// </summary>
+        public double TimeSlotWeight { get; set; } = 1.0;
+
+        /// <summary>
+        /// 是否使用优化的张量操作 - 对应需求7.2, 7.4
+        /// </summary>
+        public bool UseOptimizedTensor { get; set; } = true;
+
+        /// <summary>
+        /// 是否启用分配日志记录
+        /// </summary>
+        public bool EnableAssignmentLogging { get; set; } = false;
+
+        /// <summary>
+        /// 是否记录约束违反日志
+        /// </summary>
+        public bool LogConstraintViolations { get; set; } = true;
+
+        /// <summary>
+        /// 是否记录未分配位置
+        /// </summary>
+        public bool LogUnassignedSlots { get; set; } = true;
+
+        /// <summary>
+        /// 异步操作让出控制权的间隔（处理多少个位置后让出一次）
+        /// </summary>
+        public int YieldInterval { get; set; } = 10;
+
+        /// <summary>
+        /// 最大重试次数（当出现无解时）
+        /// </summary>
+        public int MaxRetryAttempts { get; set; } = 3;
+
+        /// <summary>
+        /// 是否启用性能监控
+        /// </summary>
+        public bool EnablePerformanceMonitoring { get; set; } = false;
     }
 }
