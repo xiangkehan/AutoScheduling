@@ -163,6 +163,26 @@ namespace AutoScheduling3.SchedulingEngine.Core
         }
 
         /// <summary>
+        /// 验证人员-哨位可用性约束 - 对应需求4.2
+        /// 验证人员是否在哨位的可用人员列表中
+        /// </summary>
+        /// <param name="personIdx">人员索引</param>
+        /// <param name="positionIdx">哨位索引</param>
+        /// <returns>是否满足约束</returns>
+        public bool ValidatePersonnelPositionAvailability(int personIdx, int positionIdx)
+        {
+            if (personIdx < 0 || personIdx >= _context.Personals.Count ||
+                positionIdx < 0 || positionIdx >= _context.Positions.Count)
+                return false;
+
+            int personId = _context.PersonIdxToId[personIdx];
+            var position = _context.Positions[positionIdx];
+
+            // 检查人员是否在哨位的可用人员列表中
+            return position.AvailablePersonnelIds.Contains(personId);
+        }
+
+        /// <summary>
         /// 验证技能匹配约束 - 对应需求5.5
         /// 验证人员技能与哨位要求的匹配性
         /// </summary>
@@ -266,6 +286,10 @@ namespace AutoScheduling3.SchedulingEngine.Core
             if (!ValidatePersonnelAvailability(personIdx))
                 return false;
 
+            // 验证人员-哨位可用性（新数据模型约束）
+            if (!ValidatePersonnelPositionAvailability(personIdx, positionIdx))
+                return false;
+
             // 验证技能匹配
             if (!ValidateSkillMatch(personIdx, positionIdx))
                 return false;
@@ -311,6 +335,9 @@ namespace AutoScheduling3.SchedulingEngine.Core
 
             if (!ValidatePersonnelAvailability(personIdx))
                 violations.Add("人员不可用或已退役");
+
+            if (!ValidatePersonnelPositionAvailability(personIdx, positionIdx))
+                violations.Add("人员不在哨位可用人员列表中");
 
             if (!ValidateSkillMatch(personIdx, positionIdx))
                 violations.Add("人员技能不匹配哨位要求");

@@ -117,24 +117,33 @@
     - _需求: 3.4_
 
 
-- [-] 5. 更新排班引擎
+- [x] 5. 更新排班引擎
 
 
-  - [-] 5.1 更新GreedyScheduler
+
+
+  - [x] 5.1 更新GreedyScheduler
+
 
     - 修改InitializeFeasibilityTensorAsync方法使用新数据模型
     - 更新SelectBestPersonnel方法
     - 优化人员筛选逻辑
     - _需求: 4.1_
 
-  - [ ] 5.2 更新ConstraintValidator
+  - [x] 5.2 更新ConstraintValidator
+
+
     - 适配新的数据模型结构
     - 更新约束验证逻辑
     - _需求: 4.2_
 
-  - [ ] 5.3 更新FeasibilityTensor初始化
+  - [x] 5.3 更新FeasibilityTensor初始化
+
+
     - 修改初始化逻辑以使用哨位的可用人员列表
     - _需求: 4.3_
+- [-] 6. 更新用户界面层
+
 
 - [ ] 6. 更新用户界面层
 

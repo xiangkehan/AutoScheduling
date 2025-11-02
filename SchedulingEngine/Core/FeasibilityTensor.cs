@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
+using AutoScheduling3.Models;
 
 namespace AutoScheduling3.SchedulingEngine.Core
 {
@@ -53,7 +54,8 @@ namespace AutoScheduling3.SchedulingEngine.Core
             _personCount = personCount;
             _useOptimizedOperations = useOptimizedOperations;
 
-            // 初始化三维张量，所有元素初始值为 true（可行）
+            // 初始化三维张量，所有元素初始值为 false（不可行）
+            // 在新数据模型中，默认所有人员都不可行，只有在哨位可用人员列表中的才可行
             _tensor = new bool[positionCount, periodCount, personCount];
             for (int x = 0; x < positionCount; x++)
             {
@@ -61,7 +63,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
                 {
                     for (int z = 0; z < personCount; z++)
                     {
-                        _tensor[x, y, z] = true;
+                        _tensor[x, y, z] = false;
                     }
                 }
             }
@@ -69,17 +71,17 @@ namespace AutoScheduling3.SchedulingEngine.Core
             // 初始化二进制存储 - 对应需求7.2
             _binarySlices = (personCount + 63) / 64; // 每个ulong存储64个人员的状态
             _binaryTensor = new ulong[positionCount, periodCount, _binarySlices];
-            InitializeBinaryTensor();
+            InitializeBinaryTensorEmpty();
 
             // 初始化MathNet矩阵 - 对应需求7.3
             if (_useOptimizedOperations && positionCount * periodCount <= 10000) // 避免过大矩阵
             {
-                _constraintMatrix = DenseMatrix.Create(positionCount * periodCount, personCount, 1.0);
+                _constraintMatrix = DenseMatrix.Create(positionCount * periodCount, personCount, 0.0);
             }
         }
 
         /// <summary>
-        /// 初始化二进制张量 - 对应需求7.2
+        /// 初始化二进制张量（全可行） - 对应需求7.2
         /// </summary>
         private void InitializeBinaryTensor()
         {
@@ -98,6 +100,24 @@ namespace AutoScheduling3.SchedulingEngine.Core
                     {
                         ulong mask = (1UL << remainingBits) - 1;
                         _binaryTensor[x, y, _binarySlices - 1] = mask;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 初始化二进制张量（全不可行） - 对应需求4.3
+        /// 用于新数据模型，默认所有人员都不可行
+        /// </summary>
+        private void InitializeBinaryTensorEmpty()
+        {
+            for (int x = 0; x < _positionCount; x++)
+            {
+                for (int y = 0; y < _periodCount; y++)
+                {
+                    for (int slice = 0; slice < _binarySlices; slice++)
+                    {
+                        _binaryTensor[x, y, slice] = 0UL; // 所有位初始为0（不可行）
                     }
                 }
             }
@@ -452,6 +472,26 @@ namespace AutoScheduling3.SchedulingEngine.Core
         }
 
         /// <summary>
+        /// 从张量同步到矩阵
+        /// </summary>
+        private void SyncMatrixFromTensor()
+        {
+            if (_constraintMatrix == null) return;
+
+            for (int x = 0; x < _positionCount; x++)
+            {
+                for (int y = 0; y < _periodCount; y++)
+                {
+                    int matrixRow = x * _periodCount + y;
+                    for (int z = 0; z < _personCount; z++)
+                    {
+                        _constraintMatrix[matrixRow, z] = _tensor[x, y, z] ? 1.0 : 0.0;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// 获取张量的内存使用统计
         /// </summary>
         public TensorMemoryStats GetMemoryStats()
@@ -516,6 +556,71 @@ namespace AutoScheduling3.SchedulingEngine.Core
             }
             
             return cloned;
+        }
+
+        /// <summary>
+        /// 使用哨位可用人员列表初始化张量 - 对应需求4.3
+        /// </summary>
+        /// <param name="positions">哨位列表</param>
+        /// <param name="personIdToIdx">人员ID到索引的映射</param>
+        public void InitializeWithAvailablePersonnel(List<PositionLocation> positions, Dictionary<int, int> personIdToIdx)
+        {
+            // 首先重置为全不可行状态
+            ResetToEmpty();
+
+            // 为每个哨位设置其可用人员为可行
+            for (int posIdx = 0; posIdx < Math.Min(positions.Count, _positionCount); posIdx++)
+            {
+                var position = positions[posIdx];
+                
+                foreach (var personnelId in position.AvailablePersonnelIds)
+                {
+                    if (personIdToIdx.TryGetValue(personnelId, out int personIdx) && 
+                        personIdx >= 0 && personIdx < _personCount)
+                    {
+                        // 将该人员在此哨位的所有时段设为可行
+                        for (int periodIdx = 0; periodIdx < _periodCount; periodIdx++)
+                        {
+                            _tensor[posIdx, periodIdx, personIdx] = true;
+                        }
+                    }
+                }
+            }
+
+            // 同步到二进制张量和矩阵
+            SyncBinaryTensorFromBool();
+            if (_constraintMatrix != null)
+            {
+                SyncMatrixFromTensor();
+            }
+        }
+
+        /// <summary>
+        /// 重置张量为全不可行状态 - 对应需求4.3
+        /// </summary>
+        public void ResetToEmpty()
+        {
+            // 重置布尔张量为全不可行
+            for (int x = 0; x < _positionCount; x++)
+            {
+                for (int y = 0; y < _periodCount; y++)
+                {
+                    for (int z = 0; z < _personCount; z++)
+                    {
+                        _tensor[x, y, z] = false;
+                    }
+                }
+            }
+
+            // 重置二进制张量
+            InitializeBinaryTensorEmpty();
+
+            // 重置矩阵
+            if (_constraintMatrix != null)
+            {
+                _constraintMatrix.Clear();
+                _constraintMatrix = DenseMatrix.Create(_positionCount * _periodCount, _personCount, 0.0);
+            }
         }
 
         /// <summary>

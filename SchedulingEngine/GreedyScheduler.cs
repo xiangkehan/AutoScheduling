@@ -119,35 +119,35 @@ namespace AutoScheduling3.SchedulingEngine
         {
             if (_tensor == null) return;
 
-            // 首先将所有人员设为不可行
-            for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
+            // 使用FeasibilityTensor的新方法初始化
+            _tensor.InitializeWithAvailablePersonnel(_context.Positions, _context.PersonIdToIdx);
+        }
+
+        /// <summary>
+        /// 获取优化的可行人员列表 - 对应需求4.1
+        /// 结合张量状态和哨位可用人员列表进行双重筛选
+        /// </summary>
+        private int[] GetOptimizedFeasiblePersons(int positionIdx, int periodIdx)
+        {
+            if (_tensor == null) return Array.Empty<int>();
+
+            var position = _context.Positions[positionIdx];
+            var feasiblePersons = new List<int>();
+
+            // 仅检查哨位可用人员列表中的人员
+            foreach (var personnelId in position.AvailablePersonnelIds)
             {
-                for (int periodIdx = 0; periodIdx < 12; periodIdx++)
+                if (_context.PersonIdToIdx.TryGetValue(personnelId, out int personIdx))
                 {
-                    for (int personIdx = 0; personIdx < _context.Personals.Count; personIdx++)
+                    // 检查张量中的可行性状态
+                    if (_tensor[positionIdx, periodIdx, personIdx])
                     {
-                        _tensor[posIdx, periodIdx, personIdx] = false;
+                        feasiblePersons.Add(personIdx);
                     }
                 }
             }
 
-            // 然后仅将哨位可用人员设为可行
-            for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
-            {
-                var position = _context.Positions[posIdx];
-                
-                foreach (var personnelId in position.AvailablePersonnelIds)
-                {
-                    if (_context.PersonIdToIdx.TryGetValue(personnelId, out int personIdx))
-                    {
-                        // 将该人员在此哨位的所有时段设为可行
-                        for (int periodIdx = 0; periodIdx < 12; periodIdx++)
-                        {
-                            _tensor[posIdx, periodIdx, personIdx] = true;
-                        }
-                    }
-                }
-            }
+            return feasiblePersons.ToArray();
         }
 
         /// <summary>
@@ -334,8 +334,8 @@ namespace AutoScheduling3.SchedulingEngine
                     break; // 所有位置已分配或无可行分配
                 }
 
-                // 获取可行人员列表
-                var feasiblePersons = _tensor.GetFeasiblePersons(posIdx, periodIdx);
+                // 获取可行人员列表并进行优化筛选
+                var feasiblePersons = GetOptimizedFeasiblePersons(posIdx, periodIdx);
                 if (feasiblePersons.Length == 0)
                 {
                     _mrvStrategy.MarkAsAssigned(posIdx, periodIdx);
