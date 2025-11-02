@@ -31,15 +31,22 @@
         </StackPanel>
 
         <!-- 主内容区 -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="1" x:Name="MainContentGrid" SizeChanged="MainContentGrid_SizeChanged">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="400"/>
+                <ColumnDefinition Width="0.4*" MinWidth="300" MaxWidth="500"/>
             </Grid.ColumnDefinitions>
+            
+            <!-- 小屏幕时的行定义（垂直布局） -->
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
             <!-- 左侧：人员列表 -->
-            <Grid Grid.Column="0">
+            <Grid x:Name="PersonnelListGrid" Grid.Column="0" Grid.Row="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -82,22 +89,128 @@
                 </GridView>
             </Grid>
 
-            <!-- 右侧：详情和编辑 -->
-            <ScrollViewer Grid.Column="2">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="人员详情" Style="{StaticResource SubtitleTextBlockStyle}"/>
+            <!-- 分隔线（仅在水平布局时显示） -->
+            <Border x:Name="SeparatorBorder" Grid.Column="1" Grid.Row="0" 
+                    Width="1" 
+                    Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    Margin="8,0"/>
 
-                    <!-- 编辑表单占位 -->
+            <!-- 右侧：详情和编辑 -->
+            <ScrollViewer x:Name="DetailScrollViewer" Grid.Column="2" Grid.Row="0">
+                <StackPanel Spacing="12">
+                    <!-- 添加人员表单 -->
+                    <Expander Header="添加新人员" IsExpanded="True">
+                        <StackPanel Spacing="12" Margin="0,12,0,0">
+                            <!-- 姓名输入 -->
+                            <TextBox Header="姓名*" 
+                                     Text="{x:Bind ViewModel.NewPersonnel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     PlaceholderText="请输入姓名"/>
+
+                            <!-- 职位选择 -->
+                            <ComboBox Header="职位*" 
+                                      ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
+                                      SelectedValue="{x:Bind ViewModel.NewPersonnel.PositionId, Mode=TwoWay}"
+                                      SelectedValuePath="Id"
+                                      DisplayMemberPath="Name"
+                                      PlaceholderText="请选择职位"/>
+
+                            <!-- 技能选择 -->
+                            <StackPanel>
+                                <TextBlock Text="技能*" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
+                                <ListView x:Name="SkillsListView"
+                                          ItemsSource="{x:Bind ViewModel.AvailableSkills, Mode=OneWay}"
+                                          SelectionMode="Multiple"
+                                          MaxHeight="120"
+                                          SelectionChanged="SkillsListView_SelectionChanged">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="local:SkillDto">
+                                            <TextBlock Text="{x:Bind Name}"/>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </StackPanel>
+
+                            <!-- 状态设置 -->
+                            <ToggleSwitch Header="是否可用" 
+                                          IsOn="{x:Bind ViewModel.NewPersonnel.IsAvailable, Mode=TwoWay}"/>
+
+                            <!-- 操作按钮 -->
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="添加人员" 
+                                        Command="{x:Bind ViewModel.CreateCommand}"
+                                        Style="{StaticResource AccentButtonStyle}"/>
+                                <Button Content="重置表单" Click="ResetForm_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
+
+                    <!-- 人员详情 -->
+                    <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.SelectedItem, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}">
+                        <TextBlock Text="人员详情" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        
+                        <!-- 编辑表单 -->
+                        <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBox Header="姓名*" 
+                                     Text="{x:Bind ViewModel.EditingPersonnel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            
+                            <ComboBox Header="职位*" 
+                                      ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
+                                      SelectedValue="{x:Bind ViewModel.EditingPersonnel.PositionId, Mode=TwoWay}"
+                                      SelectedValuePath="Id"
+                                      DisplayMemberPath="Name"/>
+                            
+                            <ToggleSwitch Header="是否可用" 
+                                          IsOn="{x:Bind ViewModel.EditingPersonnel.IsAvailable, Mode=TwoWay}"/>
+                            
+                            <ToggleSwitch Header="是否已退役" 
+                                          IsOn="{x:Bind ViewModel.EditingPersonnel.IsRetired, Mode=TwoWay}"/>
+                            
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="保存" Command="{x:Bind ViewModel.SaveCommand}" Style="{StaticResource AccentButtonStyle}"/>
+                                <Button Content="取消" Command="{x:Bind ViewModel.CancelCommand}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- 详情显示 -->
+                        <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                            <TextBlock Text="{x:Bind ViewModel.SelectedItem.Name, Mode=OneWay}" Style="{StaticResource TitleTextBlockStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.SelectedItem.PositionName, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="状态:" FontWeight="SemiBold"/>
+                                <TextBlock Text="{x:Bind ViewModel.SelectedItem.IsActive, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='在职|离职'}"/>
+                                <TextBlock Text="{x:Bind ViewModel.SelectedItem.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='可用|忙碌'}"/>
+                            </StackPanel>
+                            
+                            <StackPanel>
+                                <TextBlock Text="技能:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ItemsRepeater ItemsSource="{x:Bind ViewModel.SelectedItem.SkillNames, Mode=OneWay}">
+                                    <ItemsRepeater.Layout>
+                                        <StackLayout Orientation="Horizontal" Spacing="4"/>
+                                    </ItemsRepeater.Layout>
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Border Background="{ThemeResource AccentFillColorDefaultBrush}" CornerRadius="4" Padding="6,3">
+                                                <TextBlock Text="{x:Bind}" FontSize="12" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- 操作按钮 -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0"
+                                    Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                            <Button Content="编辑" Command="{x:Bind ViewModel.EditCommand}"/>
+                            <Button Content="删除" Command="{x:Bind ViewModel.DeleteCommand}" Style="{StaticResource AccentButtonStyle}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- 空状态提示 -->
                     <TextBlock Text="选择左侧人员查看详情" 
                                Visibility="{x:Bind ViewModel.SelectedItem, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-
-                    <!-- 操作按钮 -->
-                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0"
-                                Visibility="{x:Bind ViewModel.SelectedItem, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}">
-                        <Button Content="编辑" Command="{x:Bind ViewModel.EditCommand}"/>
-                        <Button Content="删除" Command="{x:Bind ViewModel.DeleteCommand}" Style="{StaticResource AccentButtonStyle}"/>
-                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

@@ -6,8 +6,10 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     x:Name="Root"
-    Width="180"
-    Height="120"
+    MinWidth="160"
+    MaxWidth="220"
+    MinHeight="100"
+    MaxHeight="140"
     CornerRadius="8"
     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -23,7 +25,7 @@
         <TextBlock Grid.Row="1" Text="{x:Bind Personnel.PositionName, Mode=OneWay, FallbackValue='N/A'}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" Margin="0,8,0,0">
-            <TextBlock Text="¼¼ÄÜ:" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBlock Text="ï¿½ï¿½ï¿½ï¿½:" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             <ItemsRepeater ItemsSource="{x:Bind Personnel.SkillNames, Mode=OneWay}">
                 <ItemsRepeater.Layout>
                     <StackLayout Orientation="Horizontal" Spacing="4"/>
@@ -40,14 +42,14 @@
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="4" Margin="0,8,0,0">
             <Border Width="40" Height="20" CornerRadius="10" Background="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Accent|Gray'}" Padding="6,2">
-                <TextBlock Text="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='ÔÚÖ°|ÀëÖ°'}" FontSize="10" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='ï¿½ï¿½Ö°|ï¿½ï¿½Ö°'}" FontSize="10" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" HorizontalAlignment="Center"/>
             </Border>
             <Border Width="40" Height="20" CornerRadius="10" Background="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Accent|Orange'}" Padding="6,2">
-                <TextBlock Text="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='¿ÉÓÃ|Ã¦Âµ'}" FontSize="10" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='ï¿½ï¿½ï¿½ï¿½|Ã¦Âµ'}" FontSize="10" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" HorizontalAlignment="Center"/>
             </Border>
             <StackPanel Orientation="Horizontal" Spacing="4" Visibility="{x:Bind ShowActions, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <Button Style="{StaticResource ButtonRevealStyle}" Content="±à¼­" FontSize="10" MinWidth="44"/>
-                <Button Style="{StaticResource ButtonRevealStyle}" Content="É¾³ý" FontSize="10" MinWidth="44"/>
+                <Button Style="{StaticResource ButtonRevealStyle}" Content="ï¿½à¼­" FontSize="10" MinWidth="44"/>
+                <Button Style="{StaticResource ButtonRevealStyle}" Content="É¾ï¿½ï¿½" FontSize="10" MinWidth="44"/>
             </StackPanel>
         </StackPanel>
         <Border x:Name="SelectionBorder" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="2" CornerRadius="8" Opacity="0" />
