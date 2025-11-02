@@ -15,10 +15,12 @@ namespace AutoScheduling3.DTOs.Mappers;
 public class PositionMapper
 {
     private readonly ISkillRepository _skillRepository;
+    private readonly IPersonalRepository _personalRepository;
 
-    public PositionMapper(ISkillRepository skillRepository)
+    public PositionMapper(ISkillRepository skillRepository, IPersonalRepository personalRepository)
     {
         _skillRepository = skillRepository ?? throw new ArgumentNullException(nameof(skillRepository));
+        _personalRepository = personalRepository ?? throw new ArgumentNullException(nameof(personalRepository));
     }
 
     /// <summary>
@@ -37,7 +39,9 @@ public class PositionMapper
             Description = model.Description,
             Requirements = model.Requirements,
             RequiredSkillIds = new List<int>(model.RequiredSkillIds),
-            RequiredSkillNames = new List<string>() // 需要异步加载
+            RequiredSkillNames = new List<string>(), // 需要异步加载
+            AvailablePersonnelIds = new List<int>(model.AvailablePersonnelIds),
+            AvailablePersonnelNames = new List<string>() // 需要异步加载
         };
     }
 
@@ -53,6 +57,13 @@ public class PositionMapper
         {
             var skills = await _skillRepository.GetByIdsAsync(model.RequiredSkillIds);
             dto.RequiredSkillNames = skills.Select(s => s.Name).ToList();
+        }
+
+        // 加载可用人员名称
+        if (model.AvailablePersonnelIds != null && model.AvailablePersonnelIds.Count > 0)
+        {
+            var personnel = await _personalRepository.GetByIdsAsync(model.AvailablePersonnelIds);
+            dto.AvailablePersonnelNames = personnel.Select(p => p.Name).ToList();
         }
 
         return dto;
@@ -96,6 +107,7 @@ public class PositionMapper
             Description = dto.Description ?? string.Empty,
             Requirements = dto.Requirements ?? string.Empty,
             RequiredSkillIds = new List<int>(dto.RequiredSkillIds),
+            AvailablePersonnelIds = new List<int>(dto.AvailablePersonnelIds),
             IsActive = true, // 新创建的哨位默认激活
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -118,6 +130,7 @@ public class PositionMapper
             Description = dto.Description ?? string.Empty,
             Requirements = dto.Requirements ?? string.Empty,
             RequiredSkillIds = new List<int>(dto.RequiredSkillIds),
+            AvailablePersonnelIds = new List<int>(dto.AvailablePersonnelIds),
             UpdatedAt = DateTime.UtcNow
         };
     }
@@ -137,6 +150,7 @@ public class PositionMapper
         model.Description = dto.Description ?? string.Empty;
         model.Requirements = dto.Requirements ?? string.Empty;
         model.RequiredSkillIds = new List<int>(dto.RequiredSkillIds);
+        model.AvailablePersonnelIds = new List<int>(dto.AvailablePersonnelIds);
         model.UpdatedAt = DateTime.UtcNow;
     }
 
@@ -154,7 +168,8 @@ public class PositionMapper
             Location = dto.Location,
             Description = dto.Description,
             Requirements = dto.Requirements,
-            RequiredSkillIds = new List<int>(dto.RequiredSkillIds)
+            RequiredSkillIds = new List<int>(dto.RequiredSkillIds),
+            AvailablePersonnelIds = new List<int>(dto.AvailablePersonnelIds)
         };
     }
 
@@ -172,7 +187,8 @@ public class PositionMapper
             Location = dto.Location,
             Description = dto.Description,
             Requirements = dto.Requirements,
-            RequiredSkillIds = new List<int>(dto.RequiredSkillIds)
+            RequiredSkillIds = new List<int>(dto.RequiredSkillIds),
+            AvailablePersonnelIds = new List<int>(dto.AvailablePersonnelIds)
         };
     }
 }

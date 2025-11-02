@@ -57,6 +57,18 @@ public class PositionDto
     /// </summary>
     [JsonPropertyName("requiredSkillNames")]
     public List<string> RequiredSkillNames { get; set; } = new();
+
+    /// <summary>
+    /// 可用人员ID列表
+    /// </summary>
+    [JsonPropertyName("availablePersonnelIds")]
+    public List<int> AvailablePersonnelIds { get; set; } = new();
+
+    /// <summary>
+    /// 可用人员名称列表（冗余字段，便于显示）
+    /// </summary>
+    [JsonPropertyName("availablePersonnelNames")]
+    public List<string> AvailablePersonnelNames { get; set; } = new();
 }
 
 /// <summary>
@@ -96,6 +108,11 @@ public class CreatePositionDto
     [Required(ErrorMessage = "技能列表不能为空")]
     [MinLength(1, ErrorMessage = "至少需要选择一项技能")]
     public List<int> RequiredSkillIds { get; set; } = new();
+
+    /// <summary>
+    /// 可用人员ID列表（可选）
+    /// </summary>
+    public List<int> AvailablePersonnelIds { get; set; } = new();
 }
 
 /// <summary>
@@ -135,4 +152,9 @@ public class UpdatePositionDto
     [Required(ErrorMessage = "技能列表不能为空")]
     [MinLength(1, ErrorMessage = "至少需要选择一项技能")]
     public List<int> RequiredSkillIds { get; set; } = new();
+
+    /// <summary>
+    /// 可用人员ID列表（可选）
+    /// </summary>
+    public List<int> AvailablePersonnelIds { get; set; } = new();
 }

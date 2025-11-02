@@ -35,8 +35,8 @@ public class PersonnelMapper
         {
             Id = model.Id,
             Name = model.Name,
-            PositionId = model.PositionId,
-            PositionName = string.Empty, // 需要异步加载
+            AvailablePositionIds = new List<int>(), // 需要异步加载
+            AvailablePositionNames = new List<string>(), // 需要异步加载
             SkillIds = new List<int>(model.SkillIds),
             SkillNames = new List<string>(), // 需要异步加载
             IsAvailable = model.IsAvailable,
@@ -54,12 +54,10 @@ public class PersonnelMapper
     {
         var dto = ToDto(model);
 
-        // 加载职位名称
-        if (model.PositionId > 0)
-        {
-            var position = await _positionRepository.GetByIdAsync(model.PositionId);
-            dto.PositionName = position?.Name ?? "未知职位";
-        }
+        // 加载可用哨位信息
+        var availablePositions = await _positionRepository.GetPositionsByPersonnelAsync(model.Id);
+        dto.AvailablePositionIds = availablePositions.Select(p => p.Id).ToList();
+        dto.AvailablePositionNames = availablePositions.Select(p => p.Name).ToList();
 
         // 加载技能名称
         if (model.SkillIds != null && model.SkillIds.Count > 0)
@@ -105,7 +103,6 @@ public class PersonnelMapper
         return new Personal
         {
             Name = dto.Name,
-            PositionId = dto.PositionId,
             SkillIds = new List<int>(dto.SkillIds),
             IsAvailable = dto.IsAvailable,
             IsRetired = false, // 新创建的人员默认未退役
@@ -129,7 +126,6 @@ public class PersonnelMapper
         {
             Id = dto.Id,
             Name = dto.Name,
-            PositionId = dto.PositionId,
             SkillIds = new List<int>(dto.SkillIds),
             IsAvailable = dto.IsAvailable,
             IsRetired = dto.IsRetired,
@@ -151,7 +147,6 @@ public class PersonnelMapper
             throw new ArgumentNullException(nameof(dto));
 
         model.Name = dto.Name;
-        model.PositionId = dto.PositionId;
         model.SkillIds = new List<int>(dto.SkillIds);
         model.IsAvailable = dto.IsAvailable;
         model.IsRetired = dto.IsRetired;
@@ -172,7 +167,7 @@ public class PersonnelMapper
         return new UpdatePersonnelDto
         {
             Name = dto.Name,
-            PositionId = dto.PositionId,
+            AvailablePositionIds = new List<int>(dto.AvailablePositionIds),
             SkillIds = new List<int>(dto.SkillIds),
             IsAvailable = dto.IsAvailable,
             IsRetired = dto.IsRetired,
@@ -193,7 +188,7 @@ public class PersonnelMapper
         return new CreatePersonnelDto
         {
             Name = dto.Name,
-            PositionId = dto.PositionId,
+            AvailablePositionIds = new List<int>(dto.AvailablePositionIds),
             SkillIds = new List<int>(dto.SkillIds),
             IsAvailable = dto.IsAvailable,
             RecentShiftIntervalCount = dto.RecentShiftIntervalCount,

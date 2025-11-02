@@ -54,19 +54,27 @@
     - _需求: 2.4_
 
 
-- [-] 3. 更新数据传输对象和映射器
+- [x] 3. 更新数据传输对象和映射器
 
 
-  - [ ] 3.1 更新PersonnelDto
+
+
+  - [x] 3.1 更新PersonnelDto
+
+
     - 移除PositionId和PositionName字段
     - 添加AvailablePositionIds和AvailablePositionNames字段
     - _需求: 5.1_
 
-  - [ ] 3.2 更新PositionDto
+  - [x] 3.2 更新PositionDto
+
+
     - 添加AvailablePersonnelIds和AvailablePersonnelNames字段
     - _需求: 5.2_
 
-  - [ ] 3.3 更新映射器类
+  - [x] 3.3 更新映射器类
+
+
     - 更新PersonnelMapper以适配新的DTO结构
     - 更新PositionMapper以适配新的DTO结构
     - _需求: 2.3_

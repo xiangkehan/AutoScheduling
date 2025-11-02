@@ -24,17 +24,16 @@ public class PersonnelDto
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 职位ID
+    /// 可用哨位ID列表
     /// </summary>
-    [Range(1, int.MaxValue, ErrorMessage = "职位ID必须大于0")]
-    [JsonPropertyName("positionId")]
-    public int PositionId { get; set; }
+    [JsonPropertyName("availablePositionIds")]
+    public List<int> AvailablePositionIds { get; set; } = new();
 
     /// <summary>
-    /// 职位名称（冗余字段，便于显示）
+    /// 可用哨位名称列表（冗余字段，便于显示）
     /// </summary>
-    [JsonPropertyName("positionName")]
-    public string PositionName { get; set; } = string.Empty;
+    [JsonPropertyName("availablePositionNames")]
+    public List<string> AvailablePositionNames { get; set; } = new();
 
     /// <summary>
     /// 技能ID列表
@@ -101,11 +100,9 @@ public class CreatePersonnelDto
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 职位ID（必填）
+    /// 可用哨位ID列表（可选）
     /// </summary>
-    [Required(ErrorMessage = "职位ID不能为空")]
-    [Range(1, int.MaxValue, ErrorMessage = "职位ID必须大于0")]
-    public int PositionId { get; set; }
+    public List<int> AvailablePositionIds { get; set; } = new();
 
     /// <summary>
     /// 技能ID列表（至少一项）
@@ -153,11 +150,9 @@ public class UpdatePersonnelDto
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 职位ID（必填）
+    /// 可用哨位ID列表（可选）
     /// </summary>
-    [Required(ErrorMessage = "职位ID不能为空")]
-    [Range(1, int.MaxValue, ErrorMessage = "职位ID必须大于0")]
-    public int PositionId { get; set; }
+    public List<int> AvailablePositionIds { get; set; } = new();
 
     /// <summary>
     /// 技能ID列表（至少一项）
