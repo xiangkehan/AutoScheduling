@@ -22,7 +22,7 @@
             <TextBlock Text="{x:Bind Personnel.Name, Mode=OneWay}" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
         </StackPanel>
 
-        <TextBlock Grid.Row="1" Text="{x:Bind Personnel.PositionName, Mode=OneWay, FallbackValue='N/A'}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
+        <TextBlock Grid.Row="1" Text="{x:Bind Personnel.AvailablePositionNames[0], Mode=OneWay, FallbackValue='N/A'}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" Margin="0,8,0,0">
             <TextBlock Text="����:" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>

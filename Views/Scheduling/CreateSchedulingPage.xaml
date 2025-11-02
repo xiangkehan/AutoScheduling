@@ -18,8 +18,8 @@
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <SymbolIcon Symbol="Contact"/>
                 <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
-                <!-- Title property not present; use PositionName -->
-                <TextBlock Text="{x:Bind PositionName}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <!-- Use first available position name -->
+                <TextBlock Text="{x:Bind AvailablePositionNames[0], FallbackValue='N/A'}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
         </DataTemplate>
 
