@@ -35,7 +35,6 @@ namespace AutoScheduling3.Data
 CREATE TABLE IF NOT EXISTS Personals (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     Name TEXT NOT NULL,
-    Position TEXT NOT NULL DEFAULT '',
     SkillIds TEXT NOT NULL DEFAULT '[]', -- JSON array of ints
     IsAvailable INTEGER NOT NULL DEFAULT 1, -- SQLite boolean (0/1)
     IsRetired INTEGER NOT NULL DEFAULT 0,
@@ -58,13 +57,12 @@ CREATE TABLE IF NOT EXISTS Personals (
 
             var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-INSERT INTO Personals (Name, Position, SkillIds, IsAvailable, IsRetired, 
+INSERT INTO Personals (Name, SkillIds, IsAvailable, IsRetired, 
                        RecentShiftInterval, RecentHolidayShiftInterval, RecentTimeSlotIntervals, CreatedAt, UpdatedAt)
-VALUES (@name, @position, @skillIds, @isAvail, @isRetired, @recentShift, @recentHoliday, @timeSlotIntervals, @createdAt, @updatedAt);
+VALUES (@name, @skillIds, @isAvail, @isRetired, @recentShift, @recentHoliday, @timeSlotIntervals, @createdAt, @updatedAt);
 SELECT last_insert_rowid();";
             
             cmd.Parameters.AddWithValue("@name", person.Name ?? string.Empty);
-            cmd.Parameters.AddWithValue("@position", person.PositionId.ToString());
             cmd.Parameters.AddWithValue("@skillIds", JsonSerializer.Serialize(person.SkillIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@isAvail", person.IsAvailable ? 1 : 0);
             cmd.Parameters.AddWithValue("@isRetired", person.IsRetired ? 1 : 0);
@@ -89,7 +87,7 @@ SELECT last_insert_rowid();";
 
             var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-SELECT Id, Name, Position, SkillIds, IsAvailable, IsRetired,
+SELECT Id, Name, SkillIds, IsAvailable, IsRetired,
        RecentShiftInterval, RecentHolidayShiftInterval, RecentTimeSlotIntervals, CreatedAt, UpdatedAt
 FROM Personals WHERE Id = @id";
             cmd.Parameters.AddWithValue("@id", id);
@@ -114,7 +112,7 @@ FROM Personals WHERE Id = @id";
 
             var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-SELECT Id, Name, Position, SkillIds, IsAvailable, IsRetired,
+SELECT Id, Name, SkillIds, IsAvailable, IsRetired,
        RecentShiftInterval, RecentHolidayShiftInterval, RecentTimeSlotIntervals, CreatedAt, UpdatedAt
 FROM Personals ORDER BY Id";
 
@@ -143,7 +141,7 @@ FROM Personals ORDER BY Id";
             var idsStr = string.Join(",", ids);
             var cmd = conn.CreateCommand();
             cmd.CommandText = $@"
-SELECT Id, Name, Position, SkillIds, IsAvailable, IsRetired,
+SELECT Id, Name, SkillIds, IsAvailable, IsRetired,
        RecentShiftInterval, RecentHolidayShiftInterval, RecentTimeSlotIntervals, CreatedAt, UpdatedAt
 FROM Personals WHERE Id IN ({idsStr}) ORDER BY Id";
 
@@ -168,7 +166,6 @@ FROM Personals WHERE Id IN ({idsStr}) ORDER BY Id";
             cmd.CommandText = @"
 UPDATE Personals SET 
     Name = @name, 
-    Position = @position, 
     SkillIds = @skillIds,
     IsAvailable = @isAvail,
     IsRetired = @isRetired,
@@ -179,7 +176,6 @@ UPDATE Personals SET
 WHERE Id = @id";
 
             cmd.Parameters.AddWithValue("@name", person.Name ?? string.Empty);
-            cmd.Parameters.AddWithValue("@position", person.PositionId.ToString());
             cmd.Parameters.AddWithValue("@skillIds", JsonSerializer.Serialize(person.SkillIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@isAvail", person.IsAvailable ? 1 : 0);
             cmd.Parameters.AddWithValue("@isRetired", person.IsRetired ? 1 : 0);
@@ -253,22 +249,21 @@ WHERE Id = @id";
         /// </summary>
         private Personal MapPerson(SqliteDataReader reader)
         {
-            var skillIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(3)) ?? new List<int>();
-            var timeSlotIntervals = JsonSerializer.Deserialize<int[]>(reader.GetString(8)) ?? new int[12];
+            var skillIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(2)) ?? new List<int>();
+            var timeSlotIntervals = JsonSerializer.Deserialize<int[]>(reader.GetString(7)) ?? new int[12];
 
             return new Personal
             {
                 Id = reader.GetInt32(0),
                 Name = reader.GetString(1),
-                PositionId = int.TryParse(reader.GetString(2), out int posId) ? posId : 0,
                 SkillIds = skillIds,
-                IsAvailable = reader.GetInt32(4) == 1,
-                IsRetired = reader.GetInt32(5) == 1,
-                RecentShiftIntervalCount = reader.GetInt32(6),
-                RecentHolidayShiftIntervalCount = reader.GetInt32(7),
+                IsAvailable = reader.GetInt32(3) == 1,
+                IsRetired = reader.GetInt32(4) == 1,
+                RecentShiftIntervalCount = reader.GetInt32(5),
+                RecentHolidayShiftIntervalCount = reader.GetInt32(6),
                 RecentPeriodShiftIntervals = timeSlotIntervals,
-                CreatedAt = reader.IsDBNull(9) ? DateTime.UtcNow : DateTime.Parse(reader.GetString(9)),
-                UpdatedAt = reader.IsDBNull(10) ? DateTime.UtcNow : DateTime.Parse(reader.GetString(10))
+                CreatedAt = reader.IsDBNull(8) ? DateTime.UtcNow : DateTime.Parse(reader.GetString(8)),
+                UpdatedAt = reader.IsDBNull(9) ? DateTime.UtcNow : DateTime.Parse(reader.GetString(9))
             };
         }
         /// <summary>
@@ -282,7 +277,7 @@ WHERE Id = @id";
 
             var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-        SELECT Id, Name, Position, SkillIds, IsAvailable, IsRetired,
+        SELECT Id, Name, SkillIds, IsAvailable, IsRetired,
                RecentShiftInterval, RecentHolidayShiftInterval, RecentTimeSlotIntervals, CreatedAt, UpdatedAt
         FROM Personals
         WHERE Name LIKE @keyword
@@ -310,7 +305,7 @@ WHERE Id = @id";
             var idsStr = string.Join(",", ids.Distinct());
             var cmd = conn.CreateCommand();
             cmd.CommandText = $@"
-SELECT Id, Name, Position, SkillIds, IsAvailable, IsRetired,
+SELECT Id, Name, SkillIds, IsAvailable, IsRetired,
        RecentShiftInterval, RecentHolidayShiftInterval, RecentTimeSlotIntervals, CreatedAt, UpdatedAt
 FROM Personals WHERE Id IN ({idsStr})";
 

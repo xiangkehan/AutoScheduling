@@ -19,18 +19,24 @@
     - 在PositionLocation类中添加AvailablePersonnelIds字段
     - 更新ToString方法以显示可用人员数量
     - _需求: 1.2, 1.3_
-- [-] 2. 更新数据访问层
+- [x] 2. 更新数据访问层
+
+
 
 
 - [ ] 2. 更新数据访问层
 
-  - [ ] 2.1 更新PersonalRepository
+  - [x] 2.1 更新PersonalRepository
+
+
     - 移除PositionId相关的数据库操作
     - 更新CreateAsync和UpdateAsync方法
     - 更新MapPerson方法
     - _需求: 2.1_
 
-  - [ ] 2.2 更新PositionLocationRepository
+  - [x] 2.2 更新PositionLocationRepository
+
+
     - 添加AvailablePersonnelIds相关的数据库操作
     - 实现AddAvailablePersonnelAsync方法
     - 实现RemoveAvailablePersonnelAsync方法
@@ -40,12 +46,16 @@
     - 更新MapPosition方法
     - _需求: 2.2_
 
-  - [ ] 2.3 更新Repository接口
+  - [x] 2.3 更新Repository接口
+
+
     - 更新IPersonalRepository接口
     - 更新IPositionRepository接口
     - _需求: 2.4_
 
-- [ ] 3. 更新数据传输对象和映射器
+
+- [-] 3. 更新数据传输对象和映射器
+
 
   - [ ] 3.1 更新PersonnelDto
     - 移除PositionId和PositionName字段

@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS Positions (
     Description TEXT NOT NULL DEFAULT '',
     Requirements TEXT NOT NULL DEFAULT '',
     RequiredSkillIds TEXT NOT NULL DEFAULT '[]', -- JSON array of ints
+    AvailablePersonnelIds TEXT NOT NULL DEFAULT '[]', -- JSON array of ints
     IsActive INTEGER NOT NULL DEFAULT 1,
     CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -47,12 +48,13 @@ CREATE TABLE IF NOT EXISTS Positions (
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "INSERT INTO Positions (Name, Location, Description, Requirements, RequiredSkillIds, IsActive, CreatedAt, UpdatedAt) VALUES (@name, @location, @description, @requirements, @skillIds, @isActive, @createdAt, @updatedAt); SELECT last_insert_rowid();";
+            cmd.CommandText = "INSERT INTO Positions (Name, Location, Description, Requirements, RequiredSkillIds, AvailablePersonnelIds, IsActive, CreatedAt, UpdatedAt) VALUES (@name, @location, @description, @requirements, @skillIds, @availablePersonnelIds, @isActive, @createdAt, @updatedAt); SELECT last_insert_rowid();";
             cmd.Parameters.AddWithValue("@name", item.Name ?? string.Empty);
             cmd.Parameters.AddWithValue("@location", item.Location ?? string.Empty);
             cmd.Parameters.AddWithValue("@description", item.Description ?? string.Empty);
             cmd.Parameters.AddWithValue("@requirements", item.Requirements ?? string.Empty);
             cmd.Parameters.AddWithValue("@skillIds", JsonSerializer.Serialize(item.RequiredSkillIds, _jsonOptions));
+            cmd.Parameters.AddWithValue("@availablePersonnelIds", JsonSerializer.Serialize(item.AvailablePersonnelIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@isActive", item.IsActive ? 1 : 0);
             cmd.Parameters.AddWithValue("@createdAt", item.CreatedAt.ToString("o"));
             cmd.Parameters.AddWithValue("@updatedAt", item.UpdatedAt.ToString("o"));
@@ -68,7 +70,7 @@ CREATE TABLE IF NOT EXISTS Positions (
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds, IsActive, CreatedAt, UpdatedAt FROM Positions ORDER BY Id";
+            cmd.CommandText = "SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds, AvailablePersonnelIds, IsActive, CreatedAt, UpdatedAt FROM Positions ORDER BY Id";
 
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -85,7 +87,7 @@ CREATE TABLE IF NOT EXISTS Positions (
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds, IsActive, CreatedAt, UpdatedAt FROM Positions WHERE Id = @id";
+            cmd.CommandText = "SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds, AvailablePersonnelIds, IsActive, CreatedAt, UpdatedAt FROM Positions WHERE Id = @id";
             cmd.Parameters.AddWithValue("@id", id);
 
             using var reader = await cmd.ExecuteReaderAsync();
@@ -112,7 +114,7 @@ CREATE TABLE IF NOT EXISTS Positions (
             // 构建 IN 子句
             var idsStr = string.Join(",", ids);
             var cmd = conn.CreateCommand();
-            cmd.CommandText = $"SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds, IsActive, CreatedAt, UpdatedAt FROM Positions WHERE Id IN ({idsStr}) ORDER BY Id";
+            cmd.CommandText = $"SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds, AvailablePersonnelIds, IsActive, CreatedAt, UpdatedAt FROM Positions WHERE Id IN ({idsStr}) ORDER BY Id";
 
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -129,12 +131,13 @@ CREATE TABLE IF NOT EXISTS Positions (
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "UPDATE Positions SET Name = @name, Location = @location, Description = @description, Requirements = @requirements, RequiredSkillIds = @skillIds, IsActive = @isActive, UpdatedAt = @updatedAt WHERE Id = @id";
+            cmd.CommandText = "UPDATE Positions SET Name = @name, Location = @location, Description = @description, Requirements = @requirements, RequiredSkillIds = @skillIds, AvailablePersonnelIds = @availablePersonnelIds, IsActive = @isActive, UpdatedAt = @updatedAt WHERE Id = @id";
             cmd.Parameters.AddWithValue("@name", item.Name ?? string.Empty);
             cmd.Parameters.AddWithValue("@location", item.Location ?? string.Empty);
             cmd.Parameters.AddWithValue("@description", item.Description ?? string.Empty);
             cmd.Parameters.AddWithValue("@requirements", item.Requirements ?? string.Empty);
             cmd.Parameters.AddWithValue("@skillIds", JsonSerializer.Serialize(item.RequiredSkillIds, _jsonOptions));
+            cmd.Parameters.AddWithValue("@availablePersonnelIds", JsonSerializer.Serialize(item.AvailablePersonnelIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@isActive", item.IsActive ? 1 : 0);
             cmd.Parameters.AddWithValue("@updatedAt", DateTime.UtcNow.ToString("o"));
             cmd.Parameters.AddWithValue("@id", item.Id);
@@ -152,6 +155,65 @@ CREATE TABLE IF NOT EXISTS Positions (
             cmd.Parameters.AddWithValue("@id", id);
 
             await cmd.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
+        /// 为哨位添加可用人员
+        /// </summary>
+        public async Task AddAvailablePersonnelAsync(int positionId, int personnelId)
+        {
+            var position = await GetByIdAsync(positionId);
+            if (position == null) return;
+
+            if (!position.AvailablePersonnelIds.Contains(personnelId))
+            {
+                position.AvailablePersonnelIds.Add(personnelId);
+                await UpdateAsync(position);
+            }
+        }
+
+        /// <summary>
+        /// 从哨位移除可用人员
+        /// </summary>
+        public async Task RemoveAvailablePersonnelAsync(int positionId, int personnelId)
+        {
+            var position = await GetByIdAsync(positionId);
+            if (position == null) return;
+
+            if (position.AvailablePersonnelIds.Remove(personnelId))
+            {
+                await UpdateAsync(position);
+            }
+        }
+
+        /// <summary>
+        /// 更新哨位的可用人员列表
+        /// </summary>
+        public async Task UpdateAvailablePersonnelAsync(int positionId, List<int> personnelIds)
+        {
+            var position = await GetByIdAsync(positionId);
+            if (position == null) return;
+
+            position.AvailablePersonnelIds = personnelIds ?? new List<int>();
+            await UpdateAsync(position);
+        }
+
+        /// <summary>
+        /// 获取哨位的可用人员ID列表
+        /// </summary>
+        public async Task<List<int>> GetAvailablePersonnelIdsAsync(int positionId)
+        {
+            var position = await GetByIdAsync(positionId);
+            return position?.AvailablePersonnelIds ?? new List<int>();
+        }
+
+        /// <summary>
+        /// 根据人员ID获取其可用的哨位列表
+        /// </summary>
+        public async Task<List<PositionLocation>> GetPositionsByPersonnelAsync(int personnelId)
+        {
+            var allPositions = await GetAllAsync();
+            return allPositions.Where(p => p.AvailablePersonnelIds.Contains(personnelId)).ToList();
         }
 
         /// <summary>
@@ -180,7 +242,7 @@ CREATE TABLE IF NOT EXISTS Positions (
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds, IsActive, CreatedAt, UpdatedAt FROM Positions WHERE Name LIKE @keyword OR Location LIKE @keyword ORDER BY Id";
+            cmd.CommandText = "SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds, AvailablePersonnelIds, IsActive, CreatedAt, UpdatedAt FROM Positions WHERE Name LIKE @keyword OR Location LIKE @keyword ORDER BY Id";
             cmd.Parameters.AddWithValue("@keyword", $"%{keyword}%");
 
             using var reader = await cmd.ExecuteReaderAsync();
@@ -195,9 +257,20 @@ CREATE TABLE IF NOT EXISTS Positions (
         private PositionLocation MapPosition(SqliteDataReader reader)
         {
             var skillIds = new List<int>();
+            var availablePersonnelIds = new List<int>();
+            
             try
             {
                 skillIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(5)) ?? new List<int>();
+            }
+            catch
+            {
+                // 如果旧数据没有这个字段，使用空列表
+            }
+
+            try
+            {
+                availablePersonnelIds = JsonSerializer.Deserialize<List<int>>(reader.GetString(6)) ?? new List<int>();
             }
             catch
             {
@@ -212,9 +285,10 @@ CREATE TABLE IF NOT EXISTS Positions (
                 Description = reader.GetString(3),
                 Requirements = reader.GetString(4),
                 RequiredSkillIds = skillIds,
-                IsActive = reader.IsDBNull(6) ? true : reader.GetInt32(6) == 1,
-                CreatedAt = reader.IsDBNull(7) ? DateTime.UtcNow : DateTime.Parse(reader.GetString(7)),
-                UpdatedAt = reader.IsDBNull(8) ? DateTime.UtcNow : DateTime.Parse(reader.GetString(8))
+                AvailablePersonnelIds = availablePersonnelIds,
+                IsActive = reader.IsDBNull(7) ? true : reader.GetInt32(7) == 1,
+                CreatedAt = reader.IsDBNull(8) ? DateTime.UtcNow : DateTime.Parse(reader.GetString(8)),
+                UpdatedAt = reader.IsDBNull(9) ? DateTime.UtcNow : DateTime.Parse(reader.GetString(9))
             };
         }
 
@@ -229,7 +303,7 @@ CREATE TABLE IF NOT EXISTS Positions (
 
             var idsStr = string.Join(",", ids.Distinct());
             var cmd = conn.CreateCommand();
-            cmd.CommandText = $"SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds, IsActive, CreatedAt, UpdatedAt FROM Positions WHERE Id IN ({idsStr})";
+            cmd.CommandText = $"SELECT Id, Name, Location, Description, Requirements, RequiredSkillIds, AvailablePersonnelIds, IsActive, CreatedAt, UpdatedAt FROM Positions WHERE Id IN ({idsStr})";
 
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
