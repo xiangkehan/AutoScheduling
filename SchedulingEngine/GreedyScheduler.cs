@@ -106,10 +106,53 @@ namespace AutoScheduling3.SchedulingEngine
             // 初始化可行性张量，使用优化操作
             _tensor = new FeasibilityTensor(_context.Positions.Count, 12, _context.Personals.Count,
                 _config.UseOptimizedTensor);
+            
+            // 使用新数据模型初始化可行性张量
+            InitializeFeasibilityTensorAsync();
+        }
+
+        /// <summary>
+        /// 使用新数据模型初始化可行性张量 - 对应需求4.1
+        /// 仅将哨位可用人员列表中的人员设为可行
+        /// </summary>
+        private void InitializeFeasibilityTensorAsync()
+        {
+            if (_tensor == null) return;
+
+            // 首先将所有人员设为不可行
+            for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
+            {
+                for (int periodIdx = 0; periodIdx < 12; periodIdx++)
+                {
+                    for (int personIdx = 0; personIdx < _context.Personals.Count; personIdx++)
+                    {
+                        _tensor[posIdx, periodIdx, personIdx] = false;
+                    }
+                }
+            }
+
+            // 然后仅将哨位可用人员设为可行
+            for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
+            {
+                var position = _context.Positions[posIdx];
+                
+                foreach (var personnelId in position.AvailablePersonnelIds)
+                {
+                    if (_context.PersonIdToIdx.TryGetValue(personnelId, out int personIdx))
+                    {
+                        // 将该人员在此哨位的所有时段设为可行
+                        for (int periodIdx = 0; periodIdx < 12; periodIdx++)
+                        {
+                            _tensor[posIdx, periodIdx, personIdx] = true;
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// 应用所有约束条件 - 对应需求5.1-5.8
+        /// 使用新数据模型：仅对哨位可用人员进行约束检查
         /// </summary>
         private void ApplyAllConstraints(DateTime date)
         {
@@ -120,13 +163,25 @@ namespace AutoScheduling3.SchedulingEngine
 
             for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
             {
+                var position = _context.Positions[posIdx];
+                
                 for (int periodIdx = 0; periodIdx < 12; periodIdx++)
                 {
                     var infeasiblePersons = new List<int>();
 
+                    // 首先将所有不在可用人员列表中的人员设为不可行
                     for (int personIdx = 0; personIdx < _context.Personals.Count; personIdx++)
                     {
-                        // 使用约束验证器检查所有硬约束
+                        int personId = _context.PersonIdxToId[personIdx];
+                        
+                        // 检查人员是否在哨位的可用人员列表中
+                        if (!position.AvailablePersonnelIds.Contains(personId))
+                        {
+                            infeasiblePersons.Add(personIdx);
+                            continue;
+                        }
+
+                        // 对可用人员进行约束验证
                         if (!_constraintValidator.ValidateAllConstraints(personIdx, posIdx, periodIdx, date))
                         {
                             infeasiblePersons.Add(personIdx);

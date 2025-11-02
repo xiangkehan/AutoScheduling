@@ -248,4 +248,112 @@ public class PositionService : IPositionService
         if (duplicateSkillIds.Any())
             throw new ArgumentException($"技能ID重复: {string.Join(", ", duplicateSkillIds)}");
     }
+
+    /// <summary>
+    /// 添加可用人员到哨位 - 根据需求3.2
+    /// </summary>
+    public async Task AddAvailablePersonnelAsync(int positionId, int personnelId)
+    {
+        if (positionId <= 0)
+            throw new ArgumentException("无效的哨位ID", nameof(positionId));
+        
+        if (personnelId <= 0)
+            throw new ArgumentException("无效的人员ID", nameof(personnelId));
+
+        // 获取哨位信息
+        var position = await _repository.GetByIdAsync(positionId);
+        if (position == null)
+            throw new ArgumentException($"哨位 ID {positionId} 不存在", nameof(positionId));
+
+        // 验证人员是否存在（通过Repository接口）
+        var personnelExists = await _repository.PersonnelExistsAsync(personnelId);
+        if (!personnelExists)
+            throw new ArgumentException($"人员 ID {personnelId} 不存在", nameof(personnelId));
+
+        // 验证人员技能是否匹配哨位要求
+        await ValidatePersonnelSkillsAsync(personnelId, positionId);
+
+        // 添加人员到可用列表（如果尚未存在）
+        await _repository.AddAvailablePersonnelAsync(positionId, personnelId);
+    }
+
+    /// <summary>
+    /// 从哨位移除可用人员 - 根据需求3.2
+    /// </summary>
+    public async Task RemoveAvailablePersonnelAsync(int positionId, int personnelId)
+    {
+        if (positionId <= 0)
+            throw new ArgumentException("无效的哨位ID", nameof(positionId));
+        
+        if (personnelId <= 0)
+            throw new ArgumentException("无效的人员ID", nameof(personnelId));
+
+        // 验证哨位是否存在
+        var positionExists = await _repository.ExistsAsync(positionId);
+        if (!positionExists)
+            throw new ArgumentException($"哨位 ID {positionId} 不存在", nameof(positionId));
+
+        // 移除人员从可用列表
+        await _repository.RemoveAvailablePersonnelAsync(positionId, personnelId);
+    }
+
+    /// <summary>
+    /// 获取哨位的可用人员列表 - 根据需求3.2
+    /// </summary>
+    public async Task<List<PersonnelDto>> GetAvailablePersonnelAsync(int positionId)
+    {
+        if (positionId <= 0)
+            throw new ArgumentException("无效的哨位ID", nameof(positionId));
+
+        // 验证哨位是否存在
+        var position = await _repository.GetByIdAsync(positionId);
+        if (position == null)
+            throw new ArgumentException($"哨位 ID {positionId} 不存在", nameof(positionId));
+
+        // 获取可用人员ID列表
+        var availablePersonnelIds = await _repository.GetAvailablePersonnelIdsAsync(positionId);
+        if (!availablePersonnelIds.Any())
+            return new List<PersonnelDto>();
+
+        // 获取人员详细信息（通过Repository接口）
+        var personnel = await _repository.GetPersonnelByIdsAsync(availablePersonnelIds);
+        
+        // 转换为DTO（需要使用PersonnelMapper）
+        var personnelMapper = new DTOs.Mappers.PersonnelMapper(_skillRepository);
+        return await personnelMapper.ToDtoListAsync(personnel);
+    }
+
+    /// <summary>
+    /// 验证人员技能是否满足哨位要求 - 根据需求3.2
+    /// </summary>
+    public async Task<bool> ValidatePersonnelSkillsAsync(int personnelId, int positionId)
+    {
+        if (personnelId <= 0 || positionId <= 0)
+            return false;
+
+        // 获取哨位信息
+        var position = await _repository.GetByIdAsync(positionId);
+        if (position == null)
+            return false;
+
+        // 获取人员信息（通过Repository接口）
+        var personnel = await _repository.GetPersonnelByIdAsync(personnelId);
+        if (personnel == null)
+            return false;
+
+        // 检查人员是否可用
+        if (!personnel.IsAvailable || personnel.IsRetired)
+            return false;
+
+        // 检查技能匹配：人员技能必须包含哨位所需的所有技能
+        if (position.RequiredSkillIds == null || position.RequiredSkillIds.Count == 0)
+            return true; // 哨位无技能要求
+
+        if (personnel.SkillIds == null || personnel.SkillIds.Count == 0)
+            return false; // 人员无技能但哨位有要求
+
+        // 验证人员技能是否包含哨位所需的所有技能
+        return position.RequiredSkillIds.All(requiredSkillId => 
+            personnel.SkillIds.Contains(requiredSkillId));
+    }
 }

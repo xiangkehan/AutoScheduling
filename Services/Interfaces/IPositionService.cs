@@ -43,4 +43,24 @@ public interface IPositionService
     /// 验证哨位数据完整性
     /// </summary>
     Task<bool> ValidatePositionDataAsync(PositionDto position);
+
+    /// <summary>
+    /// 添加可用人员到哨位
+    /// </summary>
+    Task AddAvailablePersonnelAsync(int positionId, int personnelId);
+
+    /// <summary>
+    /// 从哨位移除可用人员
+    /// </summary>
+    Task RemoveAvailablePersonnelAsync(int positionId, int personnelId);
+
+    /// <summary>
+    /// 获取哨位的可用人员列表
+    /// </summary>
+    Task<List<PersonnelDto>> GetAvailablePersonnelAsync(int positionId);
+
+    /// <summary>
+    /// 验证人员技能是否满足哨位要求
+    /// </summary>
+    Task<bool> ValidatePersonnelSkillsAsync(int personnelId, int positionId);
 }

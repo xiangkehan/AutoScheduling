@@ -48,4 +48,9 @@ public interface IPersonnelService
     /// 验证人员技能匹配
     /// </summary>
     Task<bool> ValidatePersonnelSkillsAsync(int personnelId, int positionId);
+
+    /// <summary>
+    /// 获取人员可用的哨位列表
+    /// </summary>
+    Task<List<PositionDto>> GetAvailablePositionsAsync(int personnelId);
 }

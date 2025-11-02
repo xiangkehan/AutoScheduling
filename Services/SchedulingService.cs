@@ -395,6 +395,9 @@ public class SchedulingService : ISchedulingService
         if (missingPositionIds.Any())
             throw new ArgumentException($"以下哨位ID不存在: {string.Join(", ", missingPositionIds)}");
 
+        // 验证哨位可用人员数据完整性 - 根据需求3.3
+        await ValidatePositionAvailablePersonnelDataIntegrityAsync(positionList, personnelList);
+
         // 验证技能匹配：至少要有一些人员能胜任一些哨位
         await ValidateSkillCompatibilityAsync(personnelList, positionList);
 
@@ -408,7 +411,7 @@ public class SchedulingService : ISchedulingService
     }
 
     /// <summary>
-    /// 验证技能兼容性
+    /// 验证技能兼容性 - 使用新数据模型
     /// </summary>
     private async Task ValidateSkillCompatibilityAsync(List<Personal> personnel, List<PositionLocation> positions)
     {
@@ -419,8 +422,18 @@ public class SchedulingService : ISchedulingService
             if (position.RequiredSkillIds?.Any() != true)
                 continue; // 无技能要求的哨位跳过
 
-            // 检查是否有人员能胜任此哨位
-            var compatiblePersonnel = personnel.Where(p => 
+            // 使用新数据模型：从哨位的可用人员列表中检查技能匹配
+            if (position.AvailablePersonnelIds?.Any() != true)
+            {
+                incompatiblePositions.Add(position.Name);
+                continue;
+            }
+
+            // 获取哨位可用人员中能胜任的人员
+            var availablePersonnel = personnel.Where(p => 
+                position.AvailablePersonnelIds.Contains(p.Id)).ToList();
+
+            var compatiblePersonnel = availablePersonnel.Where(p => 
                 p.SkillIds?.Any() == true && 
                 position.RequiredSkillIds.All(requiredSkill => p.SkillIds.Contains(requiredSkill))
             ).ToList();
@@ -434,6 +447,65 @@ public class SchedulingService : ISchedulingService
         if (incompatiblePositions.Any())
         {
             throw new ArgumentException($"以下哨位没有合适的人员能够胜任: {string.Join(", ", incompatiblePositions)}");
+        }
+    }
+
+    /// <summary>
+    /// 验证哨位可用人员数据完整性 - 根据需求3.3
+    /// </summary>
+    private async Task ValidatePositionAvailablePersonnelDataIntegrityAsync(List<PositionLocation> positions, List<Personal> personnel)
+    {
+        var personnelIds = personnel.Select(p => p.Id).ToHashSet();
+        var dataIntegrityIssues = new List<string>();
+
+        foreach (var position in positions)
+        {
+            if (position.AvailablePersonnelIds?.Any() != true)
+            {
+                dataIntegrityIssues.Add($"哨位 '{position.Name}' 没有配置可用人员");
+                continue;
+            }
+
+            // 检查可用人员ID是否都存在
+            var invalidPersonnelIds = position.AvailablePersonnelIds
+                .Where(id => !personnelIds.Contains(id))
+                .ToList();
+
+            if (invalidPersonnelIds.Any())
+            {
+                dataIntegrityIssues.Add($"哨位 '{position.Name}' 包含无效的人员ID: {string.Join(", ", invalidPersonnelIds)}");
+            }
+
+            // 检查可用人员中是否有人能胜任该哨位
+            var availablePersonnel = personnel.Where(p => 
+                position.AvailablePersonnelIds.Contains(p.Id) && 
+                p.IsAvailable && 
+                !p.IsRetired).ToList();
+
+            if (!availablePersonnel.Any())
+            {
+                dataIntegrityIssues.Add($"哨位 '{position.Name}' 没有可用的人员");
+                continue;
+            }
+
+            // 检查技能匹配
+            if (position.RequiredSkillIds?.Any() == true)
+            {
+                var skilledPersonnel = availablePersonnel.Where(p => 
+                    p.SkillIds?.Any() == true && 
+                    position.RequiredSkillIds.All(requiredSkill => p.SkillIds.Contains(requiredSkill))
+                ).ToList();
+
+                if (!skilledPersonnel.Any())
+                {
+                    dataIntegrityIssues.Add($"哨位 '{position.Name}' 的可用人员中没有人具备所需技能");
+                }
+            }
+        }
+
+        if (dataIntegrityIssues.Any())
+        {
+            throw new ArgumentException($"哨位可用人员数据完整性验证失败:\n{string.Join("\n", dataIntegrityIssues)}");
         }
     }
 

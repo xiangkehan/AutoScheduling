@@ -51,7 +51,7 @@ public class PersonnelService : IPersonnelService
         
         // 验证业务规则
         await ValidateSkillIdsAsync(dto.SkillIds);
-        await ValidatePositionIdAsync(dto.PositionId);
+        // 移除职位相关验证 - 根据需求3.1
 
         // 转换并创建
         var model = _mapper.ToModel(dto);
@@ -69,7 +69,7 @@ public class PersonnelService : IPersonnelService
         
         // 验证业务规则
         await ValidateSkillIdsAsync(dto.SkillIds);
-        await ValidatePositionIdAsync(dto.PositionId);
+        // 移除职位相关验证 - 根据需求3.1
 
         // 获取现有对象
         var model = await _repository.GetByIdAsync(id);
@@ -166,6 +166,43 @@ public class PersonnelService : IPersonnelService
     }
 
     /// <summary>
+    /// 获取人员可用的哨位列表 - 根据需求3.1
+    /// </summary>
+    public async Task<List<PositionDto>> GetAvailablePositionsAsync(int personnelId)
+    {
+        // 获取人员信息
+        var personnel = await _repository.GetByIdAsync(personnelId);
+        if (personnel == null)
+            throw new InvalidOperationException($"人员 {personnelId} 不存在");
+
+        // 检查人员是否可用
+        if (!personnel.IsAvailable || personnel.IsRetired)
+            return new List<PositionDto>();
+
+        // 获取所有哨位
+        var allPositions = await _positionRepository.GetAllAsync();
+        var availablePositions = new List<PositionLocation>();
+
+        // 筛选人员可以胜任的哨位
+        foreach (var position in allPositions)
+        {
+            // 检查哨位的可用人员列表是否包含该人员
+            if (position.AvailablePersonnelIds?.Contains(personnelId) == true)
+            {
+                // 验证技能匹配
+                if (await ValidatePersonnelSkillsAsync(personnelId, position.Id))
+                {
+                    availablePositions.Add(position);
+                }
+            }
+        }
+
+        // 转换为DTO（需要使用PositionMapper）
+        var positionMapper = new DTOs.Mappers.PositionMapper(_skillRepository);
+        return await positionMapper.ToDtoListAsync(availablePositions);
+    }
+
+    /// <summary>
     /// 验证技能ID是否有效
     /// </summary>
     private async Task ValidateSkillIdsAsync(List<int> skillIds)
@@ -182,13 +219,5 @@ public class PersonnelService : IPersonnelService
             throw new ArgumentException($"技能ID无效: {string.Join(", ", invalidSkillIds)}");
     }
 
-    /// <summary>
-    /// 验证职位ID是否有效
-    /// </summary>
-    private async Task ValidatePositionIdAsync(int positionId)
-    {
-        var positionExists = await _positionRepository.ExistsAsync(positionId);
-        if (!positionExists)
-            throw new ArgumentException($"职位ID {positionId} 不存在");
-    }
+
 }

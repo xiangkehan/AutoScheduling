@@ -43,4 +43,19 @@ public interface IPositionRepository : IRepository<PositionLocation>
     /// 根据人员ID获取其可用的哨位列表
     /// </summary>
     Task<List<PositionLocation>> GetPositionsByPersonnelAsync(int personnelId);
+
+    /// <summary>
+    /// 检查人员是否存在
+    /// </summary>
+    Task<bool> PersonnelExistsAsync(int personnelId);
+
+    /// <summary>
+    /// 根据ID获取人员信息
+    /// </summary>
+    Task<Personal?> GetPersonnelByIdAsync(int personnelId);
+
+    /// <summary>
+    /// 根据ID列表获取人员信息
+    /// </summary>
+    Task<List<Personal>> GetPersonnelByIdsAsync(IEnumerable<int> personnelIds);
 }

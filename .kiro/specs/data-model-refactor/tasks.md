@@ -79,32 +79,49 @@
     - 更新PositionMapper以适配新的DTO结构
     - _需求: 2.3_
 
-- [ ] 4. 更新业务逻辑层
-  - [ ] 4.1 更新PersonnelService
+- [x] 4. 更新业务逻辑层
+
+
+
+
+
+  - [x] 4.1 更新PersonnelService
+
+
     - 移除职位相关的验证和业务逻辑
     - 更新CreateAsync方法
     - 添加GetAvailablePositionsAsync方法
     - _需求: 3.1_
 
-  - [ ] 4.2 更新PositionService
+  - [x] 4.2 更新PositionService
+
+
     - 添加AddAvailablePersonnelAsync方法
     - 添加RemoveAvailablePersonnelAsync方法
     - 添加GetAvailablePersonnelAsync方法
     - 实现ValidatePersonnelSkillsAsync方法
     - _需求: 3.2_
 
-  - [ ] 4.3 更新SchedulingService
+  - [x] 4.3 更新SchedulingService
+
+
     - 使用新数据模型构建排班请求
     - 验证哨位可用人员数据完整性
     - _需求: 3.3_
 
-  - [ ] 4.4 更新服务接口
+  - [x] 4.4 更新服务接口
+
+
     - 更新IPersonnelService接口
     - 更新IPositionService接口
     - _需求: 3.4_
 
-- [ ] 5. 更新排班引擎
-  - [ ] 5.1 更新GreedyScheduler
+
+- [-] 5. 更新排班引擎
+
+
+  - [-] 5.1 更新GreedyScheduler
+
     - 修改InitializeFeasibilityTensorAsync方法使用新数据模型
     - 更新SelectBestPersonnel方法
     - 优化人员筛选逻辑
@@ -120,6 +137,7 @@
     - _需求: 4.3_
 
 - [ ] 6. 更新用户界面层
+
   - [ ] 6.1 更新PersonnelPage相关代码
     - 移除职位选择相关的UI元素
     - 添加可用哨位显示功能
@@ -136,6 +154,7 @@
     - _需求: 5.3, 5.4_
 
 - [ ] 7. 验证系统功能
+
   - [ ] 7.1 测试核心功能
     - 测试所有核心功能正常运行
     - 验证排班算法性能
