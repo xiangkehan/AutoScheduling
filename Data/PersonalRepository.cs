@@ -27,24 +27,8 @@ namespace AutoScheduling3.Data
         /// </summary>
         public async Task InitAsync()
         {
-            using var conn = new SqliteConnection(_connectionString);
-            await conn.OpenAsync();
-
-            var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-CREATE TABLE IF NOT EXISTS Personals (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    Name TEXT NOT NULL,
-    SkillIds TEXT NOT NULL DEFAULT '[]', -- JSON array of ints
-    IsAvailable INTEGER NOT NULL DEFAULT 1, -- SQLite boolean (0/1)
-    IsRetired INTEGER NOT NULL DEFAULT 0,
-    RecentShiftInterval INTEGER NOT NULL DEFAULT 0,
-    RecentHolidayShiftInterval INTEGER NOT NULL DEFAULT 0,
-    RecentTimeSlotIntervals TEXT NOT NULL DEFAULT '[0,0,0,0,0,0,0,0,0,0,0,0]', -- JSON array of 12 ints
-    CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);";
-            await cmd.ExecuteNonQueryAsync();
+            // 表创建由 DatabaseService 统一管理，这里只做必要的初始化
+            await Task.CompletedTask;
         }
 
         /// <summary>

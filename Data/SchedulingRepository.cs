@@ -25,36 +25,8 @@ namespace AutoScheduling3.Data
 
         public async Task InitAsync()
         {
-            using var conn = new SqliteConnection(_connectionString);
-            await conn.OpenAsync();
-
-            var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-CREATE TABLE IF NOT EXISTS Schedules (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    Header TEXT NOT NULL,
-    PersonnelIds TEXT NOT NULL DEFAULT '[]', -- JSON array of ints
-    PositionIds TEXT NOT NULL DEFAULT '[]',  -- JSON array of ints
-    StartDate TEXT NOT NULL, -- ISO 8601 date
-    EndDate TEXT NOT NULL,   -- ISO 8601 date
-    IsConfirmed INTEGER NOT NULL DEFAULT 0, -- 0=buffer, 1=confirmed
-    CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS SingleShifts (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ScheduleId INTEGER NOT NULL,
-    PositionId INTEGER NOT NULL,
-    PersonnelId INTEGER NOT NULL,
-    StartTime TEXT NOT NULL, -- ISO 8601
-    EndTime TEXT NOT NULL,   -- ISO 8601
-    DayIndex INTEGER NOT NULL DEFAULT 0,
-    TimeSlotIndex INTEGER NOT NULL DEFAULT 0,
-    IsNightShift INTEGER NOT NULL DEFAULT 0,
-    FOREIGN KEY (ScheduleId) REFERENCES Schedules(Id) ON DELETE CASCADE
-);
-";
-            await cmd.ExecuteNonQueryAsync();
+            // 表创建由 DatabaseService 统一管理，这里只做必要的初始化
+            await Task.CompletedTask;
         }
 
         #region Schedule CRUD

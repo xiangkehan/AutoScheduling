@@ -24,20 +24,8 @@ namespace AutoScheduling3.Data
         /// </summary>
         public async Task InitAsync()
         {
-            using var conn = new SqliteConnection(_connectionString);
-            await conn.OpenAsync();
-
-            var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-CREATE TABLE IF NOT EXISTS Skills (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    Name TEXT NOT NULL,
-    Description TEXT NOT NULL,
-    IsActive INTEGER NOT NULL DEFAULT 1,
-    CreatedAt TEXT NOT NULL,
-    UpdatedAt TEXT NOT NULL
-);";
-            await cmd.ExecuteNonQueryAsync();
+            // 表创建由 DatabaseService 统一管理，这里只做必要的初始化
+            await Task.CompletedTask;
         }
 
         /// <summary>

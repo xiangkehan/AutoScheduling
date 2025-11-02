@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS Positions (
     Description TEXT NOT NULL DEFAULT '',
     Requirements TEXT NOT NULL DEFAULT '',
     RequiredSkillIds TEXT NOT NULL DEFAULT '[]', -- JSON array of ints
+    AvailablePersonnelIds TEXT NOT NULL DEFAULT '[]', -- JSON array of ints
     IsActive INTEGER NOT NULL DEFAULT 1,
     CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP

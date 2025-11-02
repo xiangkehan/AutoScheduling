@@ -26,37 +26,8 @@ public class SchedulingTemplateRepository : ITemplateRepository
     /// </summary>
     public async Task InitAsync()
     {
-        using var conn = new SqliteConnection(_connectionString);
-        await conn.OpenAsync();
-
-        var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-CREATE TABLE IF NOT EXISTS SchedulingTemplates (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    Name TEXT NOT NULL,
-    Description TEXT DEFAULT '',
-    TemplateType TEXT NOT NULL DEFAULT 'regular',
-    IsDefault INTEGER NOT NULL DEFAULT 0,
-    PersonnelIds TEXT NOT NULL DEFAULT '[]',
-    PositionIds TEXT NOT NULL DEFAULT '[]',
-    HolidayConfigId INTEGER,
-    UseActiveHolidayConfig INTEGER NOT NULL DEFAULT 0,
-    EnabledFixedRuleIds TEXT NOT NULL DEFAULT '[]',
-    EnabledManualAssignmentIds TEXT NOT NULL DEFAULT '[]',
-    DurationDays INTEGER NOT NULL DEFAULT 1,
-    StrategyConfig TEXT NOT NULL DEFAULT '{}',
-    UsageCount INTEGER NOT NULL DEFAULT 0,
-    IsActive INTEGER NOT NULL DEFAULT 1,
-    CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    LastUsedAt TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_template_active ON SchedulingTemplates(IsActive);
-CREATE INDEX IF NOT EXISTS idx_template_usage ON SchedulingTemplates(UsageCount);
-CREATE INDEX IF NOT EXISTS idx_template_type ON SchedulingTemplates(TemplateType);
-CREATE INDEX IF NOT EXISTS idx_template_default ON SchedulingTemplates(IsDefault);
-";
-        await cmd.ExecuteNonQueryAsync();
+        // 表创建由 DatabaseService 统一管理，这里只做必要的初始化
+        await Task.CompletedTask;
     }
 
     public async Task<List<SchedulingTemplate>> GetAllAsync()

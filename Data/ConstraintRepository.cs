@@ -26,41 +26,8 @@ namespace AutoScheduling3.Data
         /// </summary>
         public async Task InitAsync()
         {
-            using var conn = new SqliteConnection(_connectionString);
-            await conn.OpenAsync();
-
-            var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-CREATE TABLE IF NOT EXISTS FixedPositionRules (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    PersonalId INTEGER NOT NULL,
-    AllowedPositionIds TEXT NOT NULL, -- JSON array of ints
-    AllowedPeriods TEXT NOT NULL, -- JSON array of ints
-    IsEnabled INTEGER NOT NULL DEFAULT 1,
-    Description TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS ManualAssignments (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    PositionId INTEGER NOT NULL,
-    PeriodIndex INTEGER NOT NULL,
-    PersonalId INTEGER NOT NULL,
-    Date TEXT NOT NULL, -- ISO 8601
-    IsEnabled INTEGER NOT NULL DEFAULT 1,
-    Remarks TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS HolidayConfigs (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ConfigName TEXT NOT NULL,
-    EnableWeekendRule INTEGER NOT NULL DEFAULT 1,
-    WeekendDays TEXT NOT NULL, -- JSON array of DayOfWeek (ints)
-    LegalHolidays TEXT NOT NULL, -- JSON array of dates (ISO 8601 strings)
-    CustomHolidays TEXT NOT NULL, -- JSON array of dates
-    ExcludedDates TEXT NOT NULL, -- JSON array of dates
-    IsActive INTEGER NOT NULL DEFAULT 1
-);";
-            await cmd.ExecuteNonQueryAsync();
+            // 表创建由 DatabaseService 统一管理，这里只做必要的初始化
+            await Task.CompletedTask;
         }
 
         #region FixedPositionRule CRUD
