@@ -20,11 +20,11 @@ namespace AutoScheduling3.SchedulingEngine
         private FeasibilityTensor? _tensor;
         private MRVStrategy? _mrvStrategy;
         private ScoreCalculator? _scoreCalculator;
-        
+
         // 新增的约束处理组件 - 对应需求5.1-5.8, 6.1-6.4
         private ConstraintValidator? _constraintValidator;
         private SoftConstraintCalculator? _softConstraintCalculator;
-        
+
         // 算法配置参数
         private readonly GreedySchedulerConfig _config;
 
@@ -41,11 +41,11 @@ namespace AutoScheduling3.SchedulingEngine
         public async Task<Schedule> ExecuteAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            
+
             // 预处理阶段
             await PreprocessAsync();
             cancellationToken.ThrowIfCancellationRequested();
-            
+
             // 多天循环处理：每天重建张量与策略，保持跨日评分状态累积
             var currentDate = _context.StartDate.Date;
             int totalDays = (_context.EndDate.Date - _context.StartDate.Date).Days + 1;
@@ -54,21 +54,21 @@ namespace AutoScheduling3.SchedulingEngine
             {
                 var date = currentDate.AddDays(day);
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 // 初始化当日排班环境
                 InitializeDailyScheduling();
-                
+
                 // 应用所有约束条件
                 ApplyAllConstraints(date);
-                
+
                 // 预置手动指定分配 - 对应需求5.8
                 ApplyManualAssignmentsForDate(date);
-                
+
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 // 执行贪心分配算法 - 对应需求7.5
                 await PerformGreedyAssignmentsAsync(date, cancellationToken);
-                
+
                 // 更新评分状态
                 UpdateDailyScoreStates(date);
             }
@@ -84,17 +84,17 @@ namespace AutoScheduling3.SchedulingEngine
             _context.InitializeMappings();
             _context.InitializePersonScoreStates();
             _context.InitializeAssignments();
-            
+
             // 初始化约束处理组件
             _constraintValidator = new ConstraintValidator(_context);
             _softConstraintCalculator = new SoftConstraintCalculator(_context);
-            
+
             // 配置软约束权重
             _softConstraintCalculator.UpdateWeights(
-                _config.RestWeight, 
-                _config.HolidayWeight, 
+                _config.RestWeight,
+                _config.HolidayWeight,
                 _config.TimeSlotWeight);
-                
+
             return Task.CompletedTask;
         }
 
@@ -104,7 +104,7 @@ namespace AutoScheduling3.SchedulingEngine
         private void InitializeDailyScheduling()
         {
             // 初始化可行性张量，使用优化操作
-            _tensor = new FeasibilityTensor(_context.Positions.Count, 12, _context.Personals.Count, 
+            _tensor = new FeasibilityTensor(_context.Positions.Count, 12, _context.Personals.Count,
                 _config.UseOptimizedTensor);
         }
 
@@ -222,7 +222,7 @@ namespace AutoScheduling3.SchedulingEngine
             var positionName = _context.Positions[positionIdx].Name;
             var personName = _context.Personals[personIdx].Name;
             var assignmentType = isManual ? "手动" : "自动";
-            
+
             var logMessage = $"{date:yyyy-MM-dd} {periodIdx * 2:D2}:00-{(periodIdx * 2 + 2):D2}:00 " +
                            $"{positionName} -> {personName} ({assignmentType})";
 
@@ -360,9 +360,9 @@ namespace AutoScheduling3.SchedulingEngine
             if (_tensor == null) return;
 
             // 相邻时段不能连续上哨
-            if (periodIdx > 0) 
+            if (periodIdx > 0)
                 _tensor.SetPersonInfeasibleForPeriod(personIdx, periodIdx - 1);
-            if (periodIdx < 11) 
+            if (periodIdx < 11)
                 _tensor.SetPersonInfeasibleForPeriod(personIdx, periodIdx + 1);
         }
 
@@ -375,12 +375,12 @@ namespace AutoScheduling3.SchedulingEngine
 
             // 夜哨时段：23:00-01:00, 01:00-03:00, 03:00-05:00, 05:00-07:00
             int[] nightPeriods = { 11, 0, 1, 2 };
-            
+
             if (nightPeriods.Contains(periodIdx))
             {
                 foreach (var np in nightPeriods)
                 {
-                    if (np != periodIdx) 
+                    if (np != periodIdx)
                         _tensor.SetPersonInfeasibleForPeriod(personIdx, np);
                 }
             }
@@ -416,7 +416,7 @@ namespace AutoScheduling3.SchedulingEngine
                             schedule.Results.Add(new SingleShift
                             {
                                 PositionId = positionId,
-                                PersonalId = personalId,
+                                PersonnelId = personalId, // 修正属性名
                                 StartTime = DateTime.SpecifyKind(startTime, DateTimeKind.Utc),
                                 EndTime = DateTime.SpecifyKind(endTime, DateTimeKind.Utc),
                                 ScheduleId = schedule.Id,
@@ -430,61 +430,60 @@ namespace AutoScheduling3.SchedulingEngine
         }
     }
 }
-    }
+
+
+/// <summary>
+/// 贪心调度器配置类
+/// </summary>
+public class GreedySchedulerConfig
+{
+    /// <summary>
+    /// 充分休息得分权重 - 对应需求6.1
+    /// </summary>
+    public double RestWeight { get; set; } = 1.0;
 
     /// <summary>
-    /// 贪心调度器配置类
+    /// 休息日平衡得分权重 - 对应需求6.2
     /// </summary>
-    public class GreedySchedulerConfig
-    {
-        /// <summary>
-        /// 充分休息得分权重 - 对应需求6.1
-        /// </summary>
-        public double RestWeight { get; set; } = 1.0;
+    public double HolidayWeight { get; set; } = 1.5;
 
-        /// <summary>
-        /// 休息日平衡得分权重 - 对应需求6.2
-        /// </summary>
-        public double HolidayWeight { get; set; } = 1.5;
+    /// <summary>
+    /// 时段平衡得分权重 - 对应需求6.3
+    /// </summary>
+    public double TimeSlotWeight { get; set; } = 1.0;
 
-        /// <summary>
-        /// 时段平衡得分权重 - 对应需求6.3
-        /// </summary>
-        public double TimeSlotWeight { get; set; } = 1.0;
+    /// <summary>
+    /// 是否使用优化的张量操作 - 对应需求7.2, 7.4
+    /// </summary>
+    public bool UseOptimizedTensor { get; set; } = true;
 
-        /// <summary>
-        /// 是否使用优化的张量操作 - 对应需求7.2, 7.4
-        /// </summary>
-        public bool UseOptimizedTensor { get; set; } = true;
+    /// <summary>
+    /// 是否启用分配日志记录
+    /// </summary>
+    public bool EnableAssignmentLogging { get; set; } = false;
 
-        /// <summary>
-        /// 是否启用分配日志记录
-        /// </summary>
-        public bool EnableAssignmentLogging { get; set; } = false;
+    /// <summary>
+    /// 是否记录约束违反日志
+    /// </summary>
+    public bool LogConstraintViolations { get; set; } = true;
 
-        /// <summary>
-        /// 是否记录约束违反日志
-        /// </summary>
-        public bool LogConstraintViolations { get; set; } = true;
+    /// <summary>
+    /// 是否记录未分配位置
+    /// </summary>
+    public bool LogUnassignedSlots { get; set; } = true;
 
-        /// <summary>
-        /// 是否记录未分配位置
-        /// </summary>
-        public bool LogUnassignedSlots { get; set; } = true;
+    /// <summary>
+    /// 异步操作让出控制权的间隔（处理多少个位置后让出一次）
+    /// </summary>
+    public int YieldInterval { get; set; } = 10;
 
-        /// <summary>
-        /// 异步操作让出控制权的间隔（处理多少个位置后让出一次）
-        /// </summary>
-        public int YieldInterval { get; set; } = 10;
+    /// <summary>
+    /// 最大重试次数（当出现无解时）
+    /// </summary>
+    public int MaxRetryAttempts { get; set; } = 3;
 
-        /// <summary>
-        /// 最大重试次数（当出现无解时）
-        /// </summary>
-        public int MaxRetryAttempts { get; set; } = 3;
-
-        /// <summary>
-        /// 是否启用性能监控
-        /// </summary>
-        public bool EnablePerformanceMonitoring { get; set; } = false;
-    }
+    /// <summary>
+    /// 是否启用性能监控
+    /// </summary>
+    public bool EnablePerformanceMonitoring { get; set; } = false;
 }

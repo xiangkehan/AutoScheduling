@@ -26,6 +26,9 @@
 
             <!-- 外观设置 -->
             <Border Style="{StaticResource EnhancedCardStyle}">
+                <Border.RenderTransform>
+                    <CompositeTransform/>
+                </Border.RenderTransform>
                 <StackPanel Spacing="16">
                     <TextBlock Text="外观" 
                                Style="{StaticResource SubtitleTextStyle}"

@@ -567,5 +567,4 @@ namespace AutoScheduling3.SchedulingEngine.Core
         public long TotalBytes { get; set; }
         public double CompressionRatio { get; set; }
     }
-    }
 }

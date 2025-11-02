@@ -614,8 +614,7 @@ namespace AutoScheduling3.Controls
                 menu.ShowAt(this);
             }
         }
-    }
-}
+
         // Context menu functionality
         private void ShowContextMenu(FrameworkElement element, CellModel cell)
         {

@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Xunit;
+using Xunit; // 添加此 using 指令以解决 CS0246: 未能找到类型或命名空间名“FactAttribute” 和 “Fact”
 
 namespace AutoScheduling3.Tests;
 
@@ -67,24 +67,24 @@ public class ConstraintServiceTests : IDisposable
         var personnel1 = new Personal
         {
             Name = "张三",
-            Position = "班长",
+            PositionId = "班长",
             IsAvailable = true,
             IsRetired = false,
             SkillIds = new List<int> { 1, 2 },
-            RecentShiftInterval = 5,
-            RecentHolidayShiftInterval = 10,
+            RecentShiftIntervalCount = 5,
+            RecentHolidayShiftIntervalCount = 10,
             RecentTimeSlotIntervals = new int[12] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
         };
 
         var personnel2 = new Personal
         {
             Name = "李四",
-            Position = "副班长",
+            PositionId = "副班长",
             IsAvailable = true,
             IsRetired = false,
             SkillIds = new List<int> { 2, 3 },
-            RecentShiftInterval = 3,
-            RecentHolidayShiftInterval = 7,
+            RecentShiftIntervalCount = 3,
+            RecentHolidayShiftIntervalCount = 7,
             RecentTimeSlotIntervals = new int[12] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1 }
         };
 
