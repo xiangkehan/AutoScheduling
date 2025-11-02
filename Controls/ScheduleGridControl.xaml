@@ -4,344 +4,151 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:converters="using:AutoScheduling3.Converters"
     xmlns:controls="using:AutoScheduling3.Controls"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    d:DesignHeight="600"
+    d:DesignWidth="1200">
 
     <UserControl.Resources>
-        <!-- 转换器资源 -->
-        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
-        <converters:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
-        <converters:ConflictTypeToColorConverter x:Key="ConflictTypeToColorConverter"/>
-        <converters:PeriodIndexToTimeConverter x:Key="PeriodIndexToTimeConverter"/>
-        
-        <!-- 冲突类型到文本转换器 -->
-        <converters:BoolToTextConverter x:Key="ConflictTypeToTextConverter"/>
-        <!-- 单元格样式 -->
-        <Style x:Key="CellBorderStyle" TargetType="Border">
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="MinHeight" Value="60"/>
+        <Style TargetType="Border" x:Key="CellBorderStyle">
+            <Setter Property="BorderBrush" Value="{ThemeResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="Padding" Value="4"/>
             <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="MinHeight" Value="60"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
         </Style>
 
-        <!-- 冲突单元格样式 -->
-        <Style x:Key="ConflictCellBorderStyle" TargetType="Border" BasedOn="{StaticResource CellBorderStyle}">
-            <Setter Property="BorderBrush" Value="{ThemeResource SystemFillColorCriticalBrush}"/>
-            <Setter Property="Background" Value="{ThemeResource SystemFillColorCriticalBackgroundBrush}"/>
-        </Style>
+        <Storyboard x:Key="DragEnterStoryboard">
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.05" Duration="0:0:0.2"/>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.05" Duration="0:0:0.2"/>
+        </Storyboard>
+        <Storyboard x:Key="DragLeaveStoryboard">
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.0" Duration="0:0:0.2"/>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.0" Duration="0:0:0.2"/>
+        </Storyboard>
 
-        <!-- 软约束冲突样式 -->
-        <Style x:Key="SoftConflictCellBorderStyle" TargetType="Border" BasedOn="{StaticResource CellBorderStyle}">
-            <Setter Property="BorderBrush" Value="{ThemeResource SystemFillColorCautionBrush}"/>
-            <Setter Property="Background" Value="{ThemeResource SystemFillColorCautionBackgroundBrush}"/>
-        </Style>
-
-        <!-- 空单元格样式 -->
-        <Style x:Key="EmptyCellBorderStyle" TargetType="Border" BasedOn="{StaticResource CellBorderStyle}">
-            <Setter Property="Background" Value="{ThemeResource SystemFillColorNeutralBackgroundBrush}"/>
-            <Setter Property="BorderStyle" Value="Dashed"/>
-        </Style>
-
-        <!-- 拖拽源样式 -->
-        <Style x:Key="DragSourceCellBorderStyle" TargetType="Border" BasedOn="{StaticResource CellBorderStyle}">
-            <Setter Property="BorderBrush" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="Background" Value="{ThemeResource AccentFillColorSecondaryBrush}"/>
-        </Style>
-
-        <!-- 拖拽目标样式 -->
-        <Style x:Key="DragTargetCellBorderStyle" TargetType="Border" BasedOn="{StaticResource CellBorderStyle}">
-            <Setter Property="BorderBrush" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="Background" Value="{ThemeResource AccentFillColorTertiaryBrush}"/>
-        </Style>
-
-        <!-- 单元格数据模板 -->
-        <DataTemplate x:Key="CellDataTemplate" x:DataType="controls:ScheduleGridControl.CellModel">
-            <Border x:Name="CellBorder" 
-                    Style="{StaticResource CellBorderStyle}"
-                    AllowDrop="True"
-                    CanDrag="True"
+        <DataTemplate x:Key="CellDataTemplate" x:DataType="controls:CellModel">
+            <Border Style="{StaticResource CellBorderStyle}"
                     PointerPressed="OnCellPointerPressed"
                     PointerReleased="OnCellPointerReleased"
                     PointerEntered="OnCellPointerEntered"
                     PointerExited="OnCellPointerExited"
-                    RightTapped="OnCellRightTapped">
+                    RightTapped="OnCellRightTapped"
+                    Background="{x:Bind Path=Shift, Converter={StaticResource ShiftToBrushConverter}, Mode=OneWay}">
+                <VisualStateManager.VisualStateGroups>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal" />
+                        <VisualState x:Name="PointerOver" />
+                    </VisualStateGroup>
+                    <VisualStateGroup x:Name="DragStates">
+                        <VisualState x:Name="NotDragging" />
+                        <VisualState x:Name="IsDragSource">
+                            <VisualState.Setters>
+                                <Setter Target="Opacity" Value="0.5"/>
+                            </VisualState.Setters>
+                        </VisualState>
+                        <VisualState x:Name="IsDragTarget">
+                            <Storyboard>
+                                <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="Gold" Duration="0:0:0.2"/>
+                            </Storyboard>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateManager.VisualStateGroups>
+
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- 哨位信息 -->
-                    <Grid Grid.Row="0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <TextBlock Grid.Column="0"
-                                   Text="{Binding Position.Name}" 
-                                   FontSize="10" 
-                                   FontWeight="SemiBold"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                   TextTrimming="CharacterEllipsis"/>
-                        
-                        <!-- 夜班指示器 -->
-                        <Ellipse Grid.Column="1"
-                                 Width="8" 
-                                 Height="8" 
-                                 Fill="{ThemeResource SystemFillColorSuccessBrush}"
-                                 Margin="4,0,0,0"
-                                 Visibility="{Binding IsNightShift, Converter={StaticResource BoolToVisibilityConverter}}"
-                                 ToolTipService.ToolTip="夜班"/>
-                    </Grid>
+                    <TextBlock Text="{x:Bind Shift.PersonnelName, Mode=OneWay}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource AccessibleTextStyle}"/>
 
-                    <!-- 人员信息 -->
-                    <StackPanel Grid.Row="1" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Shift.PersonnelName, FallbackValue='未分配'}" 
-                                   FontSize="12" 
-                                   FontWeight="SemiBold"
-                                   TextWrapping="Wrap"
-                                   TextTrimming="CharacterEllipsis"
-                                   MaxLines="2"
-                                   Foreground="{Binding Shift, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter='TextColor'}"/>
-                        <TextBlock Text="{x:Bind PersonnelIdText, FallbackValue='', Mode=OneWay}" 
-                                   FontSize="9" 
-                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                   Visibility="{Binding Shift, Converter={StaticResource NullToVisibilityConverter}}"/>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <TextBlock Text="{x:Bind PersonnelIdText, Mode=OneWay}"
+                                   FontSize="10"
+                                   Foreground="{ThemeResource TextSecondaryBrush}"
+                                   Margin="0,0,4,0"/>
+                        <Border Width="8" Height="8" CornerRadius="4"
+                                Background="{x:Bind ConflictBrush, Mode=OneWay}"
+                                Visibility="{x:Bind HasConflict, Mode=OneWay}"/>
                     </StackPanel>
-
-                    <!-- 时间信息 -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4">
-                        <TextBlock Text="{x:Bind DateText, Mode=OneWay}" 
-                                   FontSize="9" 
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        <TextBlock Text="{Binding PeriodDisplayText}" 
-                                   FontSize="9" 
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                    </StackPanel>
-
-                    <!-- 冲突指示器 -->
-                    <Border Grid.Row="3" 
-                            Background="{Binding ConflictBrush}"
-                            CornerRadius="2"
-                            Padding="4,2"
-                            Margin="0,2,0,0"
-                            Visibility="{Binding HasConflict, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <TextBlock Text="{Binding ConflictDisplayText}" 
-                                   FontSize="8" 
-                                   Foreground="White"
-                                   FontWeight="SemiBold"/>
-                    </Border>
-
-                    <!-- 拖拽状态覆盖层 -->
-                    <Border Grid.RowSpan="4"
-                            x:Name="DragOverlay"
-                            Background="{ThemeResource AccentFillColorTertiaryBrush}"
-                            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
-                            BorderThickness="2"
-                            CornerRadius="4"
-                            Opacity="0"
-                            IsHitTestVisible="False"/>
                 </Grid>
             </Border>
         </DataTemplate>
 
-        <!-- 表头数据模板 -->
-        <DataTemplate x:Key="HeaderDataTemplate">
-            <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="8,4"
-                    Margin="2">
-                <TextBlock Text="{Binding}" 
-                           FontWeight="SemiBold"
-                           FontSize="11"
-                           TextAlignment="Center"
-                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+        <DataTemplate x:Key="HeaderTemplate" x:DataType="x:String">
+            <Border BorderBrush="{ThemeResource CardBorderBrush}" BorderThickness="0,0,1,1" Padding="8">
+                <TextBlock Text="{x:Bind}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
             </Border>
         </DataTemplate>
     </UserControl.Resources>
 
-    <Grid x:Name="RootGrid">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <!-- 工具栏 -->
-        <Border Grid.Row="0" 
-                Background="{ThemeResource LayerFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="0,0,0,1"
-                Padding="12,8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <!-- Corner -->
+        <Border Grid.Row="0" Grid.Column="0" BorderBrush="{ThemeResource CardBorderBrush}" BorderThickness="0,0,1,1"/>
 
-                <!-- 左侧信息 -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
-                    <TextBlock Text="{Binding Schedule.Title, FallbackValue='排班表'}" 
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"/>
-                    <TextBlock Text="{x:Bind TotalCellsText, Mode=OneWay}" 
-                               FontSize="12"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               VerticalAlignment="Center"/>
-                    <TextBlock Text="{x:Bind ConflictCountText, Mode=OneWay}" 
-                               FontSize="12"
-                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                               VerticalAlignment="Center"
-                               Visibility="{Binding HasConflicts, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                </StackPanel>
-
-                <!-- 右侧控制 -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <ToggleButton x:Name="ShowConflictsToggle" 
-                                  Content="显示冲突" 
-                                  IsChecked="{x:Bind ShowConflicts, Mode=TwoWay}"/>
-                    <ToggleButton x:Name="VirtualizationToggle" 
-                                  Content="虚拟化" 
-                                  IsChecked="True"
-                                  ToolTipService.ToolTip="启用虚拟化以提升大数据量性能"/>
-                    <Button x:Name="RefreshButton" 
-                            Content="刷新" 
-                            Click="OnRefreshClick"
-                            ToolTipService.ToolTip="刷新排班数据"/>
-                    <Button x:Name="ExportButton" 
-                            Content="导出" 
-                            Click="OnExportClick"
-                            ToolTipService.ToolTip="导出排班表数据"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- 主网格区域 -->
-        <ScrollViewer Grid.Row="1" 
-                      x:Name="MainScrollViewer"
-                      HorizontalScrollMode="Auto" 
-                      VerticalScrollMode="Auto" 
-                      ZoomMode="Enabled"
-                      MinZoomFactor="0.5"
-                      MaxZoomFactor="2.0"
-                      HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto"
-                      IsTabStop="False">
-            
-            <Grid x:Name="GridContainer">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- 左上角空白 -->
-                <Border Grid.Row="0" Grid.Column="0" 
-                        Background="{ThemeResource LayerFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="0,0,1,1"
-                        MinWidth="100"
-                        MinHeight="40"/>
-
-                <!-- 时间轴表头 -->
-                <ScrollViewer Grid.Row="0" Grid.Column="1"
-                              x:Name="TimeHeaderScrollViewer"
-                              HorizontalScrollMode="Disabled"
-                              VerticalScrollMode="Disabled"
-                              ZoomMode="Disabled"
-                              HorizontalScrollBarVisibility="Hidden"
-                              VerticalScrollBarVisibility="Hidden">
-                    <ItemsRepeater x:Name="TimeHeaderRepeater"
-                                   ItemTemplate="{StaticResource HeaderDataTemplate}">
-                        <ItemsRepeater.Layout>
-                            <StackLayout Orientation="Horizontal"/>
-                        </ItemsRepeater.Layout>
-                    </ItemsRepeater>
-                </ScrollViewer>
-
-                <!-- 哨位名称列 -->
-                <ScrollViewer Grid.Row="1" Grid.Column="0"
-                              x:Name="PositionHeaderScrollViewer"
-                              HorizontalScrollMode="Disabled"
-                              VerticalScrollMode="Disabled"
-                              ZoomMode="Disabled"
-                              HorizontalScrollBarVisibility="Hidden"
-                              VerticalScrollBarVisibility="Hidden">
-                    <ItemsRepeater x:Name="PositionHeaderRepeater"
-                                   ItemTemplate="{StaticResource HeaderDataTemplate}">
-                        <ItemsRepeater.Layout>
-                            <StackLayout Orientation="Vertical"/>
-                        </ItemsRepeater.Layout>
-                    </ItemsRepeater>
-                </ScrollViewer>
-
-                <!-- 主数据网格 - 使用虚拟化 -->
-                <ScrollViewer Grid.Row="1" Grid.Column="1"
-                              x:Name="DataScrollViewer"
-                              HorizontalScrollMode="Disabled"
-                              VerticalScrollMode="Disabled"
-                              ZoomMode="Disabled"
-                              HorizontalScrollBarVisibility="Hidden"
-                              VerticalScrollBarVisibility="Hidden">
-                    <ItemsRepeater x:Name="MainGridRepeater"
-                                   ItemTemplate="{StaticResource CellDataTemplate}"
-                                   VerticalCacheLength="2.0"
-                                   HorizontalCacheLength="2.0">
-                        <ItemsRepeater.Layout>
-                            <UniformGridLayout x:Name="GridLayout"
-                                               Orientation="Horizontal" 
-                                               MinItemWidth="120" 
-                                               MinItemHeight="60"
-                                               ItemsStretch="Fill"
-                                               MinRowSpacing="2"
-                                               MinColumnSpacing="2"/>
-                        </ItemsRepeater.Layout>
-                    </ItemsRepeater>
-                </ScrollViewer>
-            </Grid>
+        <!-- Time Headers -->
+        <ScrollViewer Grid.Row="0" Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+            <ItemsRepeater x:Name="TimeHeaderRepeater" ItemTemplate="{StaticResource HeaderTemplate}">
+                <ItemsRepeater.Layout>
+                    <StackLayout Orientation="Horizontal"/>
+                </ItemsRepeater.Layout>
+            </ItemsRepeater>
         </ScrollViewer>
 
-        <!-- 加载指示器 -->
-        <ProgressRing Grid.Row="1" 
-                      x:Name="LoadingRing"
-                      x:FieldModifier="internal"
-                      IsActive="False"
-                      Width="40" 
-                      Height="40"
-                      HorizontalAlignment="Center"
-                      VerticalAlignment="Center"/>
+        <!-- Position Headers -->
+        <ScrollViewer Grid.Row="1" Grid.Column="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+            <ItemsRepeater x:Name="PositionHeaderRepeater" ItemTemplate="{StaticResource HeaderTemplate}">
+                <ItemsRepeater.Layout>
+                    <StackLayout Orientation="Vertical"/>
+                </ItemsRepeater.Layout>
+            </ItemsRepeater>
+        </ScrollViewer>
 
-        <!-- 空状态提示 -->
-        <StackPanel Grid.Row="1" 
-                    x:Name="EmptyStatePanel"
-                    Visibility="Collapsed"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Spacing="12">
-            <FontIcon Glyph="&#xE9F3;" FontSize="48" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-            <TextBlock Text="暂无排班数据" 
-                       FontSize="16" 
-                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                       HorizontalAlignment="Center"/>
-            <TextBlock Text="请先创建排班或加载现有数据" 
-                       FontSize="12" 
-                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                       HorizontalAlignment="Center"/>
+        <!-- Main Grid -->
+        <ScrollViewer Grid.Row="1" Grid.Column="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+            <ItemsRepeater x:Name="MainGridRepeater" ItemTemplate="{StaticResource CellDataTemplate}">
+                <ItemsRepeater.Layout>
+                    <UniformGridLayout x:Name="GridLayout" Orientation="Horizontal"/>
+                </ItemsRepeater.Layout>
+            </ItemsRepeater>
+        </ScrollViewer>
+
+        <!-- Status Bar -->
+        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Padding="8" Background="{ThemeResource AppBackgroundBrush}">
+            <TextBlock Text="{x:Bind TotalCellsText, Mode=OneWay}" Margin="0,0,16,0"/>
+            <TextBlock Text="{x:Bind ConflictCountText, Mode=OneWay}" Foreground="{ThemeResource ErrorBrush}"/>
+        </StackPanel>
+
+        <!-- Loading/Empty States -->
+        <ProgressRing x:Name="LoadingRing" Grid.Row="1" Grid.Column="1" IsActive="False" Width="60" Height="60"/>
+        <StackPanel x:Name="EmptyStatePanel" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
+            <TextBlock Text="没有可显示的排班数据" Style="{StaticResource SubtitleTextStyle}"/>
+            <TextBlock Text="请先生成或加载一个排班表" Style="{StaticResource AccessibleTextStyle}" HorizontalAlignment="Center"/>
         </StackPanel>
     </Grid>
 </UserControl>

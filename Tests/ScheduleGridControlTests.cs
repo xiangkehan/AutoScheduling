@@ -81,7 +81,7 @@ namespace AutoScheduling3.Tests
         [TestMethod]
         public void TestCellModelProperties()
         {
-            var cellModel = new ScheduleGridControl.CellModel
+            var cellModel = new CellModel
             {
                 Date = DateTime.Today,
                 PeriodIndex = 0,
@@ -100,7 +100,7 @@ namespace AutoScheduling3.Tests
         [TestMethod]
         public void TestConflictDetection()
         {
-            var cellModel = new ScheduleGridControl.CellModel();
+            var cellModel = new CellModel();
             
             Assert.IsFalse(cellModel.HasConflict);
             Assert.IsNull(cellModel.Conflict);

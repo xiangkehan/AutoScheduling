@@ -58,12 +58,14 @@
     </ResourceDictionary.ThemeDictionaries>
 
     <!-- 增强的卡片样式 -->
-    <Style x:Key="EnhancedCardStyle" TargetType="Border">
+    <Style x:Key="EnhancedCardStyle" TargetType="ContentControl">
         <Setter Property="Background" Value="{ThemeResource CardBackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{ThemeResource CardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="16"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
         <Setter Property="RenderTransform">
             <Setter.Value>
                 <CompositeTransform/>
@@ -71,32 +73,34 @@
         </Setter>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="Border">
-                    <Border Background="{TemplateBinding Background}"
+                <ControlTemplate TargetType="ContentControl">
+                    <Border x:Name="CardBorder"
+                            Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            Padding="{TemplateBinding Padding}">
+                            CornerRadius="{TemplateBinding CornerRadius}">
                         <Border.Shadow>
                             <ThemeShadow/>
                         </Border.Shadow>
-                        <ContentPresenter/>
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          Padding="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualState x:Name="Normal"/>
                                 <VisualState x:Name="PointerOver">
-                                    <VisualState.Setters>
-                                        <Setter Target="(UIElement.RenderTransform).(CompositeTransform.ScaleX)" Value="1.02"/>
-                                        <Setter Target="(UIElement.RenderTransform).(CompositeTransform.ScaleY)" Value="1.02"/>
-                                    </VisualState.Setters>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(CompositeTransform.ScaleX)"
+                                        <DoubleAnimation Storyboard.TargetName="CardBorder"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(CompositeTransform.ScaleX)"
                                                          To="1.02" Duration="0:0:0.2">
                                             <DoubleAnimation.EasingFunction>
                                                 <CubicEase EasingMode="EaseOut"/>
                                             </DoubleAnimation.EasingFunction>
                                         </DoubleAnimation>
-                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(CompositeTransform.ScaleY)"
+                                        <DoubleAnimation Storyboard.TargetName="CardBorder"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(CompositeTransform.ScaleY)"
                                                          To="1.02" Duration="0:0:0.2">
                                             <DoubleAnimation.EasingFunction>
                                                 <CubicEase EasingMode="EaseOut"/>
@@ -106,6 +110,9 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
+                        <Border.RenderTransform>
+                            <CompositeTransform/>
+                        </Border.RenderTransform>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -128,7 +135,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border Background="{TemplateBinding Background}"
+                    <Border x:Name="RootBorder"
+                            Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{TemplateBinding CornerRadius}"
@@ -142,24 +150,27 @@
                                 <VisualState x:Name="Normal"/>
                                 <VisualState x:Name="PointerOver">
                                     <VisualState.Setters>
-                                        <Setter Target="Background" Value="{ThemeResource AccentHoverBrush}"/>
+                                        <Setter Target="RootBorder.Background" Value="{ThemeResource AccentHoverBrush}"/>
                                     </VisualState.Setters>
                                 </VisualState>
                                 <VisualState x:Name="Pressed">
                                     <VisualState.Setters>
-                                        <Setter Target="Background" Value="{ThemeResource AccentPressedBrush}"/>
-                                        <Setter Target="(UIElement.RenderTransform).(CompositeTransform.ScaleX)" Value="0.98"/>
-                                        <Setter Target="(UIElement.RenderTransform).(CompositeTransform.ScaleY)" Value="0.98"/>
+                                        <Setter Target="RootBorder.Background" Value="{ThemeResource AccentPressedBrush}"/>
+                                        <Setter Target="RootBorder.(UIElement.RenderTransform).(CompositeTransform.ScaleX)" Value="0.98"/>
+                                        <Setter Target="RootBorder.(UIElement.RenderTransform).(CompositeTransform.ScaleY)" Value="0.98"/>
                                     </VisualState.Setters>
                                 </VisualState>
                                 <VisualState x:Name="Disabled">
                                     <VisualState.Setters>
-                                        <Setter Target="Background" Value="{ThemeResource TextDisabledBrush}"/>
-                                        <Setter Target="Opacity" Value="0.6"/>
+                                        <Setter Target="RootBorder.Background" Value="{ThemeResource TextDisabledBrush}"/>
+                                        <Setter Target="RootBorder.Opacity" Value="0.6"/>
                                     </VisualState.Setters>
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
+                        <Border.RenderTransform>
+                            <CompositeTransform/>
+                        </Border.RenderTransform>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>

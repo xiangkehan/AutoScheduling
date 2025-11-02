@@ -65,7 +65,7 @@ namespace AutoScheduling3.Controls
         public string TotalCellsText => $"总计: {_cells.Count} 个班次";
         public string ConflictCountText => $"冲突: {Schedule?.Conflicts?.Count ?? 0} 个";
 
-        // ѡõĶڹֶָںϷУ飨ⲿ)
+        // ѡõĶڹֶָןϷУ飨ⲿ)
         public List<FixedPositionRule>? ActiveFixedRules { get; set; }
         public List<ManualAssignment>? ActiveManualAssignments { get; set; }
 
@@ -77,121 +77,7 @@ namespace AutoScheduling3.Controls
         private void OnLoaded(object sender, RoutedEventArgs e) => BuildGrid();
 
         // Enhanced Cell model with virtualization and drag-drop support
-        public class CellModel : INotifyPropertyChanged
-        {
-            private ShiftDto? _shift;
-            private bool _hasConflict;
-            private ConflictDto? _conflict;
-            private bool _isDragSource;
-            private bool _isDragTarget;
-
-            public ShiftDto? Shift 
-            { 
-                get => _shift; 
-                set 
-                { 
-                    _shift = value; 
-                    OnPropertyChanged(); 
-                    OnPropertyChanged(nameof(IsEmpty));
-                    OnPropertyChanged(nameof(PersonnelIdText));
-                } 
-            }
-            
-            public DateTime Date { get; set; }
-            public PositionDto? Position { get; set; }
-            public int PeriodIndex { get; set; }
-            
-            public bool HasConflict 
-            { 
-                get => _hasConflict; 
-                set 
-                { 
-                    _hasConflict = value; 
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(ConflictBrush));
-                    OnPropertyChanged(nameof(ConflictDisplayText));
-                } 
-            }
-            
-            public ConflictDto? Conflict 
-            { 
-                get => _conflict; 
-                set 
-                { 
-                    _conflict = value; 
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(ConflictBrush));
-                    OnPropertyChanged(nameof(ConflictDisplayText));
-                } 
-            }
-
-            public bool IsDragSource 
-            { 
-                get => _isDragSource; 
-                set 
-                { 
-                    _isDragSource = value; 
-                    OnPropertyChanged(); 
-                } 
-            }
-            
-            public bool IsDragTarget 
-            { 
-                get => _isDragTarget; 
-                set 
-                { 
-                    _isDragTarget = value; 
-                    OnPropertyChanged(); 
-                } 
-            }
-
-            // Computed properties for UI binding
-            public bool IsEmpty => Shift == null;
-            public bool IsNightShift => PeriodIndex >= 22 || PeriodIndex <= 6; // 22:00-06:59 as night shift
-            public string PeriodDisplayText => $"{PeriodIndex * 2:D2}:00-{(PeriodIndex * 2 + 2) % 24:D2}:00";
-            
-            // Properties for x:Bind StringFormat replacement
-            public string DateText => $"{Date:MM-dd}";
-            public string PersonnelIdText => Shift != null ? $"ID: {Shift.PersonnelId}" : "";
-
-            public SolidColorBrush ConflictBrush
-            {
-                get
-                {
-                    if (!HasConflict || Conflict == null) return new SolidColorBrush(Colors.Transparent);
-                    
-                    return Conflict.Type switch
-                    {
-                        "hard" => new SolidColorBrush(Colors.Red),
-                        "soft" => new SolidColorBrush(Colors.Orange),
-                        "unassigned" => new SolidColorBrush(Colors.Gray),
-                        _ => new SolidColorBrush(Colors.Yellow)
-                    };
-                }
-            }
-            
-            public string ConflictDisplayText
-            {
-                get
-                {
-                    if (!HasConflict || Conflict == null) return string.Empty;
-                    
-                    return Conflict.Type switch
-                    {
-                        "hard" => "硬约束",
-                        "soft" => "软约束", 
-                        "unassigned" => "未分配",
-                        _ => "冲突"
-                    };
-                }
-            }
-
-            public event PropertyChangedEventHandler? PropertyChanged;
-            protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
-            {
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-            }
-        }
+        
 
         // Collections for virtualization
         private readonly ObservableCollection<CellModel> _cells = new();
@@ -549,7 +435,7 @@ namespace AutoScheduling3.Controls
                 await new Services.DialogService().ShowWarningAsync(warn);
                 return;
             }
-            //Ա
+            //Α
             var tmpPersonId = a.Shift.PersonnelId;
             var tmpPersonName = a.Shift.PersonnelName;
             a.Shift.PersonnelId = b.Shift.PersonnelId;
