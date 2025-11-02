@@ -14,15 +14,23 @@ public class DialogService
     /// </summary>
     public async Task ShowMessageAsync(string title, string message)
     {
-        var dialog = new ContentDialog
+        try
         {
-            Title = title,
-            Content = message,
-            CloseButtonText = "确定",
-            XamlRoot = App.MainWindow?.Content?.XamlRoot
-        };
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = message,
+                CloseButtonText = "确定",
+                XamlRoot = App.MainWindow?.Content?.XamlRoot
+            };
 
-        await dialog.ShowAsync();
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            // 如果对话框显示失败，回退到调试输出
+            System.Diagnostics.Debug.WriteLine($"Dialog failed to show: {title} - {message}. Error: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -30,21 +38,29 @@ public class DialogService
     /// </summary>
     public async Task ShowErrorAsync(string message, Exception? exception = null)
     {
-        string content = message;
-        if (exception != null)
+        try
         {
-            content += $"\n\n详细信息:\n{exception.Message}";
+            string content = message;
+            if (exception != null)
+            {
+                content += $"\n\n详细信息:\n{exception.Message}";
+            }
+
+            var dialog = new ContentDialog
+            {
+                Title = "错误",
+                Content = content,
+                CloseButtonText = "确定",
+                XamlRoot = App.MainWindow?.Content?.XamlRoot
+            };
+
+            await dialog.ShowAsync();
         }
-
-        var dialog = new ContentDialog
+        catch (Exception ex)
         {
-            Title = "错误",
-            Content = content,
-            CloseButtonText = "确定",
-            XamlRoot = App.MainWindow?.Content?.XamlRoot
-        };
-
-        await dialog.ShowAsync();
+            // 如果对话框显示失败，回退到调试输出
+            System.Diagnostics.Debug.WriteLine($"Error dialog failed to show: {message}. Dialog error: {ex.Message}");
+        }
     }
 
     /// <summary>

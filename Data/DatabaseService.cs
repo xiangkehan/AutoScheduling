@@ -179,8 +179,14 @@ CREATE TABLE IF NOT EXISTS SchedulingTemplates (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     Name TEXT NOT NULL,
     Description TEXT DEFAULT '',
+    TemplateType TEXT NOT NULL DEFAULT 'regular',
+    IsDefault INTEGER NOT NULL DEFAULT 0,
     PersonnelIds TEXT NOT NULL DEFAULT '[]',
     PositionIds TEXT NOT NULL DEFAULT '[]',
+    HolidayConfigId INTEGER,
+    UseActiveHolidayConfig INTEGER NOT NULL DEFAULT 0,
+    EnabledFixedRuleIds TEXT NOT NULL DEFAULT '[]',
+    EnabledManualAssignmentIds TEXT NOT NULL DEFAULT '[]',
     DurationDays INTEGER NOT NULL DEFAULT 1,
     StrategyConfig TEXT NOT NULL DEFAULT '{}',
     UsageCount INTEGER NOT NULL DEFAULT 0,
@@ -265,6 +271,8 @@ CREATE INDEX IF NOT EXISTS idx_shifts_day_slot ON SingleShifts(DayIndex, TimeSlo
 CREATE INDEX IF NOT EXISTS idx_templates_active ON SchedulingTemplates(IsActive);
 CREATE INDEX IF NOT EXISTS idx_templates_usage ON SchedulingTemplates(UsageCount);
 CREATE INDEX IF NOT EXISTS idx_templates_name ON SchedulingTemplates(Name);
+CREATE INDEX IF NOT EXISTS idx_templates_type ON SchedulingTemplates(TemplateType);
+CREATE INDEX IF NOT EXISTS idx_templates_default ON SchedulingTemplates(IsDefault);
 
 -- 约束表索引
 CREATE INDEX IF NOT EXISTS idx_fixed_rules_personal ON FixedPositionRules(PersonalId);

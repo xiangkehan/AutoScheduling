@@ -154,18 +154,21 @@ namespace AutoScheduling3
             {
                 System.Diagnostics.Debug.WriteLine($"Services initialization failed: {ex.Message}");
                 
-                // 如果初始化失败，仍然创建窗口但显示错误信息
+                // 如果初始化失败，仍然创建窗口
                 _window = new MainWindow();
                 MainWindow = _window;
                 MainWindowHandle = WindowNative.GetWindowHandle(_window);
                 _window.Activate();
                 
-                // 显示错误对话框
-                var dialogService = ServiceProvider.GetService<Helpers.DialogService>();
-                if (dialogService != null)
+                // 延迟显示错误对话框，等待窗口完全加载
+                _ = Task.Delay(1000).ContinueWith(async _ =>
                 {
-                    await dialogService.ShowErrorAsync($"应用程序初始化失败：{ex.Message}");
-                }
+                    var dialogService = ServiceProvider.GetService<Helpers.DialogService>();
+                    if (dialogService != null)
+                    {
+                        await dialogService.ShowErrorAsync($"应用程序初始化失败：{ex.Message}");
+                    }
+                });
             }
         }
 

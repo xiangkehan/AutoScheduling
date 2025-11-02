@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml.Controls;
 using AutoScheduling3.ViewModels.History;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml;
 
 namespace AutoScheduling3.Views.History
 {
