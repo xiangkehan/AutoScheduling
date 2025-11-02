@@ -6,8 +6,8 @@ namespace AutoScheduling3.Models
 {
     /// <summary>
     /// 哨位数据模型：表示一个哨位的基本信息，用于通过 SQLite 存储。
-    /// 包含：数据库ID、哨位名称、哨位地点、哨位介绍、哨位要求、哨位所需技能ID集合。
-    /// 需求: 1.1, 2.2
+    /// 包含：数据库ID、哨位名称、哨位地点、哨位介绍、哨位要求、哨位所需技能ID集合、可用人员ID集合。
+    /// 需求: 1.2, 1.3
     /// </summary>
     public class PositionLocation
     {
@@ -48,6 +48,11 @@ namespace AutoScheduling3.Models
         public List<int> RequiredSkillIds { get; set; } = new List<int>();
 
         /// <summary>
+        /// 可用人员ID集合（对应 Personal.Id）
+        /// </summary>
+        public List<int> AvailablePersonnelIds { get; set; } = new List<int>();
+
+        /// <summary>
         /// 是否启用
         /// </summary>
         public bool IsActive { get; set; } = true;
@@ -64,7 +69,7 @@ namespace AutoScheduling3.Models
 
         public override string ToString()
         {
-            return $"[{Id}] {Name} @ {Location} - {Description}";
+            return $"[{Id}] {Name} @ {Location} - {Description} (可用人员: {AvailablePersonnelIds.Count})";
         }
     }
 }

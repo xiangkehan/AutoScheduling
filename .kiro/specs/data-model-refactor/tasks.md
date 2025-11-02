@@ -1,17 +1,29 @@
 # 数据模型重构实施计划
 
-- [ ] 1. 更新核心数据模型
-  - [ ] 1.1 更新Personal模型类
+- [x] 1. 更新核心数据模型
+
+
+
+
+
+  - [x] 1.1 更新Personal模型类
+
+
     - 从Personal类中移除PositionId字段
     - 更新相关属性和方法
     - _需求: 1.1_
 
-  - [ ] 1.2 更新PositionLocation模型类
+  - [x] 1.2 更新PositionLocation模型类
+
+
     - 在PositionLocation类中添加AvailablePersonnelIds字段
     - 更新ToString方法以显示可用人员数量
     - _需求: 1.2, 1.3_
+- [-] 2. 更新数据访问层
+
 
 - [ ] 2. 更新数据访问层
+
   - [ ] 2.1 更新PersonalRepository
     - 移除PositionId相关的数据库操作
     - 更新CreateAsync和UpdateAsync方法
@@ -34,6 +46,7 @@
     - _需求: 2.4_
 
 - [ ] 3. 更新数据传输对象和映射器
+
   - [ ] 3.1 更新PersonnelDto
     - 移除PositionId和PositionName字段
     - 添加AvailablePositionIds和AvailablePositionNames字段
