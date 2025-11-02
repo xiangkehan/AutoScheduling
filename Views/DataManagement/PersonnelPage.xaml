@@ -106,13 +106,21 @@
                                      Text="{x:Bind ViewModel.NewPersonnel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                      PlaceholderText="请输入姓名"/>
 
-                            <!-- 职位选择 -->
-                            <ComboBox Header="职位*" 
-                                      ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
-                                      SelectedValue="{x:Bind ViewModel.NewPersonnel.PositionId, Mode=TwoWay}"
-                                      SelectedValuePath="Id"
-                                      DisplayMemberPath="Name"
-                                      PlaceholderText="请选择职位"/>
+                            <!-- 可用哨位选择 -->
+                            <StackPanel>
+                                <TextBlock Text="可用哨位" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
+                                <ListView x:Name="AvailablePositionsListView"
+                                          ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
+                                          SelectionMode="Multiple"
+                                          MaxHeight="120"
+                                          SelectionChanged="AvailablePositionsListView_SelectionChanged">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="local:PositionDto">
+                                            <TextBlock Text="{x:Bind Name}"/>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </StackPanel>
 
                             <!-- 技能选择 -->
                             <StackPanel>
@@ -153,11 +161,21 @@
                             <TextBox Header="姓名*" 
                                      Text="{x:Bind ViewModel.EditingPersonnel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                             
-                            <ComboBox Header="职位*" 
-                                      ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
-                                      SelectedValue="{x:Bind ViewModel.EditingPersonnel.PositionId, Mode=TwoWay}"
-                                      SelectedValuePath="Id"
-                                      DisplayMemberPath="Name"/>
+                            <!-- 可用哨位编辑 -->
+                            <StackPanel>
+                                <TextBlock Text="可用哨位" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
+                                <ListView x:Name="EditAvailablePositionsListView"
+                                          ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
+                                          SelectionMode="Multiple"
+                                          MaxHeight="120"
+                                          SelectionChanged="EditAvailablePositionsListView_SelectionChanged">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="local:PositionDto">
+                                            <TextBlock Text="{x:Bind Name}"/>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </StackPanel>
                             
                             <ToggleSwitch Header="是否可用" 
                                           IsOn="{x:Bind ViewModel.EditingPersonnel.IsAvailable, Mode=TwoWay}"/>
@@ -174,7 +192,23 @@
                         <!-- 详情显示 -->
                         <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
                             <TextBlock Text="{x:Bind ViewModel.SelectedItem.Name, Mode=OneWay}" Style="{StaticResource TitleTextBlockStyle}"/>
-                            <TextBlock Text="{x:Bind ViewModel.SelectedItem.PositionName, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            
+                            <!-- 可用哨位显示 -->
+                            <StackPanel>
+                                <TextBlock Text="可用哨位:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ItemsRepeater ItemsSource="{x:Bind ViewModel.SelectedItem.AvailablePositionNames, Mode=OneWay}">
+                                    <ItemsRepeater.Layout>
+                                        <StackLayout Orientation="Horizontal" Spacing="4"/>
+                                    </ItemsRepeater.Layout>
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Border Background="{ThemeResource SystemFillColorSolidNeutralBrush}" CornerRadius="4" Padding="6,3">
+                                                <TextBlock Text="{x:Bind}" FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
+                            </StackPanel>
                             
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBlock Text="状态:" FontWeight="SemiBold"/>

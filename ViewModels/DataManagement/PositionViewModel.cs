@@ -16,6 +16,7 @@ namespace AutoScheduling3.ViewModels.DataManagement;
 public partial class PositionViewModel : ListViewModelBase<PositionDto>
 {
     private readonly IPositionService _positionService;
+    private readonly IPersonnelService _personnelService;
     private readonly ISkillService _skillService;
     private readonly DialogService _dialogService;
 
@@ -55,12 +56,34 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
     /// </summary>
     public ObservableCollection<SkillDto> AvailableSkills { get; } = new();
 
+    /// <summary>
+    /// 所有人员列表（用于人员管理）
+    /// </summary>
+    public ObservableCollection<PersonnelDto> AllPersonnel { get; } = new();
+
+    /// <summary>
+    /// 当前哨位的可用人员列表
+    /// </summary>
+    public ObservableCollection<PersonnelDto> AvailablePersonnel { get; } = new();
+
+    /// <summary>
+    /// 选中的人员（用于添加/移除操作）
+    /// </summary>
+    private PersonnelDto? _selectedPersonnel;
+    public PersonnelDto? SelectedPersonnel
+    {
+        get => _selectedPersonnel;
+        set => SetProperty(ref _selectedPersonnel, value);
+    }
+
     public PositionViewModel(
         IPositionService positionService,
+        IPersonnelService personnelService,
         ISkillService skillService,
         DialogService dialogService)
     {
         _positionService = positionService ?? throw new ArgumentNullException(nameof(positionService));
+        _personnelService = personnelService ?? throw new ArgumentNullException(nameof(personnelService));
         _skillService = skillService ?? throw new ArgumentNullException(nameof(skillService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
@@ -69,6 +92,8 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
         SaveCommand = new AsyncRelayCommand(SavePositionAsync, () => IsEditing);
         CancelCommand = new RelayCommand(CancelEdit, () => IsEditing);
         DeleteCommand = new AsyncRelayCommand(DeletePositionAsync, () => SelectedItem != null);
+        AddPersonnelCommand = new AsyncRelayCommand(AddPersonnelAsync, () => SelectedItem != null && SelectedPersonnel != null);
+        RemovePersonnelCommand = new AsyncRelayCommand(RemovePersonnelAsync, () => SelectedItem != null && SelectedPersonnel != null);
     }
 
     /// <summary>
@@ -97,6 +122,16 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
     public IAsyncRelayCommand DeleteCommand { get; }
 
     /// <summary>
+    /// 添加人员命令
+    /// </summary>
+    public IAsyncRelayCommand AddPersonnelCommand { get; }
+
+    /// <summary>
+    /// 移除人员命令
+    /// </summary>
+    public IAsyncRelayCommand RemovePersonnelCommand { get; }
+
+    /// <summary>
     /// 加载数据
     /// </summary>
     public override async Task LoadDataAsync()
@@ -118,6 +153,17 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
             {
                 AvailableSkills.Add(skill);
             }
+
+            // 加载所有人员
+            var personnel = await _personnelService.GetAllAsync();
+            AllPersonnel.Clear();
+            foreach (var person in personnel)
+            {
+                AllPersonnel.Add(person);
+            }
+
+            // 更新当前选中哨位的可用人员
+            UpdateAvailablePersonnel();
         }, "正在加载哨位数据...");
     }
 
@@ -154,7 +200,8 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
                 Location = SelectedItem.Location,
                 Description = SelectedItem.Description,
                 Requirements = SelectedItem.Requirements,
-                RequiredSkillIds = new List<int>(SelectedItem.RequiredSkillIds)
+                RequiredSkillIds = new List<int>(SelectedItem.RequiredSkillIds),
+                AvailablePersonnelIds = new List<int>(SelectedItem.AvailablePersonnelIds)
             };
 
             IsEditing = true;
@@ -216,6 +263,79 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
 
             await _dialogService.ShowSuccessAsync("哨位已删除！");
         }, "正在删除...");
+    }
+
+    /// <summary>
+    /// 添加人员到当前哨位
+    /// </summary>
+    private async Task AddPersonnelAsync()
+    {
+        if (SelectedItem == null || SelectedPersonnel == null)
+            return;
+
+        await ExecuteAsync(async () =>
+        {
+            await _positionService.AddAvailablePersonnelAsync(SelectedItem.Id, SelectedPersonnel.Id);
+            
+            // 重新加载数据
+            await LoadDataAsync();
+
+            await _dialogService.ShowSuccessAsync($"已将人员 '{SelectedPersonnel.Name}' 添加到哨位 '{SelectedItem.Name}'");
+        }, "正在添加人员...");
+    }
+
+    /// <summary>
+    /// 从当前哨位移除人员
+    /// </summary>
+    private async Task RemovePersonnelAsync()
+    {
+        if (SelectedItem == null || SelectedPersonnel == null)
+            return;
+
+        var confirmed = await _dialogService.ShowConfirmAsync(
+            "确认移除",
+            $"确定要将人员 '{SelectedPersonnel.Name}' 从哨位 '{SelectedItem.Name}' 中移除吗？");
+
+        if (!confirmed)
+            return;
+
+        await ExecuteAsync(async () =>
+        {
+            await _positionService.RemoveAvailablePersonnelAsync(SelectedItem.Id, SelectedPersonnel.Id);
+            
+            // 重新加载数据
+            await LoadDataAsync();
+
+            await _dialogService.ShowSuccessAsync($"已将人员 '{SelectedPersonnel.Name}' 从哨位 '{SelectedItem.Name}' 中移除");
+        }, "正在移除人员...");
+    }
+
+    /// <summary>
+    /// 更新当前哨位的可用人员列表
+    /// </summary>
+    private void UpdateAvailablePersonnel()
+    {
+        AvailablePersonnel.Clear();
+        
+        if (SelectedItem != null)
+        {
+            foreach (var person in AllPersonnel)
+            {
+                if (SelectedItem.AvailablePersonnelIds.Contains(person.Id))
+                {
+                    AvailablePersonnel.Add(person);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 重写选中项变更处理，更新可用人员列表
+    /// </summary>
+    protected override void OnSelectedItemChanged(PositionDto? newItem)
+    {
+        base.OnSelectedItemChanged(newItem);
+        UpdateAvailablePersonnel();
     }
 
     protected override void OnError(Exception exception)

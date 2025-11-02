@@ -5,8 +5,15 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:dto="using:AutoScheduling3.DTOs"
+    xmlns:conv="using:AutoScheduling3.Converters"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    
+    <Page.Resources>
+        <conv:BoolToTextConverter x:Key="BoolToTextConverter"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <conv:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
+    </Page.Resources>
 
     <Grid Padding="24">
         <Grid.RowDefinitions>
@@ -24,51 +31,191 @@
         </StackPanel>
 
         <!-- 主内容区 -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="1" x:Name="MainContentGrid" SizeChanged="MainContentGrid_SizeChanged">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="0.5*" MinWidth="350" MaxWidth="600"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- 小屏幕时的行定义（垂直布局） -->
             <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- 搜索和操作栏 -->
-            <Grid Grid.Row="0" Margin="0,0,0,12">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+            <!-- 左侧：哨位列表 -->
+            <Grid x:Name="PositionListGrid" Grid.Column="0" Grid.Row="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                <AutoSuggestBox Grid.Column="0" 
-                                PlaceholderText="搜索哨位..."
-                                QueryIcon="Find"
-                                Text="{x:Bind ViewModel.SearchKeyword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <!-- 搜索和操作栏 -->
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <CommandBar Grid.Column="1" DefaultLabelPosition="Right">
-                    <AppBarButton Icon="Refresh" Label="刷新" Command="{x:Bind ViewModel.RefreshCommand}"/>
-                    <AppBarButton Icon="Add" Label="新建" Command="{x:Bind ViewModel.CreateCommand}"/>
-                </CommandBar>
+                    <AutoSuggestBox Grid.Column="0" 
+                                    PlaceholderText="搜索哨位..."
+                                    QueryIcon="Find"
+                                    Text="{x:Bind ViewModel.SearchKeyword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <CommandBar Grid.Column="1" DefaultLabelPosition="Right">
+                        <AppBarButton Icon="Refresh" Label="刷新" Command="{x:Bind ViewModel.RefreshCommand}"/>
+                        <AppBarButton Icon="Add" Label="新建" Command="{x:Bind ViewModel.CreateCommand}"/>
+                    </CommandBar>
+                </Grid>
+
+                <!-- 哨位列表 -->
+                <ListView Grid.Row="1"
+                          ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
+                          SelectedItem="{x:Bind ViewModel.SelectedItem, Mode=TwoWay}"
+                          SelectionMode="Single">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="dto:PositionDto">
+                            <Grid Padding="12,8">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="{x:Bind Name}" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                <TextBlock Grid.Row="1" Text="{x:Bind Location}" 
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="2" 
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}">
+                                    <Run Text="可用人员: "/>
+                                    <Run Text="{x:Bind AvailablePersonnelIds.Count}"/>
+                                </TextBlock>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
             </Grid>
 
-            <!-- 哨位列表 -->
-            <ListView Grid.Row="1"
-                      ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
-                      SelectedItem="{x:Bind ViewModel.SelectedItem, Mode=TwoWay}"
-                      SelectionMode="Single">
-                <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="dto:PositionDto">
-                        <Grid Padding="12,8">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+            <!-- 分隔线（仅在水平布局时显示） -->
+            <Border x:Name="SeparatorBorder" Grid.Column="1" Grid.Row="0" 
+                    Width="1" 
+                    Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    Margin="8,0"/>
 
-                            <TextBlock Grid.Row="0" Text="{x:Bind Name}" Style="{StaticResource BodyStrongTextBlockStyle}"/>
-                            <TextBlock Grid.Row="1" Text="{x:Bind Location}" 
-                                       Style="{StaticResource CaptionTextBlockStyle}"
+            <!-- 右侧：哨位详情和人员管理 -->
+            <ScrollViewer x:Name="DetailScrollViewer" Grid.Column="2" Grid.Row="0">
+                <StackPanel Spacing="16">
+                    <!-- 哨位详情 -->
+                    <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.SelectedItem, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}">
+                        <TextBlock Text="哨位详情" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{x:Bind ViewModel.SelectedItem.Name, Mode=OneWay}" Style="{StaticResource TitleTextBlockStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.SelectedItem.Location, Mode=OneWay}" 
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        </Grid>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+                            
+                            <TextBlock Text="{x:Bind ViewModel.SelectedItem.Description, Mode=OneWay}" 
+                                       TextWrapping="Wrap"
+                                       Visibility="{x:Bind ViewModel.SelectedItem.Description, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            
+                            <StackPanel>
+                                <TextBlock Text="所需技能:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ItemsRepeater ItemsSource="{x:Bind ViewModel.SelectedItem.RequiredSkillNames, Mode=OneWay}">
+                                    <ItemsRepeater.Layout>
+                                        <StackLayout Orientation="Horizontal" Spacing="4"/>
+                                    </ItemsRepeater.Layout>
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Border Background="{ThemeResource AccentFillColorDefaultBrush}" CornerRadius="4" Padding="6,3">
+                                                <TextBlock Text="{x:Bind}" FontSize="12" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- 操作按钮 -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="编辑" Command="{x:Bind ViewModel.EditCommand}"/>
+                            <Button Content="删除" Command="{x:Bind ViewModel.DeleteCommand}" Style="{StaticResource AccentButtonStyle}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- 人员管理 -->
+                    <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.SelectedItem, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}">
+                        <TextBlock Text="人员管理" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        
+                        <!-- 当前可用人员 -->
+                        <Expander Header="当前可用人员" IsExpanded="True">
+                            <StackPanel Spacing="8" Margin="0,12,0,0">
+                                <ListView ItemsSource="{x:Bind ViewModel.AvailablePersonnel, Mode=OneWay}"
+                                          SelectedItem="{x:Bind ViewModel.SelectedPersonnel, Mode=TwoWay}"
+                                          MaxHeight="200"
+                                          SelectionMode="Single">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="dto:PersonnelDto">
+                                            <Grid Padding="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{x:Bind Name}" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                                    <TextBlock Text="{x:Bind IsActive, Converter={StaticResource BoolToTextConverter}, ConverterParameter='在职|离职'}" 
+                                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                </StackPanel>
+                                                
+                                                <Button Grid.Column="1" 
+                                                        Content="移除" 
+                                                        Command="{x:Bind DataContext.RemovePersonnelCommand, ElementName=DetailScrollViewer}"
+                                                        Style="{StaticResource AccentButtonStyle}"
+                                                        FontSize="12"
+                                                        Padding="8,4"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                
+                                <TextBlock Text="暂无可用人员" 
+                                           Visibility="{x:Bind ViewModel.AvailablePersonnel.Count, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,20"/>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- 添加人员 -->
+                        <Expander Header="添加人员" IsExpanded="False">
+                            <StackPanel Spacing="8" Margin="0,12,0,0">
+                                <ComboBox Header="选择人员" 
+                                          ItemsSource="{x:Bind ViewModel.AllPersonnel, Mode=OneWay}"
+                                          SelectedItem="{x:Bind ViewModel.SelectedPersonnel, Mode=TwoWay}"
+                                          DisplayMemberPath="Name"
+                                          PlaceholderText="请选择要添加的人员"/>
+                                
+                                <Button Content="添加到当前哨位" 
+                                        Command="{x:Bind ViewModel.AddPersonnelCommand}"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Expander>
+                    </StackPanel>
+
+                    <!-- 空状态提示 -->
+                    <TextBlock Text="选择左侧哨位查看详情和管理人员" 
+                               Visibility="{x:Bind ViewModel.SelectedItem, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,40"/>
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
 
         <!-- 加载指示器 -->

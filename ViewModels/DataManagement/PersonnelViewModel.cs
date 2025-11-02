@@ -52,7 +52,7 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     }
 
     /// <summary>
-    /// 可选职位列表
+    /// 可选哨位列表
     /// </summary>
     public ObservableCollection<PositionDto> AvailablePositions { get; } = new();
 
@@ -167,7 +167,7 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
             EditingPersonnel = new UpdatePersonnelDto
             {
                 Name = SelectedItem.Name,
-                PositionId = SelectedItem.PositionId,
+                AvailablePositionIds = new List<int>(SelectedItem.AvailablePositionIds),
                 SkillIds = new List<int>(SelectedItem.SkillIds),
                 IsAvailable = SelectedItem.IsAvailable,
                 IsRetired = SelectedItem.IsRetired
