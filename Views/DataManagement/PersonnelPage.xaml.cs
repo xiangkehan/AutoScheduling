@@ -13,7 +13,12 @@ namespace AutoScheduling3.Views.DataManagement
         {
             this.InitializeComponent();
             ViewModel = ((App)Application.Current).ServiceProvider.GetRequiredService<PersonnelViewModel>();
-            _ = ViewModel.LoadDataAsync();
+            this.Loaded += PersonnelPage_Loaded;
+        }
+
+        private async void PersonnelPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            await ViewModel.LoadDataAsync();
         }
     }
 }

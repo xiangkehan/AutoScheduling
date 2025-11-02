@@ -16,6 +16,11 @@ public sealed partial class PositionPage : Page
     {
         this.InitializeComponent();
         ViewModel = ((App)Application.Current).ServiceProvider.GetRequiredService<PositionViewModel>();
-        _ = ViewModel.LoadDataAsync();
+        this.Loaded += PositionPage_Loaded;
+    }
+
+    private async void PositionPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        await ViewModel.LoadDataAsync();
     }
 }

@@ -25,6 +25,9 @@ public static class ServiceCollectionExtensions
     /// <returns>服务集合</returns>
     public static IServiceCollection AddRepositories(this IServiceCollection services, string databasePath)
     {
+        // 注册数据库服务
+        services.AddSingleton(sp => new DatabaseService(databasePath));
+        
         services.AddSingleton<IPersonalRepository>(sp => new PersonalRepository(databasePath));
         services.AddSingleton<IPositionRepository>(sp => new PositionLocationRepository(databasePath));
         services.AddSingleton<ISkillRepository>(sp => new SkillRepository(databasePath));

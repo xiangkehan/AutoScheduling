@@ -14,6 +14,7 @@ using AutoScheduling3.ViewModels.DataManagement;
 using AutoScheduling3.ViewModels.History;
 using AutoScheduling3.History;
 using AutoScheduling3.Extensions;
+using AutoScheduling3.Data;
 
 namespace AutoScheduling3
 {
@@ -37,9 +38,9 @@ namespace AutoScheduling3
         public static nint MainWindowHandle { get; private set; }
 
         /// <summary>
-        /// 数据库路径
+        /// 获取数据库路径
         /// </summary>
-        private const string DatabasePath = "AutoScheduling.db";
+        private static string DatabasePath => DatabaseConfiguration.GetDefaultDatabasePath();
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -83,7 +84,11 @@ namespace AutoScheduling3
         {
             try
             {
-                // 首先初始化配置服务
+                // 首先初始化数据库
+                var databaseService = ServiceProvider.GetRequiredService<DatabaseService>();
+                await databaseService.InitializeAsync();
+
+                // 然后初始化配置服务
                 var configService = ServiceProvider.GetRequiredService<IConfigurationService>();
                 await configService.InitializeAsync();
 
@@ -120,6 +125,13 @@ namespace AutoScheduling3
             catch(Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"服务初始化失败: {ex.Message}");
+                
+                // 显示错误对话框
+                var dialogService = ServiceProvider.GetService<Helpers.DialogService>();
+                if (dialogService != null)
+                {
+                    await dialogService.ShowErrorAsync($"应用程序初始化失败：{ex.Message}");
+                }
             }
         }
 
@@ -132,16 +144,29 @@ namespace AutoScheduling3
             try
             {
                 await InitializeServicesAsync();
+                
+                _window = new MainWindow();
+                MainWindow = _window;
+                MainWindowHandle = WindowNative.GetWindowHandle(_window);
+                _window.Activate();
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Services initialization failed: {ex.Message}");
+                
+                // 如果初始化失败，仍然创建窗口但显示错误信息
+                _window = new MainWindow();
+                MainWindow = _window;
+                MainWindowHandle = WindowNative.GetWindowHandle(_window);
+                _window.Activate();
+                
+                // 显示错误对话框
+                var dialogService = ServiceProvider.GetService<Helpers.DialogService>();
+                if (dialogService != null)
+                {
+                    await dialogService.ShowErrorAsync($"应用程序初始化失败：{ex.Message}");
+                }
             }
-
-            _window = new MainWindow();
-            MainWindow = _window;
-            MainWindowHandle = WindowNative.GetWindowHandle(_window);
-            _window.Activate();
         }
 
         // 在 App 类中添加 MainWindowHandle 字段

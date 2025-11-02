@@ -16,6 +16,11 @@ public sealed partial class SkillPage : Page
     {
         this.InitializeComponent();
         ViewModel = ((App)Application.Current).ServiceProvider.GetRequiredService<SkillViewModel>();
-        _ = ViewModel.LoadDataAsync();
+        this.Loaded += SkillPage_Loaded;
+    }
+
+    private async void SkillPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        await ViewModel.LoadDataAsync();
     }
 }

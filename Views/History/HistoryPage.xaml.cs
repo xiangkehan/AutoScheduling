@@ -12,7 +12,12 @@ namespace AutoScheduling3.Views.History
             this.InitializeComponent();
             ViewModel = (App.Current as App).ServiceProvider.GetRequiredService<HistoryViewModel>();
             DataContext = ViewModel;
-            _ = ViewModel.LoadDataAsync();
+            this.Loaded += HistoryPage_Loaded;
+        }
+
+        private async void HistoryPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            await ViewModel.LoadDataAsync();
         }
     }
 }
