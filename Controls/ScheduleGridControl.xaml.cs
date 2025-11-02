@@ -432,7 +432,7 @@ namespace AutoScheduling3.Controls
             // ϷУ飺 + ڹ + ͬԱһҹڼ򵥼
             if (!ValidateSwap(a, b, out var warn))
             {
-                await new Services.DialogService().ShowWarningAsync(warn);
+                await new Helpers.DialogService().ShowWarningAsync(warn);
                 return;
             }
             //Α
@@ -512,7 +512,7 @@ namespace AutoScheduling3.Controls
                     menu.Items.Add(clearItem);
                 }
                 var infoItem = new MenuFlyoutItem { Text = "" };
-                infoItem.Click += (s, args) => { new Services.DialogService().ShowMessageAsync("", cell.Shift == null ? "δ" : $"Α: {cell.Shift.PersonnelName}\nλ: {cell.Position?.Name}\nʱ: {cell.Shift.StartTime:yyyy-MM-dd HH:mm} - {cell.Shift.EndTime:HH:mm}"); };
+                infoItem.Click += (s, args) => { new Helpers.DialogService().ShowMessageAsync("", cell.Shift == null ? "δ" : $"Α: {cell.Shift.PersonnelName}\nλ: {cell.Position?.Name}\nʱ: {cell.Shift.StartTime:yyyy-MM-dd HH:mm} - {cell.Shift.EndTime:HH:mm}"); };
                 menu.Items.Add(infoItem);
                 menu.ShowAt(this);
             }
@@ -587,7 +587,7 @@ namespace AutoScheduling3.Controls
                 info += $"冲突: {cell.Conflict.Message}";
             }
             
-            await new Services.DialogService().ShowMessageAsync("单元格信息", info);
+            await new Helpers.DialogService().ShowMessageAsync("单元格信息", info);
         }
 
         private async void ShowConflictInfo(CellModel cell)
@@ -607,7 +607,7 @@ namespace AutoScheduling3.Controls
                 info += $"相关哨位ID: {cell.Conflict.PositionId}\n";
             }
             
-            await new Services.DialogService().ShowMessageAsync("冲突详情", info);
+            await new Helpers.DialogService().ShowMessageAsync("冲突详情", info);
         }
 
         private void ShowEditDialog(CellModel cell)
@@ -631,7 +631,7 @@ namespace AutoScheduling3.Controls
         private async void OnExportClick(object sender, RoutedEventArgs e)
         {
             // TODO: Implement export functionality
-            await new Services.DialogService().ShowMessageAsync("导出", "导出功能正在开发中...");
+            await new Helpers.DialogService().ShowMessageAsync("导出", "导出功能正在开发中...");
         }
 
         // Performance optimization methods

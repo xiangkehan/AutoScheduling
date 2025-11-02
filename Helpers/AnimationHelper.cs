@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using System;
 using System.Threading.Tasks;
@@ -234,6 +235,8 @@ public static class AnimationHelper
         if (_themeService?.IsAnimationEnabled != true)
             return;
 
+        EnsureCompositeTransform(button);
+
         var pressAnimation = CreateScaleAnimation(button, 1.0, 0.95, TimeSpan.FromMilliseconds(100));
         var releaseAnimation = CreateScaleAnimation(button, 0.95, 1.0, TimeSpan.FromMilliseconds(100));
 
@@ -249,8 +252,9 @@ public static class AnimationHelper
         if (_themeService?.IsAnimationEnabled != true)
             return;
 
+        EnsureCompositeTransform(element);
         var targetScale = isEntering ? 1.05 : 1.0;
-        var animation = CreateScaleAnimation(element, element.RenderTransform is Microsoft.UI.Xaml.Media.CompositeTransform ct ? ct.ScaleX : 1.0, targetScale, TimeSpan.FromMilliseconds(200));
+        var animation = CreateScaleAnimation(element, (element.RenderTransform as CompositeTransform)?.ScaleX ?? 1.0, targetScale, TimeSpan.FromMilliseconds(200));
         animation.Begin();
     }
 
@@ -274,6 +278,14 @@ public static class AnimationHelper
 
             var animation = CreateSlideInFromLeftAnimation(item, TimeSpan.FromMilliseconds(300));
             animation.Begin();
+        }
+    }
+
+    private static void EnsureCompositeTransform(FrameworkElement element)
+    {
+        if (element.RenderTransform is not CompositeTransform)
+        {
+            element.RenderTransform = new CompositeTransform();
         }
     }
 }
