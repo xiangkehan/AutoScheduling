@@ -236,6 +236,7 @@ public class SkillService : ISkillService
         usageInfo.UsedByPersonnel = allPersonnel
             .Where(p => p.SkillIds != null && p.SkillIds.Contains(skillId))
             .Select(p => new { p.Id, p.Name })
+            .Cast<object>()
             .ToList();
 
         // 检查哨位使用情况
@@ -243,6 +244,7 @@ public class SkillService : ISkillService
         usageInfo.RequiredByPositions = allPositions
             .Where(p => p.RequiredSkillIds != null && p.RequiredSkillIds.Contains(skillId))
             .Select(p => new { p.Id, p.Name })
+            .Cast<object>()
             .ToList();
 
         usageInfo.IsInUse = usageInfo.UsedByPersonnel.Any() || usageInfo.RequiredByPositions.Any();
@@ -258,6 +260,6 @@ public class SkillUsageInfo
 {
     public int SkillId { get; set; }
     public bool IsInUse { get; set; }
-    public List<dynamic> UsedByPersonnel { get; set; } = new();
-    public List<dynamic> RequiredByPositions { get; set; } = new();
+    public List<object> UsedByPersonnel { get; set; } = new();
+    public List<object> RequiredByPositions { get; set; } = new();
 }

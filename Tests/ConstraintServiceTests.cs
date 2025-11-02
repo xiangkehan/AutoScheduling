@@ -67,25 +67,23 @@ public class ConstraintServiceTests : IDisposable
         var personnel1 = new Personal
         {
             Name = "张三",
-            PositionId = "班长",
+            PositionId = 1,
             IsAvailable = true,
             IsRetired = false,
             SkillIds = new List<int> { 1, 2 },
             RecentShiftIntervalCount = 5,
-            RecentHolidayShiftIntervalCount = 10,
-            RecentTimeSlotIntervals = new int[12] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
+            RecentHolidayShiftIntervalCount = 10
         };
 
         var personnel2 = new Personal
         {
             Name = "李四",
-            PositionId = "副班长",
+            PositionId = 2,
             IsAvailable = true,
             IsRetired = false,
             SkillIds = new List<int> { 2, 3 },
             RecentShiftIntervalCount = 3,
-            RecentHolidayShiftIntervalCount = 7,
-            RecentTimeSlotIntervals = new int[12] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1 }
+            RecentHolidayShiftIntervalCount = 7
         };
 
         await _personnelRepository.CreateAsync(personnel1);

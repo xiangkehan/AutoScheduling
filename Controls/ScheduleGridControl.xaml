@@ -5,6 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:converters="using:AutoScheduling3.Converters"
+    xmlns:controls="using:AutoScheduling3.Controls"
     mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -62,7 +63,7 @@
         </Style>
 
         <!-- 单元格数据模板 -->
-        <DataTemplate x:Key="CellDataTemplate">
+        <DataTemplate x:Key="CellDataTemplate" x:DataType="controls:ScheduleGridControl.CellModel">
             <Border x:Name="CellBorder" 
                     Style="{StaticResource CellBorderStyle}"
                     AllowDrop="True"
@@ -113,7 +114,7 @@
                                    TextTrimming="CharacterEllipsis"
                                    MaxLines="2"
                                    Foreground="{Binding Shift, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter='TextColor'}"/>
-                        <TextBlock Text="{Binding Shift.PersonnelId, StringFormat='ID: {0}', FallbackValue=''}" 
+                        <TextBlock Text="{x:Bind PersonnelIdText, FallbackValue='', Mode=OneWay}" 
                                    FontSize="9" 
                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                    Visibility="{Binding Shift, Converter={StaticResource NullToVisibilityConverter}}"/>
@@ -121,7 +122,7 @@
 
                     <!-- 时间信息 -->
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4">
-                        <TextBlock Text="{Binding Date, StringFormat='{}{0:MM-dd}'}" 
+                        <TextBlock Text="{x:Bind DateText, Mode=OneWay}" 
                                    FontSize="9" 
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         <TextBlock Text="{Binding PeriodDisplayText}" 
@@ -195,11 +196,11 @@
                     <TextBlock Text="{Binding Schedule.Title, FallbackValue='排班表'}" 
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding TotalCells, StringFormat='总计: {0} 个班次'}" 
+                    <TextBlock Text="{x:Bind TotalCellsText, Mode=OneWay}" 
                                FontSize="12"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding ConflictCount, StringFormat='冲突: {0} 个'}" 
+                    <TextBlock Text="{x:Bind ConflictCountText, Mode=OneWay}" 
                                FontSize="12"
                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
                                VerticalAlignment="Center"
@@ -318,6 +319,7 @@
         <!-- 加载指示器 -->
         <ProgressRing Grid.Row="1" 
                       x:Name="LoadingRing"
+                      x:FieldModifier="internal"
                       IsActive="False"
                       Width="40" 
                       Height="40"

@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
+using CommunityToolkit.WinUI.UI.Controls;
 using System.Collections.Generic;
 
 namespace AutoScheduling3.Helpers;
@@ -58,8 +59,8 @@ public static class AccessibilityHelper
     /// </summary>
     public static void SetDescribedBy(FrameworkElement element, FrameworkElement describingElement)
     {
-        var describedByList = new List<FrameworkElement> { describingElement };
-        AutomationProperties.SetDescribedBy(element, describedByList);
+        // var describedByList = new List<FrameworkElement> { describingElement };
+        // AutomationProperties.SetDescribedBy(element, describedByList);
     }
 
     /// <summary>
@@ -67,8 +68,7 @@ public static class AccessibilityHelper
     /// </summary>
     public static void SetLabeledBy(FrameworkElement element, FrameworkElement labelElement)
     {
-        var labeledByList = new List<FrameworkElement> { labelElement };
-        AutomationProperties.SetLabeledBy(element, labeledByList);
+        AutomationProperties.SetLabeledBy(element, labelElement);
     }
 
     /// <summary>
@@ -216,12 +216,12 @@ public static class AccessibilityHelper
         if (hasError && !string.IsNullOrEmpty(errorMessage))
         {
             AutomationProperties.SetHelpText(element, errorMessage);
-            AutomationProperties.SetHasValidationError(element, true);
+            // AutomationProperties.SetHasValidationError(element, true);
         }
         else
         {
             AutomationProperties.SetHelpText(element, string.Empty);
-            AutomationProperties.SetHasValidationError(element, false);
+            // AutomationProperties.SetHasValidationError(element, false);
         }
     }
 
@@ -232,15 +232,15 @@ public static class AccessibilityHelper
     {
         SetAccessibilityProperties(progressBar, name, null, AutomationControlType.ProgressBar);
         
-        if (minimum.HasValue)
-        {
-            AutomationProperties.SetRangeMinimum(progressBar, minimum.Value);
-        }
+        // if (minimum.HasValue)
+        // {
+        //     AutomationProperties.SetRangeMinimum(progressBar, minimum.Value);
+        // }
         
-        if (maximum.HasValue)
-        {
-            AutomationProperties.SetRangeMaximum(progressBar, maximum.Value);
-        }
+        // if (maximum.HasValue)
+        // {
+        //     AutomationProperties.SetRangeMaximum(progressBar, maximum.Value);
+        // }
     }
 
     /// <summary>
@@ -249,11 +249,11 @@ public static class AccessibilityHelper
     public static void SetupToggleSwitch(ToggleSwitch toggleSwitch, string name, string? description = null)
     {
         SetAccessibilityProperties(toggleSwitch, name, description, AutomationControlType.Button);
-        AutomationProperties.SetToggleState(toggleSwitch, toggleSwitch.IsOn ? ToggleState.On : ToggleState.Off);
+        // AutomationProperties.SetToggleState(toggleSwitch, toggleSwitch.IsOn ? ToggleState.On : ToggleState.Off);
         
         toggleSwitch.Toggled += (s, e) =>
         {
-            AutomationProperties.SetToggleState(toggleSwitch, toggleSwitch.IsOn ? ToggleState.On : ToggleState.Off);
+            // AutomationProperties.SetToggleState(toggleSwitch, toggleSwitch.IsOn ? ToggleState.On : ToggleState.Off);
         };
     }
 
@@ -263,16 +263,16 @@ public static class AccessibilityHelper
     public static void SetupComboBox(ComboBox comboBox, string name, string? description = null)
     {
         SetAccessibilityProperties(comboBox, name, description, AutomationControlType.ComboBox);
-        AutomationProperties.SetIsExpandable(comboBox, true);
+        // AutomationProperties.SetIsExpandable(comboBox, true);
         
         comboBox.DropDownOpened += (s, e) =>
         {
-            AutomationProperties.SetExpandCollapseState(comboBox, ExpandCollapseState.Expanded);
+            // AutomationProperties.SetExpandCollapseState(comboBox, ExpandCollapseState.Expanded);
         };
         
         comboBox.DropDownClosed += (s, e) =>
         {
-            AutomationProperties.SetExpandCollapseState(comboBox, ExpandCollapseState.Collapsed);
+            // AutomationProperties.SetExpandCollapseState(comboBox, ExpandCollapseState.Collapsed);
         };
     }
 }

@@ -84,11 +84,11 @@ namespace AutoScheduling3.SchedulingEngine.Core
             if (LastConfirmedSchedule == null) return;
             // 找到每个人员最近的一个班次
             var lastByPerson = new Dictionary<int, SingleShift>();
-            foreach (var shift in LastConfirmedSchedule.Shifts)
+            foreach (var shift in LastConfirmedSchedule.ShiftsInternal)
             {
-                if (!lastByPerson.TryGetValue(shift.PersonalId, out var existing) || shift.StartTime > existing.StartTime)
+                if (!lastByPerson.TryGetValue(shift.PersonnelId, out var existing) || shift.StartTime > existing.StartTime)
                 {
-                    lastByPerson[shift.PersonalId] = shift;
+                    lastByPerson[shift.PersonnelId] = shift;
                 }
             }
             foreach (var kvp in lastByPerson)

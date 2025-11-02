@@ -14,10 +14,12 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using AutoScheduling3.Services;
+using Microsoft.UI.Xaml.Automation;
 
 namespace AutoScheduling3.Controls
 {
-    public sealed partial class ScheduleGridControl : UserControl
+    public sealed partial class ScheduleGridControl : UserControl, INotifyPropertyChanged
     {
         public ScheduleGridControl() 
         { 
@@ -59,7 +61,11 @@ namespace AutoScheduling3.Controls
         public int ConflictCount => Schedule?.Conflicts?.Count ?? 0;
         public bool HasConflicts => ConflictCount > 0;
 
-        // ��ѡ���������õĶ��ڹ������ֶ�ָ�����ںϷ���У�飨�����ⲿ��)
+        // Computed properties for UI binding (StringFormat replacement)
+        public string TotalCellsText => $"总计: {_cells.Count} 个班次";
+        public string ConflictCountText => $"冲突: {Schedule?.Conflicts?.Count ?? 0} 个";
+
+        // ѡõĶڹֶָںϷУ飨ⲿ)
         public List<FixedPositionRule>? ActiveFixedRules { get; set; }
         public List<ManualAssignment>? ActiveManualAssignments { get; set; }
 
@@ -87,6 +93,7 @@ namespace AutoScheduling3.Controls
                     _shift = value; 
                     OnPropertyChanged(); 
                     OnPropertyChanged(nameof(IsEmpty));
+                    OnPropertyChanged(nameof(PersonnelIdText));
                 } 
             }
             
@@ -143,6 +150,10 @@ namespace AutoScheduling3.Controls
             public bool IsNightShift => PeriodIndex >= 22 || PeriodIndex <= 6; // 22:00-06:59 as night shift
             public string PeriodDisplayText => $"{PeriodIndex * 2:D2}:00-{(PeriodIndex * 2 + 2) % 24:D2}:00";
             
+            // Properties for x:Bind StringFormat replacement
+            public string DateText => $"{Date:MM-dd}";
+            public string PersonnelIdText => Shift != null ? $"ID: {Shift.PersonnelId}" : "";
+
             public SolidColorBrush ConflictBrush
             {
                 get
@@ -260,6 +271,10 @@ namespace AutoScheduling3.Controls
             });
 
             // Update UI bindings
+            OnPropertyChanged(nameof(TotalCells));
+            OnPropertyChanged(nameof(ConflictCount));
+            OnPropertyChanged(nameof(TotalCellsText));
+            OnPropertyChanged(nameof(ConflictCountText));
             UpdateVirtualizedView();
             
             // Bind headers
@@ -441,8 +456,10 @@ namespace AutoScheduling3.Controls
                     }
                 }
             }
-            Schedule.Conflicts = conflicts; // ���� DTO ��ͻ����
+            Schedule.Conflicts = conflicts; //  DTO ͻ
             ConflictsRecomputed?.Invoke(this, conflicts);
+            OnPropertyChanged(nameof(ConflictCount));
+            OnPropertyChanged(nameof(ConflictCountText));
         }
 
         // Enhanced drag-drop event handlers
@@ -526,13 +543,13 @@ namespace AutoScheduling3.Controls
         private async Task TrySwapCellsAsync(CellModel a, CellModel b)
         {
             if (Schedule == null || a.Shift == null || b.Shift == null) return;
-            // �Ϸ���У�飺���� + ���ڹ��� + ͬ��Աһ�����ҹ�ڼ򵥼��
+            // ϷУ飺 + ڹ + ͬԱһҹڼ򵥼
             if (!ValidateSwap(a, b, out var warn))
             {
-                await new DialogService().ShowWarningAsync(warn);
+                await new Services.DialogService().ShowWarningAsync(warn);
                 return;
             }
-            //������Ա
+            //Ա
             var tmpPersonId = a.Shift.PersonnelId;
             var tmpPersonName = a.Shift.PersonnelName;
             a.Shift.PersonnelId = b.Shift.PersonnelId;
@@ -604,12 +621,12 @@ namespace AutoScheduling3.Controls
                 var menu = new MenuFlyout();
                 if (cell.Shift != null)
                 {
-                    var clearItem = new MenuFlyoutItem { Text = "������" };
+                    var clearItem = new MenuFlyoutItem { Text = "" };
                     clearItem.Click += async (s, args) => { Schedule!.Shifts.Remove(cell.Shift!); cell.Shift = null; ShiftChanged?.Invoke(this, null); await RecomputeConflictsAsync(); UpdateVirtualizedView(); };
                     menu.Items.Add(clearItem);
                 }
-                var infoItem = new MenuFlyoutItem { Text = "����" };
-                infoItem.Click += (s, args) => { new DialogService().ShowMessageAsync("�������", cell.Shift == null ? "δ����" : $"��Ա: {cell.Shift.PersonnelName}\n��λ: {cell.Position?.Name}\nʱ��: {cell.Shift.StartTime:yyyy-MM-dd HH:mm} - {cell.Shift.EndTime:HH:mm}"); };
+                var infoItem = new MenuFlyoutItem { Text = "" };
+                infoItem.Click += (s, args) => { new Services.DialogService().ShowMessageAsync("", cell.Shift == null ? "δ" : $"Α: {cell.Shift.PersonnelName}\nλ: {cell.Position?.Name}\nʱ: {cell.Shift.StartTime:yyyy-MM-dd HH:mm} - {cell.Shift.EndTime:HH:mm}"); };
                 menu.Items.Add(infoItem);
                 menu.ShowAt(this);
             }
@@ -684,7 +701,7 @@ namespace AutoScheduling3.Controls
                 info += $"冲突: {cell.Conflict.Message}";
             }
             
-            await new DialogService().ShowMessageAsync("单元格信息", info);
+            await new Services.DialogService().ShowMessageAsync("单元格信息", info);
         }
 
         private async void ShowConflictInfo(CellModel cell)
@@ -704,7 +721,7 @@ namespace AutoScheduling3.Controls
                 info += $"相关哨位ID: {cell.Conflict.PositionId}\n";
             }
             
-            await new DialogService().ShowMessageAsync("冲突详情", info);
+            await new Services.DialogService().ShowMessageAsync("冲突详情", info);
         }
 
         private void ShowEditDialog(CellModel cell)
@@ -728,7 +745,7 @@ namespace AutoScheduling3.Controls
         private async void OnExportClick(object sender, RoutedEventArgs e)
         {
             // TODO: Implement export functionality
-            await new DialogService().ShowMessageAsync("导出", "导出功能正在开发中...");
+            await new Services.DialogService().ShowMessageAsync("导出", "导出功能正在开发中...");
         }
 
         // Performance optimization methods
@@ -792,6 +809,12 @@ namespace AutoScheduling3.Controls
         public void HighlightConflicts(bool highlight)
         {
             ShowConflicts = highlight;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

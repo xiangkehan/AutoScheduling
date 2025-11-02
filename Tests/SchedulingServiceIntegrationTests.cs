@@ -77,9 +77,9 @@ namespace AutoScheduling3.Tests
             _mockHistoryMgmt.Setup(h => h.GetAllBufferSchedulesAsync())
                 .ReturnsAsync(mockBuffers);
             _mockConstraintRepo.Setup(c => c.GetActiveHolidayConfigAsync())
-                .ReturnsAsync((HolidayConfig)null);
+                .ReturnsAsync(default(Models.Constraints.HolidayConfig));
             _mockConstraintRepo.Setup(c => c.GetAllFixedPositionRulesAsync(true))
-                .ReturnsAsync(new List<FixedPositionRule>());
+                .ReturnsAsync(new List<Models.Constraints.FixedPositionRule>());
 
             // Act
             var status = await _schedulingService.GetSchedulingEngineStatusAsync();
@@ -106,7 +106,7 @@ namespace AutoScheduling3.Tests
                 EndDate = DateTime.Today.AddDays(1),
                 PersonnelIds = new List<int> { 1, 2 },
                 PositionIds = new List<int> { 1 },
-                Shifts = new List<SingleShift>()
+                Results = new List<SingleShift>()
             };
             
             var mockBuffers = new List<(Schedule Schedule, DateTime CreateTime, int BufferId)>
@@ -143,13 +143,13 @@ namespace AutoScheduling3.Tests
                 EndDate = DateTime.Today,
                 PersonnelIds = new List<int> { 1 },
                 PositionIds = new List<int> { 1 },
-                Shifts = new List<SingleShift>
+                Results = new List<SingleShift>
                 {
                     new SingleShift
                     {
                         Id = 1,
                         PositionId = 1,
-                        PersonalId = 1,
+                        PersonnelId = 1,
                         StartTime = DateTime.Today.AddHours(8),
                         EndTime = DateTime.Today.AddHours(10)
                     }
@@ -166,7 +166,7 @@ namespace AutoScheduling3.Tests
             _mockHistoryMgmt.Setup(h => h.ConfirmBufferScheduleAsync(1))
                 .Returns(Task.CompletedTask);
             _mockConstraintRepo.Setup(c => c.GetActiveHolidayConfigAsync())
-                .ReturnsAsync((HolidayConfig)null);
+                .ReturnsAsync(default(Models.Constraints.HolidayConfig));
             _mockPersonalRepo.Setup(p => p.GetPersonnelByIdsAsync(It.IsAny<IEnumerable<int>>()))
                 .ReturnsAsync(new List<Personal>
                 {
@@ -191,16 +191,16 @@ namespace AutoScheduling3.Tests
             { 
                 Id = 1, 
                 Header = "Test Schedule",
-                Shifts = new List<SingleShift>
+                Results = new List<SingleShift>
                 {
                     new SingleShift
                     {
-                        PersonalId = 1,
+                        PersonnelId = 1,
                         StartTime = DateTime.Today.AddHours(8)
                     },
                     new SingleShift
                     {
-                        PersonalId = 2,
+                        PersonnelId = 2,
                         StartTime = DateTime.Today.AddHours(10)
                     }
                 }
@@ -249,7 +249,7 @@ namespace AutoScheduling3.Tests
                     EndDate = DateTime.Today,
                     PersonnelIds = new List<int> { 1 },
                     PositionIds = new List<int> { 1 },
-                    Shifts = new List<SingleShift>()
+                    Results = new List<SingleShift>()
                 }, DateTime.UtcNow.AddMinutes(-10), 1),
                 (new Schedule 
                 { 
@@ -259,7 +259,7 @@ namespace AutoScheduling3.Tests
                     EndDate = DateTime.Today,
                     PersonnelIds = new List<int> { 1 },
                     PositionIds = new List<int> { 1 },
-                    Shifts = new List<SingleShift>()
+                    Results = new List<SingleShift>()
                 }, DateTime.UtcNow.AddMinutes(-5), 2)
             };
 
@@ -268,7 +268,7 @@ namespace AutoScheduling3.Tests
             _mockHistoryMgmt.Setup(h => h.ConfirmBufferScheduleAsync(It.IsAny<int>()))
                 .Returns(Task.CompletedTask);
             _mockConstraintRepo.Setup(c => c.GetActiveHolidayConfigAsync())
-                .ReturnsAsync((HolidayConfig)null);
+                .ReturnsAsync(default(Models.Constraints.HolidayConfig));
             _mockPersonalRepo.Setup(p => p.GetPersonnelByIdsAsync(It.IsAny<IEnumerable<int>>()))
                 .ReturnsAsync(new List<Personal>
                 {

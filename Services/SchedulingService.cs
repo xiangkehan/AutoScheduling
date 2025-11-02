@@ -151,7 +151,7 @@ public class SchedulingService : ISchedulingService
             EndDate = b.Schedule.EndDate,
             PersonnelCount = b.Schedule.PersonnelIds.Count,
             PositionCount = b.Schedule.PositionIds.Count,
-            ShiftCount = b.Schedule.Shifts.Count,
+            ShiftCount = b.Schedule.Results.Count,
             CreatedAt = b.CreateTime,
             ConfirmedAt = null
         }).ToList();
@@ -213,7 +213,7 @@ public class SchedulingService : ISchedulingService
             EndDate = h.Schedule.EndDate,
             PersonnelCount = h.Schedule.PersonnelIds.Count,
             PositionCount = h.Schedule.PositionIds.Count,
-            ShiftCount = h.Schedule.Shifts.Count,
+            ShiftCount = h.Schedule.Results.Count,
             CreatedAt = h.Schedule.CreatedAt == default ? h.ConfirmTime : h.Schedule.CreatedAt,
             ConfirmedAt = h.ConfirmTime
         }).ToList();
@@ -306,14 +306,14 @@ public class SchedulingService : ISchedulingService
             Title = schedule.Header,
             PersonnelIds = schedule.PersonnelIds.ToList(),
             PositionIds = schedule.PositionIds.ToList(),
-            Shifts = schedule.Shifts.Select(s => new ShiftDto
+            Shifts = schedule.Results.Select(s => new ShiftDto
             {
                 Id = s.Id,
                 ScheduleId = s.ScheduleId,
                 PositionId = s.PositionId,
                 PositionName = positionNames.TryGetValue(s.PositionId, out var pname) ? pname : string.Empty,
-                PersonnelId = s.PersonalId,
-                PersonnelName = personnelNames.TryGetValue(s.PersonalId, out var pername) ? pername : string.Empty,
+                PersonnelId = s.PersonnelId,
+                PersonnelName = personnelNames.TryGetValue(s.PersonnelId, out var pername) ? pername : string.Empty,
                 StartTime = s.StartTime,
                 EndTime = s.EndTime,
                 PeriodIndex = CalcPeriodIndex(s.StartTime)
@@ -332,7 +332,7 @@ public class SchedulingService : ISchedulingService
         var conflicts = new List<ConflictDto>();
         // 未分配冲突：扫描全部日期、时段、哨位组合
         int totalDays = (schedule.EndDate.Date - schedule.StartDate.Date).Days + 1;
-        var assignedTriples = schedule.Shifts
+        var assignedTriples = schedule.Results
         .GroupBy(s => (Date: s.StartTime.Date, Period: CalcPeriodIndex(s.StartTime), Pos: s.PositionId))
         .Select(g => g.Key)
         .ToHashSet();
@@ -501,7 +501,7 @@ public class SchedulingService : ISchedulingService
     private async Task<List<(DateTime Date, int Period, int PositionId)>> GetCriticalUnassignedSlotsAsync(Schedule schedule)
     {
         var unassignedSlots = new List<(DateTime Date, int Period, int PositionId)>();
-        var assignedSlots = schedule.Shifts
+        var assignedSlots = schedule.Results
             .Select(s => (Date: s.StartTime.Date, Period: CalcPeriodIndex(s.StartTime), PositionId: s.PositionId))
             .ToHashSet();
 
@@ -540,8 +540,8 @@ public class SchedulingService : ISchedulingService
     /// </summary>
     private async Task<List<(string Name, int ShiftCount)>> GetOverworkedPersonnelAsync(Schedule schedule)
     {
-        var personnelShiftCounts = schedule.Shifts
-            .GroupBy(s => s.PersonalId)
+        var personnelShiftCounts = schedule.Results
+            .GroupBy(s => s.PersonnelId)
             .ToDictionary(g => g.Key, g => g.Count());
 
         var personnel = await _personalRepo.GetPersonnelByIdsAsync(schedule.PersonnelIds);
@@ -657,7 +657,6 @@ public class SchedulingService : ISchedulingService
             TotalSchedules = histories.Count + buffers.Count,
             ConfirmedSchedules = histories.Count,
             DraftSchedules = buffers.Count,
-            LastScheduleDate = histories.Any() ? histories.Max(h => h.ConfirmTime) : DateTime.MinValue
         };
         
         // 计算人员班次统计
@@ -666,12 +665,12 @@ public class SchedulingService : ISchedulingService
         
         foreach (var (schedule, _) in histories)
         {
-            foreach (var shift in schedule.Shifts)
+            foreach (var shift in schedule.Results)
             {
                 // 人员班次计数
-                if (!personnelShiftCounts.ContainsKey(shift.PersonalId))
-                    personnelShiftCounts[shift.PersonalId] = 0;
-                personnelShiftCounts[shift.PersonalId]++;
+                if (!personnelShiftCounts.ContainsKey(shift.PersonnelId))
+                    personnelShiftCounts[shift.PersonnelId] = 0;
+                personnelShiftCounts[shift.PersonnelId]++;
                 
                 // 时段分布统计
                 var periodIndex = CalcPeriodIndex(shift.StartTime);

@@ -79,7 +79,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddHelperServices(this IServiceCollection services)
     {
         services.AddSingleton<NavigationService>();
-        services.AddSingleton<DialogService>();
+        services.AddSingleton<AutoScheduling3.Services.DialogService>();
         services.AddSingleton<IThemeService, ThemeService>();
 
         return services;
