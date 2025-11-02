@@ -1,6 +1,7 @@
 using AutoScheduling3.Data.Interfaces;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.DTOs.Mappers;
+using AutoScheduling3.Models;
 using AutoScheduling3.Services.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -198,7 +199,7 @@ public class PersonnelService : IPersonnelService
         }
 
         // 转换为DTO（需要使用PositionMapper）
-        var positionMapper = new DTOs.Mappers.PositionMapper(_skillRepository);
+        var positionMapper = new DTOs.Mappers.PositionMapper(_skillRepository, _repository);
         return await positionMapper.ToDtoListAsync(availablePositions);
     }
 

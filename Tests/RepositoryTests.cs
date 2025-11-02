@@ -27,9 +27,9 @@ namespace AutoScheduling3.Tests
                 var person = new Personal
                 {
                     Name = "测试人员",
-                    PositionId = 1, // 使用职位ID而不是职位名称
                     IsAvailable = true,
-                    IsRetired = false
+                    IsRetired = false,
+                    SkillIds = new List<int> { 1, 2 }
                 };
 
                 var id = await repo.CreateAsync(person);
@@ -40,11 +40,11 @@ namespace AutoScheduling3.Tests
                 if (retrieved == null || retrieved.Name != person.Name) return false;
 
                 // 测试更新
-                retrieved.PositionId = 2; // 更新职位ID
+                retrieved.Name = "更新后的人员"; // 更新人员名称
                 await repo.UpdateAsync(retrieved);
 
                 var updated = await repo.GetByIdAsync(id);
-                if (updated == null || updated.PositionId != 2) return false;
+                if (updated == null || updated.Name != "更新后的人员") return false;
 
                 // 测试删除
                 await repo.DeleteAsync(id);
@@ -164,7 +164,7 @@ namespace AutoScheduling3.Tests
                 var person = new Personal
                 {
                     Name = "", // 空名称应该被处理
-                    PositionId = 1 // 使用职位ID
+                    SkillIds = new List<int> { 1 }
                 };
 
                 var id = await repo.CreateAsync(person);

@@ -67,7 +67,6 @@ public class ConstraintServiceTests : IDisposable
         var personnel1 = new Personal
         {
             Name = "张三",
-            PositionId = 1,
             IsAvailable = true,
             IsRetired = false,
             SkillIds = new List<int> { 1, 2 },
@@ -78,7 +77,6 @@ public class ConstraintServiceTests : IDisposable
         var personnel2 = new Personal
         {
             Name = "李四",
-            PositionId = 2,
             IsAvailable = true,
             IsRetired = false,
             SkillIds = new List<int> { 2, 3 },

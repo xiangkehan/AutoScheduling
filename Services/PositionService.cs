@@ -319,7 +319,7 @@ public class PositionService : IPositionService
         var personnel = await _repository.GetPersonnelByIdsAsync(availablePersonnelIds);
         
         // 转换为DTO（需要使用PersonnelMapper）
-        var personnelMapper = new DTOs.Mappers.PersonnelMapper(_skillRepository);
+        var personnelMapper = new DTOs.Mappers.PersonnelMapper(_skillRepository, _repository);
         return await personnelMapper.ToDtoListAsync(personnel);
     }
 

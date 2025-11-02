@@ -317,5 +317,13 @@ FROM Personals WHERE Id IN ({idsStr})";
 
             return list;
         }
+
+        /// <summary>
+        /// 根据ID列表获取人员（别名方法，与 GetPersonnelByIdsAsync 相同）
+        /// </summary>
+        public async Task<List<Personal>> GetByIdsAsync(IEnumerable<int> ids)
+        {
+            return await GetPersonnelByIdsAsync(ids);
+        }
     }
 }

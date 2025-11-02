@@ -23,4 +23,9 @@ public interface IPersonalRepository : IRepository<Personal>
     /// 根据ID列表获取人员
     /// </summary>
     Task<List<Personal>> GetPersonnelByIdsAsync(IEnumerable<int> ids);
+
+    /// <summary>
+    /// 根据ID列表获取人员（别名方法，与 GetPersonnelByIdsAsync 相同）
+    /// </summary>
+    Task<List<Personal>> GetByIdsAsync(IEnumerable<int> ids);
 }

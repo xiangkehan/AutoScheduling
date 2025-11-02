@@ -174,7 +174,7 @@
                                                 
                                                 <Button Grid.Column="1" 
                                                         Content="移除" 
-                                                        Command="{x:Bind DataContext.RemovePersonnelCommand, ElementName=DetailScrollViewer}"
+                                                        Command="{Binding DataContext.RemovePersonnelCommand, ElementName=DetailScrollViewer}"
                                                         Style="{StaticResource AccentButtonStyle}"
                                                         FontSize="12"
                                                         Padding="8,4"/>
