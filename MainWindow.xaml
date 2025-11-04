@@ -70,16 +70,6 @@
             </NavigationViewItem>
         </NavigationView.MenuItems>
 
-        <NavigationView.PaneFooter>
-            <StackPanel>
-                <NavigationViewItem Content="设置" Tag="Settings">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE713;"/>
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-            </StackPanel>
-        </NavigationView.PaneFooter>
-
         <Frame x:Name="ContentFrame"/>
     </NavigationView>
 </Window>
