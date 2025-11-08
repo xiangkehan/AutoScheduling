@@ -1,3 +1,4 @@
+using AutoScheduling3.Data.Enums;
 using System;
 
 namespace AutoScheduling3.Data.Exceptions
