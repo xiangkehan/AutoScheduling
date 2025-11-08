@@ -493,10 +493,15 @@ CREATE TABLE IF NOT EXISTS DatabaseVersion (
 
         /// <summary>
         /// 设置数据库版本
+        /// Enhanced to accept optional transaction parameter
         /// </summary>
-        private async Task SetDatabaseVersionAsync(SqliteConnection conn, int version)
+        private async Task SetDatabaseVersionAsync(SqliteConnection conn, int version, SqliteTransaction transaction = null)
         {
             var cmd = conn.CreateCommand();
+            if (transaction != null)
+            {
+                cmd.Transaction = transaction;
+            }
             cmd.CommandText = @"
 INSERT OR REPLACE INTO DatabaseVersion (Id, Version, UpdatedAt) 
 VALUES (1, @version, @updatedAt)";
@@ -767,27 +772,89 @@ CREATE INDEX IF NOT EXISTS idx_manual_assignments_enabled ON ManualAssignments(I
 
         /// <summary>
         /// 数据库迁移
+        /// Enhanced with transactions, rollback support, and logging
+        /// Requirements: 7.1, 7.2, 7.4, 7.5
         /// </summary>
         private async Task MigrateDatabaseAsync(SqliteConnection conn, int fromVersion, int toVersion)
         {
+            // Prevent version downgrade
+            // Requirement: 7.5
+            if (toVersion < fromVersion)
+            {
+                var errorMsg = $"Database version downgrade is not allowed. Current version: {fromVersion}, Target version: {toVersion}";
+                _logger.LogError(errorMsg);
+                throw new DatabaseMigrationException(errorMsg);
+            }
+            
+            _logger.Log($"Starting database migration from version {fromVersion} to {toVersion}");
+            
             for (int version = fromVersion + 1; version <= toVersion; version++)
             {
-                await MigrateToVersionAsync(conn, version);
-                await SetDatabaseVersionAsync(conn, version);
+                // Wrap each migration in a transaction
+                // Requirements: 7.1, 7.2
+                using var transaction = conn.BeginTransaction();
+                try
+                {
+                    var migrationStartTime = DateTime.UtcNow;
+                    _logger.Log($"[{migrationStartTime:yyyy-MM-dd HH:mm:ss.fff}] Starting migration to version {version}");
+                    
+                    // Perform migration
+                    await MigrateToVersionAsync(conn, version, transaction);
+                    
+                    // Validate schema after migration
+                    // Requirement: 7.3
+                    _logger.Log($"Validating schema after migration to version {version}");
+                    var validationResult = await _schemaValidator.ValidateSchemaAsync();
+                    if (!validationResult.IsValid)
+                    {
+                        var errorMsg = $"Schema validation failed after migration to version {version}. " +
+                                     $"Missing tables: {validationResult.MissingTables.Count}, " +
+                                     $"Column mismatches: {validationResult.ColumnMismatches.Count}, " +
+                                     $"Missing indexes: {validationResult.MissingIndexes.Count}";
+                        _logger.LogError(errorMsg);
+                        throw new DatabaseMigrationException(errorMsg);
+                    }
+                    
+                    // Update version
+                    await SetDatabaseVersionAsync(conn, version, transaction);
+                    
+                    // Commit transaction
+                    await transaction.CommitAsync();
+                    
+                    var migrationDuration = DateTime.UtcNow - migrationStartTime;
+                    _logger.Log($"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff}] Successfully migrated to version {version} (Duration: {migrationDuration.TotalMilliseconds:F2}ms)");
+                }
+                catch (Exception ex)
+                {
+                    // Rollback transaction on failure
+                    // Requirement: 7.2
+                    await transaction.RollbackAsync();
+                    var errorMsg = $"Migration to version {version} failed and was rolled back: {ex.Message}";
+                    _logger.LogError(errorMsg);
+                    throw new DatabaseMigrationException(errorMsg, ex);
+                }
             }
+            
+            _logger.Log($"Database migration completed successfully. Final version: {toVersion}");
         }
 
         /// <summary>
         /// 迁移到指定版本
+        /// Enhanced to accept transaction parameter
         /// </summary>
-        private async Task MigrateToVersionAsync(SqliteConnection conn, int version)
+        private async Task MigrateToVersionAsync(SqliteConnection conn, int version, SqliteTransaction transaction = null)
         {
             switch (version)
             {
                 case 1:
                     // 初始版本，无需迁移
+                    _logger.Log("Version 1 is the initial version, no migration needed");
                     break;
                 // 未来版本的迁移逻辑在这里添加
+                // Example for future versions:
+                // case 2:
+                //     await MigrateToVersion2Async(conn, transaction);
+                //     break;
                 default:
                     throw new NotSupportedException($"Migration to version {version} is not supported.");
             }
