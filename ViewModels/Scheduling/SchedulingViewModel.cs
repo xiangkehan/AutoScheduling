@@ -8,7 +8,7 @@ using AutoScheduling3.DTOs;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.Helpers;
 using System.Collections.Generic;
-using AutoScheduling3.Models.Constraints; // ÐÂÔöÔ¼ÊøÄ£ÐÍÒýÓÃ
+using AutoScheduling3.Models.Constraints; // ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 using CommunityToolkit.Mvvm.Input.Internals;
 
 namespace AutoScheduling3.ViewModels.Scheduling
@@ -18,10 +18,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private readonly ISchedulingService _schedulingService;
         private readonly IPersonnelService _personnelService;
         private readonly IPositionService _positionService;
-        private readonly ITemplateService _templateService; // ÐÂÔöÄ£°å·þÎñ
+        private readonly ITemplateService _templateService; // ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½
         private readonly DialogService _dialogService;
-        private readonly NavigationService _navigation_service; // ±£³ÖÔ­µ¼º½·þÎñ×Ö¶ÎÃû
-        private Microsoft.UI.Xaml.Controls.ContentDialog? _progressDialog; //½ø¶È¶Ô»°¿òÒýÓÃ
+        private readonly NavigationService _navigation_service; // ï¿½ï¿½ï¿½ï¿½Ô­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½
+        private Microsoft.UI.Xaml.Controls.ContentDialog? _progressDialog; //ï¿½ï¿½ï¿½È¶Ô»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
         [ObservableProperty]
         private int _currentStep = 1;
@@ -51,7 +51,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         [ObservableProperty] private bool _useActiveHolidayConfig = true;
         [ObservableProperty] private int? _selectedHolidayConfigId;
 
-        //Ô¼ÊøÊý¾ÝÔ´£¨Ê¹ÓÃÊôÐÔÒÔ±ã UI°ó¶¨)
+        //Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô±ï¿½ UIï¿½ï¿½)
         [ObservableProperty] private ObservableCollection<HolidayConfig> _holidayConfigs = new();
         [ObservableProperty] private ObservableCollection<FixedPositionRule> _fixedPositionRules = new();
         [ObservableProperty] private ObservableCollection<ManualAssignment> _manualAssignments = new();
@@ -64,16 +64,16 @@ namespace AutoScheduling3.ViewModels.Scheduling
         [ObservableProperty]
         private bool _isLoadingInitial;
         [ObservableProperty]
-        private bool _isLoadingConstraints; // Ê¹ÓÃÊôÐÔ¹© UI ÏÔÊ¾¼ÓÔØ×´Ì¬
+        private bool _isLoadingConstraints; // Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½Ô¹ï¿½ UI ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½×´Ì¬
 
-        // Ä£°åÏà¹Ø£¨Ê¹ÓÃÊôÐÔ¶ø·Ç×Ö¶Î£¬±ãÓÚ°ó¶¨ÓëÂß¼­Í³Ò»£©
+        // Ä£ï¿½ï¿½ï¿½ï¿½Ø£ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ö¶Î£ï¿½ï¿½ï¿½ï¿½Ú°ï¿½ï¿½ï¿½ï¿½ß¼ï¿½Í³Ò»ï¿½ï¿½
         [ObservableProperty] private int? _loadedTemplateId;
         [ObservableProperty] private bool _templateApplied;
 
-        // µÚ5²½»ã×ÜÕ¹Ê¾¼¯ºÏ
+        // ï¿½ï¿½5ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¹Ê¾ï¿½ï¿½ï¿½ï¿½
         [ObservableProperty] private ObservableCollection<SummarySection> _summarySections = new();
 
-        // ÃüÁî
+        // ï¿½ï¿½ï¿½ï¿½
         public IAsyncRelayCommand LoadDataCommand { get; }
         public IRelayCommand NextStepCommand { get; }
         public IRelayCommand PreviousStepCommand { get; }
@@ -123,7 +123,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             if (CurrentStep < 5 && CanGoNext())
             {
-                // Èç¹ûÄ£°åÒÑÓ¦ÓÃ²¢´¦ÓÚµÚ1²½£¬Ö±½ÓÌøµ½µÚ5²½
+                // ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Ã²ï¿½ï¿½ï¿½ï¿½Úµï¿½1ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½5ï¿½ï¿½
                 if (TemplateApplied && CurrentStep == 1)
                 {
                     CurrentStep = 5;
@@ -149,7 +149,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             if (CurrentStep > 1)
             {
-                // Èç¹ûÄ£°åÒÑÓ¦ÓÃ£¬×èÖ¹»Øµ½ÈËÔ±/ÉÚÎ»/Ô¼Êø²½Öè£¬Ö»ÄÜ»Øµ½µÚ1²½
+                // ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Ã£ï¿½ï¿½ï¿½Ö¹ï¿½Øµï¿½ï¿½ï¿½Ô±/ï¿½ï¿½Î»/Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½è£¬Ö»ï¿½Ü»Øµï¿½ï¿½ï¿½1ï¿½ï¿½
                 if (TemplateApplied && CurrentStep > 1 && CurrentStep <= 5)
                 {
                     CurrentStep = 1;
@@ -181,22 +181,22 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
         private bool ValidateStep1(out string error)
         {
-            if (string.IsNullOrWhiteSpace(ScheduleTitle)) { error = "ÅÅ°àÃû³Æ²»ÄÜÎª¿Õ"; return false; }
-            if (ScheduleTitle.Length > 100) { error = "ÅÅ°àÃû³Æ³¤¶È²»ÄÜ³¬¹ý100×Ö·û"; return false; }
-            if (StartDate.Date < DateTimeOffset.Now.Date) { error = "¿ªÊ¼ÈÕÆÚ²»ÄÜÔçÓÚ½ñÌì"; return false; }
-            if (EndDate.Date < StartDate.Date) { error = "½áÊøÈÕÆÚ²»ÄÜÔçÓÚ¿ªÊ¼ÈÕÆÚ"; return false; }
-            if ((EndDate.Date - StartDate.Date).TotalDays + 1 > 365) { error = "ÅÅ°àÖÜÆÚ²»ÄÜ³¬¹ý365Ìì"; return false; }
+            if (string.IsNullOrWhiteSpace(ScheduleTitle)) { error = "ï¿½Å°ï¿½ï¿½ï¿½ï¿½Æ²ï¿½ï¿½ï¿½Îªï¿½ï¿½"; return false; }
+            if (ScheduleTitle.Length > 100) { error = "ï¿½Å°ï¿½ï¿½ï¿½ï¿½Æ³ï¿½ï¿½È²ï¿½ï¿½Ü³ï¿½ï¿½ï¿½100ï¿½Ö·ï¿½"; return false; }
+            if (StartDate.Date < DateTimeOffset.Now.Date) { error = "ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½"; return false; }
+            if (EndDate.Date < StartDate.Date) { error = "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¿ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½"; return false; }
+            if ((EndDate.Date - StartDate.Date).TotalDays + 1 > 365) { error = "ï¿½Å°ï¿½ï¿½ï¿½ï¿½Ú²ï¿½ï¿½Ü³ï¿½ï¿½ï¿½365ï¿½ï¿½"; return false; }
             error = string.Empty; return true;
         }
         private bool ValidateStep2(out string error)
         {
-            if (SelectedPersonnels == null || SelectedPersonnels.Count == 0) { error = "ÇëÖÁÉÙÑ¡ÔñÒ»ÃûÈËÔ±"; return false; }
-            if (SelectedPersonnels.Any(p => !p.IsAvailable || p.IsRetired)) { error = "°üº¬²»¿ÉÓÃ»òÍËÒÛÈËÔ±£¬ÇëÒÆ³ý"; return false; }
+            if (SelectedPersonnels == null || SelectedPersonnels.Count == 0) { error = "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ô±"; return false; }
+            if (SelectedPersonnels.Any(p => !p.IsAvailable || p.IsRetired)) { error = "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½ï¿½ï¿½Æ³ï¿½"; return false; }
             error = string.Empty; return true;
         }
         private bool ValidateStep3(out string error)
         {
-            if (SelectedPositions == null || SelectedPositions.Count == 0) { error = "ÇëÖÁÉÙÑ¡ÔñÒ»¸öÉÚÎ»"; return false; }
+            if (SelectedPositions == null || SelectedPositions.Count == 0) { error = "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Î»"; return false; }
             error = string.Empty; return true;
         }
 
@@ -211,13 +211,13 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 await Task.WhenAll(personnelTask, positionTask);
                 AvailablePersonnels = new ObservableCollection<PersonnelDto>(personnelTask.Result);
                 AvailablePositions = new ObservableCollection<PositionDto>(positionTask.Result);
-                // Ä¬ÈÏ±êÌâ
+                // Ä¬ï¿½Ï±ï¿½ï¿½ï¿½
                 if (string.IsNullOrWhiteSpace(ScheduleTitle))
-                    ScheduleTitle = $"ÅÅ°à±í_{DateTime.Now:yyyyMMdd}";
+                    ScheduleTitle = $"ï¿½Å°ï¿½ï¿½_{DateTime.Now:yyyyMMdd}";
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("¼ÓÔØÈËÔ±/ÉÚÎ»Ê§°Ü", ex);
+                await _dialogService.ShowErrorAsync("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô±/ï¿½ï¿½Î»Ê§ï¿½ï¿½", ex);
             }
             finally
             {
@@ -227,7 +227,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
         private async Task LoadConstraintsAsync()
         {
-            // Ê¹ÓÃÊôÐÔ¶ø·Ç×Ö¶Î£¬È·±£ UI°ó¶¨¸üÐÂ
+            // Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ö¶Î£ï¿½È·ï¿½ï¿½ UIï¿½ó¶¨¸ï¿½ï¿½ï¿½
             if (IsLoadingConstraints) return;
             IsLoadingConstraints = true;
             try
@@ -248,8 +248,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
             catch (Exception ex)
             {
-                // ÐÞÕý×Ö¶ÎÃû£º_dialogService
-                await _dialogService.ShowErrorAsync("¼ÓÔØÔ¼ÊøÅäÖÃÊ§°Ü", ex);
+                // ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½_dialogService
+                await _dialogService.ShowErrorAsync("ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½", ex);
             }
             finally
             {
@@ -266,21 +266,55 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 else if (!ValidateStep3(out var e3)) await _dialogService.ShowWarningAsync(e3);
                 return;
             }
+            
             var request = BuildSchedulingRequest();
-            // ÏÔÊ¾½ø¶È¶Ô»°¿ò
-            _progressDialog = _dialogService.ShowLoadingDialog("ÕýÔÚÉú³ÉÅÅ°à£¬ÇëÉÔºò...");
+            
+            // æ˜¾ç¤ºè¿›åº¦å¯¹è¯æ¡†
+            _progressDialog = _dialogService.ShowLoadingDialog("æ­£åœ¨ç”ŸæˆæŽ’ç­ï¼Œè¯·ç¨å€™...");
             IsExecuting = true;
             RefreshCommandStates();
+            
             try
             {
+                System.Diagnostics.Debug.WriteLine($"å¼€å§‹æ‰§è¡ŒæŽ’ç­: {request.Title}");
+                System.Diagnostics.Debug.WriteLine($"äººå‘˜æ•°: {request.PersonnelIds.Count}, å“¨ä½æ•°: {request.PositionIds.Count}");
+                
                 var schedule = await _schedulingService.ExecuteSchedulingAsync(request);
+                
+                System.Diagnostics.Debug.WriteLine($"æŽ’ç­æ‰§è¡ŒæˆåŠŸï¼Œç”Ÿæˆ {schedule.Shifts.Count} ä¸ªç­æ¬¡");
+                
                 ResultSchedule = schedule;
-                await _dialogService.ShowSuccessAsync("ÅÅ°àÈÎÎñ³É¹¦");
-                try { _navigation_service.NavigateTo("ScheduleResult", schedule.Id); } catch { }
+                await _dialogService.ShowSuccessAsync("æŽ’ç­ç”ŸæˆæˆåŠŸ");
+                
+                try 
+                { 
+                    _navigation_service.NavigateTo("ScheduleResult", schedule.Id); 
+                } 
+                catch (Exception navEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"å¯¼èˆªå¤±è´¥: {navEx.Message}");
+                }
+            }
+            catch (ArgumentException argEx)
+            {
+                // ä¸šåŠ¡è§„åˆ™éªŒè¯å¤±è´¥
+                System.Diagnostics.Debug.WriteLine($"ä¸šåŠ¡è§„åˆ™éªŒè¯å¤±è´¥: {argEx.Message}");
+                await _dialogService.ShowErrorAsync($"æŽ’ç­å‚æ•°éªŒè¯å¤±è´¥ï¼š{argEx.Message}");
+            }
+            catch (InvalidOperationException invEx)
+            {
+                // æ“ä½œæ— æ•ˆï¼ˆå¦‚æ•°æ®ä¸å­˜åœ¨ï¼‰
+                System.Diagnostics.Debug.WriteLine($"æ“ä½œæ— æ•ˆ: {invEx.Message}");
+                await _dialogService.ShowErrorAsync($"æŽ’ç­æ“ä½œå¤±è´¥ï¼š{invEx.Message}");
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("Ö´ÐÐÅÅ°àÊ§°Ü", ex);
+                // å…¶ä»–æœªçŸ¥å¼‚å¸¸
+                System.Diagnostics.Debug.WriteLine($"æŽ’ç­æ‰§è¡Œå¼‚å¸¸: {ex.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"å¼‚å¸¸æ¶ˆæ¯: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"å †æ ˆè·Ÿè¸ª: {ex.StackTrace}");
+                
+                await _dialogService.ShowErrorAsync($"æ‰§è¡ŒæŽ’ç­å¤±è´¥ï¼š{ex.Message}\n\nè¯¦ç»†ä¿¡æ¯ï¼š{ex.GetType().Name}");
             }
             finally
             {
@@ -334,7 +368,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 var template = await _templateService.GetByIdAsync(templateId);
                 if (template == null)
                 {
-                    await _dialogService.ShowWarningAsync("Ä£°å²»´æÔÚ");
+                    await _dialogService.ShowWarningAsync("æ¨¡æ¿ä¸å­˜åœ¨");
                     return;
                 }
                 LoadedTemplateId = template.Id;
@@ -358,11 +392,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 TemplateApplied = true;
                 CurrentStep = 1; // Stay on step 1
                 RefreshCommandStates();
-                await _dialogService.ShowSuccessAsync("Ä£°åÒÑ¼ÓÔØ£¬ÇëÑ¡ÔñÈÕÆÚ·¶Î§ºóÖ±½ÓÖ´ÐÐÅÅ°à");
+                await _dialogService.ShowSuccessAsync("Ä£ï¿½ï¿½ï¿½Ñ¼ï¿½ï¿½Ø£ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½ï¿½Ú·ï¿½Î§ï¿½ï¿½Ö±ï¿½ï¿½Ö´ï¿½ï¿½ï¿½Å°ï¿½");
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("¼ÓÔØÄ£°åÊ§°Ü", ex);
+                await _dialogService.ShowErrorAsync("ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½Ê§ï¿½ï¿½", ex);
             }
             finally
             {
@@ -387,35 +421,35 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private bool CanSaveTemplate() => SelectedPersonnels.Count > 0 && SelectedPositions.Count > 0;
         private async Task SaveAsTemplateAsync()
         {
-            if (!CanSaveTemplate()) { await _dialogService.ShowWarningAsync("µ±Ç°ÅäÖÃ²»ÍêÕû£¬ÎÞ·¨±£´æÎªÄ£°å"); return; }
-            // ¹¹½¨×Ô¶¨ÒåÊäÈë¶Ô»°¿ò (Ãû³Æ¡¢ÀàÐÍ¡¢ÃèÊö¡¢Ä¬ÈÏ¿ª¹Ø)
-            var nameBox = new Microsoft.UI.Xaml.Controls.TextBox { PlaceholderText = "Ä£°åÃû³Æ", Text = $"Ä£°å_{DateTime.Now:yyyyMMdd}" };
+            if (!CanSaveTemplate()) { await _dialogService.ShowWarningAsync("ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½ï¿½ï¿½ï¿½ï¿½ÎªÄ£ï¿½ï¿½"); return; }
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô»ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½Æ¡ï¿½ï¿½ï¿½ï¿½Í¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½Ï¿ï¿½ï¿½ï¿½)
+            var nameBox = new Microsoft.UI.Xaml.Controls.TextBox { PlaceholderText = "Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½", Text = $"Ä£ï¿½ï¿½_{DateTime.Now:yyyyMMdd}" };
             var typeBox = new Microsoft.UI.Xaml.Controls.ComboBox { ItemsSource = new string[] { "regular", "holiday", "special" }, SelectedIndex = 0, MinWidth = 160 };
-            var descBox = new Microsoft.UI.Xaml.Controls.TextBox { AcceptsReturn = true, Height = 80, PlaceholderText = "ÃèÊö(¿ÉÑ¡)" };
-            var defaultSwitch = new Microsoft.UI.Xaml.Controls.ToggleSwitch { Header = "ÉèÎªÄ¬ÈÏ", IsOn = false };
+            var descBox = new Microsoft.UI.Xaml.Controls.TextBox { AcceptsReturn = true, Height = 80, PlaceholderText = "ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½Ñ¡)" };
+            var defaultSwitch = new Microsoft.UI.Xaml.Controls.ToggleSwitch { Header = "ï¿½ï¿½ÎªÄ¬ï¿½ï¿½", IsOn = false };
             var panel = new Microsoft.UI.Xaml.Controls.StackPanel { Spacing = 8 };
-            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "Ãû³Æ:" });
+            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "ï¿½ï¿½ï¿½ï¿½:" });
             panel.Children.Add(nameBox);
-            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "ÀàÐÍ:" });
+            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "ï¿½ï¿½ï¿½ï¿½:" });
             panel.Children.Add(typeBox);
-            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "ÃèÊö:" });
+            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "ï¿½ï¿½ï¿½ï¿½:" });
             panel.Children.Add(descBox);
             panel.Children.Add(defaultSwitch);
             var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
             {
-                Title = "±£´æÎªÄ£°å",
+                Title = "ï¿½ï¿½ï¿½ï¿½ÎªÄ£ï¿½ï¿½",
                 Content = panel,
-                PrimaryButtonText = "±£´æ",
-                SecondaryButtonText = "È¡Ïû",
+                PrimaryButtonText = "ï¿½ï¿½ï¿½ï¿½",
+                SecondaryButtonText = "È¡ï¿½ï¿½",
                 DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
                 XamlRoot = App.MainWindow?.Content?.XamlRoot
             };
             var result = await dialog.ShowAsync();
             if (result != Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary) return;
             var name = nameBox.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(name)) { await _dialogService.ShowWarningAsync("Ãû³Æ²»ÄÜÎª¿Õ"); return; }
+            if (string.IsNullOrWhiteSpace(name)) { await _dialogService.ShowWarningAsync("ï¿½ï¿½ï¿½Æ²ï¿½ï¿½ï¿½Îªï¿½ï¿½"); return; }
             var type = typeBox.SelectedItem?.ToString() ?? "regular";
-            if (name.Length > 100) { await _dialogService.ShowWarningAsync("Ãû³Æ²»ÄÜ³¬¹ý100×Ö·û"); return; }
+            if (name.Length > 100) { await _dialogService.ShowWarningAsync("ï¿½ï¿½ï¿½Æ²ï¿½ï¿½Ü³ï¿½ï¿½ï¿½100ï¿½Ö·ï¿½"); return; }
             var createDto = new CreateTemplateDto
             {
                 Name = name,
@@ -432,53 +466,53 @@ namespace AutoScheduling3.ViewModels.Scheduling
             try
             {
                 var tpl = await _templateService.CreateAsync(createDto);
-                await _dialogService.ShowSuccessAsync($"Ä£°å '{tpl.Name}' ÒÑ±£´æ");
+                await _dialogService.ShowSuccessAsync($"Ä£ï¿½ï¿½ '{tpl.Name}' ï¿½Ñ±ï¿½ï¿½ï¿½");
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("±£´æÄ£°åÊ§°Ü", ex);
+                await _dialogService.ShowErrorAsync("ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½Ê§ï¿½ï¿½", ex);
             }
         }
 
-        // ¹¹½¨µÚ5²½»ã×Ü
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½5ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         private void BuildSummarySections()
         {
             var sections = new List<SummarySection>();
-            // »ù±¾ÐÅÏ¢
-            var basic = new SummarySection { Header = "»ù´¡ÐÅÏ¢" };
-            basic.Lines.Add($"ÅÅ°àÃû³Æ: {ScheduleTitle}");
-            basic.Lines.Add($"ÈÕÆÚ·¶Î§: {StartDate:yyyy-MM-dd} ÖÁ {EndDate:yyyy-MM-dd} (ºÏ¼Æ {(EndDate.Date - StartDate.Date).TotalDays + 1} Ìì) ");
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
+            var basic = new SummarySection { Header = "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢" };
+            basic.Lines.Add($"ï¿½Å°ï¿½ï¿½ï¿½ï¿½ï¿½: {ScheduleTitle}");
+            basic.Lines.Add($"ï¿½ï¿½ï¿½Ú·ï¿½Î§: {StartDate:yyyy-MM-dd} ï¿½ï¿½ {EndDate:yyyy-MM-dd} (ï¿½Ï¼ï¿½ {(EndDate.Date - StartDate.Date).TotalDays + 1} ï¿½ï¿½) ");
             sections.Add(basic);
-            // ÈËÔ±
-            var per = new SummarySection { Header = $"²ÎÓëÈËÔ± ({SelectedPersonnels.Count})" };
-            foreach (var p in SelectedPersonnels.Take(20)) // ±ÜÃâ¹ý³¤
+            // ï¿½ï¿½Ô±
+            var per = new SummarySection { Header = $"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô± ({SelectedPersonnels.Count})" };
+            foreach (var p in SelectedPersonnels.Take(20)) // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 per.Lines.Add($"{p.Name} (ID:{p.Id})");
-            if (SelectedPersonnels.Count > 20) per.Lines.Add($"... ¹² {SelectedPersonnels.Count} ÈË");
+            if (SelectedPersonnels.Count > 20) per.Lines.Add($"... ï¿½ï¿½ {SelectedPersonnels.Count} ï¿½ï¿½");
             sections.Add(per);
-            // ÉÚÎ»
-            var pos = new SummarySection { Header = $"²ÎÓëÉÚÎ» ({SelectedPositions.Count})" };
+            // ï¿½ï¿½Î»
+            var pos = new SummarySection { Header = $"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î» ({SelectedPositions.Count})" };
             foreach (var p in SelectedPositions.Take(20))
                 pos.Lines.Add($"{p.Name} (ID:{p.Id})");
-            if (SelectedPositions.Count > 20) pos.Lines.Add($"... ¹² {SelectedPositions.Count} ¸öÉÚÎ»");
+            if (SelectedPositions.Count > 20) pos.Lines.Add($"... ï¿½ï¿½ {SelectedPositions.Count} ï¿½ï¿½ï¿½ï¿½Î»");
             sections.Add(pos);
-            //Ô¼Êø
-            var cons = new SummarySection { Header = "Ô¼ÊøÅäÖÃ" };
-            cons.Lines.Add(UseActiveHolidayConfig ? "ÐÝÏ¢ÈÕÅäÖÃ: Ê¹ÓÃµ±Ç°»î¶¯ÅäÖÃ" : $"ÐÝÏ¢ÈÕÅäÖÃ: ×Ô¶¨ÒåÅäÖÃID={SelectedHolidayConfigId}");
+            //Ô¼ï¿½ï¿½
+            var cons = new SummarySection { Header = "Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½" };
+            cons.Lines.Add(UseActiveHolidayConfig ? "ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: Ê¹ï¿½Ãµï¿½Ç°ï¿½î¶¯ï¿½ï¿½ï¿½ï¿½" : $"ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ID={SelectedHolidayConfigId}");
             var enabledRulesCount = FixedPositionRules.Count(r => r.IsEnabled);
             var enabledAssignmentsCount = ManualAssignments.Count(a => a.IsEnabled);
-            cons.Lines.Add($"ÆôÓÃ¶¨¸Ú¹æÔò: {enabledRulesCount} Ìõ");
-            cons.Lines.Add($"ÆôÓÃÊÖ¶¯Ö¸¶¨: {enabledAssignmentsCount} Ìõ");
+            cons.Lines.Add($"ï¿½ï¿½ï¿½Ã¶ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½: {enabledRulesCount} ï¿½ï¿½");
+            cons.Lines.Add($"ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½Ö¸ï¿½ï¿½: {enabledAssignmentsCount} ï¿½ï¿½");
             sections.Add(cons);
-            // Ä£°åÐÅÏ¢
+            // Ä£ï¿½ï¿½ï¿½ï¿½Ï¢
             if (TemplateApplied && LoadedTemplateId.HasValue)
             {
-                sections.Add(new SummarySection { Header = "Ä£°åÀ´Ô´", Lines = { $"À´Ô´Ä£°åID: {LoadedTemplateId}" } });
+                sections.Add(new SummarySection { Header = "Ä£ï¿½ï¿½ï¿½ï¿½Ô´", Lines = { $"ï¿½ï¿½Ô´Ä£ï¿½ï¿½ID: {LoadedTemplateId}" } });
             }
-            // ÔÚ BuildSummarySections ÖÐÉèÖÃ
+            // ï¿½ï¿½ BuildSummarySections ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             SummarySections = new ObservableCollection<SummarySection>(sections);
         }
 
-        // ÊôÐÔ±ä¸ü»Øµ÷
+        // ï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½Øµï¿½
         partial void OnCurrentStepChanged(int value)
         {
             RefreshCommandStates();

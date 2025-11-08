@@ -57,87 +57,149 @@ public class SchedulingService : ISchedulingService
 
     public async Task<ScheduleDto> ExecuteSchedulingAsync(SchedulingRequestDto request, CancellationToken cancellationToken = default)
     {
-        if (request == null) throw new ArgumentNullException(nameof(request));
-        ValidateRequest(request);
+        System.Diagnostics.Debug.WriteLine("=== 开始执行排班 ===");
         
-        // 业务规则验证
-        await ValidateSchedulingRequestBusinessLogicAsync(request);
+        if (request == null) 
+        {
+            System.Diagnostics.Debug.WriteLine("错误: request 为 null");
+            throw new ArgumentNullException(nameof(request));
+        }
         
-        cancellationToken.ThrowIfCancellationRequested();
+        System.Diagnostics.Debug.WriteLine($"排班标题: {request.Title}");
+        System.Diagnostics.Debug.WriteLine($"日期范围: {request.StartDate:yyyy-MM-dd} 到 {request.EndDate:yyyy-MM-dd}");
+        System.Diagnostics.Debug.WriteLine($"人员数量: {request.PersonnelIds?.Count ?? 0}");
+        System.Diagnostics.Debug.WriteLine($"哨位数量: {request.PositionIds?.Count ?? 0}");
+        
+        Task<List<Personal>> personalsTask;
+        Task<List<PositionLocation>> positionsTask;
+        Task<List<Skill>> skillsTask;
 
-        // 并行加载基础数据
-        var personalsTask = (_personalRepo as PersonalRepository)?.GetByIdsAsync(request.PersonnelIds) ?? _personalRepo.GetPersonnelByIdsAsync(request.PersonnelIds);
-        var positionsTask = (_positionRepo as PositionLocationRepository)?.GetByIdsAsync(request.PositionIds) ?? _positionRepo.GetPositionsByIdsAsync(request.PositionIds);
-        var skillsTask = _skillRepo.GetAllAsync();
-        await Task.WhenAll(personalsTask, positionsTask, skillsTask);
-
-        // 构建上下文
-        var context = new SchedulingContext
+        try
         {
-            Personals = personalsTask.Result,
-            Positions = positionsTask.Result,
-            Skills = skillsTask.Result,
-            StartDate = request.StartDate.Date,
-            EndDate = request.EndDate.Date
-        };
-        cancellationToken.ThrowIfCancellationRequested();
+            System.Diagnostics.Debug.WriteLine("步骤1: 基本参数验证");
+            ValidateRequest(request);
+            
+            System.Diagnostics.Debug.WriteLine("步骤2: 业务规则验证");
+            await ValidateSchedulingRequestBusinessLogicAsync(request);
+            
+            cancellationToken.ThrowIfCancellationRequested();
 
-        //休息日配置
-        if (request.UseActiveHolidayConfig)
-        {
-            context.HolidayConfig = await _constraintRepo.GetActiveHolidayConfigAsync();
+            System.Diagnostics.Debug.WriteLine("步骤3: 加载基础数据");
+            // 并行加载基础数据
+            personalsTask = (_personalRepo as PersonalRepository)?.GetByIdsAsync(request.PersonnelIds) ?? _personalRepo.GetPersonnelByIdsAsync(request.PersonnelIds);
+            positionsTask = (_positionRepo as PositionLocationRepository)?.GetByIdsAsync(request.PositionIds) ?? _positionRepo.GetPositionsByIdsAsync(request.PositionIds);
+            skillsTask = _skillRepo.GetAllAsync();
+            await Task.WhenAll(personalsTask, positionsTask, skillsTask);
+            
+            System.Diagnostics.Debug.WriteLine($"加载完成 - 人员: {personalsTask.Result.Count}, 哨位: {positionsTask.Result.Count}, 技能: {skillsTask.Result.Count}");
         }
-        else if (request.HolidayConfigId.HasValue)
+        catch (Exception ex)
         {
-            var allConfigs = await _constraintRepo.GetAllHolidayConfigsAsync();
-            context.HolidayConfig = allConfigs.FirstOrDefault(c => c.Id == request.HolidayConfigId.Value);
+            System.Diagnostics.Debug.WriteLine($"排班前期验证失败: {ex.GetType().Name} - {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"堆栈: {ex.StackTrace}");
+            throw;
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
-        // 定岗规则
-        if (request.EnabledFixedRuleIds?.Count > 0)
+        try
         {
-            var allRules = await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly: true);
-            context.FixedPositionRules = allRules.Where(r => request.EnabledFixedRuleIds.Contains(r.Id)).ToList();
+            System.Diagnostics.Debug.WriteLine("步骤4: 构建排班上下文");
+            // 构建上下文
+            var context = new SchedulingContext
+            {
+                Personals = personalsTask.Result,
+                Positions = positionsTask.Result,
+                Skills = skillsTask.Result,
+                StartDate = request.StartDate.Date,
+                EndDate = request.EndDate.Date
+            };
+            cancellationToken.ThrowIfCancellationRequested();
+
+            System.Diagnostics.Debug.WriteLine("步骤5: 加载休息日配置");
+            //休息日配置
+            if (request.UseActiveHolidayConfig)
+            {
+                context.HolidayConfig = await _constraintRepo.GetActiveHolidayConfigAsync();
+                System.Diagnostics.Debug.WriteLine($"使用活动休息日配置: {context.HolidayConfig?.Id ?? 0}");
+            }
+            else if (request.HolidayConfigId.HasValue)
+            {
+                var allConfigs = await _constraintRepo.GetAllHolidayConfigsAsync();
+                context.HolidayConfig = allConfigs.FirstOrDefault(c => c.Id == request.HolidayConfigId.Value);
+                System.Diagnostics.Debug.WriteLine($"使用指定休息日配置: {request.HolidayConfigId}");
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+
+            System.Diagnostics.Debug.WriteLine("步骤6: 加载定岗规则");
+            // 定岗规则
+            if (request.EnabledFixedRuleIds?.Count > 0)
+            {
+                var allRules = await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly: true);
+                context.FixedPositionRules = allRules.Where(r => request.EnabledFixedRuleIds.Contains(r.Id)).ToList();
+            }
+            else
+            {
+                context.FixedPositionRules = await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly: true);
+            }
+            System.Diagnostics.Debug.WriteLine($"定岗规则数量: {context.FixedPositionRules?.Count ?? 0}");
+            cancellationToken.ThrowIfCancellationRequested();
+
+            System.Diagnostics.Debug.WriteLine("步骤7: 加载手动指定");
+            // 手动指定
+            if (request.EnabledManualAssignmentIds?.Count > 0)
+            {
+                var manualRange = await _constraintRepo.GetManualAssignmentsByDateRangeAsync(request.StartDate, request.EndDate, enabledOnly: true);
+                context.ManualAssignments = manualRange.Where(m => request.EnabledManualAssignmentIds.Contains(m.Id)).ToList();
+            }
+            else
+            {
+                context.ManualAssignments = await _constraintRepo.GetManualAssignmentsByDateRangeAsync(request.StartDate, request.EndDate, enabledOnly: true);
+            }
+            System.Diagnostics.Debug.WriteLine($"手动指定数量: {context.ManualAssignments?.Count ?? 0}");
+            cancellationToken.ThrowIfCancellationRequested();
+
+            System.Diagnostics.Debug.WriteLine("步骤8: 加载历史排班");
+            // 最近历史排班（用于间隔评分等）
+            context.LastConfirmedSchedule = await _historyMgmt.GetLastConfirmedScheduleAsync();
+            System.Diagnostics.Debug.WriteLine($"最近确认排班: {context.LastConfirmedSchedule?.Id ?? 0}");
+            cancellationToken.ThrowIfCancellationRequested();
+
+            System.Diagnostics.Debug.WriteLine("步骤9: 执行排班算法");
+            // 执行算法
+            var scheduler = new GreedyScheduler(context);
+            var modelSchedule = await scheduler.ExecuteAsync(cancellationToken);
+            
+            System.Diagnostics.Debug.WriteLine($"算法执行完成，生成 {modelSchedule.Results?.Count ?? 0} 个班次");
+            
+            modelSchedule.Header = request.Title;
+            modelSchedule.StartDate = request.StartDate.Date;
+            modelSchedule.EndDate = request.EndDate.Date;
+            modelSchedule.CreatedAt = DateTime.UtcNow;
+            modelSchedule.PersonnelIds = request.PersonnelIds;
+            modelSchedule.PositionIds = request.PositionIds;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            System.Diagnostics.Debug.WriteLine("步骤10: 保存到缓冲区");
+            // 保存至缓冲区（草稿）
+            _ = await _historyMgmt.AddToBufferAsync(modelSchedule);
+
+            System.Diagnostics.Debug.WriteLine("步骤11: 映射DTO");
+            // 映射 DTO（草稿未确认）
+            var result = await MapToScheduleDtoAsync(modelSchedule, confirmedAt: null);
+            
+            System.Diagnostics.Debug.WriteLine("=== 排班执行成功 ===");
+            return result;
         }
-        else
+        catch (Exception ex)
         {
-            context.FixedPositionRules = await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly: true);
+            System.Diagnostics.Debug.WriteLine($"排班执行失败: {ex.GetType().Name}");
+            System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"内部异常: {ex.InnerException.Message}");
+            }
+            throw;
         }
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // 手动指定
-        if (request.EnabledManualAssignmentIds?.Count > 0)
-        {
-            var manualRange = await _constraintRepo.GetManualAssignmentsByDateRangeAsync(request.StartDate, request.EndDate, enabledOnly: true);
-            context.ManualAssignments = manualRange.Where(m => request.EnabledManualAssignmentIds.Contains(m.Id)).ToList();
-        }
-        else
-        {
-            context.ManualAssignments = await _constraintRepo.GetManualAssignmentsByDateRangeAsync(request.StartDate, request.EndDate, enabledOnly: true);
-        }
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // 最近历史排班（用于间隔评分等）
-        context.LastConfirmedSchedule = await _historyMgmt.GetLastConfirmedScheduleAsync();
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // 执行算法
-        var scheduler = new GreedyScheduler(context);
-        var modelSchedule = await scheduler.ExecuteAsync(cancellationToken);
-        modelSchedule.Header = request.Title;
-        modelSchedule.StartDate = request.StartDate.Date;
-        modelSchedule.EndDate = request.EndDate.Date;
-        modelSchedule.CreatedAt = DateTime.UtcNow;
-        modelSchedule.PersonnelIds = request.PersonnelIds;
-        modelSchedule.PositionIds = request.PositionIds;
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // 保存至缓冲区（草稿）
-        _ = await _historyMgmt.AddToBufferAsync(modelSchedule);
-
-        // 映射 DTO（草稿未确认）
-        return await MapToScheduleDtoAsync(modelSchedule, confirmedAt: null);
     }
 
     public async Task<List<ScheduleSummaryDto>> GetDraftsAsync()
