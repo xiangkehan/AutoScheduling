@@ -1,3 +1,5 @@
+using AutoScheduling3.Data.Enums;
+
 namespace AutoScheduling3.Data.Models
 {
     /// <summary>
