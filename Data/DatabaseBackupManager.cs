@@ -74,6 +74,18 @@ namespace AutoScheduling3.Data
                     _logger?.Log($"Created backup directory: {_backupDirectory}");
                 }
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                var errorMsg = $"权限不足，无法创建备份目录: {_backupDirectory}";
+                _logger?.LogError(errorMsg);
+                throw new UnauthorizedAccessException(errorMsg, ex);
+            }
+            catch (IOException ex)
+            {
+                var errorMsg = $"创建备份目录时发生IO错误: {_backupDirectory}";
+                _logger?.LogError(errorMsg);
+                throw new IOException(errorMsg, ex);
+            }
             catch (Exception ex)
             {
                 _logger?.LogError($"Failed to create backup directory: {ex.Message}");
@@ -116,11 +128,41 @@ namespace AutoScheduling3.Data
                 var backupDir = Path.GetDirectoryName(backupPath);
                 if (!string.IsNullOrEmpty(backupDir) && !Directory.Exists(backupDir))
                 {
-                    Directory.CreateDirectory(backupDir);
+                    try
+                    {
+                        Directory.CreateDirectory(backupDir);
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        var errorMsg = $"权限不足，无法创建备份目录: {backupDir}";
+                        _logger?.LogError(errorMsg);
+                        throw new UnauthorizedAccessException(errorMsg, ex);
+                    }
+                    catch (IOException ex)
+                    {
+                        var errorMsg = $"创建备份目录时发生IO错误: {backupDir}";
+                        _logger?.LogError(errorMsg);
+                        throw new IOException(errorMsg, ex);
+                    }
                 }
 
                 // Copy database file to backup location
-                await Task.Run(() => File.Copy(_databasePath, backupPath, overwrite: true));
+                try
+                {
+                    await Task.Run(() => File.Copy(_databasePath, backupPath, overwrite: true));
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    var errorMsg = $"权限不足，无法创建备份文件: {backupPath}";
+                    _logger?.LogError(errorMsg);
+                    throw new UnauthorizedAccessException(errorMsg, ex);
+                }
+                catch (IOException ex)
+                {
+                    var errorMsg = $"创建备份文件时发生IO错误: {backupPath}";
+                    _logger?.LogError(errorMsg);
+                    throw new IOException(errorMsg, ex);
+                }
 
                 _logger?.Log($"Backup file created: {backupPath}");
 
@@ -230,7 +272,22 @@ namespace AutoScheduling3.Data
                 {
                     var preRestoreBackupPath = _databasePath + ".pre-restore";
                     _logger?.Log($"Creating pre-restore backup: {preRestoreBackupPath}");
-                    await Task.Run(() => File.Copy(_databasePath, preRestoreBackupPath, overwrite: true));
+                    try
+                    {
+                        await Task.Run(() => File.Copy(_databasePath, preRestoreBackupPath, overwrite: true));
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        var errorMsg = $"权限不足，无法创建恢复前备份: {preRestoreBackupPath}";
+                        _logger?.LogError(errorMsg);
+                        throw new UnauthorizedAccessException(errorMsg, ex);
+                    }
+                    catch (IOException ex)
+                    {
+                        var errorMsg = $"创建恢复前备份时发生IO错误: {preRestoreBackupPath}";
+                        _logger?.LogError(errorMsg);
+                        throw new IOException(errorMsg, ex);
+                    }
                 }
 
                 // Close all connections by forcing garbage collection
@@ -243,7 +300,22 @@ namespace AutoScheduling3.Data
 
                 // Restore the backup
                 _logger?.Log($"Restoring database from backup: {backupPath}");
-                await Task.Run(() => File.Copy(backupPath, _databasePath, overwrite: true));
+                try
+                {
+                    await Task.Run(() => File.Copy(backupPath, _databasePath, overwrite: true));
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    var errorMsg = $"权限不足，无法恢复数据库文件: {_databasePath}";
+                    _logger?.LogError(errorMsg);
+                    throw new UnauthorizedAccessException(errorMsg, ex);
+                }
+                catch (IOException ex)
+                {
+                    var errorMsg = $"恢复数据库文件时发生IO错误: {_databasePath}";
+                    _logger?.LogError(errorMsg);
+                    throw new IOException(errorMsg, ex);
+                }
 
                 _logger?.Log($"Database restored successfully from: {backupPath}");
 
@@ -278,26 +350,59 @@ namespace AutoScheduling3.Data
                     return Enumerable.Empty<BackupInfo>();
                 }
 
-                var backupFiles = Directory.GetFiles(_backupDirectory, "*.db")
+                string[] backupFiles;
+                try
+                {
+                    backupFiles = Directory.GetFiles(_backupDirectory, "*.db");
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    var errorMsg = $"权限不足，无法访问备份目录: {_backupDirectory}";
+                    _logger?.LogError(errorMsg);
+                    throw new UnauthorizedAccessException(errorMsg, ex);
+                }
+                catch (IOException ex)
+                {
+                    var errorMsg = $"访问备份目录时发生IO错误: {_backupDirectory}";
+                    _logger?.LogError(errorMsg);
+                    throw new IOException(errorMsg, ex);
+                }
+
+                var backupFilesList = backupFiles
                     .OrderByDescending(f => new FileInfo(f).CreationTime)
                     .ToList();
 
                 var backupInfoList = new List<BackupInfo>();
 
-                foreach (var backupFile in backupFiles)
+                foreach (var backupFile in backupFilesList)
                 {
-                    var fileInfo = new FileInfo(backupFile);
-                    var backupInfo = new BackupInfo
+                    try
                     {
-                        FilePath = backupFile,
-                        FileName = fileInfo.Name,
-                        FileSize = fileInfo.Length,
-                        CreatedAt = fileInfo.CreationTime,
-                        DatabaseVersion = await GetDatabaseVersionAsync(backupFile),
-                        IsVerified = await VerifyBackupAsync(backupFile)
-                    };
+                        var fileInfo = new FileInfo(backupFile);
+                        var backupInfo = new BackupInfo
+                        {
+                            FilePath = backupFile,
+                            FileName = fileInfo.Name,
+                            FileSize = fileInfo.Length,
+                            CreatedAt = fileInfo.CreationTime,
+                            DatabaseVersion = await GetDatabaseVersionAsync(backupFile),
+                            IsVerified = await VerifyBackupAsync(backupFile)
+                        };
 
-                    backupInfoList.Add(backupInfo);
+                        backupInfoList.Add(backupInfo);
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        _logger?.LogWarning($"权限不足，无法访问备份文件 {backupFile}: {ex.Message}");
+                    }
+                    catch (IOException ex)
+                    {
+                        _logger?.LogWarning($"访问备份文件时发生IO错误 {backupFile}: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning($"处理备份文件时发生错误 {backupFile}: {ex.Message}");
+                    }
                 }
 
                 _logger?.Log($"Found {backupInfoList.Count} backup files");
@@ -322,7 +427,25 @@ namespace AutoScheduling3.Data
                     return;
                 }
 
-                var backupFiles = Directory.GetFiles(_backupDirectory, "*.db")
+                string[] backupFilePaths;
+                try
+                {
+                    backupFilePaths = Directory.GetFiles(_backupDirectory, "*.db");
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    var errorMsg = $"权限不足，无法访问备份目录进行清理: {_backupDirectory}";
+                    _logger?.LogError(errorMsg);
+                    throw new UnauthorizedAccessException(errorMsg, ex);
+                }
+                catch (IOException ex)
+                {
+                    var errorMsg = $"访问备份目录时发生IO错误: {_backupDirectory}";
+                    _logger?.LogError(errorMsg);
+                    throw new IOException(errorMsg, ex);
+                }
+
+                var backupFiles = backupFilePaths
                     .Select(f => new FileInfo(f))
                     .OrderByDescending(f => f.CreationTime)
                     .ToList();
@@ -341,6 +464,14 @@ namespace AutoScheduling3.Data
                     try
                     {
                         await DeleteBackupAsync(fileToDelete.FullName);
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        _logger?.LogWarning($"权限不足，无法删除备份 {fileToDelete.Name}: {ex.Message}");
+                    }
+                    catch (IOException ex)
+                    {
+                        _logger?.LogWarning($"删除备份时发生IO错误 {fileToDelete.Name}: {ex.Message}");
                     }
                     catch (Exception ex)
                     {
@@ -377,8 +508,23 @@ namespace AutoScheduling3.Data
                 }
 
                 _logger?.Log($"Deleting backup: {backupPath}");
-                await Task.Run(() => File.Delete(backupPath));
-                _logger?.Log($"Backup deleted: {backupPath}");
+                try
+                {
+                    await Task.Run(() => File.Delete(backupPath));
+                    _logger?.Log($"Backup deleted: {backupPath}");
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    var errorMsg = $"权限不足，无法删除备份文件: {backupPath}";
+                    _logger?.LogError(errorMsg);
+                    throw new UnauthorizedAccessException(errorMsg, ex);
+                }
+                catch (IOException ex)
+                {
+                    var errorMsg = $"删除备份文件时发生IO错误: {backupPath}";
+                    _logger?.LogError(errorMsg);
+                    throw new IOException(errorMsg, ex);
+                }
             }
             catch (Exception ex)
             {

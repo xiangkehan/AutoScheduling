@@ -19,7 +19,29 @@ using AutoScheduling3.Data;
 namespace AutoScheduling3
 {
     /// <summary>
-    /// Provides application-specific behavior to supplement the default Application class.
+    /// 应用程序主类 - 提供应用程序特定的行为
+    /// 
+    /// 数据存储说明：
+    /// 本应用程序使用 ApplicationData.Current.LocalFolder 作为所有数据的存储位置。
+    /// 
+    /// 为什么使用 ApplicationData.Current.LocalFolder：
+    /// 1. WinUI3 最佳实践：这是 WinUI3 应用程序推荐的数据存储方式
+    /// 2. 应用商店兼容性：确保应用程序符合 Windows 应用商店的要求
+    /// 3. 沙箱安全性：应用程序在沙箱环境中正确运行，自动拥有读写权限
+    /// 4. 系统管理：Windows 系统可以正确管理应用数据的备份和清理
+    /// 5. 用户隐私：数据与其他应用程序隔离，提高安全性
+    /// 
+    /// 数据存储结构：
+    /// - 数据库文件：{LocalFolder}\GuardDutyScheduling.db
+    /// - 配置文件：{LocalFolder}\Settings\config.json
+    /// - 备份文件：{LocalFolder}\backups\*.db
+    /// 
+    /// 日志记录：
+    /// - 应用启动时记录 LocalFolder 路径
+    /// - 记录数据库路径和备份目录
+    /// - 所有日志使用 [App] 前缀，便于过滤和诊断
+    /// 
+    /// 需求: 1.1, 1.2, 2.1, 6.2, 8.1, 8.2, 8.3
     /// </summary>
     public partial class App : Application
     {
@@ -56,7 +78,7 @@ namespace AutoScheduling3
         private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
             // Log the exception
-            System.Diagnostics.Debug.WriteLine($"Unhandled exception: {e.Exception}");
+            System.Diagnostics.Debug.WriteLine($"[App] Unhandled exception: {e.Exception}");
             // Optionally, prevent the application from crashing
             e.Handled = true;
         }
@@ -79,7 +101,7 @@ namespace AutoScheduling3
 
         /// <summary>
         /// 初始化应用程序服务
-        /// Requirements: 1.1, 1.4
+        /// Requirements: 1.1, 1.4, 6.2, 8.2
         /// </summary>
         private async System.Threading.Tasks.Task InitializeServicesAsync()
         {
@@ -87,10 +109,31 @@ namespace AutoScheduling3
             
             try
             {
+                // Log ApplicationData.Current.LocalFolder path at application startup
+                // Requirements: 5.1, 5.2, 5.3, 6.2, 8.2, 8.3
+                try
+                {
+                    var localFolder = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
+                    System.Diagnostics.Debug.WriteLine($"[App] Application startup - LocalFolder path: {localFolder}");
+                    System.Diagnostics.Debug.WriteLine($"[App] Database path: {DatabasePath}");
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    var errorMsg = "权限不足，无法访问应用程序数据文件夹";
+                    System.Diagnostics.Debug.WriteLine($"[App] {errorMsg}: {ex.Message}");
+                    throw new InvalidOperationException(errorMsg, ex);
+                }
+                catch (System.IO.IOException ex)
+                {
+                    var errorMsg = "访问应用程序数据文件夹时发生IO错误";
+                    System.Diagnostics.Debug.WriteLine($"[App] {errorMsg}: {ex.Message}");
+                    throw new InvalidOperationException(errorMsg, ex);
+                }
+                
                 // 首先初始化数据库 - 使用新的 InitializeAsync 方法
                 var databaseService = ServiceProvider.GetRequiredService<DatabaseService>();
                 
-                System.Diagnostics.Debug.WriteLine("Starting database initialization...");
+                System.Diagnostics.Debug.WriteLine("[App] Starting database initialization...");
                 
                 // Create initialization options with default settings
                 var initOptions = new AutoScheduling3.Data.Models.InitializationOptions
@@ -106,7 +149,7 @@ namespace AutoScheduling3
                 var initResult = await databaseService.InitializeAsync(initOptions);
                 
                 // Log initialization duration
-                System.Diagnostics.Debug.WriteLine($"Database initialization completed in {initResult.Duration.TotalMilliseconds:F2}ms");
+                System.Diagnostics.Debug.WriteLine($"[App] Database initialization completed in {initResult.Duration.TotalMilliseconds:F2}ms");
                 
                 // Handle initialization result
                 if (!initResult.Success)
@@ -118,7 +161,7 @@ namespace AutoScheduling3
                     }
                     errorMsg += $": {initResult.ErrorMessage}";
                     
-                    System.Diagnostics.Debug.WriteLine(errorMsg);
+                    System.Diagnostics.Debug.WriteLine($"[App] {errorMsg}");
                     
                     // 显示错误对话框
                     var dialogService = ServiceProvider.GetService<Helpers.DialogService>();
@@ -136,10 +179,10 @@ namespace AutoScheduling3
                 // Display warnings if any
                 if (initResult.Warnings != null && initResult.Warnings.Count > 0)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Database initialization completed with {initResult.Warnings.Count} warning(s):");
+                    System.Diagnostics.Debug.WriteLine($"[App] Database initialization completed with {initResult.Warnings.Count} warning(s):");
                     foreach (var warning in initResult.Warnings)
                     {
-                        System.Diagnostics.Debug.WriteLine($"  - {warning}");
+                        System.Diagnostics.Debug.WriteLine($"[App]   - {warning}");
                     }
                     
                     // Optionally show warnings to user (non-blocking)
@@ -163,7 +206,7 @@ namespace AutoScheduling3
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine("Database initialization completed successfully with no warnings");
+                    System.Diagnostics.Debug.WriteLine("[App] Database initialization completed successfully with no warnings");
                 }
 
                 // 然后初始化配置服务
@@ -203,13 +246,13 @@ namespace AutoScheduling3
                 
                 // Log total initialization duration
                 var totalDuration = DateTime.UtcNow - initStartTime;
-                System.Diagnostics.Debug.WriteLine($"Total application initialization completed in {totalDuration.TotalMilliseconds:F2}ms");
+                System.Diagnostics.Debug.WriteLine($"[App] Total application initialization completed in {totalDuration.TotalMilliseconds:F2}ms");
             }
             catch(AutoScheduling3.Data.Exceptions.DatabaseInitializationException dbEx)
             {
                 // Handle database initialization exceptions with stage information
                 var errorMsg = $"数据库初始化失败 (阶段: {dbEx.FailedStage}): {dbEx.Message}";
-                System.Diagnostics.Debug.WriteLine(errorMsg);
+                System.Diagnostics.Debug.WriteLine($"[App] {errorMsg}");
                 
                 // 显示错误对话框
                 var dialogService = ServiceProvider.GetService<Helpers.DialogService>();
@@ -223,8 +266,8 @@ namespace AutoScheduling3
             }
             catch(Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"服务初始化失败: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                System.Diagnostics.Debug.WriteLine($"[App] 服务初始化失败: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[App] Stack trace: {ex.StackTrace}");
                 
                 // 显示错误对话框
                 var dialogService = ServiceProvider.GetService<Helpers.DialogService>();
@@ -255,7 +298,7 @@ namespace AutoScheduling3
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Services initialization failed: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[App] Services initialization failed: {ex.Message}");
                 
                 // 如果初始化失败，仍然创建窗口
                 _window = new MainWindow();

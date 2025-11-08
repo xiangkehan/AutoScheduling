@@ -9,12 +9,29 @@ using AutoScheduling3.Data.Enums;
 using AutoScheduling3.Data.Exceptions;
 using System.Collections.Generic;
 using System.Linq;
+using Windows.Storage;
 
 namespace AutoScheduling3.Data
 {
     /// <summary>
     /// 数据库服务：管理数据库初始化、版本管理和迁移
-    /// 需求: 1.2, 2.1
+    /// 
+    /// 使用 ApplicationData.Current.LocalFolder 存储数据库和备份文件。
+    /// 
+    /// 为什么使用 ApplicationData.Current.LocalFolder：
+    /// 1. WinUI3 标准：符合 WinUI3 应用程序的数据存储规范
+    /// 2. 权限保证：应用程序自动拥有完整的读写权限
+    /// 3. 沙箱安全：在应用程序沙箱中安全运行
+    /// 4. 系统集成：Windows 系统可以正确管理应用数据
+    /// 
+    /// 核心功能：
+    /// - 数据库初始化和版本管理
+    /// - 健康检查和自动修复
+    /// - 备份和恢复
+    /// - 架构验证和迁移
+    /// - 诊断和日志记录
+    /// 
+    /// 需求: 1.2, 2.1, 8.3
     /// </summary>
     public class DatabaseService
     {
@@ -31,11 +48,36 @@ namespace AutoScheduling3.Data
         private readonly ILogger _logger;
 
         /// <summary>
-        /// Initializes a new instance of DatabaseService
-        /// Requirements: 1.1, 1.4
+        /// 初始化数据库服务实例
+        /// 
+        /// 初始化流程：
+        /// 1. 设置数据库路径和连接字符串
+        /// 2. 初始化日志记录器
+        /// 3. 初始化健康检查、架构验证和修复服务
+        /// 4. 初始化备份管理器，使用 ApplicationData.Current.LocalFolder\backups
+        /// 5. 记录所有关键路径信息
+        /// 
+        /// 备份目录配置：
+        /// - 使用 ApplicationData.Current.LocalFolder\backups 作为备份目录
+        /// - 这确保备份文件与数据库文件在同一个应用数据位置
+        /// - 最大备份数量：5 个
+        /// 
+        /// 日志记录：
+        /// - 输出 ApplicationData LocalFolder 路径
+        /// - 输出数据库文件路径
+        /// - 输出备份目录路径
+        /// - 这些日志对诊断路径问题非常有用
+        /// 
+        /// 错误处理：
+        /// - UnauthorizedAccessException：权限不足，抛出 InvalidOperationException
+        /// - IOException：文件系统访问错误，抛出 InvalidOperationException
+        /// - 提供清晰的错误消息，便于用户理解问题
+        /// 
+        /// 需求: 1.1, 1.4, 4.1, 4.2, 5.1, 5.2, 5.3, 6.3, 8.1, 8.3
         /// </summary>
-        /// <param name="dbPath">Path to the database file</param>
-        /// <param name="logger">Optional logger for diagnostic messages</param>
+        /// <param name="dbPath">数据库文件路径（通常从 DatabaseConfiguration.GetDefaultDatabasePath() 获取）</param>
+        /// <param name="logger">可选的日志记录器，用于诊断消息（如果未提供，使用 DebugLogger）</param>
+        /// <exception cref="InvalidOperationException">无法访问应用程序数据文件夹时抛出</exception>
         public DatabaseService(string dbPath, ILogger logger = null)
         {
             _dbPath = dbPath;
@@ -50,13 +92,33 @@ namespace AutoScheduling3.Data
             _schemaValidator = new DatabaseSchemaValidator(_connectionString, _logger);
             _repairService = new DatabaseRepairService(_connectionString, _schemaValidator, _logger);
             
-            // Initialize backup manager with default backup directory
-            var backupDirectory = Path.Combine(
-                Path.GetDirectoryName(_dbPath) ?? string.Empty, 
-                "backups");
-            _backupManager = new DatabaseBackupManager(_dbPath, backupDirectory, maxBackups: 5);
-            
-            _logger.Log($"DatabaseService initialized for database: {_dbPath}");
+            try
+            {
+                // Initialize backup manager with ApplicationData.Current.LocalFolder backups directory
+                // Requirements: 4.1, 4.2, 5.1, 5.2, 8.1, 8.3
+                var localFolder = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
+                var backupDirectory = Path.Combine(localFolder, "backups");
+                _backupManager = new DatabaseBackupManager(_dbPath, backupDirectory, maxBackups: 5);
+                
+                // Log storage paths during initialization
+                // Requirements: 6.3, 8.1, 8.3
+                _logger.Log($"[DatabaseService] Initialized");
+                _logger.Log($"[DatabaseService] ApplicationData LocalFolder: {localFolder}");
+                _logger.Log($"[DatabaseService] Database path: {_dbPath}");
+                _logger.Log($"[DatabaseService] Backup directory: {backupDirectory}");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                var errorMsg = "权限不足，无法访问应用程序数据文件夹";
+                _logger.LogError($"[DatabaseService] {errorMsg}: {ex.Message}");
+                throw new InvalidOperationException(errorMsg, ex);
+            }
+            catch (IOException ex)
+            {
+                var errorMsg = "访问应用程序数据文件夹时发生IO错误";
+                _logger.LogError($"[DatabaseService] {errorMsg}: {ex.Message}");
+                throw new InvalidOperationException(errorMsg, ex);
+            }
         }
 
         /// <summary>
@@ -996,13 +1058,71 @@ CREATE INDEX IF NOT EXISTS idx_manual_assignments_enabled ON ManualAssignments(I
         }
 
         /// <summary>
-        /// Gets comprehensive diagnostics information about the database
-        /// Requirements: 10.1, 10.2
+        /// 获取数据库的综合诊断信息
+        /// 
+        /// 诊断信息包括：
+        /// - 基本信息：版本、文件路径、大小、最后修改时间
+        /// - 健康报告：完整性检查、性能指标、问题列表
+        /// - 架构验证：表、列、索引的完整性
+        /// - 表行数统计：每个表的记录数量
+        /// - 索引统计：所有索引的信息
+        /// - 性能指标：数据库性能相关的度量
+        /// 
+        /// 存储路径报告：
+        /// - 输出 ApplicationData.Current.LocalFolder 路径
+        /// - 输出数据库文件路径
+        /// - 输出备份目录路径
+        /// - 这些信息对诊断路径配置问题非常有用
+        /// 
+        /// 错误处理：
+        /// - UnauthorizedAccessException 和 IOException：记录警告但继续
+        /// - 如果某些诊断信息收集失败，记录警告但继续
+        /// - 失败的表行数标记为 -1
+        /// - 确保返回尽可能多的可用信息
+        /// 
+        /// 需求: 5.1, 5.2, 6.1, 6.3, 8.1, 8.3, 10.1, 10.2
         /// </summary>
-        /// <returns>Comprehensive diagnostics information</returns>
+        /// <returns>包含所有诊断信息的对象</returns>
         public async Task<DatabaseDiagnostics> GetDiagnosticsAsync()
         {
-            _logger.Log("Collecting database diagnostics");
+            _logger.Log("[DatabaseService] Collecting database diagnostics");
+            
+            // Collect storage path information with error handling
+            // Requirements: 5.1, 5.2, 6.1, 6.3, 8.1, 8.3
+            var storagePathInfo = new StoragePathInfo();
+            try
+            {
+                var localFolder = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
+                var backupDirectory = Path.Combine(localFolder, "backups");
+                var configPath = Path.Combine(localFolder, "Settings", "config.json");
+                
+                storagePathInfo.LocalFolderPath = localFolder;
+                storagePathInfo.DatabasePath = _dbPath;
+                storagePathInfo.BackupDirectoryPath = backupDirectory;
+                storagePathInfo.ConfigurationPath = configPath;
+                storagePathInfo.PathsAccessible = true;
+                storagePathInfo.ErrorMessage = null;
+                
+                // Log current storage paths
+                _logger.Log($"[DatabaseService] Current storage location - LocalFolder: {localFolder}");
+                _logger.Log($"[DatabaseService] Database path: {_dbPath}");
+                _logger.Log($"[DatabaseService] Backup directory: {backupDirectory}");
+                _logger.Log($"[DatabaseService] Configuration path: {configPath}");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                var errorMsg = $"权限不足，无法访问存储路径信息: {ex.Message}";
+                _logger.LogWarning($"[DatabaseService] {errorMsg}");
+                storagePathInfo.PathsAccessible = false;
+                storagePathInfo.ErrorMessage = errorMsg;
+            }
+            catch (IOException ex)
+            {
+                var errorMsg = $"访问存储路径信息时发生IO错误: {ex.Message}";
+                _logger.LogWarning($"[DatabaseService] {errorMsg}");
+                storagePathInfo.PathsAccessible = false;
+                storagePathInfo.ErrorMessage = errorMsg;
+            }
             
             var diagnostics = new DatabaseDiagnostics
             {
@@ -1011,7 +1131,8 @@ CREATE INDEX IF NOT EXISTS idx_manual_assignments_enabled ON ManualAssignments(I
                 SchemaValidation = await _schemaValidator.ValidateSchemaAsync(),
                 TableRowCounts = new Dictionary<string, int>(),
                 IndexStats = new List<IndexUsageStats>(),
-                Performance = new DatabasePerformanceMetrics()
+                Performance = new DatabasePerformanceMetrics(),
+                StoragePaths = storagePathInfo
             };
 
             try

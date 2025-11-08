@@ -4,6 +4,7 @@ namespace AutoScheduling3.Data.Models
 {
     /// <summary>
     /// Comprehensive diagnostics information about the database
+    /// Requirements: 6.1, 6.2, 6.3, 8.1
     /// </summary>
     public class DatabaseDiagnostics
     {
@@ -36,6 +37,49 @@ namespace AutoScheduling3.Data.Models
         /// Performance metrics
         /// </summary>
         public DatabasePerformanceMetrics Performance { get; set; }
+
+        /// <summary>
+        /// Storage path information
+        /// Requirements: 6.1, 6.2, 6.3
+        /// </summary>
+        public StoragePathInfo StoragePaths { get; set; }
+    }
+
+    /// <summary>
+    /// Storage path information for diagnostics
+    /// Requirements: 6.1, 6.2, 6.3, 8.1
+    /// </summary>
+    public class StoragePathInfo
+    {
+        /// <summary>
+        /// ApplicationData.Current.LocalFolder path
+        /// </summary>
+        public string LocalFolderPath { get; set; }
+
+        /// <summary>
+        /// Database file path
+        /// </summary>
+        public string DatabasePath { get; set; }
+
+        /// <summary>
+        /// Backup directory path
+        /// </summary>
+        public string BackupDirectoryPath { get; set; }
+
+        /// <summary>
+        /// Configuration file path
+        /// </summary>
+        public string ConfigurationPath { get; set; }
+
+        /// <summary>
+        /// Whether all paths are accessible
+        /// </summary>
+        public bool PathsAccessible { get; set; }
+
+        /// <summary>
+        /// Error message if paths are not accessible
+        /// </summary>
+        public string ErrorMessage { get; set; }
     }
 
     /// <summary>
