@@ -8,6 +8,7 @@ using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.ViewModels.DataManagement;
 using AutoScheduling3.ViewModels.History;
 using AutoScheduling3.ViewModels.Scheduling;
+using AutoScheduling3.ViewModels.Settings;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoScheduling3.Extensions;
@@ -111,6 +112,9 @@ public static class ServiceCollectionExtensions
         services.AddTransient<HistoryDetailViewModel>();
         services.AddTransient<DraftsViewModel>();
         services.AddTransient<CompareViewModel>();
+
+        // 设置 ViewModel
+        services.AddTransient<SettingsPageViewModel>();
 
         return services;
     }
