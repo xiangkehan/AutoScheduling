@@ -280,24 +280,18 @@ namespace AutoScheduling3.Data
                     // Create version table first
                     await CreateVersionTableAsync(conn);
                     
-                    // Create all tables in a transaction for atomicity
-                    using (var transaction = conn.BeginTransaction())
+                    // Create all tables (transaction handling is inside CreateAllTablesAsync)
+                    try
                     {
-                        try
-                        {
-                            await CreateAllTablesAsync(conn);
-                            await transaction.CommitAsync();
-                            _logger.Log("Database tables created successfully");
-                        }
-                        catch (Exception ex)
-                        {
-                            await transaction.RollbackAsync();
-                            _logger.LogError($"Failed to create tables: {ex.Message}");
-                            throw new DatabaseInitializationException(
-                                "Failed to create database tables",
-                                InitializationStage.TableCreation,
-                                ex);
-                        }
+                        await CreateAllTablesAsync(conn);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Failed to create tables: {ex.Message}");
+                        throw new DatabaseInitializationException(
+                            "Failed to create database tables",
+                            InitializationStage.TableCreation,
+                            ex);
                     }
                     
                     _stateManager.UpdateProgress(InitializationStage.IndexCreation, "Creating database indexes");
@@ -513,11 +507,20 @@ VALUES (1, @version, @updatedAt)";
 
         /// <summary>
         /// 创建所有数据库表
+        /// Requirements: 1.1
         /// </summary>
         private async Task CreateAllTablesAsync(SqliteConnection conn)
         {
-            var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
+            // Wrap table creation in transaction for atomicity
+            using var transaction = conn.BeginTransaction();
+            
+            try
+            {
+                _logger.Log("Creating database tables within transaction");
+                
+                var cmd = conn.CreateCommand();
+                cmd.Transaction = transaction;
+                cmd.CommandText = @"
 -- 人员表
 CREATE TABLE IF NOT EXISTS Personals (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -644,7 +647,23 @@ CREATE TABLE IF NOT EXISTS ManualAssignments (
     FOREIGN KEY (PersonalId) REFERENCES Personals(Id)
 );
 ";
-            await cmd.ExecuteNonQueryAsync();
+                await cmd.ExecuteNonQueryAsync();
+                
+                // Update progress during creation
+                _stateManager.UpdateProgress(InitializationStage.TableCreation, "All tables created successfully");
+                _logger.Log("All database tables created successfully");
+                
+                // Commit transaction
+                await transaction.CommitAsync();
+                _logger.Log("Table creation transaction committed");
+            }
+            catch (Exception ex)
+            {
+                // Rollback on failure
+                await transaction.RollbackAsync();
+                _logger.LogError($"Failed to create tables, transaction rolled back: {ex.Message}");
+                throw;
+            }
         }
 
         /// <summary>
