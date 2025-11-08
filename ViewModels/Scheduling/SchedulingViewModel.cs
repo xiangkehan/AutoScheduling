@@ -275,7 +275,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             {
                 var schedule = await _schedulingService.ExecuteSchedulingAsync(request);
                 ResultSchedule = schedule;
-                await _dialogService.ShowSuccessAsync("排班生成成功");
+                await _dialogService.ShowSuccessAsync("排班任务成功");
                 try { _navigation_service.NavigateTo("ScheduleResult", schedule.Id); } catch { }
             }
             catch (Exception ex)

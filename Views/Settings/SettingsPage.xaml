@@ -357,8 +357,7 @@
 
                                         <!-- 操作按钮 -->
                                         <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
-                                            <Button Content="复制路径"
-                                                    Style="{StaticResource EnhancedButtonStyle}"
+                                            <Button Style="{StaticResource EnhancedButtonStyle}"
                                                     Command="{Binding ElementName=Root, Path=ViewModel.CopyPathCommand}"
                                                     CommandParameter="{x:Bind FullPath, Mode=OneWay}"
                                                     AutomationProperties.Name="复制文件路径到剪贴板">
@@ -370,8 +369,7 @@
                                                 </Button.Content>
                                             </Button>
 
-                                            <Button Content="打开目录"
-                                                    Style="{StaticResource EnhancedButtonStyle}"
+                                            <Button Style="{StaticResource EnhancedButtonStyle}"
                                                     Command="{Binding ElementName=Root, Path=ViewModel.OpenDirectoryCommand}"
                                                     CommandParameter="{x:Bind FullPath, Mode=OneWay}"
                                                     IsEnabled="{x:Bind Exists, Mode=OneWay}"
@@ -391,8 +389,7 @@
                     </ItemsControl>
 
                     <!-- 刷新按钮 -->
-                    <Button Content="刷新信息"
-                            Style="{StaticResource EnhancedButtonStyle}"
+                    <Button Style="{StaticResource EnhancedButtonStyle}"
                             Command="{x:Bind ViewModel.RefreshStorageInfoCommand}"
                             HorizontalAlignment="Left"
                             AutomationProperties.Name="刷新存储文件信息">
