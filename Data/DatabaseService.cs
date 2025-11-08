@@ -3,6 +3,11 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using AutoScheduling3.Data.Interfaces;
+using AutoScheduling3.Data.Logging;
+using AutoScheduling3.Data.Models;
+using AutoScheduling3.Data.Enums;
+using AutoScheduling3.Data.Exceptions;
+using System.Collections.Generic;
 
 namespace AutoScheduling3.Data
 {
@@ -16,47 +21,453 @@ namespace AutoScheduling3.Data
         private readonly string _dbPath;
         private const int CurrentVersion = 1;
 
-        public DatabaseService(string dbPath)
+        // New components for enhanced initialization
+        private readonly DatabaseHealthChecker _healthChecker;
+        private readonly DatabaseSchemaValidator _schemaValidator;
+        private readonly DatabaseRepairService _repairService;
+        private readonly DatabaseBackupManager _backupManager;
+        private readonly InitializationStateManager _stateManager;
+        private readonly ILogger _logger;
+
+        /// <summary>
+        /// Initializes a new instance of DatabaseService
+        /// Requirements: 1.1, 1.4
+        /// </summary>
+        /// <param name="dbPath">Path to the database file</param>
+        /// <param name="logger">Optional logger for diagnostic messages</param>
+        public DatabaseService(string dbPath, ILogger logger = null)
         {
             _dbPath = dbPath;
             _connectionString = new SqliteConnectionStringBuilder { DataSource = dbPath }.ToString();
+            
+            // Initialize logger (use DebugLogger if none provided)
+            _logger = logger ?? new DebugLogger("DatabaseService");
+            
+            // Initialize all new components
+            _stateManager = new InitializationStateManager();
+            _healthChecker = new DatabaseHealthChecker(_connectionString, _logger);
+            _schemaValidator = new DatabaseSchemaValidator(_connectionString, _logger);
+            _repairService = new DatabaseRepairService(_connectionString, _schemaValidator, _logger);
+            
+            // Initialize backup manager with default backup directory
+            var backupDirectory = Path.Combine(
+                Path.GetDirectoryName(_dbPath) ?? string.Empty, 
+                "backups");
+            _backupManager = new DatabaseBackupManager(_dbPath, backupDirectory, maxBackups: 5);
+            
+            _logger.Log($"DatabaseService initialized for database: {_dbPath}");
+        }
+
+        /// <summary>
+        /// Enhanced database initialization with comprehensive lifecycle management
+        /// Requirements: 1.1, 1.5, 9.1, 9.2
+        /// </summary>
+        /// <param name="options">Initialization options (null for defaults)</param>
+        /// <returns>Initialization result with success status and details</returns>
+        public async Task<InitializationResult> InitializeAsync(InitializationOptions options = null)
+        {
+            // Use default options if none provided
+            options ??= new InitializationOptions();
+            
+            var startTime = DateTime.UtcNow;
+            var warnings = new List<string>();
+            
+            try
+            {
+                // Check if initialization is already in progress
+                if (!await _stateManager.TryBeginInitializationAsync())
+                {
+                    var errorMsg = "Database initialization is already in progress";
+                    _logger.LogWarning(errorMsg);
+                    return new InitializationResult
+                    {
+                        Success = false,
+                        FinalState = InitializationState.InProgress,
+                        ErrorMessage = errorMsg,
+                        Duration = DateTime.UtcNow - startTime
+                    };
+                }
+                
+                _logger.Log("Starting database initialization");
+                
+                // Step 1: Create directory with error handling
+                // Requirements: 1.4, 6.2
+                _stateManager.UpdateProgress(InitializationStage.DirectoryCreation, "Creating database directory");
+                try
+                {
+                    var directory = Path.GetDirectoryName(_dbPath);
+                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                    {
+                        _logger.Log($"Creating database directory: {directory}");
+                        Directory.CreateDirectory(directory);
+                        _logger.Log("Database directory created successfully");
+                    }
+                    else
+                    {
+                        _logger.Log("Database directory already exists");
+                    }
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    var errorMsg = $"Permission denied when creating database directory. Please ensure the application has write permissions to: {Path.GetDirectoryName(_dbPath)}";
+                    _logger.LogError(errorMsg);
+                    _stateManager.CompleteInitialization(false);
+                    throw new DatabaseInitializationException(errorMsg, InitializationStage.DirectoryCreation, ex);
+                }
+                catch (IOException ex)
+                {
+                    var errorMsg = $"I/O error when creating database directory: {ex.Message}";
+                    _logger.LogError(errorMsg);
+                    _stateManager.CompleteInitialization(false);
+                    throw new DatabaseInitializationException(errorMsg, InitializationStage.DirectoryCreation, ex);
+                }
+                
+                // Step 2: Test database connection with retry logic
+                // Requirements: 6.1
+                _stateManager.UpdateProgress(InitializationStage.ConnectionTest, "Testing database connection");
+                await ExecuteWithRetryAsync(async () =>
+                {
+                    using var testConn = new SqliteConnection(_connectionString);
+                    await testConn.OpenAsync();
+                    var cmd = testConn.CreateCommand();
+                    cmd.CommandText = "SELECT 1";
+                    await cmd.ExecuteScalarAsync();
+                    _logger.Log("Database connection test successful");
+                    return true;
+                }, options.ConnectionRetryCount, options.ConnectionRetryDelay);
+                
+                // Step 3: Check if database exists and perform health check if requested
+                // Requirements: 1.2, 4.1, 5.4, 6.3
+                bool databaseExists = File.Exists(_dbPath);
+                bool isNewDatabase = !databaseExists;
+                
+                if (databaseExists && options.PerformHealthCheck)
+                {
+                    _stateManager.UpdateProgress(InitializationStage.HealthCheck, "Performing database health check");
+                    _logger.Log("Performing health check on existing database");
+                    
+                    var healthReport = await _healthChecker.CheckHealthAsync();
+                    
+                    if (healthReport.OverallStatus == HealthStatus.Critical)
+                    {
+                        _logger.LogError("Database health check detected critical issues");
+                        
+                        // Check if database is corrupted
+                        bool isCorrupted = healthReport.Issues.Exists(i => 
+                            i.Category == "Integrity" && i.Severity == IssueSeverity.Critical);
+                        
+                        if (isCorrupted)
+                        {
+                            _logger.LogError("Database corruption detected");
+                            
+                            if (options.CreateBackupBeforeRepair)
+                            {
+                                try
+                                {
+                                    _logger.Log("Creating backup before attempting repair");
+                                    var backupPath = await _backupManager.CreateBackupAsync();
+                                    _logger.Log($"Backup created at: {backupPath}");
+                                    warnings.Add($"Database corruption detected. Backup created at: {backupPath}");
+                                }
+                                catch (Exception backupEx)
+                                {
+                                    _logger.LogWarning($"Failed to create backup: {backupEx.Message}");
+                                    warnings.Add($"Failed to create backup before repair: {backupEx.Message}");
+                                }
+                            }
+                            
+                            // For corrupted databases, we'll need to rebuild
+                            warnings.Add("Database corruption detected. Database will be rebuilt.");
+                            isNewDatabase = true; // Treat as new database
+                        }
+                    }
+                    else if (healthReport.OverallStatus == HealthStatus.Warning)
+                    {
+                        _logger.LogWarning("Database health check detected warnings");
+                        foreach (var issue in healthReport.Issues)
+                        {
+                            warnings.Add($"{issue.Category}: {issue.Description}");
+                        }
+                    }
+                    else
+                    {
+                        _logger.Log("Database health check passed");
+                    }
+                }
+                
+                // Step 4: Validate schema and repair if needed (for existing databases)
+                // Requirements: 1.3, 2.1, 3.1, 3.2, 3.3
+                if (!isNewDatabase && options.AutoRepair)
+                {
+                    _stateManager.UpdateProgress(InitializationStage.SchemaValidation, "Validating database schema");
+                    _logger.Log("Validating database schema");
+                    
+                    var validationResult = await _schemaValidator.ValidateSchemaAsync();
+                    
+                    if (!validationResult.IsValid)
+                    {
+                        _logger.LogWarning("Database schema validation failed - repair needed");
+                        
+                        if (options.CreateBackupBeforeRepair)
+                        {
+                            try
+                            {
+                                _logger.Log("Creating backup before schema repair");
+                                var backupPath = await _backupManager.CreateBackupAsync();
+                                _logger.Log($"Backup created at: {backupPath}");
+                                warnings.Add($"Schema issues detected. Backup created at: {backupPath}");
+                            }
+                            catch (Exception backupEx)
+                            {
+                                _logger.LogWarning($"Failed to create backup: {backupEx.Message}");
+                                warnings.Add($"Failed to create backup before repair: {backupEx.Message}");
+                            }
+                        }
+                        
+                        _stateManager.UpdateProgress(InitializationStage.SchemaRepair, "Repairing database schema");
+                        _logger.Log("Attempting to repair database schema");
+                        
+                        var repairOptions = new RepairOptions
+                        {
+                            CreateMissingTables = true,
+                            AddMissingColumns = true,
+                            CreateMissingIndexes = true,
+                            BackupBeforeRepair = false // Already created backup above
+                        };
+                        
+                        var repairResult = await _repairService.RepairSchemaAsync(validationResult, repairOptions);
+                        
+                        if (repairResult.Success)
+                        {
+                            _logger.Log("Database schema repaired successfully");
+                            foreach (var action in repairResult.ActionsPerformed)
+                            {
+                                warnings.Add($"Repaired: {action.Description}");
+                            }
+                            
+                            // Verify repair was successful
+                            var verificationResult = await _schemaValidator.ValidateSchemaAsync();
+                            if (!verificationResult.IsValid)
+                            {
+                                _logger.LogError("Schema validation failed after repair");
+                                warnings.Add("Warning: Some schema issues remain after repair");
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogError($"Database schema repair failed: {repairResult.ErrorMessage}");
+                            warnings.Add($"Schema repair failed: {repairResult.ErrorMessage}");
+                            
+                            // Continue anyway - we'll try to work with what we have
+                        }
+                    }
+                    else
+                    {
+                        _logger.Log("Database schema validation passed");
+                    }
+                }
+                
+                // Step 5: Create tables and indexes for new databases
+                // Requirements: 1.1
+                if (isNewDatabase)
+                {
+                    using var conn = new SqliteConnection(_connectionString);
+                    await conn.OpenAsync();
+                    
+                    _stateManager.UpdateProgress(InitializationStage.TableCreation, "Creating database tables");
+                    _logger.Log("Creating database tables");
+                    
+                    // Create version table first
+                    await CreateVersionTableAsync(conn);
+                    
+                    // Create all tables in a transaction for atomicity
+                    using (var transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            await CreateAllTablesAsync(conn);
+                            await transaction.CommitAsync();
+                            _logger.Log("Database tables created successfully");
+                        }
+                        catch (Exception ex)
+                        {
+                            await transaction.RollbackAsync();
+                            _logger.LogError($"Failed to create tables: {ex.Message}");
+                            throw new DatabaseInitializationException(
+                                "Failed to create database tables",
+                                InitializationStage.TableCreation,
+                                ex);
+                        }
+                    }
+                    
+                    _stateManager.UpdateProgress(InitializationStage.IndexCreation, "Creating database indexes");
+                    _logger.Log("Creating database indexes");
+                    
+                    // Create indexes in a transaction
+                    using (var transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            await CreateIndexesAsync(conn);
+                            await transaction.CommitAsync();
+                            _logger.Log("Database indexes created successfully");
+                        }
+                        catch (Exception ex)
+                        {
+                            await transaction.RollbackAsync();
+                            _logger.LogError($"Failed to create indexes: {ex.Message}");
+                            // Don't throw - indexes are not critical for basic functionality
+                            warnings.Add($"Failed to create some indexes: {ex.Message}");
+                        }
+                    }
+                    
+                    // Set database version
+                    await SetDatabaseVersionAsync(conn, CurrentVersion);
+                    _logger.Log($"Database version set to {CurrentVersion}");
+                }
+                else
+                {
+                    // For existing databases, check version and migrate if needed
+                    using var conn = new SqliteConnection(_connectionString);
+                    await conn.OpenAsync();
+                    
+                    var currentVersion = await GetDatabaseVersionAsync(conn);
+                    
+                    if (currentVersion < CurrentVersion)
+                    {
+                        _stateManager.UpdateProgress(InitializationStage.Migration, "Migrating database");
+                        _logger.Log($"Migrating database from version {currentVersion} to {CurrentVersion}");
+                        
+                        await MigrateDatabaseAsync(conn, currentVersion, CurrentVersion);
+                        _logger.Log("Database migration completed successfully");
+                    }
+                }
+                
+                // Step 6: Finalization
+                // Requirements: 1.4, 9.5
+                _stateManager.UpdateProgress(InitializationStage.Finalization, "Finalizing initialization");
+                _logger.Log("Database initialization completed successfully");
+                
+                // Update state manager with final state
+                _stateManager.CompleteInitialization(true);
+                
+                // Calculate duration and return result
+                var duration = DateTime.UtcNow - startTime;
+                _logger.Log($"Initialization completed in {duration.TotalMilliseconds:F2}ms");
+                
+                if (warnings.Count > 0)
+                {
+                    _logger.LogWarning($"Initialization completed with {warnings.Count} warning(s)");
+                }
+                
+                return new InitializationResult
+                {
+                    Success = true,
+                    FinalState = InitializationState.Completed,
+                    Duration = duration,
+                    Warnings = warnings
+                };
+            }
+            catch (DatabaseInitializationException dbEx)
+            {
+                // Handle initialization exceptions with stage information
+                _logger.LogError($"Database initialization failed at stage {dbEx.FailedStage}: {dbEx.Message}");
+                _stateManager.CompleteInitialization(false);
+                
+                return new InitializationResult
+                {
+                    Success = false,
+                    FinalState = InitializationState.Failed,
+                    FailedStage = dbEx.FailedStage,
+                    ErrorMessage = dbEx.Message,
+                    Duration = DateTime.UtcNow - startTime,
+                    Warnings = warnings
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Database initialization failed: {ex.Message}");
+                _stateManager.CompleteInitialization(false);
+                
+                return new InitializationResult
+                {
+                    Success = false,
+                    FinalState = InitializationState.Failed,
+                    ErrorMessage = ex.Message,
+                    Duration = DateTime.UtcNow - startTime,
+                    Warnings = warnings
+                };
+            }
+        }
+
+        /// <summary>
+        /// Executes an operation with retry logic and exponential backoff
+        /// Requirements: 6.1
+        /// </summary>
+        private async Task<T> ExecuteWithRetryAsync<T>(
+            Func<Task<T>> operation,
+            int maxRetries = 3,
+            TimeSpan? initialDelay = null)
+        {
+            var delay = initialDelay ?? TimeSpan.FromSeconds(1);
+            Exception lastException = null;
+
+            for (int attempt = 0; attempt < maxRetries; attempt++)
+            {
+                try
+                {
+                    return await operation();
+                }
+                catch (SqliteException ex) when (ex.SqliteErrorCode == 5) // SQLITE_BUSY
+                {
+                    lastException = ex;
+                    if (attempt < maxRetries - 1)
+                    {
+                        _logger.LogWarning(
+                            $"Database locked, retrying in {delay.TotalSeconds}s (attempt {attempt + 1}/{maxRetries})");
+                        await Task.Delay(delay);
+                        delay = TimeSpan.FromMilliseconds(delay.TotalMilliseconds * 2); // Exponential backoff
+                    }
+                }
+            }
+
+            var errorMsg = $"Failed to connect to database after {maxRetries} attempts";
+            _logger.LogError(errorMsg);
+            throw new DatabaseInitializationException(
+                errorMsg,
+                InitializationStage.ConnectionTest,
+                lastException);
         }
 
         /// <summary>
         /// 初始化数据库：创建数据库文件、表结构和索引
+        /// Maintained for backward compatibility - calls new InitializeAsync with default options
+        /// Requirements: 1.1
         /// </summary>
         public async Task InitializeAsync()
         {
-            // 确保数据库目录存在
-            var directory = Path.GetDirectoryName(_dbPath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            using var conn = new SqliteConnection(_connectionString);
-            await conn.OpenAsync();
-
-            // 创建版本管理表
-            await CreateVersionTableAsync(conn);
-
-            // 检查当前版本
-            var currentVersion = await GetDatabaseVersionAsync(conn);
+            _logger.Log("InitializeAsync() called (backward compatibility mode)");
             
-            if (currentVersion == 0)
+            // Call new InitializeAsync with default options
+            var result = await InitializeAsync(new InitializationOptions());
+            
+            // Throw exception on failure for backward compatibility
+            if (!result.Success)
             {
-                // 全新数据库，创建所有表
-                await CreateAllTablesAsync(conn);
-                await SetDatabaseVersionAsync(conn, CurrentVersion);
+                var stage = result.FailedStage ?? InitializationStage.DirectoryCreation;
+                throw new DatabaseInitializationException(
+                    result.ErrorMessage,
+                    stage);
             }
-            else if (currentVersion < CurrentVersion)
+            
+            // Log warnings if any
+            if (result.Warnings.Count > 0)
             {
-                // 需要迁移
-                await MigrateDatabaseAsync(conn, currentVersion, CurrentVersion);
+                foreach (var warning in result.Warnings)
+                {
+                    _logger.LogWarning(warning);
+                }
             }
-
-            // 创建索引
-            await CreateIndexesAsync(conn);
         }
 
         /// <summary>
@@ -238,11 +649,58 @@ CREATE TABLE IF NOT EXISTS ManualAssignments (
 
         /// <summary>
         /// 创建数据库索引
+        /// Enhanced to check for existing indexes and only create missing ones
+        /// Requirements: 8.1, 8.2, 8.4
         /// </summary>
-        private async Task CreateIndexesAsync(SqliteConnection conn)
+        private async Task CreateIndexesAsync(SqliteConnection conn, bool checkExisting = false)
         {
-            var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
+            var indexDefinitions = DatabaseSchema.GetIndexDefinitions();
+            
+            if (checkExisting)
+            {
+                // Get existing indexes
+                var existingIndexes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var checkCmd = conn.CreateCommand();
+                checkCmd.CommandText = @"
+                    SELECT name 
+                    FROM sqlite_master 
+                    WHERE type = 'index' 
+                    AND name NOT LIKE 'sqlite_%'";
+                
+                using (var reader = await checkCmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        existingIndexes.Add(reader.GetString(0));
+                    }
+                }
+                
+                _logger?.Log($"Found {existingIndexes.Count} existing indexes");
+                
+                // Only create missing indexes
+                foreach (var indexDef in indexDefinitions)
+                {
+                    if (!existingIndexes.Contains(indexDef.Key))
+                    {
+                        try
+                        {
+                            var cmd = conn.CreateCommand();
+                            cmd.CommandText = indexDef.Value;
+                            await cmd.ExecuteNonQueryAsync();
+                            _logger?.Log($"Created index: {indexDef.Key}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.LogWarning($"Failed to create index {indexDef.Key}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Create all indexes (for new databases)
+                var cmd = conn.CreateCommand();
+                cmd.CommandText = @"
 -- 人员表索引
 CREATE INDEX IF NOT EXISTS idx_personals_name ON Personals(Name);
 CREATE INDEX IF NOT EXISTS idx_personals_available ON Personals(IsAvailable);
@@ -284,7 +742,8 @@ CREATE INDEX IF NOT EXISTS idx_manual_assignments_personnel ON ManualAssignments
 CREATE INDEX IF NOT EXISTS idx_manual_assignments_date ON ManualAssignments(Date);
 CREATE INDEX IF NOT EXISTS idx_manual_assignments_enabled ON ManualAssignments(IsEnabled);
 ";
-            await cmd.ExecuteNonQueryAsync();
+                await cmd.ExecuteNonQueryAsync();
+            }
         }
 
         /// <summary>
