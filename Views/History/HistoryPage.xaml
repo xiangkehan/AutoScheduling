@@ -13,13 +13,18 @@
         <conv:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
     </Page.Resources>
 
-    <Grid Padding="16" RowDefinitions="Auto,Auto,*">
+    <Grid Padding="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
         <!-- Filters -->
-        <StackPanel Orientation="Horizontal" Spacing="12">
-            <TextBox Width="200" PlaceholderText="关键词" Text="{Binding Keyword, Mode=TwoWay}"/>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
+            <TextBox Width="200" PlaceholderText="关键字" Text="{Binding Keyword, Mode=TwoWay}"/>
             <DatePicker Date="{Binding StartDate, Mode=TwoWay}"/>
             <DatePicker Date="{Binding EndDate, Mode=TwoWay}"/>
-            <Button Content="应用" Command="{Binding ApplyDateRangeAsyncCommand}"/>
+            <Button Content="应用" Command="{Binding ApplyDateRangeCommand}"/>
             <ComboBox Width="120" ItemsSource="{Binding SortByOptions}" SelectedItem="{Binding SelectedSortBy}"/>
             <Button Content="时间线" Command="{Binding SwitchViewCommand}" CommandParameter="Timeline"/>
             <Button Content="列表" Command="{Binding SwitchViewCommand}" CommandParameter="List"/>
@@ -27,12 +32,12 @@
 
         <!-- Paging -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Visibility="{Binding IsListView, Converter={StaticResource BoolToVisibilityConverter}}">
-            <TextBlock Text="页码:"/>
+            <TextBlock Text="页面:"/>
             <TextBlock Text="{Binding CurrentPage}"/>
             <TextBlock Text="/"/>
             <TextBlock Text="{Binding TotalPages}"/>
-            <Button Content="上一页" Command="{Binding PrevPageAsyncCommand}"/>
-            <Button Content="下一页" Command="{Binding NextPageAsyncCommand}"/>
+            <Button Content="上一页" Command="{Binding PrevPageCommand}"/>
+            <Button Content="下一页" Command="{Binding NextPageCommand}"/>
         </StackPanel>
 
         <!-- Content -->
@@ -47,24 +52,24 @@
                             <StackPanel Width="320">
                                 <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold"/>
                                 <TextBlock>
- <Run Text="{Binding StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
- <Run Text=" - "/>
- <Run Text="{Binding EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
+                                    <Run Text="{Binding StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
+                                    <Run Text=" - "/>
+                                    <Run Text="{Binding EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
                                 </TextBlock>
                                 <TextBlock FontSize="12">
- <Run Text="人员:"/>
- <Run Text="{Binding NumberOfPersonnel}"/>
- <Run Text=" 哨位:"/>
- <Run Text="{Binding NumberOfPositions}"/>
+                                    <Run Text="人员:"/>
+                                    <Run Text="{Binding NumberOfPersonnel}"/>
+                                    <Run Text=" 哨位:"/>
+                                    <Run Text="{Binding NumberOfPositions}"/>
                                 </TextBlock>
                                 <TextBlock FontSize="12">
- <Run Text="确认:"/>
- <Run Text="{Binding ConfirmTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd HH:mm}"/>
+                                    <Run Text="确认:"/>
+                                    <Run Text="{Binding ConfirmTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd HH:mm}"/>
                                 </TextBlock>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <Button Content="详情" Command="{Binding DataContext.ViewDetailCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
-                                <Button Content="导出" Command="{Binding DataContext.ExportAsyncCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                <Button Content="查看" Command="{Binding DataContext.ViewDetailCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                <Button Content="导出" Command="{Binding DataContext.ExportCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
                                 <Button Content="对比" Command="{Binding DataContext.CompareCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
                             </StackPanel>
                         </StackPanel>
@@ -90,19 +95,27 @@
             <ListView x:Name="ListView" Visibility="{Binding IsListView, Converter={StaticResource BoolToVisibilityConverter}}" ItemsSource="{Binding Items}" SelectionMode="None">
                 <ListView.ItemTemplate>
                     <DataTemplate>
-                        <Grid ColumnDefinitions="120,200,220,80,80,Auto" Padding="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Margin="0,4,0,0" CornerRadius="4">
+                        <Grid Padding="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Margin="0,4,0,0" CornerRadius="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="220"/>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="{Binding ConfirmTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
                             <TextBlock Grid.Column="1" Text="{Binding Name}"/>
                             <TextBlock Grid.Column="2">
- <Run Text="{Binding StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
- <Run Text=" - "/>
- <Run Text="{Binding EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
+                                <Run Text="{Binding StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
+                                <Run Text=" - "/>
+                                <Run Text="{Binding EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
                             </TextBlock>
                             <TextBlock Grid.Column="3" Text="{Binding NumberOfPersonnel}"/>
                             <TextBlock Grid.Column="4" Text="{Binding NumberOfPositions}"/>
                             <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4">
-                                <Button Content="详情" Command="{Binding DataContext.ViewDetailCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
-                                <Button Content="导出" Command="{Binding DataContext.ExportAsyncCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                <Button Content="查看" Command="{Binding DataContext.ViewDetailCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                <Button Content="导出" Command="{Binding DataContext.ExportCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
                                 <Button Content="对比" Command="{Binding DataContext.CompareCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
                             </StackPanel>
                         </Grid>

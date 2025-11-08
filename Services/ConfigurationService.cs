@@ -87,6 +87,13 @@ public class ConfigurationService : IConfigurationService
     public async Task InitializeAsync()
     {
         await LoadConfigurationAsync();
+        
+        // 如果配置文件不存在，创建一个空的配置文件
+        if (!File.Exists(_configFilePath))
+        {
+            System.Diagnostics.Debug.WriteLine($"[ConfigurationService] Configuration file does not exist, creating empty configuration file");
+            await SaveConfigurationAsync();
+        }
     }
 
     public async Task CleanupAsync()
