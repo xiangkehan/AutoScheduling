@@ -21,7 +21,7 @@
         <DataTemplate x:Key="PersonnelListItemTemplate" x:DataType="dto:PersonnelDto">
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
-                <TextBlock Text="{x:Bind AvailablePositionNames[0], FallbackValue='N/A'}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Text="技能: {x:Bind SkillIds.Count}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
         </DataTemplate>
         <DataTemplate x:Key="PositionListItemTemplate" x:DataType="dto:PositionDto">

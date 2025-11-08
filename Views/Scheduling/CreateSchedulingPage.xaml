@@ -18,8 +18,8 @@
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <SymbolIcon Symbol="Contact"/>
                 <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
-                <!-- Use first available position name -->
-                <TextBlock Text="{x:Bind AvailablePositionNames[0], FallbackValue='N/A'}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <!-- Display skill count -->
+                <TextBlock Text="{x:Bind SkillIds.Count, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
         </DataTemplate>
 

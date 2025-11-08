@@ -21,23 +21,23 @@
         </Grid.RowDefinitions>
         <!-- Filters -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
-            <TextBox Width="200" PlaceholderText="¹Ø¼ü×Ö" Text="{Binding Keyword, Mode=TwoWay}"/>
+            <TextBox Width="200" PlaceholderText="å…³é”®å­—" Text="{Binding Keyword, Mode=TwoWay}"/>
             <DatePicker Date="{Binding StartDate, Mode=TwoWay}"/>
             <DatePicker Date="{Binding EndDate, Mode=TwoWay}"/>
-            <Button Content="Ó¦ÓÃ" Command="{Binding ApplyDateRangeCommand}"/>
+            <Button Content="åº”ç”¨" Command="{Binding ApplyDateRangeCommand}"/>
             <ComboBox Width="120" ItemsSource="{Binding SortByOptions}" SelectedItem="{Binding SelectedSortBy}"/>
-            <Button Content="Ê±¼äÏß" Command="{Binding SwitchViewCommand}" CommandParameter="Timeline"/>
-            <Button Content="ÁÐ±í" Command="{Binding SwitchViewCommand}" CommandParameter="List"/>
+            <Button Content="æ—¶é—´çº¿" Command="{Binding SwitchViewCommand}" CommandParameter="Timeline"/>
+            <Button Content="åˆ—è¡¨" Command="{Binding SwitchViewCommand}" CommandParameter="List"/>
         </StackPanel>
 
         <!-- Paging -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Visibility="{Binding IsListView, Converter={StaticResource BoolToVisibilityConverter}}">
-            <TextBlock Text="Ò³Ãæ:"/>
+            <TextBlock Text="é¡µé¢:"/>
             <TextBlock Text="{Binding CurrentPage}"/>
             <TextBlock Text="/"/>
             <TextBlock Text="{Binding TotalPages}"/>
-            <Button Content="ÉÏÒ»Ò³" Command="{Binding PrevPageCommand}"/>
-            <Button Content="ÏÂÒ»Ò³" Command="{Binding NextPageCommand}"/>
+            <Button Content="ä¸Šä¸€é¡µ" Command="{Binding PrevPageCommand}"/>
+            <Button Content="ä¸‹ä¸€é¡µ" Command="{Binding NextPageCommand}"/>
         </StackPanel>
 
         <!-- Content -->
@@ -57,20 +57,20 @@
                                     <Run Text="{Binding EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
                                 </TextBlock>
                                 <TextBlock FontSize="12">
-                                    <Run Text="ÈËÔ±:"/>
+                                    <Run Text="äººå‘˜:"/>
                                     <Run Text="{Binding NumberOfPersonnel}"/>
-                                    <Run Text=" ÉÚÎ»:"/>
+                                    <Run Text=" å“¨ä½:"/>
                                     <Run Text="{Binding NumberOfPositions}"/>
                                 </TextBlock>
                                 <TextBlock FontSize="12">
-                                    <Run Text="È·ÈÏ:"/>
+                                    <Run Text="ç¡®è®¤:"/>
                                     <Run Text="{Binding ConfirmTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd HH:mm}"/>
                                 </TextBlock>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <Button Content="²é¿´" Command="{Binding DataContext.ViewDetailCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
-                                <Button Content="µ¼³ö" Command="{Binding DataContext.ExportCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
-                                <Button Content="¶Ô±È" Command="{Binding DataContext.CompareCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                <Button Content="æŸ¥çœ‹" Command="{Binding DataContext.ViewDetailCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                <Button Content="å¯¼å‡º" Command="{Binding DataContext.ExportCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                <Button Content="å¯¹æ¯”" Command="{Binding DataContext.CompareCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -114,9 +114,9 @@
                             <TextBlock Grid.Column="3" Text="{Binding NumberOfPersonnel}"/>
                             <TextBlock Grid.Column="4" Text="{Binding NumberOfPositions}"/>
                             <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4">
-                                <Button Content="²é¿´" Command="{Binding DataContext.ViewDetailCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
-                                <Button Content="µ¼³ö" Command="{Binding DataContext.ExportCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
-                                <Button Content="¶Ô±È" Command="{Binding DataContext.CompareCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                <Button Content="æŸ¥çœ‹" Command="{Binding DataContext.ViewDetailCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                <Button Content="å¯¼å‡º" Command="{Binding DataContext.ExportCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                <Button Content="å¯¹æ¯”" Command="{Binding DataContext.CompareCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
                             </StackPanel>
                         </Grid>
                     </DataTemplate>

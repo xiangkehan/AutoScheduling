@@ -15,12 +15,10 @@ namespace AutoScheduling3.DTOs.Mappers;
 public class PersonnelMapper
 {
     private readonly ISkillRepository _skillRepository;
-    private readonly IPositionRepository _positionRepository;
 
-    public PersonnelMapper(ISkillRepository skillRepository, IPositionRepository positionRepository)
+    public PersonnelMapper(ISkillRepository skillRepository)
     {
         _skillRepository = skillRepository ?? throw new ArgumentNullException(nameof(skillRepository));
-        _positionRepository = positionRepository ?? throw new ArgumentNullException(nameof(positionRepository));
     }
 
     /// <summary>
@@ -35,8 +33,6 @@ public class PersonnelMapper
         {
             Id = model.Id,
             Name = model.Name,
-            AvailablePositionIds = new List<int>(), // 需要异步加载
-            AvailablePositionNames = new List<string>(), // 需要异步加载
             SkillIds = new List<int>(model.SkillIds),
             SkillNames = new List<string>(), // 需要异步加载
             IsAvailable = model.IsAvailable,
@@ -53,11 +49,6 @@ public class PersonnelMapper
     public async Task<PersonnelDto> ToDtoAsync(Personal model)
     {
         var dto = ToDto(model);
-
-        // 加载可用哨位信息
-        var availablePositions = await _positionRepository.GetPositionsByPersonnelAsync(model.Id);
-        dto.AvailablePositionIds = availablePositions.Select(p => p.Id).ToList();
-        dto.AvailablePositionNames = availablePositions.Select(p => p.Name).ToList();
 
         // 加载技能名称
         if (model.SkillIds != null && model.SkillIds.Count > 0)
@@ -167,7 +158,6 @@ public class PersonnelMapper
         return new UpdatePersonnelDto
         {
             Name = dto.Name,
-            AvailablePositionIds = new List<int>(dto.AvailablePositionIds),
             SkillIds = new List<int>(dto.SkillIds),
             IsAvailable = dto.IsAvailable,
             IsRetired = dto.IsRetired,
@@ -188,7 +178,6 @@ public class PersonnelMapper
         return new CreatePersonnelDto
         {
             Name = dto.Name,
-            AvailablePositionIds = new List<int>(dto.AvailablePositionIds),
             SkillIds = new List<int>(dto.SkillIds),
             IsAvailable = dto.IsAvailable,
             RecentShiftIntervalCount = dto.RecentShiftIntervalCount,

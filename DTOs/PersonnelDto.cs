@@ -24,18 +24,6 @@ public class PersonnelDto
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 可用哨位ID列表
-    /// </summary>
-    [JsonPropertyName("availablePositionIds")]
-    public List<int> AvailablePositionIds { get; set; } = new();
-
-    /// <summary>
-    /// 可用哨位名称列表（冗余字段，便于显示）
-    /// </summary>
-    [JsonPropertyName("availablePositionNames")]
-    public List<string> AvailablePositionNames { get; set; } = new();
-
-    /// <summary>
     /// 技能ID列表
     /// </summary>
     [Required(ErrorMessage = "技能列表不能为空")]
@@ -100,11 +88,6 @@ public class CreatePersonnelDto
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 可用哨位ID列表（可选）
-    /// </summary>
-    public List<int> AvailablePositionIds { get; set; } = new();
-
-    /// <summary>
     /// 技能ID列表（至少一项）
     /// </summary>
     [Required(ErrorMessage = "技能列表不能为空")]
@@ -148,11 +131,6 @@ public class UpdatePersonnelDto
     [Required(ErrorMessage = "姓名不能为空")]
     [StringLength(50, MinimumLength = 1, ErrorMessage = "姓名长度必须在1-50字符之间")]
     public string Name { get; set; } = string.Empty;
-
-    /// <summary>
-    /// 可用哨位ID列表（可选）
-    /// </summary>
-    public List<int> AvailablePositionIds { get; set; } = new();
 
     /// <summary>
     /// 技能ID列表（至少一项）

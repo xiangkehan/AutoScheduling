@@ -107,36 +107,6 @@
                                      Text="{x:Bind ViewModel.NewPersonnel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                      PlaceholderText="请输入姓名"/>
 
-                            <!-- 可用哨位选择 -->
-                            <StackPanel>
-                                <TextBlock Text="可用哨位" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
-                                <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
-                                        BorderThickness="1" 
-                                        CornerRadius="4"
-                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
-                                        Padding="4">
-                                    <Grid MinHeight="60">
-                                        <ListView x:Name="AvailablePositionsListView"
-                                                  ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
-                                                  SelectionMode="Multiple"
-                                                  MaxHeight="120"
-                                                  SelectionChanged="AvailablePositionsListView_SelectionChanged">
-                                            <ListView.ItemTemplate>
-                                                <DataTemplate x:DataType="local:PositionDto">
-                                                    <TextBlock Text="{x:Bind Name}"/>
-                                                </DataTemplate>
-                                            </ListView.ItemTemplate>
-                                        </ListView>
-                                        <TextBlock Text="暂无哨位数据，请先添加哨位"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"
-                                                   Margin="8"
-                                                   Visibility="{x:Bind ViewModel.AvailablePositions.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
-                                    </Grid>
-                                </Border>
-                            </StackPanel>
-
                             <!-- 技能选择 -->
                             <StackPanel>
                                 <TextBlock Text="技能*" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
@@ -190,36 +160,6 @@
                             <TextBox Header="姓名*" 
                                      Text="{x:Bind ViewModel.EditingPersonnel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                             
-                            <!-- 可用哨位编辑 -->
-                            <StackPanel>
-                                <TextBlock Text="可用哨位" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
-                                <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
-                                        BorderThickness="1" 
-                                        CornerRadius="4"
-                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
-                                        Padding="4">
-                                    <Grid MinHeight="60">
-                                        <ListView x:Name="EditAvailablePositionsListView"
-                                                  ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
-                                                  SelectionMode="Multiple"
-                                                  MaxHeight="120"
-                                                  SelectionChanged="EditAvailablePositionsListView_SelectionChanged">
-                                            <ListView.ItemTemplate>
-                                                <DataTemplate x:DataType="local:PositionDto">
-                                                    <TextBlock Text="{x:Bind Name}"/>
-                                                </DataTemplate>
-                                            </ListView.ItemTemplate>
-                                        </ListView>
-                                        <TextBlock Text="暂无哨位数据，请先添加哨位"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"
-                                                   Margin="8"
-                                                   Visibility="{x:Bind ViewModel.AvailablePositions.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
-                                    </Grid>
-                                </Border>
-                            </StackPanel>
-
                             <!-- 技能编辑 -->
                             <StackPanel>
                                 <TextBlock Text="技能*" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
@@ -265,23 +205,6 @@
                         <!-- 详情显示 -->
                         <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
                             <TextBlock Text="{x:Bind ViewModel.SelectedItem.Name, Mode=OneWay}" Style="{StaticResource TitleTextBlockStyle}"/>
-                            
-                            <!-- 可用哨位显示 -->
-                            <StackPanel>
-                                <TextBlock Text="可用哨位:" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <ItemsRepeater ItemsSource="{x:Bind ViewModel.SelectedItem.AvailablePositionNames, Mode=OneWay}">
-                                    <ItemsRepeater.Layout>
-                                        <StackLayout Orientation="Horizontal" Spacing="4"/>
-                                    </ItemsRepeater.Layout>
-                                    <ItemsRepeater.ItemTemplate>
-                                        <DataTemplate x:DataType="x:String">
-                                            <Border Background="{ThemeResource SystemFillColorSolidNeutralBrush}" CornerRadius="4" Padding="6,3">
-                                                <TextBlock Text="{x:Bind}" FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsRepeater.ItemTemplate>
-                                </ItemsRepeater>
-                            </StackPanel>
                             
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBlock Text="状态:" FontWeight="SemiBold"/>

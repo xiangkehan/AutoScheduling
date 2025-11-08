@@ -16,6 +16,7 @@
 		<GenerateProgramFile>false</GenerateProgramFile>
 	</PropertyGroup>
 	<ItemGroup>
+		<Page Remove="Themes\Converters.xaml" />
 		<Page Remove="Views\History\HistoryDetailPage.xaml" />
 	</ItemGroup>
 	<ItemGroup>
@@ -48,6 +49,9 @@
 	</ItemGroup>
 	<ItemGroup>
 		<Page Update="Controls\ScheduleGridControl.xaml" />
+		<None Update="Themes\Converters.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</None>
 		<None Update="Views\History\HistoryDetailPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</None>

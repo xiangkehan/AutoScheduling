@@ -1,6 +1,8 @@
 # Implementation Plan
 
-- [-] 1. 修改 DTO 层，移除可用哨位字段
+- [x] 1. 修改 DTO 层，移除可用哨位字段
+
+
 
 
 
@@ -8,64 +10,153 @@
   - 确保所有验证特性（Attributes）保持正确
   - _需求: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 2. 修改 Mapper 层，移除可用哨位映射逻辑
+- [x] 2. 修改 Mapper 层，移除可用哨位映射逻辑
+
+
+
+
 
   - 更新 PersonnelMapper.ToDto() 方法，移除可用哨位字段的初始化
   - 更新 PersonnelMapper.ToDtoAsync() 方法，移除加载可用哨位信息的逻辑
   - 更新 PersonnelMapper.ToUpdateDto() 方法，移除 AvailablePositionIds 的复制
   - 更新 PersonnelMapper.ToCreateDto() 方法，移除 AvailablePositionIds 的复制
   - _需求: 1.1, 1.2, 1.3, 1.4_
+-
 
-- [ ] 3. 修改 Service 层接口和实现
+- [x] 3. 修改 Service 层接口和实现
 
-- [ ] 3.1 更新 IPersonnelService 接口
+
+
+
+- [x] 3.1 更新 IPersonnelService 接口
+
+
   - 移除 GetAvailablePositionsAsync(int personnelId) 方法签名
   - _需求: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 3.2 更新 PersonnelService 实现
+- [x] 3.2 更新 PersonnelService 实现
+
+
   - 移除 IPositionRepository 依赖注入
   - 更新构造函数，移除 positionRepository 参数
   - 移除 GetAvailablePositionsAsync() 方法实现
   - _需求: 5.1, 5.2, 5.3, 5.4_
+-
 
-- [ ] 4. 修改 UI 层 XAML，移除可用哨位控件
+- [x] 4. 修改 UI 层 XAML，移除可用哨位控件
 
-- [ ] 4.1 修改添加人员表单
+
+- [x] 4.1 修改添加人员表单
+
+
   - 移除可用哨位选择的 StackPanel
   - 移除 AvailablePositionsListView 控件
   - 调整表单布局和间距
   - _需求: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 4.2 修改编辑人员表单
+- [x] 4.2 修改编辑人员表单
+
+
   - 移除可用哨位编辑的 StackPanel
   - 移除 EditAvailablePositionsListView 控件
   - 调整表单布局和间距
   - _需求: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 4.3 修改人员详情显示
+
+
+- [x] 4.3 修改 PersonnelCard 控件
+
+
+
+
+
+  - 移除显示 AvailablePositionNames[0] 的 TextBlock（Grid.Row="1"）
+  - 调整 Grid 的 RowDefinitions，移除不再使用的行定义
+  - 可选：用其他信息替代（如人员ID或其他有用信息）
+  - _需求: 4.1, 4.2, 4.3, 4.4_
+
+- [x] 4.4 修改人员详情显示
   - 移除可用哨位显示的 StackPanel
   - 移除可用哨位名称的 ItemsRepeater
   - 调整详情布局
   - _需求: 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 5. 修改 UI 层 Code-behind，移除可用哨位事件处理
-- [ ] 5.1 移除事件处理方法
+- [x] 4.5 修改 CreateSchedulingPage.xaml
+
+
+
+
+
+  - 在 PersonnelListViewTemplate 中移除显示 AvailablePositionNames[0] 的 TextBlock（第 22 行）
+  - 可选：用技能数量或其他信息替代
+  - _需求: 4.1, 4.2, 4.3, 4.4_
+
+
+- [x] 4.6 修改 TemplatePage.xaml
+
+
+
+
+  - 在 PersonnelListItemTemplate 中移除显示 AvailablePositionNames[0] 的 TextBlock（第 20 行）
+  - 可选：用技能数量或其他信息替代
+  - _需求: 4.1, 4.2, 4.3, 4.4_
+
+
+
+
+
+
+- [x] 5. 修改 UI 层 Code-behind，移除可用哨位事件处理
+
+
+
+- [x] 5.1 移除事件处理方法
+
+
+
+
   - 移除 AvailablePositionsListView_SelectionChanged 方法
+
+
   - 移除 EditAvailablePositionsListView_SelectionChanged 方法
   - _需求: 2.1, 3.1_
 
-- [ ] 5.2 更新现有方法
+- [x] 5.2 更新现有方法
+
+
+
+
+
   - 更新 SyncEditSelections() 方法，移除同步哨位选择的逻辑
   - 更新 ResetForm_Click() 方法，移除清空哨位选择的逻辑
   - _需求: 2.1, 3.1_
 
-- [ ] 6. 修改 ViewModel 层，移除可用哨位处理逻辑
-- [ ] 6.1 更新 StartEditAsync 方法
+
+- [x] 6. 修改 ViewModel 层，移除可用哨位处理逻辑
+
+
+
+
+
+
+- [x] 6.1 更新 StartEditAsync 方法
+
+
+
+
+
+
   - 移除 AvailablePositionIds 的复制逻辑
   - 确保只复制实际存在的字段
   - _需求: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 6.2 可选：清理 LoadDataAsync 方法
+- [x] 6.2 可选：清理 LoadDataAsync 方法
+
+
+
+
+
+
   - 评估是否需要保留加载哨位列表的逻辑
   - 如果确认不需要，移除相关代码
   - _需求: 2.1, 3.1_

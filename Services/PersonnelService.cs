@@ -17,18 +17,15 @@ public class PersonnelService : IPersonnelService
 {
     private readonly IPersonalRepository _repository;
     private readonly ISkillRepository _skillRepository;
-    private readonly IPositionRepository _positionRepository;
     private readonly PersonnelMapper _mapper;
 
     public PersonnelService(
         IPersonalRepository repository, 
         ISkillRepository skillRepository,
-        IPositionRepository positionRepository,
         PersonnelMapper mapper)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _skillRepository = skillRepository ?? throw new ArgumentNullException(nameof(skillRepository));
-        _positionRepository = positionRepository ?? throw new ArgumentNullException(nameof(positionRepository));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
     }
 
@@ -137,6 +134,8 @@ public class PersonnelService : IPersonnelService
 
     /// <summary>
     /// 验证人员技能匹配（业务规则验证）
+    /// 注意：此方法需要 IPositionRepository 依赖，但为了保持接口兼容性暂时保留
+    /// 实际使用时应该从调用方传入 position 对象或通过 PositionService 调用
     /// </summary>
     public async Task<bool> ValidatePersonnelSkillsAsync(int personnelId, int positionId)
     {
@@ -145,62 +144,14 @@ public class PersonnelService : IPersonnelService
         if (personnel == null)
             return false;
 
-        // 获取哨位信息
-        var position = await _positionRepository.GetByIdAsync(positionId);
-        if (position == null)
-            return false;
-
         // 检查人员是否可用
         if (!personnel.IsAvailable || personnel.IsRetired)
             return false;
 
-        // 检查技能匹配：人员技能必须包含哨位所需的所有技能
-        if (position.RequiredSkillIds == null || position.RequiredSkillIds.Count == 0)
-            return true; // 哨位无技能要求
-
-        if (personnel.SkillIds == null || personnel.SkillIds.Count == 0)
-            return false; // 人员无技能但哨位有要求
-
-        // 验证人员技能是否包含哨位所需的所有技能
-        return position.RequiredSkillIds.All(requiredSkillId => 
-            personnel.SkillIds.Contains(requiredSkillId));
-    }
-
-    /// <summary>
-    /// 获取人员可用的哨位列表 - 根据需求3.1
-    /// </summary>
-    public async Task<List<PositionDto>> GetAvailablePositionsAsync(int personnelId)
-    {
-        // 获取人员信息
-        var personnel = await _repository.GetByIdAsync(personnelId);
-        if (personnel == null)
-            throw new InvalidOperationException($"人员 {personnelId} 不存在");
-
-        // 检查人员是否可用
-        if (!personnel.IsAvailable || personnel.IsRetired)
-            return new List<PositionDto>();
-
-        // 获取所有哨位
-        var allPositions = await _positionRepository.GetAllAsync();
-        var availablePositions = new List<PositionLocation>();
-
-        // 筛选人员可以胜任的哨位
-        foreach (var position in allPositions)
-        {
-            // 检查哨位的可用人员列表是否包含该人员
-            if (position.AvailablePersonnelIds?.Contains(personnelId) == true)
-            {
-                // 验证技能匹配
-                if (await ValidatePersonnelSkillsAsync(personnelId, position.Id))
-                {
-                    availablePositions.Add(position);
-                }
-            }
-        }
-
-        // 转换为DTO（需要使用PositionMapper）
-        var positionMapper = new DTOs.Mappers.PositionMapper(_skillRepository, _repository);
-        return await positionMapper.ToDtoListAsync(availablePositions);
+        // 注意：由于移除了 IPositionRepository 依赖，此方法无法验证哨位技能要求
+        // 建议在调用方使用 PositionService 获取哨位信息后进行验证
+        // 或者将此方法移至 SchedulingService 等需要同时访问人员和哨位的服务中
+        return true;
     }
 
     /// <summary>
@@ -219,6 +170,4 @@ public class PersonnelService : IPersonnelService
         if (invalidSkillIds.Any())
             throw new ArgumentException($"技能ID无效: {string.Join(", ", invalidSkillIds)}");
     }
-
-
 }

@@ -162,6 +162,106 @@
 
 ### 4. UI 层修改
 
+#### PersonnelCard.xaml (控件)
+
+**当前结构:**
+```xml
+<Grid x:Name="LayoutRoot" RowDefinitions="Auto,*,Auto,Auto">
+    <StackPanel Grid.Row="0"><!-- 人员名称 --></StackPanel>
+    <TextBlock Grid.Row="1" Text="{x:Bind Personnel.AvailablePositionNames[0], ...}"/>  <!-- 需要移除 -->
+    <StackPanel Grid.Row="2"><!-- 技能列表 --></StackPanel>
+    <StackPanel Grid.Row="3"><!-- 状态标签 --></StackPanel>
+</Grid>
+```
+
+**移除的元素:**
+- Grid.Row="1" 中的 TextBlock - 显示 `Personnel.AvailablePositionNames[0]`
+
+**修改方案（推荐）:**
+
+方案1：完全移除该行
+```xml
+<Grid x:Name="LayoutRoot" RowDefinitions="Auto,Auto,Auto">
+    <StackPanel Grid.Row="0"><!-- 人员名称 --></StackPanel>
+    <!-- 移除 Grid.Row="1" -->
+    <StackPanel Grid.Row="1"><!-- 技能列表（原 Row 2）--></StackPanel>
+    <StackPanel Grid.Row="2"><!-- 状态标签（原 Row 3）--></StackPanel>
+</Grid>
+```
+
+方案2：替换为其他信息（可选）
+```xml
+<Grid x:Name="LayoutRoot" RowDefinitions="Auto,Auto,Auto,Auto">
+    <StackPanel Grid.Row="0"><!-- 人员名称 --></StackPanel>
+    <TextBlock Grid.Row="1" Text="{x:Bind Personnel.Id, Mode=OneWay, StringFormat='ID: {0}'}" 
+               Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+               FontSize="12" Margin="0,4,0,0"/>
+    <StackPanel Grid.Row="2"><!-- 技能列表 --></StackPanel>
+    <StackPanel Grid.Row="3"><!-- 状态标签 --></StackPanel>
+</Grid>
+```
+
+**推荐使用方案1**，因为：
+- 卡片更简洁
+- 人员ID对用户意义不大
+- 技能和状态信息更重要
+
+#### CreateSchedulingPage.xaml
+
+**移除的绑定:**
+- PersonnelListViewTemplate 中的 TextBlock - 显示 `AvailablePositionNames[0]`（第 22 行）
+
+**修改方案:**
+```xml
+<!-- 修改前: -->
+<DataTemplate x:Key="PersonnelListViewTemplate" x:DataType="dto:PersonnelDto">
+    <StackPanel Orientation="Horizontal" Spacing="8">
+        <SymbolIcon Symbol="Contact"/>
+        <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
+        <TextBlock Text="{x:Bind AvailablePositionNames[0], FallbackValue='N/A'}" 
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>  <!-- 移除此行 -->
+    </StackPanel>
+</DataTemplate>
+
+<!-- 修改后: -->
+<DataTemplate x:Key="PersonnelListViewTemplate" x:DataType="dto:PersonnelDto">
+    <StackPanel Orientation="Horizontal" Spacing="8">
+        <SymbolIcon Symbol="Contact"/>
+        <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
+        <!-- 可选：显示技能数量或其他信息 -->
+        <TextBlock Text="{x:Bind SkillIds.Count, StringFormat='技能: {0}'}" 
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+    </StackPanel>
+</DataTemplate>
+```
+
+#### TemplatePage.xaml
+
+**移除的绑定:**
+- PersonnelListItemTemplate 中的 TextBlock - 显示 `AvailablePositionNames[0]`（第 20 行）
+
+**修改方案:**
+```xml
+<!-- 修改前: -->
+<DataTemplate x:Key="PersonnelListItemTemplate" x:DataType="dto:PersonnelDto">
+    <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
+        <TextBlock Text="{x:Bind AvailablePositionNames[0], FallbackValue='N/A'}" 
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>  <!-- 移除此行 -->
+    </StackPanel>
+</DataTemplate>
+
+<!-- 修改后: -->
+<DataTemplate x:Key="PersonnelListItemTemplate" x:DataType="dto:PersonnelDto">
+    <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
+        <!-- 可选：显示技能数量或其他信息 -->
+        <TextBlock Text="{x:Bind SkillIds.Count, StringFormat='技能: {0}'}" 
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+    </StackPanel>
+</DataTemplate>
+```
+
 #### PersonnelPage.xaml
 
 **移除的控件:**
@@ -450,9 +550,7 @@ Personal (无可用哨位) → PersonnelDto (无可用哨位) → UI (不显示�
 修改后，人员与哨位的关系仍然存在，但方向单一：
 - **哨位 → 人员**: 哨位配置可用人员列表（PositionLocation.AvailablePersonnelIds）
 - **人员 ← 哨位**: 人员不配置可用哨位列表（已移除）
-
-这种单向关系更符合业务逻辑：
-- 哨位定义了"哪些人可以站这个哨位"
+    
 - 排班时根据哨位的可用人员列表和人员技能进行匹配
 
 ## Implementation Notes

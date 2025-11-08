@@ -16,7 +16,6 @@ namespace AutoScheduling3.ViewModels.DataManagement;
 public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
 {
     private readonly IPersonnelService _personnelService;
-    private readonly IPositionService _positionService;
     private readonly ISkillService _skillService;
     private readonly DialogService _dialogService;
 
@@ -52,23 +51,16 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     }
 
     /// <summary>
-    /// 可选哨位列表
-    /// </summary>
-    public ObservableCollection<PositionDto> AvailablePositions { get; } = new();
-
-    /// <summary>
     /// 可选技能列表
     /// </summary>
     public ObservableCollection<SkillDto> AvailableSkills { get; } = new();
 
     public PersonnelViewModel(
         IPersonnelService personnelService,
-        IPositionService positionService,
         ISkillService skillService,
         DialogService dialogService)
     {
         _personnelService = personnelService ?? throw new ArgumentNullException(nameof(personnelService));
-        _positionService = positionService ?? throw new ArgumentNullException(nameof(positionService));
         _skillService = skillService ?? throw new ArgumentNullException(nameof(skillService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
@@ -119,14 +111,7 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
             ClearItems();
             AddRange(personnel);
 
-            // 加载可选项
-            var positions = await _positionService.GetAllAsync();
-            AvailablePositions.Clear();
-            foreach (var pos in positions)
-            {
-                AvailablePositions.Add(pos);
-            }
-
+            // 加载可选技能
             var skills = await _skillService.GetAllAsync();
             AvailableSkills.Clear();
             foreach (var skill in skills)
@@ -167,7 +152,6 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
             EditingPersonnel = new UpdatePersonnelDto
             {
                 Name = SelectedItem.Name,
-                AvailablePositionIds = new List<int>(SelectedItem.AvailablePositionIds),
                 SkillIds = new List<int>(SelectedItem.SkillIds),
                 IsAvailable = SelectedItem.IsAvailable,
                 IsRetired = SelectedItem.IsRetired

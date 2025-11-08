@@ -45,17 +45,6 @@ namespace AutoScheduling3.Views.DataManagement
         {
             if (ViewModel.EditingPersonnel == null) return;
 
-            // 同步哨位选择
-            EditAvailablePositionsListView.SelectedItems.Clear();
-            foreach (var posId in ViewModel.EditingPersonnel.AvailablePositionIds)
-            {
-                var position = ViewModel.AvailablePositions.FirstOrDefault(p => p.Id == posId);
-                if (position != null)
-                {
-                    EditAvailablePositionsListView.SelectedItems.Add(position);
-                }
-            }
-
             // 同步技能选择
             EditSkillsListView.SelectedItems.Clear();
             foreach (var skillId in ViewModel.EditingPersonnel.SkillIds)
@@ -72,28 +61,12 @@ namespace AutoScheduling3.Views.DataManagement
         {
             ViewModel.NewPersonnel = new DTOs.CreatePersonnelDto();
             SkillsListView.SelectedItems.Clear();
-            AvailablePositionsListView.SelectedItems.Clear();
         }
 
         private void SkillsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var selectedSkills = SkillsListView.SelectedItems.Cast<DTOs.SkillDto>().ToList();
             ViewModel.NewPersonnel.SkillIds = selectedSkills.Select(s => s.Id).ToList();
-        }
-
-        private void AvailablePositionsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var selectedPositions = AvailablePositionsListView.SelectedItems.Cast<DTOs.PositionDto>().ToList();
-            ViewModel.NewPersonnel.AvailablePositionIds = selectedPositions.Select(p => p.Id).ToList();
-        }
-
-        private void EditAvailablePositionsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (ViewModel.EditingPersonnel != null)
-            {
-                var selectedPositions = EditAvailablePositionsListView.SelectedItems.Cast<DTOs.PositionDto>().ToList();
-                ViewModel.EditingPersonnel.AvailablePositionIds = selectedPositions.Select(p => p.Id).ToList();
-            }
         }
 
         private void EditSkillsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
