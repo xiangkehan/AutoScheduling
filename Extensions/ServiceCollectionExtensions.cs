@@ -70,6 +70,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITemplateService, TemplateService>();
         services.AddSingleton<IHistoryService, HistoryService>();
         services.AddSingleton<ISchedulingService, SchedulingService>();
+        services.AddSingleton<IStoragePathService, StoragePathService>();
 
         return services;
     }

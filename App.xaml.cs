@@ -100,7 +100,8 @@ namespace AutoScheduling3
                     ServiceProvider.GetRequiredService<IConstraintRepository>(),
                     ServiceProvider.GetRequiredService<ITemplateRepository>(),
                     ServiceProvider.GetRequiredService<IHistoryManagement>(),
-                    ServiceProvider.GetRequiredService<ISchedulingService>()
+                    ServiceProvider.GetRequiredService<ISchedulingService>(),
+                    ServiceProvider.GetRequiredService<IStoragePathService>()
                 };
 
                 foreach(var target in initTargets)

@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.Helpers;
+using AutoScheduling3.ViewModels.Settings;
 using System;
 using System.Linq;
 
@@ -17,8 +18,17 @@ public sealed partial class SettingsPage : Page
     private IConfigurationService? _configurationService;
     private bool _isInitializing = true;
 
+    /// <summary>
+    /// 获取ViewModel实例
+    /// </summary>
+    public SettingsPageViewModel ViewModel { get; }
+
     public SettingsPage()
     {
+        // 从服务定位器获取ViewModel
+        ViewModel = ServiceLocator.GetService<SettingsPageViewModel>() 
+                    ?? throw new InvalidOperationException("SettingsPageViewModel not registered");
+        
         InitializeComponent();
         Loaded += SettingsPage_Loaded;
     }
