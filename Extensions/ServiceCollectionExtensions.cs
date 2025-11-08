@@ -24,11 +24,18 @@ public static class ServiceCollectionExtensions
     /// <param name="services">服务集合</param>
     /// <param name="databasePath">数据库路径</param>
     /// <returns>服务集合</returns>
+    /// <remarks>
+    /// DatabaseService is registered as a singleton and must be initialized before other services.
+    /// Requirements: 1.1
+    /// </remarks>
     public static IServiceCollection AddRepositories(this IServiceCollection services, string databasePath)
     {
-        // 注册数据库服务
-        services.AddSingleton(sp => new DatabaseService(databasePath));
+        // 注册数据库服务为单例 - 必须在其他服务之前初始化
+        // Register DatabaseService as singleton - must be initialized before other services
+        services.AddSingleton<DatabaseService>(sp => new DatabaseService(databasePath));
         
+        // 注册其他仓储服务 - 这些服务依赖于已初始化的数据库
+        // Register other repository services - these depend on initialized database
         services.AddSingleton<IPersonalRepository>(sp => new PersonalRepository(databasePath));
         services.AddSingleton<IPositionRepository>(sp => new PositionLocationRepository(databasePath));
         services.AddSingleton<ISkillRepository>(sp => new SkillRepository(databasePath));
@@ -125,10 +132,21 @@ public static class ServiceCollectionExtensions
     /// <param name="services">服务集合</param>
     /// <param name="databasePath">数据库路径</param>
     /// <returns>服务集合</returns>
+    /// <remarks>
+    /// Services are registered in dependency order:
+    /// 1. Repositories (including DatabaseService as singleton) - must be initialized first
+    /// 2. Mappers - data transformation utilities
+    /// 3. Business Services - depend on repositories
+    /// 4. Helper Services - UI and utility services
+    /// 5. ViewModels - depend on all above services
+    /// 
+    /// DatabaseService must be explicitly initialized via InitializeAsync() before other services use it.
+    /// Requirements: 1.1
+    /// </remarks>
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, string databasePath)
     {
         return services
-            .AddRepositories(databasePath)
+            .AddRepositories(databasePath)      // DatabaseService registered here as singleton
             .AddMappers()
             .AddBusinessServices()
             .AddHelperServices()

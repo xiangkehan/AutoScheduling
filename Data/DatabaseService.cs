@@ -8,6 +8,7 @@ using AutoScheduling3.Data.Models;
 using AutoScheduling3.Data.Enums;
 using AutoScheduling3.Data.Exceptions;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AutoScheduling3.Data
 {
@@ -920,6 +921,251 @@ CREATE INDEX IF NOT EXISTS idx_manual_assignments_enabled ON ManualAssignments(I
             await templateRepo.InitAsync();
             await constraintRepo.InitAsync();
         }
+
+        #region New Public API Methods (Task 11)
+
+        /// <summary>
+        /// Performs a comprehensive health check on the database
+        /// Requirements: 4.1
+        /// </summary>
+        /// <returns>Detailed health report</returns>
+        public async Task<DatabaseHealthReport> PerformHealthCheckAsync()
+        {
+            _logger.Log("Performing database health check");
+            return await _healthChecker.CheckHealthAsync();
+        }
+
+        /// <summary>
+        /// Repairs database schema issues
+        /// Requirements: 3.1
+        /// </summary>
+        /// <param name="options">Options controlling which repairs to perform (null for defaults)</param>
+        /// <returns>Result containing details of repair actions performed</returns>
+        public async Task<RepairResult> RepairDatabaseAsync(RepairOptions options = null)
+        {
+            _logger.Log("Starting database repair");
+            
+            // First validate the schema to identify issues
+            var validationResult = await _schemaValidator.ValidateSchemaAsync();
+            
+            if (validationResult.IsValid)
+            {
+                _logger.Log("Database schema is valid, no repairs needed");
+                return new RepairResult
+                {
+                    Success = true
+                };
+            }
+            
+            // Perform repair
+            return await _repairService.RepairSchemaAsync(validationResult, options);
+        }
+
+        /// <summary>
+        /// Creates a backup of the database
+        /// Requirements: 5.1
+        /// </summary>
+        /// <param name="customPath">Optional custom path for the backup file</param>
+        /// <returns>Path to the created backup file</returns>
+        public async Task<string> CreateBackupAsync(string customPath = null)
+        {
+            _logger.Log("Creating database backup");
+            return await _backupManager.CreateBackupAsync(customPath);
+        }
+
+        /// <summary>
+        /// Restores the database from a backup file
+        /// Requirements: 5.3
+        /// </summary>
+        /// <param name="backupPath">Path to the backup file to restore from</param>
+        public async Task RestoreFromBackupAsync(string backupPath)
+        {
+            _logger.Log($"Restoring database from backup: {backupPath}");
+            await _backupManager.RestoreFromBackupAsync(backupPath);
+        }
+
+        /// <summary>
+        /// Lists all available backup files
+        /// Requirements: 5.6
+        /// </summary>
+        /// <returns>Collection of backup information</returns>
+        public async Task<IEnumerable<BackupInfo>> ListBackupsAsync()
+        {
+            _logger.Log("Listing available backups");
+            return await _backupManager.ListBackupsAsync();
+        }
+
+        /// <summary>
+        /// Gets comprehensive diagnostics information about the database
+        /// Requirements: 10.1, 10.2
+        /// </summary>
+        /// <returns>Comprehensive diagnostics information</returns>
+        public async Task<DatabaseDiagnostics> GetDiagnosticsAsync()
+        {
+            _logger.Log("Collecting database diagnostics");
+            
+            var diagnostics = new DatabaseDiagnostics
+            {
+                BasicInfo = await GetDatabaseInfoAsync(),
+                HealthReport = await _healthChecker.CheckHealthAsync(),
+                SchemaValidation = await _schemaValidator.ValidateSchemaAsync(),
+                TableRowCounts = new Dictionary<string, int>(),
+                IndexStats = new List<IndexUsageStats>(),
+                Performance = new DatabasePerformanceMetrics()
+            };
+
+            try
+            {
+                using var conn = new SqliteConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Collect row counts for each table
+                var tables = new[] { "Personals", "Positions", "Skills", "Schedules", "SingleShifts", 
+                                    "SchedulingTemplates", "FixedPositionRules", "HolidayConfigs", "ManualAssignments" };
+                
+                foreach (var table in tables)
+                {
+                    try
+                    {
+                        var cmd = conn.CreateCommand();
+                        cmd.CommandText = $"SELECT COUNT(*) FROM {table}";
+                        var count = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                        diagnostics.TableRowCounts[table] = count;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning($"Failed to get row count for table {table}: {ex.Message}");
+                        diagnostics.TableRowCounts[table] = -1; // Indicate error
+                    }
+                }
+
+                // Collect index statistics
+                var indexCmd = conn.CreateCommand();
+                indexCmd.CommandText = @"
+                    SELECT name, tbl_name 
+                    FROM sqlite_master 
+                    WHERE type = 'index' 
+                    AND name NOT LIKE 'sqlite_%'
+                    ORDER BY tbl_name, name";
+                
+                using (var reader = await indexCmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        diagnostics.IndexStats.Add(new IndexUsageStats
+                        {
+                            IndexName = reader.GetString(0),
+                            TableName = reader.GetString(1),
+                            Exists = true
+                        });
+                    }
+                }
+
+                _logger.Log($"Diagnostics collected: {diagnostics.TableRowCounts.Count} tables, {diagnostics.IndexStats.Count} indexes");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to collect some diagnostics: {ex.Message}");
+            }
+
+            return diagnostics;
+        }
+
+        /// <summary>
+        /// Exports the database schema as SQL text
+        /// Requirements: 10.2, 10.5
+        /// </summary>
+        /// <returns>SQL text representing the database schema</returns>
+        public async Task<string> ExportSchemaAsync()
+        {
+            _logger.Log("Exporting database schema");
+            
+            var schemaBuilder = new System.Text.StringBuilder();
+            schemaBuilder.AppendLine("-- Database Schema Export");
+            schemaBuilder.AppendLine($"-- Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+            schemaBuilder.AppendLine();
+
+            try
+            {
+                using var conn = new SqliteConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Export tables
+                var cmd = conn.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT sql 
+                    FROM sqlite_master 
+                    WHERE type = 'table' 
+                    AND name NOT LIKE 'sqlite_%'
+                    ORDER BY name";
+                
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    schemaBuilder.AppendLine("-- Tables");
+                    schemaBuilder.AppendLine();
+                    
+                    while (await reader.ReadAsync())
+                    {
+                        var sql = reader.GetString(0);
+                        schemaBuilder.AppendLine(sql + ";");
+                        schemaBuilder.AppendLine();
+                    }
+                }
+
+                // Export indexes
+                cmd.CommandText = @"
+                    SELECT sql 
+                    FROM sqlite_master 
+                    WHERE type = 'index' 
+                    AND name NOT LIKE 'sqlite_%'
+                    AND sql IS NOT NULL
+                    ORDER BY name";
+                
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    schemaBuilder.AppendLine("-- Indexes");
+                    schemaBuilder.AppendLine();
+                    
+                    while (await reader.ReadAsync())
+                    {
+                        var sql = reader.GetString(0);
+                        schemaBuilder.AppendLine(sql + ";");
+                        schemaBuilder.AppendLine();
+                    }
+                }
+
+                _logger.Log("Schema export completed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to export schema: {ex.Message}");
+                schemaBuilder.AppendLine($"-- Error exporting schema: {ex.Message}");
+            }
+
+            return schemaBuilder.ToString();
+        }
+
+        /// <summary>
+        /// Gets the current initialization state
+        /// Requirements: 9.3
+        /// </summary>
+        /// <returns>Current initialization state</returns>
+        public InitializationState GetInitializationState()
+        {
+            return _stateManager.GetCurrentState();
+        }
+
+        /// <summary>
+        /// Gets the current initialization progress information
+        /// Requirements: 9.3
+        /// </summary>
+        /// <returns>Current initialization progress</returns>
+        public InitializationProgress GetInitializationProgress()
+        {
+            return _stateManager.GetProgress();
+        }
+
+        #endregion
     }
 
     /// <summary>

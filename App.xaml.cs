@@ -79,14 +79,92 @@ namespace AutoScheduling3
 
         /// <summary>
         /// 初始化应用程序服务
+        /// Requirements: 1.1, 1.4
         /// </summary>
         private async System.Threading.Tasks.Task InitializeServicesAsync()
         {
+            var initStartTime = DateTime.UtcNow;
+            
             try
             {
-                // 首先初始化数据库
+                // 首先初始化数据库 - 使用新的 InitializeAsync 方法
                 var databaseService = ServiceProvider.GetRequiredService<DatabaseService>();
-                await databaseService.InitializeAsync();
+                
+                System.Diagnostics.Debug.WriteLine("Starting database initialization...");
+                
+                // Create initialization options with default settings
+                var initOptions = new AutoScheduling3.Data.Models.InitializationOptions
+                {
+                    PerformHealthCheck = true,
+                    AutoRepair = true,
+                    CreateBackupBeforeRepair = true,
+                    ConnectionRetryCount = 3,
+                    ConnectionRetryDelay = TimeSpan.FromSeconds(1)
+                };
+                
+                // Call new InitializeAsync with options
+                var initResult = await databaseService.InitializeAsync(initOptions);
+                
+                // Log initialization duration
+                System.Diagnostics.Debug.WriteLine($"Database initialization completed in {initResult.Duration.TotalMilliseconds:F2}ms");
+                
+                // Handle initialization result
+                if (!initResult.Success)
+                {
+                    var errorMsg = $"数据库初始化失败";
+                    if (initResult.FailedStage.HasValue)
+                    {
+                        errorMsg += $" (阶段: {initResult.FailedStage.Value})";
+                    }
+                    errorMsg += $": {initResult.ErrorMessage}";
+                    
+                    System.Diagnostics.Debug.WriteLine(errorMsg);
+                    
+                    // 显示错误对话框
+                    var dialogService = ServiceProvider.GetService<Helpers.DialogService>();
+                    if (dialogService != null)
+                    {
+                        await dialogService.ShowErrorAsync(errorMsg);
+                    }
+                    
+                    // Throw exception to prevent further initialization
+                    throw new AutoScheduling3.Data.Exceptions.DatabaseInitializationException(
+                        initResult.ErrorMessage,
+                        initResult.FailedStage ?? AutoScheduling3.Data.Enums.InitializationStage.DirectoryCreation);
+                }
+                
+                // Display warnings if any
+                if (initResult.Warnings != null && initResult.Warnings.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Database initialization completed with {initResult.Warnings.Count} warning(s):");
+                    foreach (var warning in initResult.Warnings)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  - {warning}");
+                    }
+                    
+                    // Optionally show warnings to user (non-blocking)
+                    var dialogService = ServiceProvider.GetService<Helpers.DialogService>();
+                    if (dialogService != null && initResult.Warnings.Count > 0)
+                    {
+                        var warningMsg = "数据库初始化完成，但有以下警告：\n\n" + 
+                                       string.Join("\n", initResult.Warnings.Take(5));
+                        if (initResult.Warnings.Count > 5)
+                        {
+                            warningMsg += $"\n\n... 以及其他 {initResult.Warnings.Count - 5} 个警告";
+                        }
+                        
+                        // Show warning dialog asynchronously without blocking
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(500); // Small delay to let UI load
+                            await dialogService.ShowWarningAsync(warningMsg);
+                        });
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("Database initialization completed successfully with no warnings");
+                }
 
                 // 然后初始化配置服务
                 var configService = ServiceProvider.GetRequiredService<IConfigurationService>();
@@ -122,10 +200,31 @@ namespace AutoScheduling3
                     var tsk = initServiceMi.Invoke(schedulingService, null) as System.Threading.Tasks.Task;
                     if(tsk != null) await tsk;
                 }
+                
+                // Log total initialization duration
+                var totalDuration = DateTime.UtcNow - initStartTime;
+                System.Diagnostics.Debug.WriteLine($"Total application initialization completed in {totalDuration.TotalMilliseconds:F2}ms");
+            }
+            catch(AutoScheduling3.Data.Exceptions.DatabaseInitializationException dbEx)
+            {
+                // Handle database initialization exceptions with stage information
+                var errorMsg = $"数据库初始化失败 (阶段: {dbEx.FailedStage}): {dbEx.Message}";
+                System.Diagnostics.Debug.WriteLine(errorMsg);
+                
+                // 显示错误对话框
+                var dialogService = ServiceProvider.GetService<Helpers.DialogService>();
+                if (dialogService != null)
+                {
+                    await dialogService.ShowErrorAsync(errorMsg);
+                }
+                
+                // Re-throw to be caught by outer handler
+                throw;
             }
             catch(Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"服务初始化失败: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
                 
                 // 显示错误对话框
                 var dialogService = ServiceProvider.GetService<Helpers.DialogService>();
@@ -133,6 +232,9 @@ namespace AutoScheduling3
                 {
                     await dialogService.ShowErrorAsync($"应用程序初始化失败：{ex.Message}");
                 }
+                
+                // Re-throw to be caught by outer handler
+                throw;
             }
         }
 

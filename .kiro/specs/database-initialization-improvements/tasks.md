@@ -379,36 +379,49 @@
     - Throw exception if downgrade attempted
     - _Requirements: 7.5_
 
-- [ ] 11. Add new public API methods to DatabaseService
+- [x] 11. Add new public API methods to DatabaseService
 
-  - [ ] 11.1 Add health check method
+
+
+
+  - [x] 11.1 Add health check method
+
+
     - Write PerformHealthCheckAsync public method
     - Return DatabaseHealthReport
     - _Requirements: 4.1_
 
-  - [ ] 11.2 Add repair method
+  - [x] 11.2 Add repair method
+
     - Write RepairDatabaseAsync public method accepting RepairOptions
     - Return RepairResult
     - _Requirements: 3.1_
 
-  - [ ] 11.3 Add backup methods
+  - [x] 11.3 Add backup methods
+
     - Write CreateBackupAsync public method
     - Write RestoreFromBackupAsync public method
     - Write ListBackupsAsync public method
     - _Requirements: 5.1, 5.3, 5.6_
 
-  - [ ] 11.4 Add diagnostics methods
+  - [x] 11.4 Add diagnostics methods
+
     - Write GetDiagnosticsAsync to return comprehensive diagnostics
     - Write ExportSchemaAsync to export schema as SQL text
     - Enhance existing GetDatabaseInfoAsync with more details
     - _Requirements: 10.1, 10.2, 10.5_
 
-  - [ ] 11.5 Add initialization state query method
+  - [x] 11.5 Add initialization state query method
+
     - Write GetInitializationState public method
     - Return current state from InitializationStateManager
     - _Requirements: 9.3_
 
-- [ ] 12. Update DatabaseConfiguration with new settings
+- [x] 12. Update DatabaseConfiguration with new settings
+
+
+
+
 
   - Add MaxBackupCount property with default value of 5
   - Add AutoRepairEnabled property with default value of true
@@ -417,7 +430,11 @@
   - Add ConnectionRetryDelay property with default TimeSpan
   - _Requirements: 6.1, 5.5_
 
-- [ ] 13. Update App.xaml.cs initialization flow
+
+- [x] 13. Update App.xaml.cs initialization flow
+
+
+
 
   - Update InitializeServicesAsync to use new InitializeAsync with options
   - Handle InitializationResult and display warnings if any
@@ -425,7 +442,11 @@
   - Add logging of initialization duration
   - _Requirements: 1.1, 1.4_
 
-- [ ] 14. Update dependency injection registration
+- [x] 14. Update dependency injection registration
+
+
+
+
 
   - Update ServiceCollectionExtensions to register DatabaseService as singleton
   - Ensure DatabaseService is properly initialized before other services

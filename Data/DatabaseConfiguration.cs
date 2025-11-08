@@ -95,5 +95,35 @@ namespace AutoScheduling3.Data
         {
             return $"Data Source={databasePath};Cache=Shared;Journal Mode=WAL;Synchronous=Normal;";
         }
+
+        /// <summary>
+        /// 最大备份数量
+        /// 需求: 5.5
+        /// </summary>
+        public static int MaxBackupCount { get; set; } = 5;
+
+        /// <summary>
+        /// 是否启用自动修复
+        /// 需求: 6.1
+        /// </summary>
+        public static bool AutoRepairEnabled { get; set; } = true;
+
+        /// <summary>
+        /// 是否在启动时执行健康检查
+        /// 需求: 6.1
+        /// </summary>
+        public static bool HealthCheckOnStartup { get; set; } = true;
+
+        /// <summary>
+        /// 连接重试次数
+        /// 需求: 6.1
+        /// </summary>
+        public static int ConnectionRetryCount { get; set; } = 3;
+
+        /// <summary>
+        /// 连接重试延迟
+        /// 需求: 6.1
+        /// </summary>
+        public static TimeSpan ConnectionRetryDelay { get; set; } = TimeSpan.FromSeconds(1);
     }
 }
