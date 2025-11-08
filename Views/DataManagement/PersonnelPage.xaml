@@ -13,6 +13,7 @@
         <!-- 修正转换器命名空间 -->
         <conv:BoolToTextConverter x:Key="BoolToTextConverter"/>
         <conv:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
+        <conv:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
     </Page.Resources>
 
     <Grid Padding="24">
@@ -109,33 +110,61 @@
                             <!-- 可用哨位选择 -->
                             <StackPanel>
                                 <TextBlock Text="可用哨位" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
-                                <ListView x:Name="AvailablePositionsListView"
-                                          ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
-                                          SelectionMode="Multiple"
-                                          MaxHeight="120"
-                                          SelectionChanged="AvailablePositionsListView_SelectionChanged">
-                                    <ListView.ItemTemplate>
-                                        <DataTemplate x:DataType="local:PositionDto">
-                                            <TextBlock Text="{x:Bind Name}"/>
-                                        </DataTemplate>
-                                    </ListView.ItemTemplate>
-                                </ListView>
+                                <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" 
+                                        CornerRadius="4"
+                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                        Padding="4">
+                                    <Grid MinHeight="60">
+                                        <ListView x:Name="AvailablePositionsListView"
+                                                  ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
+                                                  SelectionMode="Multiple"
+                                                  MaxHeight="120"
+                                                  SelectionChanged="AvailablePositionsListView_SelectionChanged">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate x:DataType="local:PositionDto">
+                                                    <TextBlock Text="{x:Bind Name}"/>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                        <TextBlock Text="暂无哨位数据，请先添加哨位"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Margin="8"
+                                                   Visibility="{x:Bind ViewModel.AvailablePositions.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Border>
                             </StackPanel>
 
                             <!-- 技能选择 -->
                             <StackPanel>
                                 <TextBlock Text="技能*" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
-                                <ListView x:Name="SkillsListView"
-                                          ItemsSource="{x:Bind ViewModel.AvailableSkills, Mode=OneWay}"
-                                          SelectionMode="Multiple"
-                                          MaxHeight="120"
-                                          SelectionChanged="SkillsListView_SelectionChanged">
-                                    <ListView.ItemTemplate>
-                                        <DataTemplate x:DataType="local:SkillDto">
-                                            <TextBlock Text="{x:Bind Name}"/>
-                                        </DataTemplate>
-                                    </ListView.ItemTemplate>
-                                </ListView>
+                                <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" 
+                                        CornerRadius="4"
+                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                        Padding="4">
+                                    <Grid MinHeight="60">
+                                        <ListView x:Name="SkillsListView"
+                                                  ItemsSource="{x:Bind ViewModel.AvailableSkills, Mode=OneWay}"
+                                                  SelectionMode="Multiple"
+                                                  MaxHeight="120"
+                                                  SelectionChanged="SkillsListView_SelectionChanged">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate x:DataType="local:SkillDto">
+                                                    <TextBlock Text="{x:Bind Name}"/>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                        <TextBlock Text="暂无技能数据，请先添加技能"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Margin="8"
+                                                   Visibility="{x:Bind ViewModel.AvailableSkills.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Border>
                             </StackPanel>
 
                             <!-- 状态设置 -->
@@ -164,17 +193,61 @@
                             <!-- 可用哨位编辑 -->
                             <StackPanel>
                                 <TextBlock Text="可用哨位" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
-                                <ListView x:Name="EditAvailablePositionsListView"
-                                          ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
-                                          SelectionMode="Multiple"
-                                          MaxHeight="120"
-                                          SelectionChanged="EditAvailablePositionsListView_SelectionChanged">
-                                    <ListView.ItemTemplate>
-                                        <DataTemplate x:DataType="local:PositionDto">
-                                            <TextBlock Text="{x:Bind Name}"/>
-                                        </DataTemplate>
-                                    </ListView.ItemTemplate>
-                                </ListView>
+                                <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" 
+                                        CornerRadius="4"
+                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                        Padding="4">
+                                    <Grid MinHeight="60">
+                                        <ListView x:Name="EditAvailablePositionsListView"
+                                                  ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
+                                                  SelectionMode="Multiple"
+                                                  MaxHeight="120"
+                                                  SelectionChanged="EditAvailablePositionsListView_SelectionChanged">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate x:DataType="local:PositionDto">
+                                                    <TextBlock Text="{x:Bind Name}"/>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                        <TextBlock Text="暂无哨位数据，请先添加哨位"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Margin="8"
+                                                   Visibility="{x:Bind ViewModel.AvailablePositions.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- 技能编辑 -->
+                            <StackPanel>
+                                <TextBlock Text="技能*" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
+                                <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" 
+                                        CornerRadius="4"
+                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                        Padding="4">
+                                    <Grid MinHeight="60">
+                                        <ListView x:Name="EditSkillsListView"
+                                                  ItemsSource="{x:Bind ViewModel.AvailableSkills, Mode=OneWay}"
+                                                  SelectionMode="Multiple"
+                                                  MaxHeight="120"
+                                                  SelectionChanged="EditSkillsListView_SelectionChanged">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate x:DataType="local:SkillDto">
+                                                    <TextBlock Text="{x:Bind Name}"/>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                        <TextBlock Text="暂无技能数据，请先添加技能"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Margin="8"
+                                                   Visibility="{x:Bind ViewModel.AvailableSkills.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Border>
                             </StackPanel>
                             
                             <ToggleSwitch Header="是否可用" 

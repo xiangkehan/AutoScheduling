@@ -27,6 +27,45 @@ namespace AutoScheduling3.Views.DataManagement
             {
                 ApplyResponsiveLayout(MainContentGrid.ActualWidth);
             }
+
+            // 监听编辑模式变化，同步选中状态
+            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        }
+
+        private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ViewModel.IsEditing) && ViewModel.IsEditing && ViewModel.EditingPersonnel != null)
+            {
+                // 同步编辑模式下的选中状态
+                SyncEditSelections();
+            }
+        }
+
+        private void SyncEditSelections()
+        {
+            if (ViewModel.EditingPersonnel == null) return;
+
+            // 同步哨位选择
+            EditAvailablePositionsListView.SelectedItems.Clear();
+            foreach (var posId in ViewModel.EditingPersonnel.AvailablePositionIds)
+            {
+                var position = ViewModel.AvailablePositions.FirstOrDefault(p => p.Id == posId);
+                if (position != null)
+                {
+                    EditAvailablePositionsListView.SelectedItems.Add(position);
+                }
+            }
+
+            // 同步技能选择
+            EditSkillsListView.SelectedItems.Clear();
+            foreach (var skillId in ViewModel.EditingPersonnel.SkillIds)
+            {
+                var skill = ViewModel.AvailableSkills.FirstOrDefault(s => s.Id == skillId);
+                if (skill != null)
+                {
+                    EditSkillsListView.SelectedItems.Add(skill);
+                }
+            }
         }
 
         private void ResetForm_Click(object sender, RoutedEventArgs e)
@@ -54,6 +93,15 @@ namespace AutoScheduling3.Views.DataManagement
             {
                 var selectedPositions = EditAvailablePositionsListView.SelectedItems.Cast<DTOs.PositionDto>().ToList();
                 ViewModel.EditingPersonnel.AvailablePositionIds = selectedPositions.Select(p => p.Id).ToList();
+            }
+        }
+
+        private void EditSkillsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (ViewModel.EditingPersonnel != null)
+            {
+                var selectedSkills = EditSkillsListView.SelectedItems.Cast<DTOs.SkillDto>().ToList();
+                ViewModel.EditingPersonnel.SkillIds = selectedSkills.Select(s => s.Id).ToList();
             }
         }
 
