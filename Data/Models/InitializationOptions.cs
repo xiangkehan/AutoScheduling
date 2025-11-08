@@ -3,22 +3,22 @@ using System;
 namespace AutoScheduling3.Data.Models
 {
     /// <summary>
-    /// Represents configuration options for database initialization
+    /// Configuration options for database initialization
     /// </summary>
     public class InitializationOptions
     {
         /// <summary>
-        /// Indicates whether to perform a health check during initialization
+        /// Whether to perform a health check on existing databases
         /// </summary>
         public bool PerformHealthCheck { get; set; } = true;
 
         /// <summary>
-        /// Indicates whether to automatically repair schema issues
+        /// Whether to automatically repair schema issues
         /// </summary>
         public bool AutoRepair { get; set; } = true;
 
         /// <summary>
-        /// Indicates whether to create a backup before attempting repairs
+        /// Whether to create a backup before attempting repairs
         /// </summary>
         public bool CreateBackupBeforeRepair { get; set; } = true;
 

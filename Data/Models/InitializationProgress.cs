@@ -5,27 +5,27 @@ using AutoScheduling3.Data.Enums;
 namespace AutoScheduling3.Data.Models
 {
     /// <summary>
-    /// Represents the progress of database initialization
+    /// Tracks the progress of database initialization
     /// </summary>
     public class InitializationProgress
     {
         /// <summary>
-        /// Current stage of initialization
+        /// The current stage of initialization
         /// </summary>
         public InitializationStage CurrentStage { get; set; }
 
         /// <summary>
-        /// Current status message
+        /// A descriptive message about the current operation
         /// </summary>
-        public string CurrentMessage { get; set; }
+        public string CurrentMessage { get; set; } = string.Empty;
 
         /// <summary>
-        /// Timestamp when initialization started
+        /// When initialization started
         /// </summary>
         public DateTime StartedAt { get; set; }
 
         /// <summary>
-        /// Timestamp when initialization completed (null if still in progress)
+        /// When initialization completed (null if still in progress)
         /// </summary>
         public DateTime? CompletedAt { get; set; }
 

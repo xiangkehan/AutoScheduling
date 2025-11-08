@@ -5,37 +5,37 @@ using AutoScheduling3.Data.Enums;
 namespace AutoScheduling3.Data.Models
 {
     /// <summary>
-    /// Represents the result of a database initialization operation
+    /// Contains the result of a database initialization attempt
     /// </summary>
     public class InitializationResult
     {
         /// <summary>
-        /// Indicates whether initialization was successful
+        /// Whether initialization succeeded
         /// </summary>
         public bool Success { get; set; }
 
         /// <summary>
-        /// Final state of initialization
+        /// The final state after initialization
         /// </summary>
         public InitializationState FinalState { get; set; }
 
         /// <summary>
-        /// Stage at which initialization failed (null if successful)
+        /// The stage where initialization failed (null if successful)
         /// </summary>
         public InitializationStage? FailedStage { get; set; }
 
         /// <summary>
         /// Error message if initialization failed
         /// </summary>
-        public string ErrorMessage { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
 
         /// <summary>
-        /// Duration of the initialization process
+        /// How long initialization took
         /// </summary>
         public TimeSpan Duration { get; set; }
 
         /// <summary>
-        /// List of warnings generated during initialization
+        /// Non-critical warnings that occurred during initialization
         /// </summary>
         public List<string> Warnings { get; set; } = new List<string>();
     }
