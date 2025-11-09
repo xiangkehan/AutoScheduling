@@ -163,8 +163,7 @@ public class PositionService : IPositionService
         if (dto.Requirements != null && dto.Requirements.Length > 1000)
             throw new ArgumentException("要求说明不能超过1000个字符", nameof(dto.Requirements));
 
-        if (dto.RequiredSkillIds == null || dto.RequiredSkillIds.Count == 0)
-            throw new ArgumentException("哨位必须至少需要一项技能", nameof(dto.RequiredSkillIds));
+        // 技能要求是可选的，允许创建没有技能要求的哨位
     }
 
     /// <summary>
@@ -193,8 +192,7 @@ public class PositionService : IPositionService
         if (dto.Requirements != null && dto.Requirements.Length > 1000)
             throw new ArgumentException("要求说明不能超过1000个字符", nameof(dto.Requirements));
 
-        if (dto.RequiredSkillIds == null || dto.RequiredSkillIds.Count == 0)
-            throw new ArgumentException("哨位必须至少需要一项技能", nameof(dto.RequiredSkillIds));
+        // 技能要求是可选的，允许更新为没有技能要求的哨位
     }
 
     /// <summary>
@@ -210,20 +208,22 @@ public class PositionService : IPositionService
             string.IsNullOrWhiteSpace(position.Location))
             return false;
 
-        // 验证技能要求
-        if (position.RequiredSkillIds == null || position.RequiredSkillIds.Count == 0)
-            return false;
+        // 技能要求是可选的，允许空技能列表
 
-        // 验证技能ID是否存在
-        try
+        // 如果有技能要求，验证技能ID是否存在
+        if (position.RequiredSkillIds != null && position.RequiredSkillIds.Count > 0)
         {
-            await ValidateSkillRequirementsAsync(position.RequiredSkillIds);
-            return true;
+            try
+            {
+                await ValidateSkillRequirementsAsync(position.RequiredSkillIds);
+            }
+            catch
+            {
+                return false;
+            }
         }
-        catch
-        {
-            return false;
-        }
+
+        return true;
     }
 
     /// <summary>
@@ -231,8 +231,9 @@ public class PositionService : IPositionService
     /// </summary>
     private async Task ValidateSkillRequirementsAsync(List<int> requiredSkillIds)
     {
+        // 允许空技能列表（表示无技能要求）
         if (requiredSkillIds == null || requiredSkillIds.Count == 0)
-            throw new ArgumentException("哨位必须至少需要一项技能");
+            return;
 
         // 检查技能是否存在
         var existingSkills = await _skillRepository.GetByIdsAsync(requiredSkillIds);

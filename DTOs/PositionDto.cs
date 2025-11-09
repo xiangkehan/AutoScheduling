@@ -133,10 +133,8 @@ public class CreatePositionDto
     public string? Requirements { get; set; }
 
     /// <summary>
-    /// 所需技能ID列表（至少一项）
+    /// 所需技能ID列表（可选）
     /// </summary>
-    [Required(ErrorMessage = "技能列表不能为空")]
-    [MinLength(1, ErrorMessage = "至少需要选择一项技能")]
     public List<int> RequiredSkillIds { get; set; } = new();
 
     /// <summary>
@@ -177,10 +175,8 @@ public class UpdatePositionDto
     public string? Requirements { get; set; }
 
     /// <summary>
-    /// 所需技能ID列表（至少一项）
+    /// 所需技能ID列表（可选）
     /// </summary>
-    [Required(ErrorMessage = "技能列表不能为空")]
-    [MinLength(1, ErrorMessage = "至少需要选择一项技能")]
     public List<int> RequiredSkillIds { get; set; } = new();
 
     /// <summary>

@@ -205,12 +205,6 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
                 return;
             }
 
-            if (NewPosition.RequiredSkillIds == null || NewPosition.RequiredSkillIds.Count == 0)
-            {
-                await _dialogService.ShowErrorAsync("至少需要选择一项所需技能");
-                return;
-            }
-
             await ExecuteAsync(async () =>
             {
                 var created = await _positionService.CreateAsync(NewPosition);

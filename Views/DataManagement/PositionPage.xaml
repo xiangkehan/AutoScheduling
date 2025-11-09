@@ -137,7 +137,10 @@
                             
                             <StackPanel>
                                 <TextBlock Text="所需技能:" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <ItemsRepeater ItemsSource="{x:Bind ViewModel.SelectedItem.RequiredSkillNames, Mode=OneWay}">
+                                
+                                <!-- 当有技能要求时显示技能列表 -->
+                                <ItemsRepeater ItemsSource="{x:Bind ViewModel.SelectedItem.RequiredSkillNames, Mode=OneWay}"
+                                               Visibility="{x:Bind ViewModel.SelectedItem.RequiredSkillIds.Count, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='>0'}">
                                     <ItemsRepeater.Layout>
                                         <StackLayout Orientation="Horizontal" Spacing="4"/>
                                     </ItemsRepeater.Layout>
@@ -149,6 +152,12 @@
                                         </DataTemplate>
                                     </ItemsRepeater.ItemTemplate>
                                 </ItemsRepeater>
+                                
+                                <!-- 当无技能要求时显示提示文本 -->
+                                <TextBlock Text="无技能要求" 
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           FontStyle="Italic"
+                                           Visibility="{x:Bind ViewModel.SelectedItem.RequiredSkillIds.Count, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='0'}"/>
                             </StackPanel>
                         </StackPanel>
 

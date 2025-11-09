@@ -79,12 +79,7 @@ public sealed partial class PositionPage : Page
                 return;
             }
 
-            // 检查是否有可用技能
-            if (ViewModel.AvailableSkills.Count == 0)
-            {
-                await ViewModel.DialogService.ShowMessageAsync("提示", "暂无技能数据，请先添加技能");
-                return;
-            }
+            // 技能是可选的，即使没有技能数据也可以创建哨位
 
             // 创建对话框
             var dialog = new ContentDialog
@@ -138,8 +133,8 @@ public sealed partial class PositionPage : Page
                 MaxHeight = 150,
                 TabIndex = 3
             };
-            skillsListView.SetValue(AutomationProperties.NameProperty, "所需技能列表，必填，支持多选");
-            skillsListView.SetValue(AutomationProperties.HelpTextProperty, "使用空格键选择或取消选择技能，Tab键移动到下一个控件");
+            skillsListView.SetValue(AutomationProperties.NameProperty, "所需技能列表，可选，支持多选");
+            skillsListView.SetValue(AutomationProperties.HelpTextProperty, "使用空格键选择或取消选择技能，Tab键移动到下一个控件。如不选择任何技能，则表示此哨位无技能要求");
 
             // 设置ListView的ItemTemplate
             var dataTemplate = new DataTemplate();
@@ -155,7 +150,7 @@ public sealed partial class PositionPage : Page
 
             var skillsHeader = new TextBlock
             {
-                Text = "所需技能*",
+                Text = "所需技能",
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             };
             Grid.SetColumn(skillsHeader, 0);
@@ -208,7 +203,6 @@ public sealed partial class PositionPage : Page
             {
                 var name = nameTextBox.Text?.Trim();
                 var location = locationTextBox.Text?.Trim();
-                var selectedSkills = skillsListView.SelectedItems;
 
                 if (string.IsNullOrWhiteSpace(name))
                 {
@@ -230,11 +224,7 @@ public sealed partial class PositionPage : Page
                     args.Cancel = true;
                     _ = ViewModel.DialogService.ShowErrorAsync("验证失败", new Exception("地点长度不能超过200字符"));
                 }
-                else if (selectedSkills.Count == 0)
-                {
-                    args.Cancel = true;
-                    _ = ViewModel.DialogService.ShowErrorAsync("验证失败", new Exception("至少需要选择一项技能"));
-                }
+                // 移除技能必选验证 - 允许创建没有技能要求的哨位
             };
 
             var result = await dialog.ShowAsync();
