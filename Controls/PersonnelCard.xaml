@@ -23,7 +23,7 @@
         </StackPanel>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4" Margin="0,8,0,0">
-            <TextBlock Text="����:" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBlock Text="技能:" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             <ItemsRepeater ItemsSource="{x:Bind Personnel.SkillNames, Mode=OneWay}">
                 <ItemsRepeater.Layout>
                     <StackLayout Orientation="Horizontal" Spacing="4"/>
@@ -40,14 +40,14 @@
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" Margin="0,8,0,0">
             <Border Width="40" Height="20" CornerRadius="10" Background="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Accent|Gray'}" Padding="6,2">
-                <TextBlock Text="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='��ְ|��ְ'}" FontSize="10" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="{x:Bind Personnel.IsActive, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='在位|退役'}" FontSize="10" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" HorizontalAlignment="Center"/>
             </Border>
             <Border Width="40" Height="20" CornerRadius="10" Background="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Accent|Orange'}" Padding="6,2">
-                <TextBlock Text="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='����|æµ'}" FontSize="10" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="{x:Bind Personnel.IsAvailable, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='可用|请假'}" FontSize="10" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" HorizontalAlignment="Center"/>
             </Border>
             <StackPanel Orientation="Horizontal" Spacing="4" Visibility="{x:Bind ShowActions, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <Button Style="{StaticResource ButtonRevealStyle}" Content="�༭" FontSize="10" MinWidth="44"/>
-                <Button Style="{StaticResource ButtonRevealStyle}" Content="ɾ��" FontSize="10" MinWidth="44"/>
+                <Button Style="{StaticResource ButtonRevealStyle}" Content="编辑" FontSize="10" MinWidth="44"/>
+                <Button Style="{StaticResource ButtonRevealStyle}" Content="删除" FontSize="10" MinWidth="44"/>
             </StackPanel>
         </StackPanel>
         <Border x:Name="SelectionBorder" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="2" CornerRadius="8" Opacity="0" />

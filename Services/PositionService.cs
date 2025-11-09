@@ -16,15 +16,18 @@ public class PositionService : IPositionService
 {
     private readonly IPositionRepository _repository;
     private readonly ISkillRepository _skillRepository;
+    private readonly IPersonalRepository _personnelRepository;
     private readonly PositionMapper _mapper;
 
     public PositionService(
         IPositionRepository repository, 
         ISkillRepository skillRepository,
+        IPersonalRepository personnelRepository,
         PositionMapper mapper)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _skillRepository = skillRepository ?? throw new ArgumentNullException(nameof(skillRepository));
+        _personnelRepository = personnelRepository ?? throw new ArgumentNullException(nameof(personnelRepository));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
     }
 
@@ -265,13 +268,15 @@ public class PositionService : IPositionService
         if (position == null)
             throw new ArgumentException($"哨位 ID {positionId} 不存在", nameof(positionId));
 
-        // 验证人员是否存在（通过Repository接口）
-        var personnelExists = await _repository.PersonnelExistsAsync(personnelId);
-        if (!personnelExists)
+        // 验证人员是否存在
+        var personnel = await _personnelRepository.GetByIdAsync(personnelId);
+        if (personnel == null)
             throw new ArgumentException($"人员 ID {personnelId} 不存在", nameof(personnelId));
 
         // 验证人员技能是否匹配哨位要求
-        await ValidatePersonnelSkillsAsync(personnelId, positionId);
+        var isValid = await ValidatePersonnelSkillsAsync(personnelId, positionId);
+        if (!isValid)
+            throw new InvalidOperationException($"人员技能不满足哨位要求");
 
         // 添加人员到可用列表（如果尚未存在）
         await _repository.AddAvailablePersonnelAsync(positionId, personnelId);
@@ -316,7 +321,7 @@ public class PositionService : IPositionService
             return new List<PersonnelDto>();
 
         // 获取人员详细信息（通过Repository接口）
-        var personnel = await _repository.GetPersonnelByIdsAsync(availablePersonnelIds);
+        var personnel = await _personnelRepository.GetByIdsAsync(availablePersonnelIds);
         
         // 转换为DTO（需要使用PersonnelMapper）
         var personnelMapper = new DTOs.Mappers.PersonnelMapper(_skillRepository);
@@ -336,8 +341,8 @@ public class PositionService : IPositionService
         if (position == null)
             return false;
 
-        // 获取人员信息（通过Repository接口）
-        var personnel = await _repository.GetPersonnelByIdAsync(personnelId);
+        // 获取人员信息
+        var personnel = await _personnelRepository.GetByIdAsync(personnelId);
         if (personnel == null)
             return false;
 

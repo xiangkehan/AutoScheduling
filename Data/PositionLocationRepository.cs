@@ -298,35 +298,6 @@ namespace AutoScheduling3.Data
             return list;
         }
 
-        /// <summary>
-        /// 检查人员是否存在 - 注意：此方法应该在人员仓储中实现，不应在哨位仓储中
-        /// </summary>
-        public async Task<bool> PersonnelExistsAsync(int personnelId)
-        {
-            // TODO: 这个方法应该移动到 IPersonalRepository 中
-            // 临时实现：总是返回 true 以避免编译错误
-            await Task.CompletedTask;
-            return true;
-        }
 
-        /// <summary>
-        /// 根据ID获取人员信息 - 注意：此方法应该在人员仓储中实现，不应在哨位仓储中
-        /// </summary>
-        public async Task<Personal?> GetPersonnelByIdAsync(int personnelId)
-        {
-            // TODO: 这个方法应该移动到 IPersonalRepository 中
-            await Task.CompletedTask;
-            throw new NotImplementedException("此方法应该在 IPersonalRepository 中实现，而不是在 IPositionRepository 中");
-        }
-
-        /// <summary>
-        /// 根据ID列表获取人员信息 - 注意：此方法应该在人员仓储中实现，不应在哨位仓储中
-        /// </summary>
-        public async Task<List<Personal>> GetPersonnelByIdsAsync(IEnumerable<int> personnelIds)
-        {
-            // TODO: 这个方法应该移动到 IPersonalRepository 中
-            await Task.CompletedTask;
-            throw new NotImplementedException("此方法应该在 IPersonalRepository 中实现，而不是在 IPositionRepository 中");
-        }
     }
 }

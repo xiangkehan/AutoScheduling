@@ -78,7 +78,19 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
     public PersonnelDto? SelectedPersonnel
     {
         get => _selectedPersonnel;
-        set => SetProperty(ref _selectedPersonnel, value);
+        set
+        {
+            if (SetProperty(ref _selectedPersonnel, value))
+            {
+                System.Diagnostics.Debug.WriteLine($"SelectedPersonnel changed to: {value?.Name ?? "null"}");
+                System.Diagnostics.Debug.WriteLine($"SelectedItem is: {SelectedItem?.Name ?? "null"}");
+                System.Diagnostics.Debug.WriteLine($"CanExecute: {SelectedItem != null && value != null}");
+                
+                // 通知命令状态更新
+                AddPersonnelCommand.NotifyCanExecuteChanged();
+                RemovePersonnelCommand.NotifyCanExecuteChanged();
+            }
+        }
     }
 
     public PositionViewModel(
@@ -97,8 +109,8 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
         SaveCommand = new AsyncRelayCommand(SavePositionAsync, () => IsEditing);
         CancelCommand = new RelayCommand(CancelEdit, () => IsEditing);
         DeleteCommand = new AsyncRelayCommand(DeletePositionAsync, () => SelectedItem != null);
-        AddPersonnelCommand = new AsyncRelayCommand(AddPersonnelAsync, () => SelectedItem != null && SelectedPersonnel != null);
-        RemovePersonnelCommand = new AsyncRelayCommand(RemovePersonnelAsync, () => SelectedItem != null && SelectedPersonnel != null);
+        AddPersonnelCommand = new AsyncRelayCommand(AddPersonnelAsync, CanAddPersonnel);
+        RemovePersonnelCommand = new AsyncRelayCommand(RemovePersonnelAsync, CanRemovePersonnel);
     }
 
     /// <summary>
@@ -311,6 +323,35 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
     }
 
     /// <summary>
+    /// 检查是否可以添加人员
+    /// </summary>
+    private bool CanAddPersonnel()
+    {
+        if (SelectedItem == null || SelectedPersonnel == null)
+        {
+            System.Diagnostics.Debug.WriteLine($"CanAddPersonnel: false - SelectedItem={SelectedItem?.Name ?? "null"}, SelectedPersonnel={SelectedPersonnel?.Name ?? "null"}");
+            return false;
+        }
+
+        // 检查人员是否已经在哨位中
+        var isAlreadyAdded = SelectedItem.AvailablePersonnelIds.Contains(SelectedPersonnel.Id);
+        System.Diagnostics.Debug.WriteLine($"CanAddPersonnel: {!isAlreadyAdded} - Personnel {SelectedPersonnel.Name} already in position: {isAlreadyAdded}");
+        return !isAlreadyAdded;
+    }
+
+    /// <summary>
+    /// 检查是否可以移除人员
+    /// </summary>
+    private bool CanRemovePersonnel()
+    {
+        if (SelectedItem == null || SelectedPersonnel == null)
+            return false;
+
+        // 只有当人员在哨位中时才能移除
+        return SelectedItem.AvailablePersonnelIds.Contains(SelectedPersonnel.Id);
+    }
+
+    /// <summary>
     /// 添加人员到当前哨位
     /// </summary>
     private async Task AddPersonnelAsync()
@@ -318,14 +359,21 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
         if (SelectedItem == null || SelectedPersonnel == null)
             return;
 
+        var selectedPositionId = SelectedItem.Id;
+        var personnelName = SelectedPersonnel.Name;
+        var positionName = SelectedItem.Name;
+
         await ExecuteAsync(async () =>
         {
-            await _positionService.AddAvailablePersonnelAsync(SelectedItem.Id, SelectedPersonnel.Id);
+            await _positionService.AddAvailablePersonnelAsync(selectedPositionId, SelectedPersonnel.Id);
             
             // 重新加载数据
             await LoadDataAsync();
 
-            await _dialogService.ShowSuccessAsync($"已将人员 '{SelectedPersonnel.Name}' 添加到哨位 '{SelectedItem.Name}'");
+            // 恢复选中的哨位
+            SelectedItem = Items.FirstOrDefault(p => p.Id == selectedPositionId);
+
+            await _dialogService.ShowSuccessAsync($"已将人员 '{personnelName}' 添加到哨位 '{positionName}'");
         }, "正在添加人员...");
     }
 
@@ -337,21 +385,29 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
         if (SelectedItem == null || SelectedPersonnel == null)
             return;
 
+        var personnelName = SelectedPersonnel.Name;
+        var positionName = SelectedItem.Name;
+
         var confirmed = await _dialogService.ShowConfirmAsync(
             "确认移除",
-            $"确定要将人员 '{SelectedPersonnel.Name}' 从哨位 '{SelectedItem.Name}' 中移除吗？");
+            $"确定要将人员 '{personnelName}' 从哨位 '{positionName}' 中移除吗？");
 
         if (!confirmed)
             return;
 
+        var selectedPositionId = SelectedItem.Id;
+
         await ExecuteAsync(async () =>
         {
-            await _positionService.RemoveAvailablePersonnelAsync(SelectedItem.Id, SelectedPersonnel.Id);
+            await _positionService.RemoveAvailablePersonnelAsync(selectedPositionId, SelectedPersonnel.Id);
             
             // 重新加载数据
             await LoadDataAsync();
 
-            await _dialogService.ShowSuccessAsync($"已将人员 '{SelectedPersonnel.Name}' 从哨位 '{SelectedItem.Name}' 中移除");
+            // 恢复选中的哨位
+            SelectedItem = Items.FirstOrDefault(p => p.Id == selectedPositionId);
+
+            await _dialogService.ShowSuccessAsync($"已将人员 '{personnelName}' 从哨位 '{positionName}' 中移除");
         }, "正在移除人员...");
     }
 
@@ -381,6 +437,10 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
     {
         base.OnSelectedItemChanged(newItem);
         UpdateAvailablePersonnel();
+        
+        // 通知命令状态更新
+        AddPersonnelCommand.NotifyCanExecuteChanged();
+        RemovePersonnelCommand.NotifyCanExecuteChanged();
     }
 
     protected override void OnError(Exception exception)

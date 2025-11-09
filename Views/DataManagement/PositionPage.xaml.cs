@@ -20,6 +20,7 @@ public sealed partial class PositionPage : Page
     {
         this.InitializeComponent();
         ViewModel = ((App)Application.Current).ServiceProvider.GetRequiredService<PositionViewModel>();
+        this.DataContext = ViewModel; // 设置 DataContext 以支持 {Binding}
         this.Loaded += PositionPage_Loaded;
     }
 

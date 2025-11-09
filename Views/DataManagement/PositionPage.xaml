@@ -143,8 +143,8 @@
 
                         <!-- 操作按钮 -->
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Content="编辑" Command="{x:Bind ViewModel.EditCommand}"/>
-                            <Button Content="删除" Command="{x:Bind ViewModel.DeleteCommand}" Style="{StaticResource AccentButtonStyle}"/>
+                            <Button Content="编辑" Command="{Binding EditCommand}"/>
+                            <Button Content="删除" Command="{Binding DeleteCommand}" Style="{StaticResource AccentButtonStyle}"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -155,8 +155,8 @@
                         <!-- 当前可用人员 -->
                         <Expander Header="当前可用人员" IsExpanded="True">
                             <StackPanel Spacing="8" Margin="0,12,0,0">
-                                <ListView ItemsSource="{x:Bind ViewModel.AvailablePersonnel, Mode=OneWay}"
-                                          SelectedItem="{x:Bind ViewModel.SelectedPersonnel, Mode=TwoWay}"
+                                <ListView ItemsSource="{Binding AvailablePersonnel}"
+                                          SelectedItem="{Binding SelectedPersonnel, Mode=TwoWay}"
                                           MaxHeight="200"
                                           SelectionMode="Single">
                                     <ListView.ItemTemplate>
@@ -197,13 +197,13 @@
                         <Expander Header="添加人员" IsExpanded="False">
                             <StackPanel Spacing="8" Margin="0,12,0,0">
                                 <ComboBox Header="选择人员" 
-                                          ItemsSource="{x:Bind ViewModel.AllPersonnel, Mode=OneWay}"
-                                          SelectedItem="{x:Bind ViewModel.SelectedPersonnel, Mode=TwoWay}"
+                                          ItemsSource="{Binding AllPersonnel}"
+                                          SelectedItem="{Binding SelectedPersonnel, Mode=TwoWay}"
                                           DisplayMemberPath="Name"
                                           PlaceholderText="请选择要添加的人员"/>
                                 
                                 <Button Content="添加到当前哨位" 
-                                        Command="{x:Bind ViewModel.AddPersonnelCommand}"
+                                        Command="{Binding AddPersonnelCommand}"
                                         Style="{StaticResource AccentButtonStyle}"
                                         HorizontalAlignment="Left"/>
                             </StackPanel>
