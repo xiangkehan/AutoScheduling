@@ -43,13 +43,20 @@ namespace AutoScheduling3.ViewModels.Base
         /// <summary>
         /// 执行异步操作的辅助方法
         /// </summary>
-        protected async Task ExecuteAsync(Func<Task> operation, string? busyMessage = null)
+        /// <param name="operation">要执行的异步操作</param>
+        /// <param name="busyMessage">繁忙状态消息</param>
+        /// <param name="showGlobalLoading">是否显示全局加载指示器（默认为 true）</param>
+        protected async Task ExecuteAsync(Func<Task> operation, string? busyMessage = null, bool showGlobalLoading = true)
         {
-            if (IsBusy)
+            if (showGlobalLoading && IsBusy)
                 return;
 
-            IsBusy = true;
-            BusyMessage = busyMessage ?? "正在加载...";
+            if (showGlobalLoading)
+            {
+                IsBusy = true;
+                BusyMessage = busyMessage ?? "正在加载...";
+            }
+            
             ErrorMessage = string.Empty;
 
             try
@@ -63,21 +70,31 @@ namespace AutoScheduling3.ViewModels.Base
             }
             finally
             {
-                IsBusy = false;
-                BusyMessage = string.Empty;
+                if (showGlobalLoading)
+                {
+                    IsBusy = false;
+                    BusyMessage = string.Empty;
+                }
             }
         }
 
         /// <summary>
         /// 执行带返回值的异步操作
         /// </summary>
-        protected async Task<T?> ExecuteAsync<T>(Func<Task<T>> operation, string? busyMessage = null)
+        /// <param name="operation">要执行的异步操作</param>
+        /// <param name="busyMessage">繁忙状态消息</param>
+        /// <param name="showGlobalLoading">是否显示全局加载指示器（默认为 true）</param>
+        protected async Task<T?> ExecuteAsync<T>(Func<Task<T>> operation, string? busyMessage = null, bool showGlobalLoading = true)
         {
-            if (IsBusy)
+            if (showGlobalLoading && IsBusy)
                 return default;
 
-            IsBusy = true;
-            BusyMessage = busyMessage ?? "正在加载...";
+            if (showGlobalLoading)
+            {
+                IsBusy = true;
+                BusyMessage = busyMessage ?? "正在加载...";
+            }
+            
             ErrorMessage = string.Empty;
 
             try
@@ -92,8 +109,11 @@ namespace AutoScheduling3.ViewModels.Base
             }
             finally
             {
-                IsBusy = false;
-                BusyMessage = string.Empty;
+                if (showGlobalLoading)
+                {
+                    IsBusy = false;
+                    BusyMessage = string.Empty;
+                }
             }
         }
 

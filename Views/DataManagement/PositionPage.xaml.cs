@@ -2,9 +2,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Media.Animation;
 using AutoScheduling3.ViewModels.DataManagement;
 using AutoScheduling3.Helpers;
 using System;
+using System.Collections.Specialized;
 using System.Linq;
 
 namespace AutoScheduling3.Views.DataManagement;
@@ -22,6 +24,9 @@ public sealed partial class PositionPage : Page
         ViewModel = ((App)Application.Current).ServiceProvider.GetRequiredService<PositionViewModel>();
         this.DataContext = ViewModel; // 设置 DataContext 以支持 {Binding}
         this.Loaded += PositionPage_Loaded;
+        
+        // 订阅集合变化事件以触发动画
+        ViewModel.AvailablePersonnel.CollectionChanged += OnAvailablePersonnelCollectionChanged;
     }
 
     private async void PositionPage_Loaded(object sender, RoutedEventArgs e)
@@ -340,5 +345,41 @@ public sealed partial class PositionPage : Page
 
         // 显示分隔线
         SeparatorBorder.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// 处理可用人员集合变化事件
+    /// </summary>
+    private void OnAvailablePersonnelCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
+        {
+            // 为新添加的项触发淡入动画
+            foreach (var item in e.NewItems)
+            {
+                TriggerFadeInAnimation(item);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 为新添加的列表项触发淡入动画
+    /// </summary>
+    private async void TriggerFadeInAnimation(object item)
+    {
+        // 等待UI更新
+        await System.Threading.Tasks.Task.Delay(10);
+        
+        // 查找对应的ListViewItem容器
+        var container = AvailablePersonnelListView.ContainerFromItem(item) as ListViewItem;
+        if (container != null)
+        {
+            var storyboard = Resources["FadeInStoryboard"] as Storyboard;
+            if (storyboard != null)
+            {
+                Storyboard.SetTarget(storyboard, container);
+                storyboard.Begin();
+            }
+        }
     }
 }

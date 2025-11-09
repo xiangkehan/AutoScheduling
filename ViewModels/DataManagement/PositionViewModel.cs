@@ -7,6 +7,7 @@ using AutoScheduling3.Helpers;
 using System.Threading.Tasks;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AutoScheduling3.ViewModels.DataManagement;
 
@@ -359,22 +360,24 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
         if (SelectedItem == null || SelectedPersonnel == null)
             return;
 
-        var selectedPositionId = SelectedItem.Id;
-        var personnelName = SelectedPersonnel.Name;
+        var personnelToAdd = SelectedPersonnel;
         var positionName = SelectedItem.Name;
 
         await ExecuteAsync(async () =>
         {
-            await _positionService.AddAvailablePersonnelAsync(selectedPositionId, SelectedPersonnel.Id);
+            // 调用服务API
+            await _positionService.AddAvailablePersonnelAsync(SelectedItem.Id, personnelToAdd.Id);
             
-            // 重新加载数据
-            await LoadDataAsync();
+            // 增量更新UI
+            AddPersonnelToAvailableList(personnelToAdd);
+            UpdateSelectedItemPersonnelIds(personnelToAdd.Id, isAdding: true);
+            
+            // 更新命令状态
+            AddPersonnelCommand.NotifyCanExecuteChanged();
+            RemovePersonnelCommand.NotifyCanExecuteChanged();
 
-            // 恢复选中的哨位
-            SelectedItem = Items.FirstOrDefault(p => p.Id == selectedPositionId);
-
-            await _dialogService.ShowSuccessAsync($"已将人员 '{personnelName}' 添加到哨位 '{positionName}'");
-        }, "正在添加人员...");
+            await _dialogService.ShowSuccessAsync($"已将人员 '{personnelToAdd.Name}' 添加到哨位 '{positionName}'");
+        }, showGlobalLoading: false);
     }
 
     /// <summary>
@@ -385,30 +388,105 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
         if (SelectedItem == null || SelectedPersonnel == null)
             return;
 
-        var personnelName = SelectedPersonnel.Name;
+        var personnelToRemove = SelectedPersonnel;
         var positionName = SelectedItem.Name;
 
         var confirmed = await _dialogService.ShowConfirmAsync(
             "确认移除",
-            $"确定要将人员 '{personnelName}' 从哨位 '{positionName}' 中移除吗？");
+            $"确定要将人员 '{personnelToRemove.Name}' 从哨位 '{positionName}' 中移除吗？");
 
         if (!confirmed)
             return;
 
-        var selectedPositionId = SelectedItem.Id;
-
         await ExecuteAsync(async () =>
         {
-            await _positionService.RemoveAvailablePersonnelAsync(selectedPositionId, SelectedPersonnel.Id);
+            // 调用服务API
+            await _positionService.RemoveAvailablePersonnelAsync(SelectedItem.Id, personnelToRemove.Id);
             
-            // 重新加载数据
-            await LoadDataAsync();
+            // 增量更新UI
+            RemovePersonnelFromAvailableList(personnelToRemove.Id);
+            UpdateSelectedItemPersonnelIds(personnelToRemove.Id, isAdding: false);
+            
+            // 清除选中的人员
+            SelectedPersonnel = null;
+            
+            // 更新命令状态
+            AddPersonnelCommand.NotifyCanExecuteChanged();
+            RemovePersonnelCommand.NotifyCanExecuteChanged();
 
-            // 恢复选中的哨位
-            SelectedItem = Items.FirstOrDefault(p => p.Id == selectedPositionId);
+            await _dialogService.ShowSuccessAsync($"已将人员 '{personnelToRemove.Name}' 从哨位 '{positionName}' 中移除");
+        }, showGlobalLoading: false);
+    }
 
-            await _dialogService.ShowSuccessAsync($"已将人员 '{personnelName}' 从哨位 '{positionName}' 中移除");
-        }, "正在移除人员...");
+    /// <summary>
+    /// 增量添加人员到可用人员列表
+    /// </summary>
+    /// <param name="personnel">要添加的人员</param>
+    private void AddPersonnelToAvailableList(PersonnelDto personnel)
+    {
+        if (personnel == null)
+            return;
+
+        // ObservableCollection 在 WinUI 3 中会自动处理 UI 线程调度
+        // 如果人员不在列表中，则添加
+        if (!AvailablePersonnel.Any(p => p.Id == personnel.Id))
+        {
+            AvailablePersonnel.Add(personnel);
+        }
+    }
+
+    /// <summary>
+    /// 增量移除人员从可用人员列表
+    /// </summary>
+    /// <param name="personnelId">要移除的人员ID</param>
+    private void RemovePersonnelFromAvailableList(int personnelId)
+    {
+        // ObservableCollection 在 WinUI 3 中会自动处理 UI 线程调度
+        // 查找并移除对应的人员
+        var personnelToRemove = AvailablePersonnel.FirstOrDefault(p => p.Id == personnelId);
+        if (personnelToRemove != null)
+        {
+            AvailablePersonnel.Remove(personnelToRemove);
+        }
+    }
+
+    /// <summary>
+    /// 更新选中哨位的人员ID列表
+    /// </summary>
+    /// <param name="personnelId">人员ID</param>
+    /// <param name="isAdding">true表示添加，false表示移除</param>
+    private void UpdateSelectedItemPersonnelIds(int personnelId, bool isAdding)
+    {
+        if (SelectedItem == null)
+            return;
+
+        if (isAdding)
+        {
+            // 添加人员ID（如果不存在）
+            if (!SelectedItem.AvailablePersonnelIds.Contains(personnelId))
+            {
+                SelectedItem.AvailablePersonnelIds.Add(personnelId);
+            }
+
+            // 添加人员名称（如果不存在）
+            var personnel = AllPersonnel.FirstOrDefault(p => p.Id == personnelId);
+            if (personnel != null && !SelectedItem.AvailablePersonnelNames.Contains(personnel.Name))
+            {
+                SelectedItem.AvailablePersonnelNames.Add(personnel.Name);
+            }
+        }
+        else
+        {
+            // 移除人员ID
+            SelectedItem.AvailablePersonnelIds.Remove(personnelId);
+
+            // 移除人员名称
+            var personnel = AllPersonnel.FirstOrDefault(p => p.Id == personnelId);
+            if (personnel != null)
+            {
+                SelectedItem.AvailablePersonnelNames.Remove(personnel.Name);
+            }
+        }
     }
 
     /// <summary>

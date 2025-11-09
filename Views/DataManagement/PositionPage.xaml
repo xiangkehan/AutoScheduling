@@ -13,6 +13,17 @@
         <conv:BoolToTextConverter x:Key="BoolToTextConverter"/>
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <conv:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
+        
+        <!-- 淡入动画 -->
+        <Storyboard x:Key="FadeInStoryboard">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                             From="0.0" To="1.0"
+                             Duration="0:0:0.15">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
     </Page.Resources>
 
     <Grid Padding="24">
@@ -155,7 +166,8 @@
                         <!-- 当前可用人员 -->
                         <Expander Header="当前可用人员" IsExpanded="True">
                             <StackPanel Spacing="8" Margin="0,12,0,0">
-                                <ListView ItemsSource="{Binding AvailablePersonnel}"
+                                <ListView x:Name="AvailablePersonnelListView"
+                                          ItemsSource="{Binding AvailablePersonnel}"
                                           SelectedItem="{Binding SelectedPersonnel, Mode=TwoWay}"
                                           MaxHeight="200"
                                           SelectionMode="Single">
