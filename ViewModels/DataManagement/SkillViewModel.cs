@@ -92,6 +92,18 @@ public partial class SkillViewModel : ListViewModelBase<SkillDto>
     public IAsyncRelayCommand DeleteCommand { get; }
 
     /// <summary>
+    /// 重写选中项变更处理，通知命令状态更新
+    /// </summary>
+    protected override void OnSelectedItemChanged(SkillDto? newItem)
+    {
+        base.OnSelectedItemChanged(newItem);
+        
+        // 通知所有依赖于SelectedItem的命令状态更新
+        EditCommand.NotifyCanExecuteChanged();
+        DeleteCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
     /// 加载数据
     /// </summary>
     public override async Task LoadDataAsync()
@@ -188,12 +200,21 @@ public partial class SkillViewModel : ListViewModelBase<SkillDto>
         if (SelectedItem == null || EditingSkill == null)
             return;
 
+        var selectedId = SelectedItem.Id;
+
         await ExecuteAsync(async () =>
         {
-            await _skillService.UpdateAsync(SelectedItem.Id, EditingSkill);
+            await _skillService.UpdateAsync(selectedId, EditingSkill);
             
-            // 重新加载数据
-            await LoadDataAsync();
+            // 增量更新UI - 直接更新SelectedItem的属性
+            SelectedItem.Name = EditingSkill.Name;
+            SelectedItem.Description = EditingSkill.Description;
+            SelectedItem.IsActive = EditingSkill.IsActive;
+            
+            // 触发属性变更通知以更新UI
+            SelectedItem.OnPropertyChanged(nameof(SelectedItem.Name));
+            SelectedItem.OnPropertyChanged(nameof(SelectedItem.Description));
+            SelectedItem.OnPropertyChanged(nameof(SelectedItem.IsActive));
 
             IsEditing = false;
             EditingSkill = null;

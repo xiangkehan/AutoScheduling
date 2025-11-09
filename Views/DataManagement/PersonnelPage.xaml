@@ -126,7 +126,7 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="技能*" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                    <TextBlock Grid.Column="0" Text="技能（可选）" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                                     <TextBlock x:Name="SelectedSkillCountText" 
                                                Grid.Column="2" 
                                                Text="已选择: 0"
@@ -159,11 +159,6 @@
                                                    Visibility="{x:Bind ViewModel.AvailableSkills.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
                                     </Grid>
                                 </Border>
-                                <TextBlock Text="{x:Bind ViewModel.SkillsValidationMessage, Mode=OneWay}"
-                                           Foreground="Red"
-                                           FontSize="12"
-                                           Margin="0,4,0,0"
-                                           Visibility="{x:Bind ViewModel.AreSkillsValid, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
                             </StackPanel>
 
                             <!-- 状态设置 -->
@@ -206,7 +201,7 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="技能*" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                    <TextBlock Grid.Column="0" Text="技能" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                                     <TextBlock x:Name="EditSelectedSkillCountText" 
                                                Grid.Column="2" 
                                                Text="已选择: 0"

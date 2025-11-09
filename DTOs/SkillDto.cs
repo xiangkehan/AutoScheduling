@@ -1,5 +1,7 @@
 using System;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace AutoScheduling3.DTOs;
@@ -7,8 +9,9 @@ namespace AutoScheduling3.DTOs;
 /// <summary>
 /// 技能数据传输对象
 /// </summary>
-public class SkillDto
+public class SkillDto : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
     /// <summary>
     /// 技能ID
     /// </summary>
@@ -47,6 +50,15 @@ public class SkillDto
     /// </summary>
     [JsonPropertyName("updatedAt")]
     public DateTime UpdatedAt { get; set; }
+
+    /// <summary>
+    /// 触发属性变更通知
+    /// </summary>
+    /// <param name="propertyName">属性名称</param>
+    public virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
 
 /// <summary>

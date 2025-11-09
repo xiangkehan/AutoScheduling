@@ -25,7 +25,7 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     private UpdatePersonnelDto? _editingPersonnel;
     private UpdatePersonnelDto? _originalPersonnel; // 保存原始数据用于取消操作
     private bool _isNameValid = false;
-    private bool _areSkillsValid = false;
+    private bool _areSkillsValid = true; // 允许没有技能，初始为true
     private string _nameValidationMessage = string.Empty;
     private string _skillsValidationMessage = string.Empty;
 
@@ -144,6 +144,18 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     public IAsyncRelayCommand DeleteCommand { get; }
 
     /// <summary>
+    /// 重写选中项变更处理，通知命令状态更新
+    /// </summary>
+    protected override void OnSelectedItemChanged(PersonnelDto? newItem)
+    {
+        base.OnSelectedItemChanged(newItem);
+        
+        // 通知所有依赖于SelectedItem的命令状态更新
+        EditCommand.NotifyCanExecuteChanged();
+        DeleteCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
     /// 加载数据
     /// </summary>
     public override async Task LoadDataAsync()
@@ -197,16 +209,9 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     /// </summary>
     public void ValidateSkills()
     {
-        if (NewPersonnel.SkillIds == null || NewPersonnel.SkillIds.Count == 0)
-        {
-            AreSkillsValid = false;
-            SkillsValidationMessage = "至少需要选择一项技能";
-        }
-        else
-        {
-            AreSkillsValid = true;
-            SkillsValidationMessage = string.Empty;
-        }
+        // 允许人员没有技能
+        AreSkillsValid = true;
+        SkillsValidationMessage = string.Empty;
 
         CreateCommand.NotifyCanExecuteChanged();
     }
@@ -225,7 +230,7 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
 
         // 重置验证状态
         IsNameValid = false;
-        AreSkillsValid = false;
+        AreSkillsValid = true; // 允许没有技能
         NameValidationMessage = string.Empty;
         SkillsValidationMessage = string.Empty;
 
@@ -326,11 +331,7 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
             return;
         }
 
-        if (EditingPersonnel.SkillIds == null || EditingPersonnel.SkillIds.Count == 0)
-        {
-            await _dialogService.ShowErrorAsync("至少需要选择一项技能");
-            return;
-        }
+        // 允许人员没有技能
 
         var selectedId = SelectedItem.Id;
 
@@ -338,18 +339,42 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
         {
             await _personnelService.UpdateAsync(selectedId, EditingPersonnel);
             
-            // 重新加载数据
-            await LoadDataAsync();
-
-            // 重新选中更新后的项
-            SelectedItem = Items.FirstOrDefault(p => p.Id == selectedId);
+            // 增量更新UI - 直接更新SelectedItem的属性
+            SelectedItem.Name = EditingPersonnel.Name;
+            SelectedItem.IsAvailable = EditingPersonnel.IsAvailable;
+            SelectedItem.IsRetired = EditingPersonnel.IsRetired;
+            // IsActive 是计算属性，会自动更新
+            
+            // 更新技能ID列表
+            SelectedItem.SkillIds.Clear();
+            foreach (var skillId in EditingPersonnel.SkillIds)
+            {
+                SelectedItem.SkillIds.Add(skillId);
+            }
+            
+            // 更新技能名称列表
+            SelectedItem.SkillNames.Clear();
+            foreach (var skillId in EditingPersonnel.SkillIds)
+            {
+                var skill = AvailableSkills.FirstOrDefault(s => s.Id == skillId);
+                if (skill != null)
+                {
+                    SelectedItem.SkillNames.Add(skill.Name);
+                }
+            }
+            
+            // 触发属性变更通知以更新UI
+            SelectedItem.OnPropertyChanged(nameof(SelectedItem.Name));
+            SelectedItem.OnPropertyChanged(nameof(SelectedItem.IsAvailable));
+            SelectedItem.OnPropertyChanged(nameof(SelectedItem.IsRetired));
+            SelectedItem.OnPropertyChanged(nameof(SelectedItem.IsActive));
+            SelectedItem.OnPropertyChanged(nameof(SelectedItem.SkillNames));
 
             IsEditing = false;
             EditingPersonnel = null;
             _originalPersonnel = null;
 
             // 根据需求8.5，成功操作不显示提示消息
-            // await _dialogService.ShowSuccessAsync("人员信息已更新！");
         }, "正在保存...");
     }
 

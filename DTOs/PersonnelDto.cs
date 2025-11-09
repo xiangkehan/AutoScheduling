@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace AutoScheduling3.DTOs;
@@ -7,8 +9,9 @@ namespace AutoScheduling3.DTOs;
 /// <summary>
 /// 人员数据传输对象
 /// </summary>
-public class PersonnelDto
+public class PersonnelDto : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
     /// <summary>
     /// 人员ID
     /// </summary>
@@ -26,7 +29,6 @@ public class PersonnelDto
     /// <summary>
     /// 技能ID列表
     /// </summary>
-    [Required(ErrorMessage = "技能列表不能为空")]
     [JsonPropertyName("skillIds")]
     public List<int> SkillIds { get; set; } = new();
 
@@ -73,6 +75,15 @@ public class PersonnelDto
 
     // 新增:兼容旧 XAML绑定的 IsActive 属性（在职且可用）
     public bool IsActive => IsAvailable && !IsRetired;
+
+    /// <summary>
+    /// 触发属性变更通知
+    /// </summary>
+    /// <param name="propertyName">属性名称</param>
+    public virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
 
 /// <summary>
@@ -88,10 +99,8 @@ public class CreatePersonnelDto
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 技能ID列表（至少一项）
+    /// 技能ID列表（可选）
     /// </summary>
-    [Required(ErrorMessage = "技能列表不能为空")]
-    [MinLength(1, ErrorMessage = "至少需要选择一项技能")]
     public List<int> SkillIds { get; set; } = new();
 
     /// <summary>
@@ -133,10 +142,8 @@ public class UpdatePersonnelDto
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 技能ID列表（至少一项）
+    /// 技能ID列表（可选）
     /// </summary>
-    [Required(ErrorMessage = "技能列表不能为空")]
-    [MinLength(1, ErrorMessage = "至少需要选择一项技能")]
     public List<int> SkillIds { get; set; } = new();
 
     /// <summary>

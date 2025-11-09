@@ -103,8 +103,7 @@ public class PersonnelService : IPersonnelService
         if (dto.Name.Length > 50)
             throw new ArgumentException("姓名长度不能超过50字符", nameof(dto.Name));
 
-        if (dto.SkillIds == null || dto.SkillIds.Count == 0)
-            throw new ArgumentException("至少选择一项技能", nameof(dto.SkillIds));
+        // 允许人员没有技能
 
         if (dto.RecentShiftIntervalCount < 0 || dto.RecentShiftIntervalCount > 999)
             throw new ArgumentException("间隔数必须在0-999之间", nameof(dto.RecentShiftIntervalCount));
@@ -118,8 +117,7 @@ public class PersonnelService : IPersonnelService
         if (dto.Name.Length > 50)
             throw new ArgumentException("姓名长度不能超过50字符", nameof(dto.Name));
 
-        if (dto.SkillIds == null || dto.SkillIds.Count == 0)
-            throw new ArgumentException("至少选择一项技能", nameof(dto.SkillIds));
+        // 允许人员没有技能
     }
 
     /// <summary>
@@ -159,8 +157,9 @@ public class PersonnelService : IPersonnelService
     /// </summary>
     private async Task ValidateSkillIdsAsync(List<int> skillIds)
     {
+        // 允许空技能列表
         if (skillIds == null || skillIds.Count == 0)
-            throw new ArgumentException("至少选择一项技能");
+            return;
 
         // 检查技能是否存在
         var existingSkills = await _skillRepository.GetByIdsAsync(skillIds);

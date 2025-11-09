@@ -291,14 +291,44 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
         if (SelectedItem == null)
             return;
 
+        var selectedId = SelectedItem.Id;
+
         try
         {
             await ExecuteAsync(async () =>
             {
-                await _positionService.UpdateAsync(SelectedItem.Id, updateDto);
+                // 调用服务更新数据库
+                await _positionService.UpdateAsync(selectedId, updateDto);
                 
-                // 重新加载数据以确保UI同步
-                await LoadDataAsync();
+                // 增量更新UI - 直接更新SelectedItem的属性
+                SelectedItem.Name = updateDto.Name;
+                SelectedItem.Location = updateDto.Location;
+                SelectedItem.Description = updateDto.Description;
+                SelectedItem.Requirements = updateDto.Requirements;
+                
+                // 更新技能ID列表
+                SelectedItem.RequiredSkillIds.Clear();
+                foreach (var skillId in updateDto.RequiredSkillIds)
+                {
+                    SelectedItem.RequiredSkillIds.Add(skillId);
+                }
+                
+                // 更新技能名称列表
+                SelectedItem.RequiredSkillNames.Clear();
+                foreach (var skillId in updateDto.RequiredSkillIds)
+                {
+                    var skill = AvailableSkills.FirstOrDefault(s => s.Id == skillId);
+                    if (skill != null)
+                    {
+                        SelectedItem.RequiredSkillNames.Add(skill.Name);
+                    }
+                }
+                
+                // 触发属性变更通知以更新UI
+                SelectedItem.OnPropertyChanged(nameof(SelectedItem.Name));
+                SelectedItem.OnPropertyChanged(nameof(SelectedItem.Location));
+                SelectedItem.OnPropertyChanged(nameof(SelectedItem.Description));
+                SelectedItem.OnPropertyChanged(nameof(SelectedItem.RequiredSkillNames));
             }, "正在保存...");
         }
         catch (ArgumentException argEx)
@@ -558,7 +588,9 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
         base.OnSelectedItemChanged(newItem);
         UpdateAvailablePersonnel();
         
-        // 通知命令状态更新
+        // 通知所有依赖于SelectedItem的命令状态更新
+        EditCommand.NotifyCanExecuteChanged();
+        DeleteCommand.NotifyCanExecuteChanged();
         AddPersonnelCommand.NotifyCanExecuteChanged();
         RemovePersonnelCommand.NotifyCanExecuteChanged();
     }
