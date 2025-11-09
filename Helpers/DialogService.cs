@@ -34,7 +34,7 @@ public class DialogService
     }
 
     /// <summary>
-    /// 显示错误对话框
+    /// 显示错误对话框（5秒后自动关闭）
     /// </summary>
     public async Task ShowErrorAsync(string message, Exception? exception = null)
     {
@@ -53,6 +53,28 @@ public class DialogService
                 CloseButtonText = "确定",
                 XamlRoot = App.MainWindow?.Content?.XamlRoot
             };
+
+            // 创建一个任务来在5秒后自动关闭对话框
+            var autoCloseTask = Task.Run(async () =>
+            {
+                await Task.Delay(5000); // 等待5秒
+                
+                // 在UI线程上关闭对话框
+                if (App.MainWindow?.DispatcherQueue != null)
+                {
+                    App.MainWindow.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        try
+                        {
+                            dialog.Hide();
+                        }
+                        catch
+                        {
+                            // 对话框可能已经被用户关闭
+                        }
+                    });
+                }
+            });
 
             await dialog.ShowAsync();
         }

@@ -216,7 +216,7 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
                 // 重置表单
                 NewPosition = new CreatePositionDto();
 
-                await _dialogService.ShowSuccessAsync("哨位创建成功！");
+                // 根据需求8.5，成功操作不显示提示消息
             }, "正在创建哨位...");
         }
         catch (ArgumentException argEx)
@@ -279,8 +279,43 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
             IsEditing = false;
             EditingPosition = null;
 
-            await _dialogService.ShowSuccessAsync("哨位信息已更新！");
+            // 根据需求8.5，成功操作不显示提示消息
         }, "正在保存...");
+    }
+
+    /// <summary>
+    /// 更新哨位（供UI层调用）
+    /// </summary>
+    public async Task UpdatePositionAsync(UpdatePositionDto updateDto)
+    {
+        if (SelectedItem == null)
+            return;
+
+        try
+        {
+            await ExecuteAsync(async () =>
+            {
+                await _positionService.UpdateAsync(SelectedItem.Id, updateDto);
+                
+                // 重新加载数据以确保UI同步
+                await LoadDataAsync();
+            }, "正在保存...");
+        }
+        catch (ArgumentException argEx)
+        {
+            // 验证错误
+            await _dialogService.ShowErrorAsync("输入验证失败", argEx);
+        }
+        catch (InvalidOperationException invEx)
+        {
+            // 业务逻辑错误
+            await _dialogService.ShowErrorAsync("操作失败：该哨位名称可能已存在或所选技能无效", invEx);
+        }
+        catch (Exception ex)
+        {
+            // 数据库或网络错误
+            await _dialogService.ShowErrorAsync("更新哨位失败，请检查网络连接或稍后重试", ex);
+        }
     }
 
     /// <summary>
@@ -312,8 +347,6 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
             await _positionService.DeleteAsync(SelectedItem.Id);
             RemoveItem(SelectedItem);
             SelectedItem = null;
-
-            await _dialogService.ShowSuccessAsync("哨位已删除！");
         }, "正在删除...");
     }
 

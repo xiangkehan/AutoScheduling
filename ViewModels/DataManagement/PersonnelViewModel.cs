@@ -7,6 +7,7 @@ using AutoScheduling3.Helpers;
 using System.Threading.Tasks;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AutoScheduling3.ViewModels.DataManagement;
 
@@ -22,6 +23,7 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     private bool _isEditing;
     private CreatePersonnelDto _newPersonnel = new();
     private UpdatePersonnelDto? _editingPersonnel;
+    private UpdatePersonnelDto? _originalPersonnel; // 保存原始数据用于取消操作
     private bool _isNameValid = false;
     private bool _areSkillsValid = false;
     private string _nameValidationMessage = string.Empty;
@@ -256,7 +258,7 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
                 // 重置表单
                 ResetCreateForm();
 
-                await _dialogService.ShowSuccessAsync("人员创建成功！");
+                // 根据需求8.5，成功操作不显示提示消息
             }, "正在创建人员...");
         }
         catch (ArgumentException argEx)
@@ -295,6 +297,15 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
                 IsRetired = SelectedItem.IsRetired
             };
 
+            // 保存原始数据的副本用于取消操作
+            _originalPersonnel = new UpdatePersonnelDto
+            {
+                Name = SelectedItem.Name,
+                SkillIds = new List<int>(SelectedItem.SkillIds),
+                IsAvailable = SelectedItem.IsAvailable,
+                IsRetired = SelectedItem.IsRetired
+            };
+
             IsEditing = true;
             await Task.CompletedTask;
         });
@@ -308,17 +319,37 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
         if (SelectedItem == null || EditingPersonnel == null)
             return;
 
+        // 验证编辑的数据
+        if (string.IsNullOrWhiteSpace(EditingPersonnel.Name))
+        {
+            await _dialogService.ShowErrorAsync("姓名不能为空");
+            return;
+        }
+
+        if (EditingPersonnel.SkillIds == null || EditingPersonnel.SkillIds.Count == 0)
+        {
+            await _dialogService.ShowErrorAsync("至少需要选择一项技能");
+            return;
+        }
+
+        var selectedId = SelectedItem.Id;
+
         await ExecuteAsync(async () =>
         {
-            await _personnelService.UpdateAsync(SelectedItem.Id, EditingPersonnel);
+            await _personnelService.UpdateAsync(selectedId, EditingPersonnel);
             
             // 重新加载数据
             await LoadDataAsync();
 
+            // 重新选中更新后的项
+            SelectedItem = Items.FirstOrDefault(p => p.Id == selectedId);
+
             IsEditing = false;
             EditingPersonnel = null;
+            _originalPersonnel = null;
 
-            await _dialogService.ShowSuccessAsync("人员信息已更新！");
+            // 根据需求8.5，成功操作不显示提示消息
+            // await _dialogService.ShowSuccessAsync("人员信息已更新！");
         }, "正在保存...");
     }
 
@@ -327,8 +358,18 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     /// </summary>
     private void CancelEdit()
     {
+        // 恢复原始数据
+        if (_originalPersonnel != null && EditingPersonnel != null)
+        {
+            EditingPersonnel.Name = _originalPersonnel.Name;
+            EditingPersonnel.SkillIds = new List<int>(_originalPersonnel.SkillIds);
+            EditingPersonnel.IsAvailable = _originalPersonnel.IsAvailable;
+            EditingPersonnel.IsRetired = _originalPersonnel.IsRetired;
+        }
+
         IsEditing = false;
         EditingPersonnel = null;
+        _originalPersonnel = null;
     }
 
     /// <summary>
@@ -352,7 +393,7 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
             RemoveItem(SelectedItem);
             SelectedItem = null;
 
-            await _dialogService.ShowSuccessAsync("人员已删除！");
+            // 根据需求8.5，成功操作不显示提示消息
         }, "正在删除...");
     }
 

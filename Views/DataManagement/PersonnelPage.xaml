@@ -186,8 +186,17 @@
                         
                         <!-- 编辑表单 -->
                         <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <TextBox Header="姓名*" 
-                                     Text="{x:Bind ViewModel.EditingPersonnel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <StackPanel>
+                                <TextBox x:Name="EditNameTextBox"
+                                         Header="姓名*" 
+                                         Text="{x:Bind ViewModel.EditingPersonnel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         TextChanged="EditNameTextBox_TextChanged"/>
+                                <TextBlock x:Name="EditNameErrorText"
+                                           Foreground="Red"
+                                           FontSize="12"
+                                           Margin="0,4,0,0"
+                                           Visibility="Collapsed"/>
+                            </StackPanel>
                             
                             <!-- 技能编辑 -->
                             <StackPanel>
@@ -230,6 +239,11 @@
                                                    Visibility="{x:Bind ViewModel.AvailableSkills.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
                                     </Grid>
                                 </Border>
+                                <TextBlock x:Name="EditSkillsErrorText"
+                                           Foreground="Red"
+                                           FontSize="12"
+                                           Margin="0,4,0,0"
+                                           Visibility="Collapsed"/>
                             </StackPanel>
                             
                             <ToggleSwitch Header="是否可用" 

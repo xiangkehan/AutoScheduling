@@ -10,6 +10,7 @@ namespace AutoScheduling3.Views.DataManagement
     public sealed partial class PersonnelPage : Page
     {
         public PersonnelViewModel ViewModel { get; }
+        private bool _isUpdatingSelection = false; // 标记是否正在程序化更新选择
 
         public PersonnelPage()
         {
@@ -50,30 +51,56 @@ namespace AutoScheduling3.Views.DataManagement
 
         private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(ViewModel.IsEditing) && ViewModel.IsEditing && ViewModel.EditingPersonnel != null)
+            if (e.PropertyName == nameof(ViewModel.IsEditing))
             {
-                // 同步编辑模式下的选中状态
-                SyncEditSelections();
+                if (ViewModel.IsEditing && ViewModel.EditingPersonnel != null)
+                {
+                    // 延迟同步以确保UI已更新
+                    _ = this.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () =>
+                    {
+                        SyncEditSelections();
+                    });
+                }
+                else if (!ViewModel.IsEditing)
+                {
+                    // 退出编辑模式时清除选择
+                    EditSkillsListView.SelectedItems.Clear();
+                    EditSelectedSkillCountText.Text = "已选择: 0";
+                }
             }
         }
 
         private void SyncEditSelections()
         {
-            if (ViewModel.EditingPersonnel == null) return;
+            if (ViewModel.EditingPersonnel == null || ViewModel.AvailableSkills.Count == 0) 
+                return;
 
-            // 同步技能选择
-            EditSkillsListView.SelectedItems.Clear();
-            foreach (var skillId in ViewModel.EditingPersonnel.SkillIds)
+            // 设置标记，防止触发SelectionChanged事件处理
+            _isUpdatingSelection = true;
+
+            try
             {
-                var skill = ViewModel.AvailableSkills.FirstOrDefault(s => s.Id == skillId);
-                if (skill != null)
+                // 清除当前选择
+                EditSkillsListView.SelectedItems.Clear();
+                
+                // 同步技能选择
+                foreach (var skillId in ViewModel.EditingPersonnel.SkillIds)
                 {
-                    EditSkillsListView.SelectedItems.Add(skill);
+                    var skill = ViewModel.AvailableSkills.FirstOrDefault(s => s.Id == skillId);
+                    if (skill != null)
+                    {
+                        EditSkillsListView.SelectedItems.Add(skill);
+                    }
                 }
+                
+                // 更新选中技能数量显示
+                EditSelectedSkillCountText.Text = $"已选择: {EditSkillsListView.SelectedItems.Count}";
             }
-            
-            // 更新选中技能数量显示
-            EditSelectedSkillCountText.Text = $"已选择: {EditSkillsListView.SelectedItems.Count}";
+            finally
+            {
+                // 恢复标记
+                _isUpdatingSelection = false;
+            }
         }
 
         private void ResetForm_Click(object sender, RoutedEventArgs e)
@@ -108,14 +135,73 @@ namespace AutoScheduling3.Views.DataManagement
 
         private void EditSkillsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            // 如果正在程序化更新选择，跳过处理
+            if (_isUpdatingSelection)
+                return;
+
             if (ViewModel.EditingPersonnel != null)
             {
                 var selectedSkills = EditSkillsListView.SelectedItems.Cast<DTOs.SkillDto>().ToList();
                 ViewModel.EditingPersonnel.SkillIds = selectedSkills.Select(s => s.Id).ToList();
+                
+                // 验证技能选择
+                ValidateEditSkills();
             }
             
             // 更新选中技能数量显示
             EditSelectedSkillCountText.Text = $"已选择: {EditSkillsListView.SelectedItems.Count}";
+        }
+
+        private void EditNameTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            ValidateEditName();
+        }
+
+        private void ValidateEditName()
+        {
+            if (ViewModel.EditingPersonnel == null)
+                return;
+
+            var name = ViewModel.EditingPersonnel.Name?.Trim();
+            
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                ShowEditFieldError(EditNameErrorText, "姓名不能为空");
+            }
+            else if (name.Length > 50)
+            {
+                ShowEditFieldError(EditNameErrorText, "姓名长度不能超过50字符");
+            }
+            else
+            {
+                HideEditFieldError(EditNameErrorText);
+            }
+        }
+
+        private void ValidateEditSkills()
+        {
+            if (ViewModel.EditingPersonnel == null)
+                return;
+
+            if (ViewModel.EditingPersonnel.SkillIds == null || ViewModel.EditingPersonnel.SkillIds.Count == 0)
+            {
+                ShowEditFieldError(EditSkillsErrorText, "至少需要选择一项技能");
+            }
+            else
+            {
+                HideEditFieldError(EditSkillsErrorText);
+            }
+        }
+
+        private void ShowEditFieldError(TextBlock errorText, string message)
+        {
+            errorText.Text = message;
+            errorText.Visibility = Visibility.Visible;
+        }
+
+        private void HideEditFieldError(TextBlock errorText)
+        {
+            errorText.Visibility = Visibility.Collapsed;
         }
 
         private void MainContentGrid_SizeChanged(object sender, SizeChangedEventArgs e)

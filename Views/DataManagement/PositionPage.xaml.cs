@@ -65,6 +65,50 @@ public sealed partial class PositionPage : Page
     }
 
     /// <summary>
+    /// 显示编辑哨位对话框
+    /// </summary>
+    private async void EditPosition_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedItem == null)
+        {
+            await ViewModel.DialogService.ShowErrorAsync("请先选择要编辑的哨位");
+            return;
+        }
+
+        try
+        {
+            // 检查 XamlRoot
+            if (this.XamlRoot == null)
+            {
+                System.Diagnostics.Debug.WriteLine("XamlRoot is null, cannot show dialog");
+                await ViewModel.DialogService.ShowErrorAsync("无法显示对话框，请刷新页面后重试");
+                return;
+            }
+
+            // 创建编辑对话框
+            var dialog = new PositionEditDialog
+            {
+                XamlRoot = this.XamlRoot,
+                Position = ViewModel.SelectedItem,
+                AvailableSkills = ViewModel.AvailableSkills
+            };
+
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary && dialog.EditedPosition != null)
+            {
+                // 调用ViewModel的更新方法
+                await ViewModel.UpdatePositionAsync(dialog.EditedPosition);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to show edit dialog: {ex.Message}");
+            await ViewModel.DialogService.ShowErrorAsync("显示编辑对话框时发生错误", ex);
+        }
+    }
+
+    /// <summary>
     /// 显示创建哨位对话框
     /// </summary>
     private async System.Threading.Tasks.Task ShowCreatePositionDialogAsync()
@@ -150,7 +194,7 @@ public sealed partial class PositionPage : Page
 
             var skillsHeader = new TextBlock
             {
-                Text = "所需技能",
+                Text = "所需技能（可选）",
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             };
             Grid.SetColumn(skillsHeader, 0);

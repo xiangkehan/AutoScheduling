@@ -138,7 +138,7 @@ public partial class SkillViewModel : ListViewModelBase<SkillDto>
                 // 重置表单
                 NewSkill = new CreateSkillDto();
 
-                await _dialogService.ShowSuccessAsync("技能创建成功！");
+                // 根据需求8.5，成功操作不显示提示消息
             }, "正在创建技能...");
         }
         catch (ArgumentException argEx)
@@ -198,7 +198,7 @@ public partial class SkillViewModel : ListViewModelBase<SkillDto>
             IsEditing = false;
             EditingSkill = null;
 
-            await _dialogService.ShowSuccessAsync("技能信息已更新！");
+            // 根据需求8.5，成功操作不显示提示消息
         }, "正在保存...");
     }
 
@@ -232,7 +232,7 @@ public partial class SkillViewModel : ListViewModelBase<SkillDto>
             RemoveItem(SelectedItem);
             SelectedItem = null;
 
-            await _dialogService.ShowSuccessAsync("技能已删除！");
+            // 根据需求8.5，成功操作不显示提示消息
         }, "正在删除...");
     }
 

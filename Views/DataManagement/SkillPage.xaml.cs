@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls; // Added for Page
 using Microsoft.UI.Xaml.Automation;
 using AutoScheduling3.ViewModels.DataManagement;
+using AutoScheduling3.Services.Interfaces;
 using System;
 
 namespace AutoScheduling3.Views.DataManagement;
@@ -19,7 +20,21 @@ public sealed partial class SkillPage : Page
         this.InitializeComponent();
         ViewModel = ((App)Application.Current).ServiceProvider.GetRequiredService<SkillViewModel>();
         this.Loaded += SkillPage_Loaded;
+        
+        // Subscribe to SelectedItem changes to update button states
+        ViewModel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(ViewModel.SelectedItem))
+            {
+                Bindings.Update();
+            }
+        };
     }
+
+    /// <summary>
+    /// 检查是否有选中的项
+    /// </summary>
+    public bool IsItemSelected() => ViewModel.SelectedItem != null;
 
     private async void SkillPage_Loaded(object sender, RoutedEventArgs e)
     {
@@ -145,6 +160,126 @@ public sealed partial class SkillPage : Page
         {
             System.Diagnostics.Debug.WriteLine($"Failed to show dialog: {ex.Message}");
             await ViewModel.DialogService.ShowErrorAsync("显示对话框时发生错误", ex);
+        }
+    }
+
+    /// <summary>
+    /// 编辑技能按钮点击事件
+    /// </summary>
+    private async void EditSkill_Click(object sender, RoutedEventArgs e)
+    {
+        await ShowEditSkillDialogAsync();
+    }
+
+    /// <summary>
+    /// 双击技能卡片触发编辑
+    /// </summary>
+    private async void SkillGridView_DoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
+    {
+        if (ViewModel.SelectedItem != null)
+        {
+            await ShowEditSkillDialogAsync();
+        }
+    }
+
+    /// <summary>
+    /// 显示编辑技能对话框
+    /// </summary>
+    private async System.Threading.Tasks.Task ShowEditSkillDialogAsync()
+    {
+        if (ViewModel.SelectedItem == null)
+        {
+            await ViewModel.DialogService.ShowErrorAsync("请先选择要编辑的技能");
+            return;
+        }
+
+        try
+        {
+            // 检查 XamlRoot
+            if (this.XamlRoot == null)
+            {
+                System.Diagnostics.Debug.WriteLine("XamlRoot is null, cannot show dialog");
+                await ViewModel.DialogService.ShowErrorAsync("无法显示对话框，请刷新页面后重试");
+                return;
+            }
+
+            // 创建编辑对话框
+            var dialog = new SkillEditDialog
+            {
+                XamlRoot = this.XamlRoot,
+                Skill = ViewModel.SelectedItem
+            };
+
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary && dialog.EditedSkill != null)
+            {
+                // 调用Service更新技能
+                var skillService = ((App)Application.Current).ServiceProvider.GetRequiredService<ISkillService>();
+                
+                try
+                {
+                    await skillService.UpdateAsync(ViewModel.SelectedItem.Id, dialog.EditedSkill);
+                    
+                    // 刷新列表
+                    await ViewModel.LoadDataAsync();
+                }
+                catch (Exception updateEx)
+                {
+                    await ViewModel.DialogService.ShowErrorAsync("更新技能失败", updateEx);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to edit skill: {ex.Message}");
+            await ViewModel.DialogService.ShowErrorAsync("编辑技能时发生错误", ex);
+        }
+    }
+
+    /// <summary>
+    /// 删除技能按钮点击事件
+    /// </summary>
+    private async void DeleteSkill_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedItem == null)
+        {
+            await ViewModel.DialogService.ShowErrorAsync("请先选择要删除的技能");
+            return;
+        }
+
+        try
+        {
+            // 显示确认对话框
+            var confirmed = await ViewModel.DialogService.ShowConfirmAsync(
+                "确认删除",
+                $"确定要删除技能 '{ViewModel.SelectedItem.Name}' 吗？此操作无法撤销。");
+
+            if (!confirmed)
+                return;
+
+            // 执行删除
+            var skillService = ((App)Application.Current).ServiceProvider.GetRequiredService<ISkillService>();
+            
+            try
+            {
+                await skillService.DeleteAsync(ViewModel.SelectedItem.Id);
+                
+                // 刷新列表
+                await ViewModel.LoadDataAsync();
+                
+                // 清除选中状态
+                ViewModel.SelectedItem = null;
+            }
+            catch (Exception deleteEx)
+            {
+                await ViewModel.DialogService.ShowErrorAsync("删除技能失败", deleteEx);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to delete skill: {ex.Message}");
+            await ViewModel.DialogService.ShowErrorAsync("删除技能时发生错误", ex);
         }
     }
 }

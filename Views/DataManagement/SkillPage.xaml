@@ -46,6 +46,8 @@
                 <CommandBar Grid.Column="1" DefaultLabelPosition="Right">
                     <AppBarButton Icon="Refresh" Label="刷新" Command="{x:Bind ViewModel.RefreshCommand}"/>
                     <AppBarButton Icon="Add" Label="新建" Click="CreateSkill_Click"/>
+                    <AppBarButton Icon="Edit" Label="编辑" Click="EditSkill_Click" IsEnabled="{x:Bind IsItemSelected(), Mode=OneWay}"/>
+                    <AppBarButton Icon="Delete" Label="删除" Click="DeleteSkill_Click" IsEnabled="{x:Bind IsItemSelected(), Mode=OneWay}"/>
                 </CommandBar>
             </Grid>
 
@@ -57,7 +59,8 @@
                       SelectionMode="Single"
                       ItemContainerStyle="{StaticResource GridViewItemStyleWithoutHover}"
                       HorizontalAlignment="Stretch"
-                      Loaded="SkillGridView_Loaded">
+                      Loaded="SkillGridView_Loaded"
+                      DoubleTapped="SkillGridView_DoubleTapped">
                 <GridView.ItemTemplate>
                     <DataTemplate x:DataType="local:SkillDto">
                         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
