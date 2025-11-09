@@ -105,7 +105,7 @@
                                            Style="{StaticResource CaptionTextBlockStyle}"
                                            Foreground="{ThemeResource TextFillColorTertiaryBrush}">
                                     <Run Text="可用人员: "/>
-                                    <Run Text="{x:Bind AvailablePersonnelIds.Count}"/>
+                                    <Run Text="{x:Bind AvailablePersonnelCount, Mode=OneWay}"/>
                                 </TextBlock>
                             </Grid>
                         </DataTemplate>

@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace AutoScheduling3.DTOs;
@@ -7,8 +9,12 @@ namespace AutoScheduling3.DTOs;
 /// <summary>
 /// 哨位/职位数据传输对象
 /// </summary>
-public class PositionDto
+public class PositionDto : INotifyPropertyChanged
 {
+    private List<int> _availablePersonnelIds = new();
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     /// <summary>
     /// 哨位ID
     /// </summary>
@@ -62,13 +68,37 @@ public class PositionDto
     /// 可用人员ID列表
     /// </summary>
     [JsonPropertyName("availablePersonnelIds")]
-    public List<int> AvailablePersonnelIds { get; set; } = new();
+    public List<int> AvailablePersonnelIds
+    {
+        get => _availablePersonnelIds;
+        set
+        {
+            _availablePersonnelIds = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(AvailablePersonnelCount));
+        }
+    }
 
     /// <summary>
     /// 可用人员名称列表（冗余字段，便于显示）
     /// </summary>
     [JsonPropertyName("availablePersonnelNames")]
     public List<string> AvailablePersonnelNames { get; set; } = new();
+
+    /// <summary>
+    /// 可用人员数量（计算属性）
+    /// </summary>
+    [JsonIgnore]
+    public int AvailablePersonnelCount => AvailablePersonnelIds.Count;
+
+    /// <summary>
+    /// 触发属性变更通知
+    /// </summary>
+    /// <param name="propertyName">属性名称</param>
+    public virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
 
 /// <summary>

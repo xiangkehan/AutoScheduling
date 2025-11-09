@@ -67,6 +67,12 @@ private void RemovePersonnelFromAvailableList(int personnelId)
 /// <param name="personnelId">人员ID</param>
 /// <param name="isAdding">true表示添加，false表示移除</param>
 private void UpdateSelectedItemPersonnelIds(int personnelId, bool isAdding)
+
+/// <summary>
+/// 触发哨位列表项的属性变更通知
+/// </summary>
+/// <param name="position">需要更新的哨位</param>
+private void NotifyPositionListItemChanged(PositionDto position)
 ```
 
 #### 修改现有方法
@@ -89,6 +95,9 @@ private async Task AddPersonnelAsync()
         // 增量更新UI
         AddPersonnelToAvailableList(personnelToAdd);
         UpdateSelectedItemPersonnelIds(personnelToAdd.Id, isAdding: true);
+        
+        // 触发哨位列表项更新（更新可用人员数量显示）
+        NotifyPositionListItemChanged(SelectedItem);
         
         // 更新命令状态
         AddPersonnelCommand.NotifyCanExecuteChanged();
@@ -124,6 +133,9 @@ private async Task RemovePersonnelAsync()
         // 增量更新UI
         RemovePersonnelFromAvailableList(personnelToRemove.Id);
         UpdateSelectedItemPersonnelIds(personnelToRemove.Id, isAdding: false);
+        
+        // 触发哨位列表项更新（更新可用人员数量显示）
+        NotifyPositionListItemChanged(SelectedItem);
         
         // 清除选中的人员
         SelectedPersonnel = null;
@@ -213,7 +225,37 @@ protected async Task ExecuteAsync(
 }
 ```
 
-### 3. XAML 视图修改
+#### NotifyPositionListItemChanged 实现
+
+有两种方案来触发哨位列表项的更新：
+
+**方案1：使用 PositionDto 的 INotifyPropertyChanged**
+```csharp
+private void NotifyPositionListItemChanged(PositionDto position)
+{
+    // 如果 PositionDto 实现了 INotifyPropertyChanged
+    position.OnPropertyChanged(nameof(position.AvailablePersonnelCount));
+}
+```
+
+**方案2：使用 Items 集合的 Replace 技巧**
+```csharp
+private void NotifyPositionListItemChanged(PositionDto position)
+{
+    // 找到项的索引
+    var index = Items.IndexOf(position);
+    if (index >= 0)
+    {
+        // 临时移除并重新添加，触发UI更新
+        Items.RemoveAt(index);
+        Items.Insert(index, position);
+    }
+}
+```
+
+**推荐方案1**，因为它更清晰且不会影响选中状态。但需要修改 `PositionDto` 实现 `INotifyPropertyChanged`。
+
+### 4. XAML 视图修改
 
 #### 添加列表项动画
 
@@ -269,7 +311,37 @@ protected async Task ExecuteAsync(
 </ListView>
 ```
 
-### 4. 代码后置修改
+#### 修改哨位列表绑定
+
+将 `AvailablePersonnelIds.Count` 改为绑定到新的计算属性：
+
+```xml
+<ListView.ItemTemplate>
+    <DataTemplate x:DataType="dto:PositionDto">
+        <Grid Padding="12,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="{x:Bind Name}" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+            <TextBlock Grid.Row="1" Text="{x:Bind Location}" 
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBlock Grid.Row="2" 
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorTertiaryBrush}">
+                <Run Text="可用人员: "/>
+                <!-- 改为绑定到 AvailablePersonnelCount 属性，使用 Mode=OneWay -->
+                <Run Text="{x:Bind AvailablePersonnelCount, Mode=OneWay}"/>
+            </TextBlock>
+        </Grid>
+    </DataTemplate>
+</ListView.ItemTemplate>
+```
+
+### 5. 代码后置修改
 
 在 `PositionPage.xaml.cs` 中添加动画触发逻辑：
 

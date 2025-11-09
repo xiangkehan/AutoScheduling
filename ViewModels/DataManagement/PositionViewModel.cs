@@ -372,11 +372,12 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
             AddPersonnelToAvailableList(personnelToAdd);
             UpdateSelectedItemPersonnelIds(personnelToAdd.Id, isAdding: true);
             
+            // 触发哨位列表项更新（更新可用人员数量显示）
+            NotifyPositionListItemChanged(SelectedItem);
+            
             // 更新命令状态
             AddPersonnelCommand.NotifyCanExecuteChanged();
             RemovePersonnelCommand.NotifyCanExecuteChanged();
-
-            await _dialogService.ShowSuccessAsync($"已将人员 '{personnelToAdd.Name}' 添加到哨位 '{positionName}'");
         }, showGlobalLoading: false);
     }
 
@@ -407,14 +408,15 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
             RemovePersonnelFromAvailableList(personnelToRemove.Id);
             UpdateSelectedItemPersonnelIds(personnelToRemove.Id, isAdding: false);
             
+            // 触发哨位列表项更新（更新可用人员数量显示）
+            NotifyPositionListItemChanged(SelectedItem);
+            
             // 清除选中的人员
             SelectedPersonnel = null;
             
             // 更新命令状态
             AddPersonnelCommand.NotifyCanExecuteChanged();
             RemovePersonnelCommand.NotifyCanExecuteChanged();
-
-            await _dialogService.ShowSuccessAsync($"已将人员 '{personnelToRemove.Name}' 从哨位 '{positionName}' 中移除");
         }, showGlobalLoading: false);
     }
 
@@ -487,6 +489,19 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
                 SelectedItem.AvailablePersonnelNames.Remove(personnel.Name);
             }
         }
+    }
+
+    /// <summary>
+    /// 触发哨位列表项的属性变更通知
+    /// </summary>
+    /// <param name="position">需要更新的哨位</param>
+    private void NotifyPositionListItemChanged(PositionDto position)
+    {
+        if (position == null)
+            return;
+
+        // 触发 AvailablePersonnelCount 属性变更通知，更新哨位列表中的可用人员数量显示
+        position.OnPropertyChanged(nameof(position.AvailablePersonnelCount));
     }
 
     /// <summary>
