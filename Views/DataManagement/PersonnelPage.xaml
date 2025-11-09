@@ -71,12 +71,14 @@
                 </Grid>
 
                 <!-- 人员列表 -->
-                <GridView Grid.Row="1"
+                <GridView x:Name="PersonnelGridView"
+                          Grid.Row="1"
                           ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
                           SelectedItem="{x:Bind ViewModel.SelectedItem, Mode=TwoWay}"
                           SelectionMode="Single"
                           ItemContainerStyle="{StaticResource GridViewItemStyleWithoutHover}"
-                          HorizontalAlignment="Stretch">
+                          HorizontalAlignment="Stretch"
+                          Loaded="PersonnelGridView_Loaded">
                     <GridView.ItemTemplate>
                         <DataTemplate x:DataType="local:PersonnelDto">
                             <controls:PersonnelCard Personnel="{x:Bind}" Margin="0,0,12,12"/>
@@ -103,13 +105,35 @@
                     <Expander Header="添加新人员" IsExpanded="True">
                         <StackPanel Spacing="12" Margin="0,12,0,0">
                             <!-- 姓名输入 -->
-                            <TextBox Header="姓名*" 
-                                     Text="{x:Bind ViewModel.NewPersonnel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     PlaceholderText="请输入姓名"/>
+                            <StackPanel>
+                                <TextBox x:Name="NameTextBox"
+                                         Header="姓名*" 
+                                         Text="{x:Bind ViewModel.NewPersonnel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         PlaceholderText="请输入姓名"
+                                         TextChanged="NameTextBox_TextChanged"/>
+                                <TextBlock Text="{x:Bind ViewModel.NameValidationMessage, Mode=OneWay}"
+                                           Foreground="Red"
+                                           FontSize="12"
+                                           Margin="0,4,0,0"
+                                           Visibility="{x:Bind ViewModel.IsNameValid, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                            </StackPanel>
 
                             <!-- 技能选择 -->
                             <StackPanel>
-                                <TextBlock Text="技能*" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="技能*" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                    <TextBlock x:Name="SelectedSkillCountText" 
+                                               Grid.Column="2" 
+                                               Text="已选择: 0"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
                                 <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
                                         BorderThickness="1" 
                                         CornerRadius="4"
@@ -135,6 +159,11 @@
                                                    Visibility="{x:Bind ViewModel.AvailableSkills.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
                                     </Grid>
                                 </Border>
+                                <TextBlock Text="{x:Bind ViewModel.SkillsValidationMessage, Mode=OneWay}"
+                                           Foreground="Red"
+                                           FontSize="12"
+                                           Margin="0,4,0,0"
+                                           Visibility="{x:Bind ViewModel.AreSkillsValid, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
                             </StackPanel>
 
                             <!-- 状态设置 -->
@@ -162,7 +191,20 @@
                             
                             <!-- 技能编辑 -->
                             <StackPanel>
-                                <TextBlock Text="技能*" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="技能*" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                    <TextBlock x:Name="EditSelectedSkillCountText" 
+                                               Grid.Column="2" 
+                                               Text="已选择: 0"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
                                 <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
                                         BorderThickness="1" 
                                         CornerRadius="4"

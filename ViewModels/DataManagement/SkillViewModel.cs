@@ -21,6 +21,11 @@ public partial class SkillViewModel : ListViewModelBase<SkillDto>
     private UpdateSkillDto? _editingSkill;
 
     /// <summary>
+    /// 对话框服务（用于页面访问）
+    /// </summary>
+    public DialogService DialogService => _dialogService;
+
+    /// <summary>
     /// 是否正在编辑模式
     /// </summary>
     public bool IsEditing
@@ -107,16 +112,50 @@ public partial class SkillViewModel : ListViewModelBase<SkillDto>
     /// </summary>
     private async Task CreateSkillAsync()
     {
-        await ExecuteAsync(async () =>
+        try
         {
-            var created = await _skillService.CreateAsync(NewSkill);
-            AddItem(created);
+            // 验证输入
+            if (string.IsNullOrWhiteSpace(NewSkill.Name))
+            {
+                await _dialogService.ShowErrorAsync("技能名称不能为空");
+                return;
+            }
 
-            // 重置表单
-            NewSkill = new CreateSkillDto();
+            if (NewSkill.Name.Length > 50)
+            {
+                await _dialogService.ShowErrorAsync("技能名称长度不能超过50字符");
+                return;
+            }
 
-            await _dialogService.ShowSuccessAsync("技能创建成功！");
-        }, "正在创建技能...");
+            await ExecuteAsync(async () =>
+            {
+                var created = await _skillService.CreateAsync(NewSkill);
+                AddItem(created);
+
+                // 自动选中新创建的项
+                SelectedItem = created;
+
+                // 重置表单
+                NewSkill = new CreateSkillDto();
+
+                await _dialogService.ShowSuccessAsync("技能创建成功！");
+            }, "正在创建技能...");
+        }
+        catch (ArgumentException argEx)
+        {
+            // 验证错误
+            await _dialogService.ShowErrorAsync("输入验证失败", argEx);
+        }
+        catch (InvalidOperationException invEx)
+        {
+            // 业务逻辑错误
+            await _dialogService.ShowErrorAsync("操作失败：该技能可能已存在", invEx);
+        }
+        catch (Exception ex)
+        {
+            // 数据库或网络错误
+            await _dialogService.ShowErrorAsync("创建技能失败，请检查网络连接或稍后重试", ex);
+        }
     }
 
     /// <summary>

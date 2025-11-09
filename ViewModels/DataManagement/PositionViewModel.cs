@@ -25,6 +25,11 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
     private UpdatePositionDto? _editingPosition;
 
     /// <summary>
+    /// 对话框服务（公开以供代码后置使用）
+    /// </summary>
+    public DialogService DialogService => _dialogService;
+
+    /// <summary>
     /// 是否正在编辑模式
     /// </summary>
     public bool IsEditing
@@ -172,16 +177,56 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
     /// </summary>
     private async Task CreatePositionAsync()
     {
-        await ExecuteAsync(async () =>
+        try
         {
-            var created = await _positionService.CreateAsync(NewPosition);
-            AddItem(created);
+            // 验证输入
+            if (string.IsNullOrWhiteSpace(NewPosition.Name))
+            {
+                await _dialogService.ShowErrorAsync("哨位名称不能为空");
+                return;
+            }
 
-            // 重置表单
-            NewPosition = new CreatePositionDto();
+            if (string.IsNullOrWhiteSpace(NewPosition.Location))
+            {
+                await _dialogService.ShowErrorAsync("哨位地点不能为空");
+                return;
+            }
 
-            await _dialogService.ShowSuccessAsync("哨位创建成功！");
-        }, "正在创建哨位...");
+            if (NewPosition.RequiredSkillIds == null || NewPosition.RequiredSkillIds.Count == 0)
+            {
+                await _dialogService.ShowErrorAsync("至少需要选择一项所需技能");
+                return;
+            }
+
+            await ExecuteAsync(async () =>
+            {
+                var created = await _positionService.CreateAsync(NewPosition);
+                AddItem(created);
+
+                // 自动选中新创建的项
+                SelectedItem = created;
+
+                // 重置表单
+                NewPosition = new CreatePositionDto();
+
+                await _dialogService.ShowSuccessAsync("哨位创建成功！");
+            }, "正在创建哨位...");
+        }
+        catch (ArgumentException argEx)
+        {
+            // 验证错误
+            await _dialogService.ShowErrorAsync("输入验证失败", argEx);
+        }
+        catch (InvalidOperationException invEx)
+        {
+            // 业务逻辑错误
+            await _dialogService.ShowErrorAsync("操作失败：该哨位可能已存在或所选技能无效", invEx);
+        }
+        catch (Exception ex)
+        {
+            // 数据库或网络错误
+            await _dialogService.ShowErrorAsync("创建哨位失败，请检查网络连接或稍后重试", ex);
+        }
     }
 
     /// <summary>

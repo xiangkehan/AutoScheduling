@@ -1,8 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Automation;
 using AutoScheduling3.ViewModels.DataManagement;
 using AutoScheduling3.Helpers;
+using System;
+using System.Linq;
 
 namespace AutoScheduling3.Views.DataManagement;
 
@@ -28,6 +31,233 @@ public sealed partial class PositionPage : Page
         if (MainContentGrid.ActualWidth > 0)
         {
             ApplyResponsiveLayout(MainContentGrid.ActualWidth);
+        }
+    }
+
+    private void PositionListView_Loaded(object sender, RoutedEventArgs e)
+    {
+        // 订阅SelectedItem变化事件以实现自动滚动
+        ViewModel.PropertyChanged += (s, args) =>
+        {
+            if (args.PropertyName == nameof(ViewModel.SelectedItem) && ViewModel.SelectedItem != null)
+            {
+                // 延迟执行以确保UI已更新
+                _ = this.DispatcherQueue.TryEnqueue(() =>
+                {
+                    PositionListView.ScrollIntoView(ViewModel.SelectedItem);
+                });
+            }
+        };
+    }
+
+    /// <summary>
+    /// 显示创建哨位对话框
+    /// </summary>
+    private async void CreatePosition_Click(object sender, RoutedEventArgs e)
+    {
+        await ShowCreatePositionDialogAsync();
+    }
+
+    /// <summary>
+    /// 显示创建哨位对话框
+    /// </summary>
+    private async System.Threading.Tasks.Task ShowCreatePositionDialogAsync()
+    {
+        try
+        {
+            // 检查 XamlRoot
+            if (this.XamlRoot == null)
+            {
+                System.Diagnostics.Debug.WriteLine("XamlRoot is null, cannot show dialog");
+                await ViewModel.DialogService.ShowErrorAsync("无法显示对话框，请刷新页面后重试");
+                return;
+            }
+
+            // 检查是否有可用技能
+            if (ViewModel.AvailableSkills.Count == 0)
+            {
+                await ViewModel.DialogService.ShowMessageAsync("提示", "暂无技能数据，请先添加技能");
+                return;
+            }
+
+            // 创建对话框
+            var dialog = new ContentDialog
+            {
+                Title = "创建新哨位",
+                PrimaryButtonText = "创建",
+                SecondaryButtonText = "取消",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.XamlRoot
+            };
+
+            // 创建输入控件
+            var nameTextBox = new TextBox
+            {
+                Header = "哨位名称*",
+                PlaceholderText = "请输入哨位名称",
+                MaxLength = 100,
+                TabIndex = 0
+            };
+            nameTextBox.SetValue(AutomationProperties.NameProperty, "哨位名称，必填");
+            nameTextBox.SetValue(AutomationProperties.HelpTextProperty, "请输入哨位名称，最多100个字符");
+
+            var locationTextBox = new TextBox
+            {
+                Header = "地点*",
+                PlaceholderText = "请输入地点",
+                MaxLength = 200,
+                TabIndex = 1
+            };
+            locationTextBox.SetValue(AutomationProperties.NameProperty, "地点，必填");
+            locationTextBox.SetValue(AutomationProperties.HelpTextProperty, "请输入哨位地点，最多200个字符");
+
+            var descriptionTextBox = new TextBox
+            {
+                Header = "介绍",
+                PlaceholderText = "请输入介绍（可选）",
+                MaxLength = 500,
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                Height = 80,
+                TabIndex = 2
+            };
+            descriptionTextBox.SetValue(AutomationProperties.NameProperty, "介绍");
+            descriptionTextBox.SetValue(AutomationProperties.HelpTextProperty, "请输入哨位介绍，可选，最多500个字符");
+
+            // 创建技能选择ListView
+            var skillsListView = new ListView
+            {
+                ItemsSource = ViewModel.AvailableSkills,
+                SelectionMode = ListViewSelectionMode.Multiple,
+                MaxHeight = 150,
+                TabIndex = 3
+            };
+            skillsListView.SetValue(AutomationProperties.NameProperty, "所需技能列表，必填，支持多选");
+            skillsListView.SetValue(AutomationProperties.HelpTextProperty, "使用空格键选择或取消选择技能，Tab键移动到下一个控件");
+
+            // 设置ListView的ItemTemplate
+            var dataTemplate = new DataTemplate();
+            // Note: In code-behind, we'll use DisplayMemberPath for simplicity
+            skillsListView.DisplayMemberPath = "Name";
+
+            // 创建技能选择标题和计数显示
+            var skillsHeaderGrid = new Grid();
+            skillsHeaderGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            skillsHeaderGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            skillsHeaderGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            skillsHeaderGrid.Margin = new Thickness(0, 0, 0, 4);
+
+            var skillsHeader = new TextBlock
+            {
+                Text = "所需技能*",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            };
+            Grid.SetColumn(skillsHeader, 0);
+
+            var skillCountText = new TextBlock
+            {
+                Text = "已选择: 0",
+                FontSize = 12,
+                Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(skillCountText, 2);
+
+            skillsHeaderGrid.Children.Add(skillsHeader);
+            skillsHeaderGrid.Children.Add(skillCountText);
+
+            // 更新技能选择计数
+            skillsListView.SelectionChanged += (s, args) =>
+            {
+                skillCountText.Text = $"已选择: {skillsListView.SelectedItems.Count}";
+            };
+
+            var skillsContainer = new StackPanel();
+            skillsContainer.Children.Add(skillsHeaderGrid);
+            skillsContainer.Children.Add(skillsListView);
+
+            // 创建布局容器
+            var scrollViewer = new ScrollViewer
+            {
+                MaxHeight = 500
+            };
+
+            var stackPanel = new StackPanel { Spacing = 12 };
+            stackPanel.Children.Add(nameTextBox);
+            stackPanel.Children.Add(locationTextBox);
+            stackPanel.Children.Add(descriptionTextBox);
+            stackPanel.Children.Add(skillsContainer);
+
+            scrollViewer.Content = stackPanel;
+            dialog.Content = scrollViewer;
+
+            // 对话框打开后自动聚焦第一个输入框
+            dialog.Opened += (s, args) =>
+            {
+                nameTextBox.Focus(FocusState.Programmatic);
+            };
+
+            // 验证逻辑
+            dialog.PrimaryButtonClick += (s, args) =>
+            {
+                var name = nameTextBox.Text?.Trim();
+                var location = locationTextBox.Text?.Trim();
+                var selectedSkills = skillsListView.SelectedItems;
+
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    args.Cancel = true;
+                    _ = ViewModel.DialogService.ShowErrorAsync("验证失败", new Exception("哨位名称不能为空"));
+                }
+                else if (name.Length > 100)
+                {
+                    args.Cancel = true;
+                    _ = ViewModel.DialogService.ShowErrorAsync("验证失败", new Exception("哨位名称长度不能超过100字符"));
+                }
+                else if (string.IsNullOrWhiteSpace(location))
+                {
+                    args.Cancel = true;
+                    _ = ViewModel.DialogService.ShowErrorAsync("验证失败", new Exception("地点不能为空"));
+                }
+                else if (location.Length > 200)
+                {
+                    args.Cancel = true;
+                    _ = ViewModel.DialogService.ShowErrorAsync("验证失败", new Exception("地点长度不能超过200字符"));
+                }
+                else if (selectedSkills.Count == 0)
+                {
+                    args.Cancel = true;
+                    _ = ViewModel.DialogService.ShowErrorAsync("验证失败", new Exception("至少需要选择一项技能"));
+                }
+            };
+
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary)
+            {
+                // 将对话框输入绑定到 ViewModel.NewPosition
+                ViewModel.NewPosition.Name = nameTextBox.Text.Trim();
+                ViewModel.NewPosition.Location = locationTextBox.Text.Trim();
+                ViewModel.NewPosition.Description = descriptionTextBox.Text?.Trim();
+                
+                // 收集选中的技能ID
+                ViewModel.NewPosition.RequiredSkillIds.Clear();
+                foreach (var item in skillsListView.SelectedItems)
+                {
+                    if (item is DTOs.SkillDto skill)
+                    {
+                        ViewModel.NewPosition.RequiredSkillIds.Add(skill.Id);
+                    }
+                }
+
+                // 执行创建命令
+                await ViewModel.CreateCommand.ExecuteAsync(null);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to show dialog: {ex.Message}");
+            await ViewModel.DialogService.ShowErrorAsync("显示对话框时发生错误", ex);
         }
     }
 

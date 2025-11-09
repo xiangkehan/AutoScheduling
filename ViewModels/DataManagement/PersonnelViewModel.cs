@@ -22,6 +22,10 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     private bool _isEditing;
     private CreatePersonnelDto _newPersonnel = new();
     private UpdatePersonnelDto? _editingPersonnel;
+    private bool _isNameValid = false;
+    private bool _areSkillsValid = false;
+    private string _nameValidationMessage = string.Empty;
+    private string _skillsValidationMessage = string.Empty;
 
     /// <summary>
     /// 是否正在编辑模式
@@ -31,6 +35,47 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
         get => _isEditing;
         set => SetProperty(ref _isEditing, value);
     }
+
+    /// <summary>
+    /// 姓名是否有效
+    /// </summary>
+    public bool IsNameValid
+    {
+        get => _isNameValid;
+        set => SetProperty(ref _isNameValid, value);
+    }
+
+    /// <summary>
+    /// 技能选择是否有效
+    /// </summary>
+    public bool AreSkillsValid
+    {
+        get => _areSkillsValid;
+        set => SetProperty(ref _areSkillsValid, value);
+    }
+
+    /// <summary>
+    /// 姓名验证消息
+    /// </summary>
+    public string NameValidationMessage
+    {
+        get => _nameValidationMessage;
+        set => SetProperty(ref _nameValidationMessage, value);
+    }
+
+    /// <summary>
+    /// 技能验证消息
+    /// </summary>
+    public string SkillsValidationMessage
+    {
+        get => _skillsValidationMessage;
+        set => SetProperty(ref _skillsValidationMessage, value);
+    }
+
+    /// <summary>
+    /// 是否可以创建（所有验证通过）
+    /// </summary>
+    public bool CanCreate => IsNameValid && AreSkillsValid;
 
     /// <summary>
     /// 新建人员DTO
@@ -64,7 +109,7 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
         _skillService = skillService ?? throw new ArgumentNullException(nameof(skillService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
-        CreateCommand = new AsyncRelayCommand(CreatePersonnelAsync);
+        CreateCommand = new AsyncRelayCommand(CreatePersonnelAsync, () => CanCreate);
         EditCommand = new AsyncRelayCommand(StartEditAsync, () => SelectedItem != null);
         SaveCommand = new AsyncRelayCommand(SavePersonnelAsync, () => IsEditing);
         CancelCommand = new RelayCommand(CancelEdit, () => IsEditing);
@@ -122,20 +167,113 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     }
 
     /// <summary>
+    /// 验证姓名
+    /// </summary>
+    public void ValidateName()
+    {
+        if (string.IsNullOrWhiteSpace(NewPersonnel.Name))
+        {
+            IsNameValid = false;
+            NameValidationMessage = "姓名不能为空";
+        }
+        else if (NewPersonnel.Name.Length > 50)
+        {
+            IsNameValid = false;
+            NameValidationMessage = "姓名长度不能超过50字符";
+        }
+        else
+        {
+            IsNameValid = true;
+            NameValidationMessage = string.Empty;
+        }
+
+        CreateCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// 验证技能选择
+    /// </summary>
+    public void ValidateSkills()
+    {
+        if (NewPersonnel.SkillIds == null || NewPersonnel.SkillIds.Count == 0)
+        {
+            AreSkillsValid = false;
+            SkillsValidationMessage = "至少需要选择一项技能";
+        }
+        else
+        {
+            AreSkillsValid = true;
+            SkillsValidationMessage = string.Empty;
+        }
+
+        CreateCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// 重置创建表单
+    /// </summary>
+    public void ResetCreateForm()
+    {
+        // 创建新的DTO实例
+        NewPersonnel = new CreatePersonnelDto
+        {
+            IsAvailable = true,
+            RecentPeriodShiftIntervals = new int[12]
+        };
+
+        // 重置验证状态
+        IsNameValid = false;
+        AreSkillsValid = false;
+        NameValidationMessage = string.Empty;
+        SkillsValidationMessage = string.Empty;
+
+        // 通知命令状态更新
+        CreateCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
     /// 创建人员
     /// </summary>
     private async Task CreatePersonnelAsync()
     {
-        await ExecuteAsync(async () =>
+        try
         {
-            var created = await _personnelService.CreateAsync(NewPersonnel);
-            AddItem(created);
+            // 验证输入
+            if (!IsNameValid || !AreSkillsValid)
+            {
+                await _dialogService.ShowErrorAsync("请修正表单中的验证错误后再提交");
+                return;
+            }
 
-            // 重置表单
-            NewPersonnel = new CreatePersonnelDto();
+            await ExecuteAsync(async () =>
+            {
+                var created = await _personnelService.CreateAsync(NewPersonnel);
+                AddItem(created);
 
-            await _dialogService.ShowSuccessAsync("人员创建成功！");
-        }, "正在创建人员...");
+                // 自动选中新创建的项
+                SelectedItem = created;
+
+                // 重置表单
+                ResetCreateForm();
+
+                await _dialogService.ShowSuccessAsync("人员创建成功！");
+            }, "正在创建人员...");
+        }
+        catch (ArgumentException argEx)
+        {
+            // 验证错误
+            await _dialogService.ShowErrorAsync("输入验证失败", argEx);
+        }
+        catch (InvalidOperationException invEx)
+        {
+            // 业务逻辑错误
+            await _dialogService.ShowErrorAsync("操作失败：该人员可能已存在或数据不一致", invEx);
+        }
+        catch (Exception ex)
+        {
+            // 数据库或网络错误
+            await _dialogService.ShowErrorAsync("创建人员失败，请检查网络连接或稍后重试", ex);
+        }
     }
 
     /// <summary>

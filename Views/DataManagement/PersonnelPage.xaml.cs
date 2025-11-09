@@ -32,6 +32,22 @@ namespace AutoScheduling3.Views.DataManagement
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
+        private void PersonnelGridView_Loaded(object sender, RoutedEventArgs e)
+        {
+            // 订阅SelectedItem变化事件以实现自动滚动
+            ViewModel.PropertyChanged += (s, args) =>
+            {
+                if (args.PropertyName == nameof(ViewModel.SelectedItem) && ViewModel.SelectedItem != null)
+                {
+                    // 延迟执行以确保UI已更新
+                    _ = this.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        PersonnelGridView.ScrollIntoView(ViewModel.SelectedItem, ScrollIntoViewAlignment.Default);
+                    });
+                }
+            };
+        }
+
         private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(ViewModel.IsEditing) && ViewModel.IsEditing && ViewModel.EditingPersonnel != null)
@@ -55,18 +71,39 @@ namespace AutoScheduling3.Views.DataManagement
                     EditSkillsListView.SelectedItems.Add(skill);
                 }
             }
+            
+            // 更新选中技能数量显示
+            EditSelectedSkillCountText.Text = $"已选择: {EditSkillsListView.SelectedItems.Count}";
         }
 
         private void ResetForm_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.NewPersonnel = new DTOs.CreatePersonnelDto();
+            // 调用ViewModel的重置方法
+            ViewModel.ResetCreateForm();
+            
+            // 清除ListView选择
             SkillsListView.SelectedItems.Clear();
+            
+            // 重置选中技能数量显示
+            SelectedSkillCountText.Text = "已选择: 0";
+            
+            // 聚焦到姓名输入框
+            NameTextBox.Focus(FocusState.Programmatic);
+        }
+
+        private void NameTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            ViewModel.ValidateName();
         }
 
         private void SkillsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var selectedSkills = SkillsListView.SelectedItems.Cast<DTOs.SkillDto>().ToList();
             ViewModel.NewPersonnel.SkillIds = selectedSkills.Select(s => s.Id).ToList();
+            ViewModel.ValidateSkills();
+            
+            // 更新选中技能数量显示
+            SelectedSkillCountText.Text = $"已选择: {SkillsListView.SelectedItems.Count}";
         }
 
         private void EditSkillsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -76,6 +113,9 @@ namespace AutoScheduling3.Views.DataManagement
                 var selectedSkills = EditSkillsListView.SelectedItems.Cast<DTOs.SkillDto>().ToList();
                 ViewModel.EditingPersonnel.SkillIds = selectedSkills.Select(s => s.Id).ToList();
             }
+            
+            // 更新选中技能数量显示
+            EditSelectedSkillCountText.Text = $"已选择: {EditSkillsListView.SelectedItems.Count}";
         }
 
         private void MainContentGrid_SizeChanged(object sender, SizeChangedEventArgs e)
