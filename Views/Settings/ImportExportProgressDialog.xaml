@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="AutoScheduling3.Views.Settings.ImportExportProgressDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="数据处理中"
+    PrimaryButtonText=""
+    CloseButtonText=""
+    DefaultButton="None">
+
+    <StackPanel Spacing="16" MinWidth="400">
+        <!-- 进度条 -->
+        <ProgressBar x:Name="ProgressBar"
+                     Minimum="0"
+                     Maximum="100"
+                     Value="0"
+                     Height="4"/>
+
+        <!-- 当前操作 -->
+        <StackPanel Spacing="8">
+            <TextBlock Text="当前操作"
+                       FontSize="12"
+                       Foreground="{ThemeResource TextSecondaryBrush}"/>
+            <TextBlock x:Name="CurrentOperationText"
+                       Text="准备中..."
+                       FontSize="14"
+                       FontWeight="Medium"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- 进度信息 -->
+        <StackPanel Spacing="8">
+            <TextBlock Text="进度"
+                       FontSize="12"
+                       Foreground="{ThemeResource TextSecondaryBrush}"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock x:Name="RecordCountText"
+                           Grid.Column="0"
+                           Text="0 / 0 条记录"
+                           FontSize="14"/>
+                
+                <TextBlock x:Name="PercentText"
+                           Grid.Column="1"
+                           Text="0%"
+                           FontSize="14"
+                           FontWeight="SemiBold"/>
+            </Grid>
+        </StackPanel>
+
+        <!-- 提示信息 -->
+        <TextBlock Text="请勿关闭此窗口，操作完成后将自动关闭"
+                   FontSize="12"
+                   Foreground="{ThemeResource TextSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   HorizontalAlignment="Center"/>
+    </StackPanel>
+</ContentDialog>

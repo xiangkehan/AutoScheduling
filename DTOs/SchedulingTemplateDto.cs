@@ -86,17 +86,17 @@ public class SchedulingTemplateDto
     public List<int> EnabledManualAssignmentIds { get; set; } = new();
 
     /// <summary>
-    /// 创建时间
+    /// 排班天数
     /// </summary>
-    [Required(ErrorMessage = "创建时间不能为空")]
-    [JsonPropertyName("createdAt")]
-    public DateTime CreatedAt { get; set; }
+    [Range(1, 365, ErrorMessage = "排班天数必须在1-365之间")]
+    [JsonPropertyName("durationDays")]
+    public int DurationDays { get; set; } = 1;
 
     /// <summary>
-    /// 最后使用时间
+    /// 排班策略配置（JSON格式）
     /// </summary>
-    [JsonPropertyName("lastUsedAt")]
-    public DateTime? LastUsedAt { get; set; }
+    [JsonPropertyName("strategyConfig")]
+    public string StrategyConfig { get; set; } = string.Empty;
 
     /// <summary>
     /// 使用次数
@@ -104,6 +104,31 @@ public class SchedulingTemplateDto
     [Range(0, int.MaxValue, ErrorMessage = "使用次数不能为负数")]
     [JsonPropertyName("usageCount")]
     public int UsageCount { get; set; }
+
+    /// <summary>
+    /// 是否启用
+    /// </summary>
+    [JsonPropertyName("isActive")]
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// 创建时间
+    /// </summary>
+    [Required(ErrorMessage = "创建时间不能为空")]
+    [JsonPropertyName("createdAt")]
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// 更新时间
+    /// </summary>
+    [JsonPropertyName("updatedAt")]
+    public DateTime UpdatedAt { get; set; }
+
+    /// <summary>
+    /// 最后使用时间
+    /// </summary>
+    [JsonPropertyName("lastUsedAt")]
+    public DateTime? LastUsedAt { get; set; }
 }
 
 /// <summary>

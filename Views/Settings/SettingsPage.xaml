@@ -236,6 +236,60 @@
                 </StackPanel>
             </Border>
 
+            <!-- 数据导入导出 -->
+            <Border Style="{StaticResource EnhancedCardStyle}">
+                <Border.RenderTransform>
+                    <CompositeTransform/>
+                </Border.RenderTransform>
+                <StackPanel Spacing="16">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="数据导入导出" 
+                                   Style="{StaticResource SubtitleTextStyle}"
+                                   AutomationProperties.HeadingLevel="Level2"/>
+                        <TextBlock Text="备份和恢复所有核心数据，包括人员、哨位、技能、排班模板和约束规则"
+                                   Style="{StaticResource AccessibleTextStyle}"
+                                   Foreground="{ThemeResource TextSecondaryBrush}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <!-- 导出导入按钮 -->
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button Style="{StaticResource EnhancedButtonStyle}"
+                                Command="{x:Bind ViewModel.ExportDataCommand}"
+                                AutomationProperties.Name="导出所有数据到文件">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE896;" FontSize="16"/>
+                                    <TextBlock Text="导出数据"/>
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+
+                        <Button Style="{StaticResource EnhancedButtonStyle}"
+                                Command="{x:Bind ViewModel.ImportDataCommand}"
+                                AutomationProperties.Name="从文件导入数据">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE8B5;" FontSize="16"/>
+                                    <TextBlock Text="导入数据"/>
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- 操作进行中提示 -->
+                    <StackPanel Orientation="Horizontal" 
+                                Spacing="12"
+                                Visibility="{x:Bind ViewModel.IsImportExportInProgress, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ProgressRing IsActive="True" Width="20" Height="20"/>
+                        <TextBlock Text="正在处理，请稍候..."
+                                   Style="{StaticResource AccessibleTextStyle}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- 存储文件路径 -->
             <Border Style="{StaticResource EnhancedCardStyle}">
                 <Border.RenderTransform>

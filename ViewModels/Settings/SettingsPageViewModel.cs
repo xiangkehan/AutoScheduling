@@ -3,10 +3,13 @@ using CommunityToolkit.Mvvm.Input;
 using AutoScheduling3.Models;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.Helpers;
+using AutoScheduling3.DTOs.ImportExport;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading.Tasks;
+using Windows.Storage.Pickers;
+using WinRT.Interop;
 
 namespace AutoScheduling3.ViewModels.Settings;
 
@@ -18,6 +21,7 @@ public partial class SettingsPageViewModel : ObservableObject
     private readonly IStoragePathService _storagePathService;
     private readonly IThemeService _themeService;
     private readonly IConfigurationService _configurationService;
+    private readonly IDataImportExportService _importExportService;
     private readonly DialogService _dialogService;
 
     /// <summary>
@@ -32,14 +36,22 @@ public partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty]
     private bool isLoadingStorageInfo;
 
+    /// <summary>
+    /// 是否正在执行导入导出操作
+    /// </summary>
+    [ObservableProperty]
+    private bool isImportExportInProgress;
+
     public SettingsPageViewModel(
         IStoragePathService storagePathService,
         IThemeService themeService,
-        IConfigurationService configurationService)
+        IConfigurationService configurationService,
+        IDataImportExportService importExportService)
     {
         _storagePathService = storagePathService ?? throw new ArgumentNullException(nameof(storagePathService));
         _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+        _importExportService = importExportService ?? throw new ArgumentNullException(nameof(importExportService));
         _dialogService = new DialogService();
 
         // 初始化时加载存储文件信息
@@ -184,5 +196,332 @@ public partial class SettingsPageViewModel : ObservableObject
         {
             IsLoadingStorageInfo = false;
         }
+    }
+
+    /// <summary>
+    /// 导出数据命令
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanExecuteImportExport))]
+    private async Task ExportDataAsync()
+    {
+        AutoScheduling3.Views.Settings.ImportExportProgressDialog progressDialog = null;
+        
+        try
+        {
+            IsImportExportInProgress = true;
+
+            // 使用 FileManagementHelper 显示文件保存对话框
+            var file = await FileManagementHelper.ShowSaveFileDialogAsync();
+            if (file == null)
+            {
+                // 用户取消了操作
+                return;
+            }
+
+            // 创建并显示进度对话框
+            progressDialog = new AutoScheduling3.Views.Settings.ImportExportProgressDialog
+            {
+                XamlRoot = App.MainWindow?.Content?.XamlRoot
+            };
+            
+            // 异步显示对话框（不等待）
+            _ = progressDialog.ShowAsync();
+
+            // 创建进度报告
+            var progress = new Progress<ExportProgress>(p =>
+            {
+                progressDialog?.UpdateExportProgress(p);
+            });
+
+            // 执行导出
+            var result = await _importExportService.ExportDataAsync(file.Path, progress);
+
+            // 关闭进度对话框
+            progressDialog?.Hide();
+
+            if (result.Success)
+            {
+                // 显示成功对话框
+                await ShowExportSuccessDialogAsync(result);
+            }
+            else
+            {
+                // 显示错误对话框
+                await _dialogService.ShowErrorAsync($"导出失败：{result.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"导出数据失败: {ex.Message}");
+            progressDialog?.Hide();
+            await _dialogService.ShowErrorAsync("导出数据时发生错误", ex);
+        }
+        finally
+        {
+            IsImportExportInProgress = false;
+        }
+    }
+
+    /// <summary>
+    /// 导入数据命令
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanExecuteImportExport))]
+    private async Task ImportDataAsync()
+    {
+        AutoScheduling3.Views.Settings.ImportExportProgressDialog progressDialog = null;
+        
+        try
+        {
+            IsImportExportInProgress = true;
+
+            // 使用 FileManagementHelper 显示文件打开对话框
+            var file = await FileManagementHelper.ShowOpenFileDialogAsync();
+            if (file == null)
+            {
+                // 用户取消了操作
+                return;
+            }
+
+            // 验证文件
+            var validation = await _importExportService.ValidateImportDataAsync(file.Path);
+            if (!validation.IsValid)
+            {
+                // 显示验证错误
+                var errorMessage = "文件验证失败：\n\n";
+                foreach (var error in validation.Errors)
+                {
+                    errorMessage += $"• {error.Message}\n";
+                }
+                await _dialogService.ShowErrorAsync(errorMessage);
+                return;
+            }
+
+            // 显示冲突解决策略选择对话框
+            var strategy = await ShowConflictResolutionDialogAsync();
+            if (!strategy.HasValue)
+            {
+                // 用户取消了操作
+                return;
+            }
+
+            // 确认导入
+            var confirmed = await _dialogService.ShowConfirmAsync(
+                "确认导入",
+                "导入操作将修改数据库中的数据。系统会在导入前自动创建备份。\n\n是否继续？",
+                "导入",
+                "取消"
+            );
+
+            if (!confirmed)
+            {
+                return;
+            }
+
+            // 创建并显示进度对话框
+            progressDialog = new AutoScheduling3.Views.Settings.ImportExportProgressDialog
+            {
+                XamlRoot = App.MainWindow?.Content?.XamlRoot
+            };
+            
+            // 异步显示对话框（不等待）
+            _ = progressDialog.ShowAsync();
+
+            // 创建导入选项
+            var options = new ImportOptions
+            {
+                Strategy = strategy.Value,
+                CreateBackupBeforeImport = true,
+                ValidateReferences = true,
+                ContinueOnError = false
+            };
+
+            // 创建进度报告
+            var progress = new Progress<ImportProgress>(p =>
+            {
+                progressDialog?.UpdateImportProgress(p);
+            });
+
+            // 执行导入
+            var result = await _importExportService.ImportDataAsync(file.Path, options, progress);
+
+            // 关闭进度对话框
+            progressDialog?.Hide();
+
+            if (result.Success)
+            {
+                // 显示成功对话框
+                await ShowImportSuccessDialogAsync(result);
+            }
+            else
+            {
+                // 显示错误对话框
+                await _dialogService.ShowErrorAsync($"导入失败：{result.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"导入数据失败: {ex.Message}");
+            progressDialog?.Hide();
+            await _dialogService.ShowErrorAsync("导入数据时发生错误", ex);
+        }
+        finally
+        {
+            IsImportExportInProgress = false;
+        }
+    }
+
+    /// <summary>
+    /// 判断是否可以执行导入导出操作
+    /// </summary>
+    private bool CanExecuteImportExport()
+    {
+        return !IsImportExportInProgress;
+    }
+
+    /// <summary>
+    /// 显示导出成功对话框
+    /// </summary>
+    private async Task ShowExportSuccessDialogAsync(ExportResult result)
+    {
+        var message = $"数据导出成功！\n\n" +
+                      $"文件路径：{result.FilePath}\n" +
+                      $"文件大小：{FormatFileSize(result.FileSize)}\n" +
+                      $"耗时：{result.Duration.TotalSeconds:F1} 秒\n\n" +
+                      $"导出统计：\n" +
+                      $"• 技能：{result.Statistics.SkillCount} 条\n" +
+                      $"• 人员：{result.Statistics.PersonnelCount} 条\n" +
+                      $"• 哨位：{result.Statistics.PositionCount} 条\n" +
+                      $"• 模板：{result.Statistics.TemplateCount} 条\n" +
+                      $"• 约束：{result.Statistics.ConstraintCount} 条";
+
+        var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+        {
+            Title = "导出成功",
+            Content = new Microsoft.UI.Xaml.Controls.StackPanel
+            {
+                Spacing = 12,
+                Children =
+                {
+                    new Microsoft.UI.Xaml.Controls.TextBlock
+                    {
+                        Text = message,
+                        TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap
+                    }
+                }
+            },
+            PrimaryButtonText = "打开文件位置",
+            CloseButtonText = "关闭",
+            DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Close,
+            XamlRoot = App.MainWindow?.Content?.XamlRoot
+        };
+
+        var dialogResult = await dialog.ShowAsync();
+        if (dialogResult == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+        {
+            // 使用 FileManagementHelper 打开文件所在位置
+            await FileManagementHelper.OpenFileLocationAsync(result.FilePath);
+        }
+    }
+
+    /// <summary>
+    /// 显示导入成功对话框
+    /// </summary>
+    private async Task ShowImportSuccessDialogAsync(ImportResult result)
+    {
+        var message = $"数据导入成功！\n\n" +
+                      $"耗时：{result.Duration.TotalSeconds:F1} 秒\n\n" +
+                      $"导入统计：\n" +
+                      $"• 总记录数：{result.Statistics.TotalRecords} 条\n" +
+                      $"• 成功导入：{result.Statistics.ImportedRecords} 条\n" +
+                      $"• 跳过记录：{result.Statistics.SkippedRecords} 条\n" +
+                      $"• 失败记录：{result.Statistics.FailedRecords} 条";
+
+        if (result.Warnings.Count > 0)
+        {
+            message += "\n\n警告信息：\n";
+            foreach (var warning in result.Warnings)
+            {
+                message += $"• {warning}\n";
+            }
+        }
+
+        await _dialogService.ShowSuccessAsync(message);
+    }
+
+    /// <summary>
+    /// 显示冲突解决策略选择对话框
+    /// </summary>
+    private async Task<ConflictResolutionStrategy?> ShowConflictResolutionDialogAsync()
+    {
+        var comboBox = new Microsoft.UI.Xaml.Controls.ComboBox
+        {
+            Width = 300,
+            SelectedIndex = 1 // 默认选择 Skip
+        };
+
+        comboBox.Items.Add(new Microsoft.UI.Xaml.Controls.ComboBoxItem
+        {
+            Content = "覆盖现有数据 (Replace)",
+            Tag = ConflictResolutionStrategy.Replace
+        });
+        comboBox.Items.Add(new Microsoft.UI.Xaml.Controls.ComboBoxItem
+        {
+            Content = "跳过冲突数据 (Skip) - 推荐",
+            Tag = ConflictResolutionStrategy.Skip
+        });
+        comboBox.Items.Add(new Microsoft.UI.Xaml.Controls.ComboBoxItem
+        {
+            Content = "合并数据 (Merge)",
+            Tag = ConflictResolutionStrategy.Merge
+        });
+
+        var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+        {
+            Title = "选择冲突解决策略",
+            Content = new Microsoft.UI.Xaml.Controls.StackPanel
+            {
+                Spacing = 12,
+                Children =
+                {
+                    new Microsoft.UI.Xaml.Controls.TextBlock
+                    {
+                        Text = "当导入的数据与现有数据冲突时，如何处理？",
+                        TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap
+                    },
+                    comboBox,
+                    new Microsoft.UI.Xaml.Controls.TextBlock
+                    {
+                        Text = "• 覆盖：删除现有数据并导入新数据\n" +
+                               "• 跳过：保留现有数据，跳过冲突的导入数据\n" +
+                               "• 合并：保留现有数据，仅导入不冲突的新数据",
+                        TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                        Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                            Microsoft.UI.Colors.Gray),
+                        FontSize = 12
+                    }
+                }
+            },
+            PrimaryButtonText = "确定",
+            CloseButtonText = "取消",
+            DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
+            XamlRoot = App.MainWindow?.Content?.XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+        {
+            var selectedItem = comboBox.SelectedItem as Microsoft.UI.Xaml.Controls.ComboBoxItem;
+            return (ConflictResolutionStrategy?)selectedItem?.Tag;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 格式化文件大小
+    /// </summary>
+    private string FormatFileSize(long bytes)
+    {
+        return FileManagementHelper.FormatFileSize(bytes);
     }
 }

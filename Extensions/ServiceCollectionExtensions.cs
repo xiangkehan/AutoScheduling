@@ -44,6 +44,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new SchedulingRepository(databasePath));
         services.AddSingleton<IHistoryManagement>(sp => new HistoryManagement(databasePath));
 
+        // 注册数据库备份管理器
+        services.AddSingleton(sp => 
+        {
+            var logger = new AutoScheduling3.Data.Logging.DebugLogger("DatabaseBackup");
+            return new DatabaseBackupManager(databasePath, logger: logger);
+        });
+
         return services;
     }
 
@@ -79,6 +86,21 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IHistoryService, HistoryService>();
         services.AddSingleton<ISchedulingService, SchedulingService>();
         services.AddSingleton<IStoragePathService, StoragePathService>();
+
+        // 注册数据导入导出服务
+        services.AddSingleton<IDataImportExportService>(sp =>
+        {
+            var logger = new AutoScheduling3.Data.Logging.DebugLogger("DataImportExport");
+            return new DataImportExportService(
+                sp.GetRequiredService<IPersonalRepository>(),
+                sp.GetRequiredService<IPositionRepository>(),
+                sp.GetRequiredService<ISkillRepository>(),
+                sp.GetRequiredService<ITemplateRepository>(),
+                sp.GetRequiredService<IConstraintRepository>(),
+                sp.GetRequiredService<DatabaseBackupManager>(),
+                logger
+            );
+        });
 
         return services;
     }

@@ -92,6 +92,24 @@ public class PositionDto : INotifyPropertyChanged
     public int AvailablePersonnelCount => AvailablePersonnelIds.Count;
 
     /// <summary>
+    /// 是否激活
+    /// </summary>
+    [JsonPropertyName("isActive")]
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// 创建时间
+    /// </summary>
+    [JsonPropertyName("createdAt")]
+    public System.DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// 更新时间
+    /// </summary>
+    [JsonPropertyName("updatedAt")]
+    public System.DateTime UpdatedAt { get; set; }
+
+    /// <summary>
     /// 触发属性变更通知
     /// </summary>
     /// <param name="propertyName">属性名称</param>
