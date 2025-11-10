@@ -70,6 +70,20 @@
             </NavigationViewItem>
         </NavigationView.MenuItems>
 
+        <NavigationView.FooterMenuItems>
+            <!-- 设置 -->
+            <NavigationViewItem Content="设置" Tag="Settings">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE713;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="测试数据生成器" Tag="TestDataGenerator">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE8F4;"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+        </NavigationView.FooterMenuItems>
+
         <Frame x:Name="ContentFrame"/>
     </NavigationView>
 </Window>

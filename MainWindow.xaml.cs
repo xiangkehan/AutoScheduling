@@ -89,6 +89,7 @@ namespace AutoScheduling3
 
             // 设置页面注册
             _navigationService.RegisterPage("Settings", typeof(SettingsPage));
+            _navigationService.RegisterPage("TestDataGenerator", typeof(TestDataGeneratorPage));
 
             // 默认导航
             _navigationService.NavigateTo("Personnel");

@@ -24,7 +24,11 @@
     - _需求: 2.1, 2.2, 2.3, 2.4, 2.5_
   
 
-  - [-] 2.2 实现人员数据生成方法
+  - [x] 2.2 实现人员数据生成方法
+
+
+
+
 
     - 生成真实的中文姓名
     - 随机分配1-3个技能并确保引用正确
@@ -32,8 +36,13 @@
     - _需求: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
   
 
+-
 
-  - [ ] 2.3 实现哨位数据生成方法
+  - [x] 2.3 实现哨位数据生成方法
+
+
+
+
     - 生成哨位名称、地点和描述
     - 分配所需技能和符合条件的可用人员
     - 确保引用关系正确
@@ -74,29 +83,47 @@
   
 
 
-  - [ ] 3.4 实现手动指定生成方法
+
+  - [x] 3.4 实现手动指定生成方法
+
+
+
     - 生成哨位、人员、日期、时段的组合
     - 避免重复组合
     - 添加有意义的备注
     - _需求: 8.1, 8.2, 8.3, 8.4, 8.5_
 
 
-- [ ] 4. 实现数据导出功能
+- [x] 4. 实现数据导出功能
 
-  - [ ] 4.1 实现元数据生成
+
+
+
+  - [x] 4.1 实现元数据生成
+
+
     - 创建ExportMetadata对象
     - 计算数据统计信息
     - _需求: 9.3_
   
-  - [ ] 4.2 实现JSON序列化导出
+  - [x] 4.2 实现JSON序列化导出
+
+
     - 使用与DataImportExportService相同的序列化选项
     - 支持导出到StorageFile（WinUI3方式）
     - 支持导出到文件路径（传统方式）
     - _需求: 9.1, 9.2, 9.4, 9.5_
 
-- [ ] 5. 创建文件位置管理器
+- [x] 5. 创建文件位置管理器
 
-  - [ ] 5.1 实现FileLocationManager类
+
+
+
+
+
+  - [x] 5.1 实现FileLocationManager类
+
+
     - 使用ApplicationData.LocalFolder作为默认存储
     - 实现GetTestDataFolderAsync方法创建TestData文件夹
     - 实现GenerateNewFileName方法生成时间戳文件名
@@ -104,7 +131,9 @@
 
     - _需求: 9.5_
   
-  - [ ] 5.2 实现最近文件管理
+  - [x] 5.2 实现最近文件管理
+
+
     - 使用FutureAccessList保存文件访问令牌
     - 使用LocalSettings持久化最近文件列表
     - 实现AddToRecentFilesAsync方法
@@ -112,21 +141,32 @@
     - 限制最多20个最近文件
     - _需求: 9.5_
   
-  - [ ] 5.3 实现文件清理功能
+  - [x] 5.3 实现文件清理功能
+
+
     - 实现CleanOldFilesAsync方法
     - 支持按天数清理旧文件
     - _需求: 9.5_
 
-- [ ] 6. 创建UI页面和ViewModel
+- [x] 6. 创建UI页面和ViewModel
 
-  - [ ] 6.1 创建TestDataGeneratorViewModel
+
+
+
+
+
+  - [x] 6.1 创建TestDataGeneratorViewModel
+
+
     - 实现配置属性（数据规模、自定义配置）
     - 实现生成选项属性
     - 实现最近文件列表
     - 实现状态和进度属性
     - _需求: 10.1, 10.2_
   
-  - [ ] 6.2 实现ViewModel命令
+  - [x] 6.2 实现ViewModel命令
+
+
     - 实现GenerateCommand生成测试数据
     - 实现BrowseCommand使用FileSavePicker选择位置
     - 实现ImportFileCommand导入测试数据
@@ -136,7 +176,9 @@
     - _需求: 10.3_
 
   
-  - [ ] 6.3 创建TestDataGeneratorPage.xaml
+  - [x] 6.3 创建TestDataGeneratorPage.xaml
+
+
     - 创建数据规模选择UI（RadioButtons）
     - 创建自定义配置面板（NumericUpDown控件）
     - 创建生成选项UI（CheckBox）
@@ -147,31 +189,49 @@
     - 创建最近文件列表UI
     - _需求: 10.1, 10.2, 10.3_
   
-  - [ ] 6.4 实现TestDataGeneratorPage.xaml.cs
+  - [x] 6.4 实现TestDataGeneratorPage.xaml.cs
+
+
     - 初始化ViewModel
     - 处理页面生命周期
     - _需求: 10.1_
 
 
-- [ ] 7. 集成到设置页面
+- [x] 7. 集成到设置页面
+
+
+
+
 
   - 在SettingsPage中添加"测试数据生成器"导航项
   - 配置页面路由
   - _需求: 10.1_
 
-- [ ] 8. 实现数据验证
 
-  - [ ] 8.1 实现配置验证
+- [x] 8. 实现数据验证
+
+
+
+
+  - [x] 8.1 实现配置验证
+
+
     - 验证配置参数的合理性
     - 提供友好的错误消息
     - _需求: 1.3_
   
-  - [ ] 8.2 实现生成数据验证
+  - [x] 8.2 实现生成数据验证
+
+
     - 验证引用完整性
     - 验证数据符合DTO规则
     - _需求: 1.3, 1.4_
 
-- [ ] 9. 配置WinUI3权限
+- [x] 9. 配置WinUI3权限
+
+
+
+
 
   - 在Package.appxmanifest中添加documentsLibrary权限（可选）
   - 配置文件类型关联（可选）

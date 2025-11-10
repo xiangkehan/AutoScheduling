@@ -351,6 +351,66 @@ public class TestDataGeneratorBasicTests
     }
 
     /// <summary>
+    /// 测试手动指定数据生成
+    /// </summary>
+    public static void Test_ManualAssignmentGeneration()
+    {
+        var config = new TestDataConfiguration 
+        { 
+            SkillCount = 5,
+            PersonnelCount = 10,
+            PositionCount = 8,
+            ManualAssignmentCount = 8
+        };
+        var generator = new TestDataGenerator(config);
+        var testData = generator.GenerateTestData();
+        
+        Debug.Assert(testData.ManualAssignments != null, "手动指定列表不应为null");
+        Debug.Assert(testData.ManualAssignments.Count > 0, "应生成手动指定记录");
+        Debug.Assert(testData.ManualAssignments.Count <= 8, "手动指定数量不应超过配置值");
+        
+        // 验证手动指定数据完整性
+        foreach (var assignment in testData.ManualAssignments)
+        {
+            Debug.Assert(assignment.Id > 0, "手动指定ID应大于0");
+            Debug.Assert(assignment.PositionId > 0, "哨位ID应大于0");
+            Debug.Assert(assignment.PersonnelId > 0, "人员ID应大于0");
+            Debug.Assert(!string.IsNullOrEmpty(assignment.PositionName), "哨位名称不应为空");
+            Debug.Assert(!string.IsNullOrEmpty(assignment.PersonnelName), "人员姓名不应为空");
+            Debug.Assert(assignment.TimeSlot >= 0 && assignment.TimeSlot <= 11, 
+                "时段索引应在0-11范围内");
+            Debug.Assert(!string.IsNullOrEmpty(assignment.Remarks), "备注不应为空");
+            
+            // 验证哨位引用有效性
+            Debug.Assert(testData.Positions.Any(p => p.Id == assignment.PositionId), 
+                $"手动指定引用的哨位ID {assignment.PositionId} 应存在");
+            
+            // 验证人员引用有效性
+            Debug.Assert(testData.Personnel.Any(p => p.Id == assignment.PersonnelId), 
+                $"手动指定引用的人员ID {assignment.PersonnelId} 应存在");
+        }
+        
+        // 验证没有重复的组合（同一哨位、日期、时段）
+        var combinations = testData.ManualAssignments
+            .Select(a => $"{a.PositionId}_{a.Date:yyyyMMdd}_{a.TimeSlot}")
+            .ToList();
+        var uniqueCombinations = combinations.Distinct().Count();
+        Debug.Assert(uniqueCombinations == combinations.Count, 
+            "手动指定不应有重复的哨位-日期-时段组合");
+        
+        // 验证备注包含有意义的信息
+        foreach (var assignment in testData.ManualAssignments)
+        {
+            Debug.Assert(assignment.Remarks.Contains(assignment.PersonnelName), 
+                "备注应包含人员姓名");
+            Debug.Assert(assignment.Remarks.Contains("值班"), 
+                "备注应包含'值班'关键字");
+        }
+        
+        Console.WriteLine($"✓ 手动指定生成测试通过 (生成了 {testData.ManualAssignments.Count} 条记录)");
+    }
+
+    /// <summary>
     /// 测试JSON序列化选项一致性
     /// </summary>
     public static void Test_JsonSerializationOptions()
@@ -384,6 +444,7 @@ public class TestDataGeneratorBasicTests
         Test_SkillGeneration();
         Test_PersonnelGeneration();
         Test_PositionGeneration();
+        Test_ManualAssignmentGeneration();
         Test_MetadataGeneration();
         Test_SampleDataProvider();
         Test_JsonStringGeneration();

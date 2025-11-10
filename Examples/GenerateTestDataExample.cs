@@ -1,3 +1,4 @@
+using AutoScheduling3.Data.Logging;
 using AutoScheduling3.TestData;
 using Windows.Storage;
 using Windows.Storage.Pickers;
@@ -188,5 +189,99 @@ public class GenerateTestDataExample
         {
             Console.WriteLine("用户取消了保存操作");
         }
+    }
+
+    /// <summary>
+    /// 示例9: 使用FileLocationManager管理测试数据文件
+    /// </summary>
+    public static async Task Example9_UseFileLocationManager(ILogger logger)
+    {
+        // 创建FileLocationManager
+        var fileManager = new FileLocationManager(logger);
+
+        // 创建生成器
+        var generator = new TestDataGenerator();
+
+        // 创建新的测试数据文件
+        var file = await fileManager.CreateNewTestDataFileAsync();
+        Console.WriteLine($"创建文件: {file.Name}");
+
+        // 导出测试数据
+        await generator.ExportToStorageFileAsync(file);
+        Console.WriteLine("测试数据已导出");
+
+        // 添加到最近文件列表
+        await fileManager.AddToRecentFilesAsync(file);
+        Console.WriteLine("已添加到最近文件列表");
+
+        // 获取最近文件列表
+        var recentFiles = await fileManager.GetRecentTestDataFilesAsync();
+        Console.WriteLine($"\n最近生成的文件 ({recentFiles.Count}):");
+        foreach (var fileInfo in recentFiles.Take(5))
+        {
+            Console.WriteLine($"  - {fileInfo.FileName}");
+            Console.WriteLine($"    大小: {fileInfo.FormattedSize}");
+            Console.WriteLine($"    时间: {fileInfo.FormattedDate}");
+        }
+    }
+
+    /// <summary>
+    /// 示例10: 清理旧的测试数据文件
+    /// </summary>
+    public static async Task Example10_CleanOldFiles(ILogger logger)
+    {
+        var fileManager = new FileLocationManager(logger);
+
+        // 清理30天前的文件
+        var deletedCount = await fileManager.CleanOldFilesAsync(daysToKeep: 30);
+        Console.WriteLine($"已清理 {deletedCount} 个旧文件");
+
+        // 清理7天前的文件（更激进的清理）
+        deletedCount = await fileManager.CleanOldFilesAsync(daysToKeep: 7);
+        Console.WriteLine($"已清理 {deletedCount} 个旧文件（7天以上）");
+    }
+
+    /// <summary>
+    /// 示例11: 完整的工作流程 - 生成、保存、管理
+    /// </summary>
+    public static async Task Example11_CompleteWorkflow(ILogger logger)
+    {
+        Console.WriteLine("=== 完整的测试数据生成工作流程 ===\n");
+
+        // 1. 创建管理器和生成器
+        var fileManager = new FileLocationManager(logger);
+        var generator = new TestDataGenerator(TestDataConfiguration.CreateDefault());
+
+        // 2. 生成测试数据
+        Console.WriteLine("步骤1: 生成测试数据...");
+        var testData = generator.GenerateTestData();
+        Console.WriteLine($"  ✓ 生成完成: {testData.Skills.Count} 技能, {testData.Personnel.Count} 人员, {testData.Positions.Count} 哨位");
+
+        // 3. 创建文件并导出
+        Console.WriteLine("\n步骤2: 创建文件并导出...");
+        var file = await fileManager.CreateNewTestDataFileAsync();
+        await generator.ExportToStorageFileAsync(file);
+        Console.WriteLine($"  ✓ 已导出到: {file.Name}");
+
+        // 4. 添加到最近文件
+        Console.WriteLine("\n步骤3: 添加到最近文件列表...");
+        await fileManager.AddToRecentFilesAsync(file);
+        Console.WriteLine("  ✓ 已添加到最近文件");
+
+        // 5. 显示最近文件
+        Console.WriteLine("\n步骤4: 查看最近文件...");
+        var recentFiles = await fileManager.GetRecentTestDataFilesAsync();
+        Console.WriteLine($"  ✓ 找到 {recentFiles.Count} 个最近文件");
+        foreach (var fileInfo in recentFiles.Take(3))
+        {
+            Console.WriteLine($"    - {fileInfo.FileName} ({fileInfo.FormattedSize})");
+        }
+
+        // 6. 清理旧文件（可选）
+        Console.WriteLine("\n步骤5: 清理旧文件...");
+        var deletedCount = await fileManager.CleanOldFilesAsync(daysToKeep: 30);
+        Console.WriteLine($"  ✓ 清理了 {deletedCount} 个旧文件");
+
+        Console.WriteLine("\n=== 工作流程完成 ===");
     }
 }

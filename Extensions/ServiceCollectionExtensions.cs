@@ -144,6 +144,14 @@ public static class ServiceCollectionExtensions
 
         // 设置 ViewModel
         services.AddTransient<SettingsPageViewModel>();
+        services.AddTransient<TestDataGeneratorViewModel>(sp =>
+        {
+            var logger = new AutoScheduling3.Data.Logging.DebugLogger("TestDataGenerator");
+            return new TestDataGeneratorViewModel(
+                sp.GetRequiredService<IDataImportExportService>(),
+                logger
+            );
+        });
 
         return services;
     }
