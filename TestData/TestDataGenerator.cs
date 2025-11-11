@@ -38,14 +38,33 @@ public class TestDataGenerator
     /// </summary>
     public ExportData GenerateTestData()
     {
+        System.Diagnostics.Debug.WriteLine("=== 开始生成测试数据 ===");
+        System.Diagnostics.Debug.WriteLine($"配置：技能={_config.SkillCount}, 人员={_config.PersonnelCount}, " +
+            $"哨位={_config.PositionCount}, 节假日配置={_config.HolidayConfigCount}, " +
+            $"模板={_config.TemplateCount}, 定岗规则={_config.FixedAssignmentCount}, " +
+            $"手动指定={_config.ManualAssignmentCount}");
+        
         // 按依赖顺序生成数据
         var skills = GenerateSkills();
+        System.Diagnostics.Debug.WriteLine($"✓ 生成技能数据：{skills.Count} 条");
+        
         var personnel = GeneratePersonnel(skills);
+        System.Diagnostics.Debug.WriteLine($"✓ 生成人员数据：{personnel.Count} 条");
+        
         var positions = GeneratePositions(skills, personnel);
+        System.Diagnostics.Debug.WriteLine($"✓ 生成哨位数据：{positions.Count} 条");
+        
         var holidayConfigs = GenerateHolidayConfigs();
+        System.Diagnostics.Debug.WriteLine($"✓ 生成节假日配置：{holidayConfigs.Count} 条");
+        
         var templates = GenerateTemplates(personnel, positions, holidayConfigs);
+        System.Diagnostics.Debug.WriteLine($"✓ 生成排班模板：{templates.Count} 条");
+        
         var fixedAssignments = GenerateFixedAssignments(personnel, positions);
+        System.Diagnostics.Debug.WriteLine($"✓ 生成定岗规则：{fixedAssignments.Count} 条");
+        
         var manualAssignments = GenerateManualAssignments(personnel, positions);
+        System.Diagnostics.Debug.WriteLine($"✓ 生成手动指定：{manualAssignments.Count} 条");
 
         // 创建导出数据对象
         var exportData = new ExportData
@@ -63,7 +82,11 @@ public class TestDataGenerator
         exportData.Metadata = CreateMetadata(exportData);
 
         // 验证生成的数据
+        System.Diagnostics.Debug.WriteLine("开始验证生成的数据...");
         ValidateGeneratedData(exportData);
+        System.Diagnostics.Debug.WriteLine("✓ 数据验证通过");
+        
+        System.Diagnostics.Debug.WriteLine("=== 测试数据生成完成 ===");
 
         return exportData;
     }
@@ -130,6 +153,84 @@ public class TestDataGenerator
     #region 私有生成方法
 
     /// <summary>
+    /// 生成唯一名称
+    /// </summary>
+    /// <param name="availableNames">可用的预定义名称列表</param>
+    /// <param name="usedNames">已使用的名称集合</param>
+    /// <param name="fallbackPrefix">备用名称前缀</param>
+    /// <param name="index">当前索引</param>
+    /// <returns>唯一的名称</returns>
+    private string GenerateUniqueName(
+        List<string> availableNames,
+        HashSet<string> usedNames,
+        string fallbackPrefix,
+        int index)
+    {
+        const int maxRetries = 1000;
+        int retryCount = 0;
+
+        while (retryCount < maxRetries)
+        {
+            string name;
+
+            // 优先使用预定义名称
+            if (availableNames.Count > 0)
+            {
+                var randomIndex = _random.Next(availableNames.Count);
+                name = availableNames[randomIndex];
+
+                // 检查是否已被使用
+                if (!usedNames.Contains(name))
+                {
+                    availableNames.RemoveAt(randomIndex);
+                    return name;
+                }
+
+                // 如果已被使用，从列表中移除并继续尝试
+                availableNames.RemoveAt(randomIndex);
+            }
+            else
+            {
+                // 预定义名称用完后，生成带编号的备用名称
+                name = $"{fallbackPrefix}{index + retryCount}";
+
+                // 检查是否已被使用
+                if (!usedNames.Contains(name))
+                {
+                    return name;
+                }
+            }
+
+            retryCount++;
+        }
+
+        // 达到最大重试次数，抛出详细的异常信息
+        var errorDetails = new System.Text.StringBuilder();
+        errorDetails.AppendLine($"无法生成唯一名称，已达到最大重试次数限制。");
+        errorDetails.AppendLine($"详细信息：");
+        errorDetails.AppendLine($"  - 尝试次数: {maxRetries}");
+        errorDetails.AppendLine($"  - 备用名称前缀: {fallbackPrefix}");
+        errorDetails.AppendLine($"  - 当前索引: {index}");
+        errorDetails.AppendLine($"  - 已使用名称数量: {usedNames.Count}");
+        errorDetails.AppendLine($"  - 剩余预定义名称数量: {availableNames.Count}");
+        errorDetails.AppendLine($"  - 预定义名称已用完: {availableNames.Count == 0}");
+        
+        if (usedNames.Count > 0)
+        {
+            var sampleNames = usedNames.Take(5).ToList();
+            errorDetails.AppendLine($"  - 已使用名称示例: {string.Join(", ", sampleNames)}");
+            if (usedNames.Count > 5)
+            {
+                errorDetails.AppendLine($"    ... 还有 {usedNames.Count - 5} 个名称");
+            }
+        }
+        
+        errorDetails.AppendLine($"建议：检查是否请求的数据量过大，或者预定义名称列表是否足够。");
+        
+        throw new InvalidOperationException(errorDetails.ToString());
+    }
+
+    /// <summary>
     /// 生成技能数据
     /// </summary>
     private List<SkillDto> GenerateSkills()
@@ -140,22 +241,8 @@ public class TestDataGenerator
 
         for (int i = 1; i <= _config.SkillCount; i++)
         {
-            string name;
-            do
-            {
-                if (availableNames.Count == 0)
-                {
-                    // 如果用完了预定义的名称，生成新的
-                    name = $"技能{i}";
-                }
-                else
-                {
-                    var index = _random.Next(availableNames.Count);
-                    name = availableNames[index];
-                    availableNames.RemoveAt(index);
-                }
-            } while (usedNames.Contains(name));
-
+            // 使用GenerateUniqueName辅助方法生成唯一名称
+            string name = GenerateUniqueName(availableNames, usedNames, "技能", i);
             usedNames.Add(name);
 
             var createdAt = DateTime.UtcNow.AddDays(-_random.Next(365));
@@ -186,22 +273,8 @@ public class TestDataGenerator
 
         for (int i = 1; i <= _config.PersonnelCount; i++)
         {
-            string name;
-            do
-            {
-                if (availableNames.Count == 0)
-                {
-                    // 如果用完了预定义的名称，生成新的
-                    name = $"人员{i}";
-                }
-                else
-                {
-                    var index = _random.Next(availableNames.Count);
-                    name = availableNames[index];
-                    availableNames.RemoveAt(index);
-                }
-            } while (usedNames.Contains(name));
-
+            // 使用GenerateUniqueName辅助方法生成唯一名称
+            string name = GenerateUniqueName(availableNames, usedNames, "人员", i);
             usedNames.Add(name);
 
             // 随机分配1-3个技能
@@ -239,38 +312,17 @@ public class TestDataGenerator
         var availableNames = _sampleData.GetAllPositionNames();
         var availableLocations = _sampleData.GetAllLocations();
         var usedNames = new HashSet<string>();
+        var usedLocations = new HashSet<string>();
 
         for (int i = 1; i <= _config.PositionCount; i++)
         {
-            string name;
-            do
-            {
-                if (availableNames.Count == 0)
-                {
-                    name = $"哨位{i}";
-                }
-                else
-                {
-                    var index = _random.Next(availableNames.Count);
-                    name = availableNames[index];
-                    availableNames.RemoveAt(index);
-                }
-            } while (usedNames.Contains(name));
-
+            // 使用GenerateUniqueName辅助方法生成唯一的哨位名称
+            string name = GenerateUniqueName(availableNames, usedNames, "哨位", i);
             usedNames.Add(name);
 
-            // 选择地点
-            string location;
-            if (availableLocations.Count > 0)
-            {
-                var locIndex = _random.Next(availableLocations.Count);
-                location = availableLocations[locIndex];
-                availableLocations.RemoveAt(locIndex);
-            }
-            else
-            {
-                location = $"位置{i}";
-            }
+            // 使用GenerateUniqueName辅助方法生成唯一的地点名称
+            string location = GenerateUniqueName(availableLocations, usedLocations, "位置", i);
+            usedLocations.Add(location);
 
             // 随机分配1-2个所需技能
             var requiredSkillCount = _random.Next(1, Math.Min(3, skills.Count + 1));
@@ -317,13 +369,16 @@ public class TestDataGenerator
     private List<HolidayConfigDto> GenerateHolidayConfigs()
     {
         var configs = new List<HolidayConfigDto>();
+        var usedNames = new HashSet<string>();
         var baseDate = DateTime.UtcNow;
 
         // 配置1: 标准周末配置
+        var config1Name = "标准周末配置";
+        usedNames.Add(config1Name);
         configs.Add(new HolidayConfigDto
         {
             Id = 1,
-            ConfigName = "标准周末配置",
+            ConfigName = config1Name,
             EnableWeekendRule = true,
             WeekendDays = new List<DayOfWeek>
             {
@@ -346,10 +401,12 @@ public class TestDataGenerator
         // 配置2: 单休配置
         if (_config.HolidayConfigCount > 1)
         {
+            var config2Name = "单休配置";
+            usedNames.Add(config2Name);
             configs.Add(new HolidayConfigDto
             {
                 Id = 2,
-                ConfigName = "单休配置",
+                ConfigName = config2Name,
                 EnableWeekendRule = true,
                 WeekendDays = new List<DayOfWeek> { DayOfWeek.Sunday },
                 LegalHolidays = new List<DateTime>
@@ -372,13 +429,43 @@ public class TestDataGenerator
         // 配置3+: 额外的自定义配置
         for (int i = 3; i <= _config.HolidayConfigCount; i++)
         {
+            // 生成唯一的配置名称
+            string configName;
+            int nameIndex = 1;
+            int retryCount = 0;
+            const int maxRetries = 1000;
+            
+            do
+            {
+                configName = $"自定义配置{nameIndex}";
+                nameIndex++;
+                retryCount++;
+                
+                if (retryCount >= maxRetries)
+                {
+                    var errorDetails = new System.Text.StringBuilder();
+                    errorDetails.AppendLine($"无法生成唯一的节假日配置名称，已达到最大重试次数限制。");
+                    errorDetails.AppendLine($"详细信息：");
+                    errorDetails.AppendLine($"  - 尝试次数: {maxRetries}");
+                    errorDetails.AppendLine($"  - 当前配置索引: {i}");
+                    errorDetails.AppendLine($"  - 请求的配置总数: {_config.HolidayConfigCount}");
+                    errorDetails.AppendLine($"  - 已使用名称数量: {usedNames.Count}");
+                    errorDetails.AppendLine($"  - 最后尝试的名称: {configName}");
+                    errorDetails.AppendLine($"建议：检查配置名称生成逻辑或减少请求的配置数量。");
+                    
+                    throw new InvalidOperationException(errorDetails.ToString());
+                }
+            } while (usedNames.Contains(configName));
+            
+            usedNames.Add(configName);
+
             var holidayConfigCreatedAt = baseDate.AddDays(-_random.Next(30, 90));
             var holidayConfigUpdatedAt = holidayConfigCreatedAt.AddDays(_random.Next(0, (int)(baseDate - holidayConfigCreatedAt).TotalDays + 1));
             
             configs.Add(new HolidayConfigDto
             {
                 Id = i,
-                ConfigName = $"自定义配置{i - 2}",
+                ConfigName = configName,
                 EnableWeekendRule = _random.Next(100) < 80, // 80%启用周末规则
                 WeekendDays = _random.Next(100) < 50
                     ? new List<DayOfWeek> { DayOfWeek.Saturday, DayOfWeek.Sunday }
@@ -413,6 +500,7 @@ public class TestDataGenerator
         var templates = new List<SchedulingTemplateDto>();
         var templateTypes = new[] { "regular", "holiday", "special" };
         var baseDate = DateTime.UtcNow;
+        var usedNames = new HashSet<string>();
 
         for (int i = 1; i <= _config.TemplateCount; i++)
         {
@@ -440,6 +528,48 @@ public class TestDataGenerator
                 .Take(positionsToSelect)
                 .ToList();
 
+            // 生成唯一的模板名称
+            string templateName;
+            int nameIndex = i;
+            int retryCount = 0;
+            const int maxRetries = 1000;
+            
+            do
+            {
+                templateName = $"{_sampleData.GetTemplateTypeName(type)}排班模板{nameIndex}";
+                nameIndex++;
+                retryCount++;
+                
+                if (retryCount >= maxRetries)
+                {
+                    var errorDetails = new System.Text.StringBuilder();
+                    errorDetails.AppendLine($"无法生成唯一的模板名称，已达到最大重试次数限制。");
+                    errorDetails.AppendLine($"详细信息：");
+                    errorDetails.AppendLine($"  - 尝试次数: {maxRetries}");
+                    errorDetails.AppendLine($"  - 模板类型: {type}");
+                    errorDetails.AppendLine($"  - 当前模板索引: {i}");
+                    errorDetails.AppendLine($"  - 请求的模板总数: {_config.TemplateCount}");
+                    errorDetails.AppendLine($"  - 已使用名称数量: {usedNames.Count}");
+                    errorDetails.AppendLine($"  - 最后尝试的名称: {templateName}");
+                    
+                    if (usedNames.Count > 0)
+                    {
+                        var sampleNames = usedNames.Take(5).ToList();
+                        errorDetails.AppendLine($"  - 已使用名称示例: {string.Join(", ", sampleNames)}");
+                        if (usedNames.Count > 5)
+                        {
+                            errorDetails.AppendLine($"    ... 还有 {usedNames.Count - 5} 个名称");
+                        }
+                    }
+                    
+                    errorDetails.AppendLine($"建议：检查模板名称生成逻辑或减少请求的模板数量。");
+                    
+                    throw new InvalidOperationException(errorDetails.ToString());
+                }
+            } while (usedNames.Contains(templateName));
+            
+            usedNames.Add(templateName);
+
             // 生成时间戳，确保UpdatedAt不早于CreatedAt
             var templateCreatedAt = baseDate.AddDays(-_random.Next(120));
             var templateUpdatedAt = templateCreatedAt.AddDays(_random.Next(0, (int)(baseDate - templateCreatedAt).TotalDays + 1));
@@ -447,7 +577,7 @@ public class TestDataGenerator
             templates.Add(new SchedulingTemplateDto
             {
                 Id = i,
-                Name = $"{_sampleData.GetTemplateTypeName(type)}排班模板{i}",
+                Name = templateName,
                 Description = $"用于{_sampleData.GetTemplateTypeName(type)}的排班模板",
                 TemplateType = type,
                 IsDefault = i == 1,
@@ -539,6 +669,15 @@ public class TestDataGenerator
         var assignments = new List<ManualAssignmentDto>();
         var baseDate = DateTime.UtcNow;
         var usedCombinations = new HashSet<string>();
+        int skippedCount = 0;
+        int assignmentId = 1;
+        
+        System.Diagnostics.Debug.WriteLine(
+            $"开始生成手动指定数据：" +
+            $"请求数量: {_config.ManualAssignmentCount}, " +
+            $"可用哨位: {positions.Count}, " +
+            $"可用人员: {personnel.Count}, " +
+            $"日期范围: {baseDate.AddDays(-10):yyyy-MM-dd} 至 {baseDate.AddDays(30):yyyy-MM-dd}");
 
         for (int i = 1; i <= _config.ManualAssignmentCount; i++)
         {
@@ -555,20 +694,66 @@ public class TestDataGenerator
 
             // 确保不重复（同一哨位、日期、时段）
             var key = $"{position.Id}_{date:yyyyMMdd}_{timeSlot}";
-            if (usedCombinations.Contains(key))
+            bool foundUnique = !usedCombinations.Contains(key);
+
+            if (!foundUnique)
             {
-                // 尝试不同的时段
-                for (int retry = 0; retry < 12; retry++)
+                // 第一阶段：尝试不同的时段（最多12次）
+                int originalTimeSlot = timeSlot;
+                for (int timeSlotRetry = 0; timeSlotRetry < 12; timeSlotRetry++)
                 {
-                    timeSlot = (timeSlot + 1) % 12;
+                    timeSlot = (originalTimeSlot + timeSlotRetry) % 12;
                     key = $"{position.Id}_{date:yyyyMMdd}_{timeSlot}";
                     if (!usedCombinations.Contains(key))
+                    {
+                        foundUnique = true;
                         break;
+                    }
                 }
 
-                // 如果还是重复，跳过这次生成
-                if (usedCombinations.Contains(key))
+                // 第二阶段：如果所有时段都被占用，尝试不同的日期（最多5次）
+                if (!foundUnique)
+                {
+                    for (int dateRetry = 1; dateRetry <= 5; dateRetry++)
+                    {
+                        date = baseDate.AddDays(_random.Next(-10, 30));
+                        timeSlot = _random.Next(0, 12);
+                        key = $"{position.Id}_{date:yyyyMMdd}_{timeSlot}";
+                        
+                        if (!usedCombinations.Contains(key))
+                        {
+                            foundUnique = true;
+                            break;
+                        }
+
+                        // 对于新日期，也尝试不同的时段
+                        for (int timeSlotRetry = 0; timeSlotRetry < 12; timeSlotRetry++)
+                        {
+                            timeSlot = (timeSlot + timeSlotRetry) % 12;
+                            key = $"{position.Id}_{date:yyyyMMdd}_{timeSlot}";
+                            if (!usedCombinations.Contains(key))
+                            {
+                                foundUnique = true;
+                                break;
+                            }
+                        }
+
+                        if (foundUnique)
+                            break;
+                    }
+                }
+
+                // 如果达到重试上限后仍然失败，跳过该记录
+                if (!foundUnique)
+                {
+                    skippedCount++;
+                    System.Diagnostics.Debug.WriteLine(
+                        $"跳过手动指定记录 #{i}：" +
+                        $"无法为哨位 {position.Name} (ID: {position.Id}) " +
+                        $"找到唯一的日期和时段组合。" +
+                        $"已尝试多个时段和日期组合。");
                     continue;
+                }
             }
 
             usedCombinations.Add(key);
@@ -579,7 +764,7 @@ public class TestDataGenerator
 
             assignments.Add(new ManualAssignmentDto
             {
-                Id = i,
+                Id = assignmentId++,
                 PositionId = position.Id,
                 PositionName = position.Name,
                 TimeSlot = timeSlot,
@@ -591,6 +776,28 @@ public class TestDataGenerator
                 CreatedAt = manualAssignmentCreatedAt,
                 UpdatedAt = manualAssignmentUpdatedAt
             });
+        }
+
+        // 如果跳过的记录数量超过请求数量的10%，记录警告信息
+        if (skippedCount > 0)
+        {
+            double skipPercentage = (double)skippedCount / _config.ManualAssignmentCount * 100;
+            string logMessage = $"手动指定数据生成完成：" +
+                $"请求数量: {_config.ManualAssignmentCount}, " +
+                $"成功生成: {assignments.Count}, " +
+                $"跳过记录: {skippedCount} ({skipPercentage:F1}%), " +
+                $"可用哨位数: {positions.Count}, " +
+                $"可用人员数: {personnel.Count}";
+            
+            System.Diagnostics.Debug.WriteLine(logMessage);
+            
+            if (skipPercentage > 10)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"警告：跳过的记录数量（{skippedCount}条，{skipPercentage:F1}%）超过了请求数量的10%。" +
+                    $"这可能表明哨位数量不足或日期范围过小。" +
+                    $"建议增加哨位数量或扩大日期范围以避免冲突。");
+            }
         }
 
         return assignments;
