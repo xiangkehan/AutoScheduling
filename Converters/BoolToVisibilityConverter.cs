@@ -15,27 +15,21 @@ public class BoolToVisibilityConverter : IValueConverter
 
     public object Convert(object value, Type targetType, object parameter, string language)
     {
-        if (value is bool boolValue)
+        var boolValue = value is bool b && b;
+        if (Inverted)
         {
-            bool inverseByParam = parameter is string param && param.Equals("Inverse", StringComparison.OrdinalIgnoreCase);
-            bool inverse = Inverted || inverseByParam;
-            return inverse
-                ? (boolValue ? Visibility.Collapsed : Visibility.Visible)
-                : (boolValue ? Visibility.Visible : Visibility.Collapsed);
+            boolValue = !boolValue;
         }
-        return Visibility.Collapsed;
+        return boolValue ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, string language)
     {
-        if (value is Visibility visibility)
+        var visibility = value is Visibility v && v == Visibility.Visible;
+        if (Inverted)
         {
-            bool inverseByParam = parameter is string param && param.Equals("Inverse", StringComparison.OrdinalIgnoreCase);
-            bool inverse = Inverted || inverseByParam;
-            return inverse
-                ? visibility == Visibility.Collapsed
-                : visibility == Visibility.Visible;
+            visibility = !visibility;
         }
-        return false;
+        return visibility;
     }
 }

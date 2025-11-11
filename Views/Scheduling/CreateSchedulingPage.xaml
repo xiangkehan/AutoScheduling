@@ -13,6 +13,7 @@
     <Page.Resources>
         <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:InvertedBooleanConverter x:Key="InvertedBooleanConverter"/>
 
         <DataTemplate x:Key="PersonnelListViewTemplate" x:DataType="dto:PersonnelDto">
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -133,7 +134,7 @@
                                 <ComboBox Header="选择一个休息日配置" ItemsSource="{x:Bind ViewModel.HolidayConfigs, Mode=OneWay}"
                                           SelectedValue="{x:Bind ViewModel.SelectedHolidayConfigId, Mode=TwoWay, FallbackValue=-1}"
                                           SelectedValuePath="Id" DisplayMemberPath="ConfigName"
-                                          IsEnabled="{x:Bind ViewModel.UseActiveHolidayConfig, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}"/>
+                                          IsEnabled="{x:Bind ViewModel.UseActiveHolidayConfig, Converter={StaticResource InvertedBooleanConverter}, Mode=OneWay}"/>
                             </StackPanel>
 
                             <!-- Fixed Position Rules -->

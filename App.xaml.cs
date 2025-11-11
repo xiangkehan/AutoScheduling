@@ -75,12 +75,28 @@ namespace AutoScheduling3
             UnhandledException += App_UnhandledException;
         }
 
-        private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+        private async void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
             // Log the exception
             System.Diagnostics.Debug.WriteLine($"[App] Unhandled exception: {e.Exception}");
-            // Optionally, prevent the application from crashing
+            
+            // 标记异常已处理，防止应用崩溃
             e.Handled = true;
+
+            // 尝试使用 DialogService 显示错误
+            var dialogService = ServiceProvider?.GetService<DialogService>();
+            if (dialogService != null)
+            {
+                try
+                {
+                    await dialogService.ShowErrorAsync("应用程序遇到未处理的错误。", e.Exception);
+                }
+                catch (Exception ex)
+                {
+                    // 如果显示对话框时也发生错误，记录到调试输出
+                    System.Diagnostics.Debug.WriteLine($"[App] Failed to show error dialog in unhandled exception handler: {ex.Message}");
+                }
+            }
         }
 
         /// <summary>

@@ -7,6 +7,7 @@ using AutoScheduling3.Views.Scheduling;
 using AutoScheduling3.Views.History;
 using AutoScheduling3.Views.Settings;
 using AutoScheduling3.Services.Interfaces;
+using AutoScheduling3.Helpers;
 
 namespace AutoScheduling3
 {
@@ -17,6 +18,7 @@ namespace AutoScheduling3
     {
         private NavigationService _navigationService;
         private IThemeService? _themeService;
+        private DialogService _dialogService;
 
         public MainWindow()
         {
@@ -32,6 +34,7 @@ namespace AutoScheduling3
         private void InitializeServices()
         {
             _themeService = ((App)Application.Current).ServiceProvider.GetRequiredService<IThemeService>();
+            _dialogService = ((App)Application.Current).ServiceProvider.GetRequiredService<DialogService>();
             
             // 初始化动画辅助类
             AnimationHelper.Initialize(_themeService);
@@ -111,7 +114,22 @@ namespace AutoScheduling3
                         AnimationHelper.AnimateButtonPress(item);
                     }
                     
-                    _navigationService.NavigateTo(tag);
+                    try
+                    {
+                        _navigationService.NavigateTo(tag);
+                    }
+                    catch (Exception ex)
+                    {
+                        try
+                        {
+                            await _dialogService.ShowErrorAsync($"导航到 '{tag}' 失败。", ex);
+                        }
+                        catch (Exception dialogEx)
+                        {
+                            // 如果对话框服务也失败了，记录到调试输出
+                            System.Diagnostics.Debug.WriteLine($"Failed to show error dialog: {dialogEx}");
+                        }
+                    }
                 }
             }
         }

@@ -1,68 +1,133 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
-		<TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
-		<TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-		<RootNamespace>AutoScheduling3</RootNamespace>
-		<ApplicationManifest>app.manifest</ApplicationManifest>
-		<Platforms>x86;x64;ARM64</Platforms>
-		<RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
-		<PublishProfile>win-$(Platform).pubxml</PublishProfile>
-		<UseWinUI>true</UseWinUI>
-		<EnableMsixTooling>true</EnableMsixTooling>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<IsPackable>false</IsPackable>
-		<GenerateProgramFile>false</GenerateProgramFile>
-	</PropertyGroup>
-	<ItemGroup>
-		<Page Remove="Themes\Converters.xaml" />
-		<Page Remove="Views\History\HistoryDetailPage.xaml" />
-	</ItemGroup>
-	<ItemGroup>
-		<Content Include="Assets\SplashScreen.scale-200.png" />
-		<Content Include="Assets\LockScreenLogo.scale-200.png" />
-		<Content Include="Assets\Square150x150Logo.scale-200.png" />
-		<Content Include="Assets\Square44x44Logo.scale-200.png" />
-		<Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
-		<Content Include="Assets\StoreLogo.png" />
-		<Content Include="Assets\Wide310x150Logo.scale-200.png" />
-	</ItemGroup>
-	<ItemGroup>
-		<PackageReference Include="MathNet.Numerics" Version="5.0.0" />
-		<PackageReference Include="MathNet.Numerics.MKL.Win-x64" Version="3.0.0" />
-		<PackageReference Include="MathNet.Numerics.Providers.OpenBLAS" Version="5.0.0" />
-		<PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.10" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
-		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6901" />
-		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.251003001" />
-		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-		<PackageReference Include="CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.2" />
-		<PackageReference Include="Moq" Version="4.20.72" />
-		<PackageReference Include="MSTest.TestFramework" Version="3.6.3" />
-		<PackageReference Include="MSTest.TestAdapter" Version="3.6.3" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-		<PackageReference Include="xunit" Version="2.9.3" />
-	</ItemGroup>
-	<ItemGroup>
-		<Folder Include="SchedulingEngine\" />
-	</ItemGroup>
-	<ItemGroup>
-		<Page Update="Controls\ScheduleGridControl.xaml" />
-		<None Update="Themes\Converters.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</None>
-		<None Update="Views\History\HistoryDetailPage.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</None>
-	</ItemGroup>
-	<PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
-		<HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
-	</PropertyGroup>
-	<PropertyGroup>
-		<PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
-		<PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-		<PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-		<PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
-	</PropertyGroup>
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>AutoScheduling3</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+    <PublishProfile>win-$(Platform).pubxml</PublishProfile>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Controls\CellModel.cs~RF18ea0bd.TMP" />
+    <None Remove="Controls\PersonnelCard.xaml" />
+    <None Remove="Controls\ScheduleGridControl.xaml" />
+    <None Remove="Converters\BoolToBrushConverter.cs" />
+    <None Remove="Converters\BoolToTextConverter.cs" />
+    <None Remove="Converters\BoolToVisibilityConverter.cs" />
+    <None Remove="Converters\CountToVisibilityConverter.cs" />
+    <None Remove="Converters\InvertedBooleanConverter.cs" />
+    <None Remove="Converters\NullToVisibilityConverter.cs" />
+    <None Remove="Themes\AnimationResources.xaml" />
+    <None Remove="Themes\ThemeResources.xaml" />
+    <None Remove="Views\DataManagement\PersonnelPage.xaml" />
+    <None Remove="Views\DataManagement\PositionEditDialog.xaml" />
+    <None Remove="Views\DataManagement\PositionPage.xaml" />
+    <None Remove="Views\DataManagement\SkillEditDialog.xaml" />
+    <None Remove="Views\DataManagement\SkillPage.xaml" />
+    <None Remove="Views\History\ComparePage.xaml" />
+    <None Remove="Views\History\HistoryPage.xaml" />
+    <None Remove="Views\Scheduling\CreateSchedulingPage.xaml" />
+    <None Remove="Views\Scheduling\DraftsPage.xaml" />
+    <None Remove="Views\Scheduling\ScheduleResultPage.xaml" />
+    <None Remove="Views\Scheduling\TemplatePage.xaml" />
+    <None Remove="Views\Settings\SettingsPage.xaml" />
+    <None Remove="Views\Settings\TestDataGeneratorPage.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\SplashScreen.scale-200.png" />
+    <Content Include="Assets\LockScreenLogo.scale-200.png" />
+    <Content Include="Assets\Square150x150Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
+    <Content Include="Assets\StoreLogo.png" />
+    <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.2" />
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.6" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240607001" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <!-- 
+    Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
+    Tools extension to be activated for this project even if the Windows App SDK Nuget
+    package has not yet been restored.
+  -->
+  <ItemGroup>
+    <ProjectCapability Include="Msix" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Controls\PersonnelCard.xaml.cs">
+      <DependentUpon>PersonnelCard.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Controls\ScheduleGridControl.xaml.cs">
+      <DependentUpon>ScheduleGridControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\DataManagement\PersonnelPage.xaml.cs">
+      <DependentUpon>PersonnelPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\DataManagement\PositionEditDialog.xaml.cs">
+      <DependentUpon>PositionEditDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\DataManagement\PositionPage.xaml.cs">
+      <DependentUpon>PositionPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\DataManagement\SkillEditDialog.xaml.cs">
+      <DependentUpon>SkillEditDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\DataManagement\SkillPage.xaml.cs">
+      <DependentUpon>SkillPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\History\ComparePage.xaml.cs">
+      <DependentUpon>ComparePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\History\HistoryPage.xaml.cs">
+      <DependentUpon>HistoryPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Scheduling\CreateSchedulingPage.xaml.cs">
+      <DependentUpon>CreateSchedulingPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Scheduling\DraftsPage.xaml.cs">
+      <DependentUpon>DraftsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Scheduling\ScheduleResultPage.xaml.cs">
+      <DependentUpon>ScheduleResultPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Settings\SettingsPage.xaml.cs">
+      <DependentUpon>SettingsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Settings\TestDataGeneratorPage.xaml.cs">
+      <DependentUpon>TestDataGeneratorPage.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <PRIResource Remove="obj\x64\Debug\net8.0-windows10.0.19041.0\win-x64\resources.pri" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Models\" />
+    <Folder Include="Tests\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Themes\AnimationResources.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Themes\ThemeResources.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
 </Project>
