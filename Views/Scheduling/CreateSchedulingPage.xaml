@@ -209,9 +209,10 @@
             <Button Content="取消" Command="{x:Bind ViewModel.CancelCommand}" Grid.Column="0"/>
 
             <StackPanel Orientation="Horizontal" Spacing="8" Grid.Column="2">
-                <Button Content="上一步" Command="{x:Bind ViewModel.PreviousStepCommand}"/>
+                <Button Content="上一步" Command="{x:Bind ViewModel.PreviousStepCommand}"
+                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='&gt;1', Mode=OneWay}"/>
                 <Button Content="下一步" Command="{x:Bind ViewModel.NextStepCommand}" Style="{ThemeResource AccentButtonStyle}"
-                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=5, Mode=OneWay}"/>
+                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='&lt;5', Mode=OneWay}"/>
                 <Button Content="保存为模板" Command="{x:Bind ViewModel.SaveAsTemplateCommand}"
                         Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=5, Mode=OneWay}"/>
                 <Button Content="开始排班" Command="{x:Bind ViewModel.ExecuteSchedulingCommand}" Style="{ThemeResource AccentButtonStyle}"

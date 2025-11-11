@@ -544,11 +544,19 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
         partial void OnSelectedPersonnelsChanged(ObservableCollection<PersonnelDto> value)
         {
+            if (value != null)
+            {
+                value.CollectionChanged += (s, e) => RefreshCommandStates();
+            }
             RefreshCommandStates();
             if (CurrentStep == 5) BuildSummarySections();
         }
         partial void OnSelectedPositionsChanged(ObservableCollection<PositionDto> value)
         {
+            if (value != null)
+            {
+                value.CollectionChanged += (s, e) => RefreshCommandStates();
+            }
             RefreshCommandStates();
             if (CurrentStep == 5) BuildSummarySections();
         }
