@@ -122,7 +122,7 @@
                                         <ComboBox Header="节假日配置" ItemsSource="{Binding HolidayConfigs}"
                                                   SelectedValue="{Binding SelectedTemplate.HolidayConfigId, Mode=TwoWay, FallbackValue=-1}"
                                                   SelectedValuePath="Id" DisplayMemberPath="ConfigName"
-                                                  IsEnabled="{Binding SelectedTemplate.UseActiveHolidayConfig, Converter={StaticResource InvertedBoolToVisibilityConverter}, Mode=OneWay}"/>
+                                                  IsEnabled="{Binding SelectedTemplate.UseActiveHolidayConfig, Converter={StaticResource InvertedBooleanConverter}, Mode=OneWay}"/>
                                     </StackPanel>
 
                                     <StackPanel Spacing="8">
