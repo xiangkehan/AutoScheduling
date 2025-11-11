@@ -244,10 +244,12 @@
                                     <Button Grid.Column="1" 
                                             Content="导入"
                                             Command="{x:Bind ImportCommand}"
+                                            CommandParameter="{x:Bind}"
                                             Style="{StaticResource AccentButtonStyle}"/>
                                     <Button Grid.Column="2" 
                                             Content="打开位置"
-                                            Command="{x:Bind OpenLocationCommand}"/>
+                                            Command="{x:Bind OpenLocationCommand}"
+                                            CommandParameter="{x:Bind}"/>
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>

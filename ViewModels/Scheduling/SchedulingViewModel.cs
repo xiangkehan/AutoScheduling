@@ -123,7 +123,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             if (CurrentStep < 5 && CanGoNext())
             {
-                // ���ģ����Ӧ�ò����ڵ�1����ֱ��������5��
+                // 如果模板已应用，并且在第1步，直接跳到第5步
                 if (TemplateApplied && CurrentStep == 1)
                 {
                     CurrentStep = 5;
@@ -149,7 +149,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             if (CurrentStep > 1)
             {
-                // ���ģ����Ӧ�ã���ֹ�ص���Ա/��λ/Լ�����裬ֻ�ܻص���1��
+                // 如果模板已应用，防止回退到人员/岗位/约束步骤，只能回到第1步
                 if (TemplateApplied && CurrentStep > 1 && CurrentStep <= 5)
                 {
                     CurrentStep = 1;
@@ -181,22 +181,22 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
         private bool ValidateStep1(out string error)
         {
-            if (string.IsNullOrWhiteSpace(ScheduleTitle)) { error = "�Ű����Ʋ���Ϊ��"; return false; }
-            if (ScheduleTitle.Length > 100) { error = "�Ű����Ƴ��Ȳ��ܳ���100�ַ�"; return false; }
-            if (StartDate.Date < DateTimeOffset.Now.Date) { error = "��ʼ���ڲ������ڽ���"; return false; }
-            if (EndDate.Date < StartDate.Date) { error = "�������ڲ������ڿ�ʼ����"; return false; }
-            if ((EndDate.Date - StartDate.Date).TotalDays + 1 > 365) { error = "�Ű����ڲ��ܳ���365��"; return false; }
+            if (string.IsNullOrWhiteSpace(ScheduleTitle)) { error = "排班标题不能为空"; return false; }
+            if (ScheduleTitle.Length > 100) { error = "排班标题长度不能超过100字符"; return false; }
+            if (StartDate.Date < DateTimeOffset.Now.Date) { error = "开始日期不能早于今天"; return false; }
+            if (EndDate.Date < StartDate.Date) { error = "结束日期不能早于开始日期"; return false; }
+            if ((EndDate.Date - StartDate.Date).TotalDays + 1 > 365) { error = "排班周期不能超过365天"; return false; }
             error = string.Empty; return true;
         }
         private bool ValidateStep2(out string error)
         {
-            if (SelectedPersonnels == null || SelectedPersonnels.Count == 0) { error = "������ѡ��һ����Ա"; return false; }
-            if (SelectedPersonnels.Any(p => !p.IsAvailable || p.IsRetired)) { error = "���������û�������Ա�����Ƴ�"; return false; }
+            if (SelectedPersonnels == null || SelectedPersonnels.Count == 0) { error = "请至少选择一名人员"; return false; }
+            if (SelectedPersonnels.Any(p => !p.IsAvailable || p.IsRetired)) { error = "选择的人员有不可用人员，请移除"; return false; }
             error = string.Empty; return true;
         }
         private bool ValidateStep3(out string error)
         {
-            if (SelectedPositions == null || SelectedPositions.Count == 0) { error = "������ѡ��һ����λ"; return false; }
+            if (SelectedPositions == null || SelectedPositions.Count == 0) { error = "请至少选择一个岗位"; return false; }
             error = string.Empty; return true;
         }
 
@@ -211,13 +211,13 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 await Task.WhenAll(personnelTask, positionTask);
                 AvailablePersonnels = new ObservableCollection<PersonnelDto>(personnelTask.Result);
                 AvailablePositions = new ObservableCollection<PositionDto>(positionTask.Result);
-                // Ĭ�ϱ���
+                // 默认标题
                 if (string.IsNullOrWhiteSpace(ScheduleTitle))
-                    ScheduleTitle = $"�Ű��_{DateTime.Now:yyyyMMdd}";
+                    ScheduleTitle = $"排班_{DateTime.Now:yyyyMMdd}";
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("������Ա/��λʧ��", ex);
+                await _dialogService.ShowErrorAsync("加载人员/岗位失败", ex);
             }
             finally
             {
@@ -227,7 +227,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
         private async Task LoadConstraintsAsync()
         {
-            // ʹ�����Զ����ֶΣ�ȷ�� UI�󶨸���
+            // 使用新字段，确保 UI绑定更新
             if (IsLoadingConstraints) return;
             IsLoadingConstraints = true;
             try
@@ -248,8 +248,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
             catch (Exception ex)
             {
-                // �����ֶ�����_dialogService
-                await _dialogService.ShowErrorAsync("����Լ������ʧ��", ex);
+                // 使用注入的 _dialogService
+                await _dialogService.ShowErrorAsync("加载约束数据失败", ex);
             }
             finally
             {
@@ -392,11 +392,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 TemplateApplied = true;
                 CurrentStep = 1; // Stay on step 1
                 RefreshCommandStates();
-                await _dialogService.ShowSuccessAsync("ģ���Ѽ��أ���ѡ�����ڷ�Χ��ֱ��ִ���Ű�");
+                await _dialogService.ShowSuccessAsync("模板已加载，请选择日期范围后直接执行排班");
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("����ģ��ʧ��", ex);
+                await _dialogService.ShowErrorAsync("加载模板失败", ex);
             }
             finally
             {
@@ -421,35 +421,35 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private bool CanSaveTemplate() => SelectedPersonnels.Count > 0 && SelectedPositions.Count > 0;
         private async Task SaveAsTemplateAsync()
         {
-            if (!CanSaveTemplate()) { await _dialogService.ShowWarningAsync("��ǰ���ò��������޷�����Ϊģ��"); return; }
-            // �����Զ�������Ի��� (���ơ����͡�������Ĭ�Ͽ���)
-            var nameBox = new Microsoft.UI.Xaml.Controls.TextBox { PlaceholderText = "ģ������", Text = $"ģ��_{DateTime.Now:yyyyMMdd}" };
+            if (!CanSaveTemplate()) { await _dialogService.ShowWarningAsync("当前配置不完整，无法保存为模板"); return; }
+            // 创建自定义对话框 (名称、类型、描述、是否默认)
+            var nameBox = new Microsoft.UI.Xaml.Controls.TextBox { PlaceholderText = "模板名称", Text = $"模板_{DateTime.Now:yyyyMMdd}" };
             var typeBox = new Microsoft.UI.Xaml.Controls.ComboBox { ItemsSource = new string[] { "regular", "holiday", "special" }, SelectedIndex = 0, MinWidth = 160 };
-            var descBox = new Microsoft.UI.Xaml.Controls.TextBox { AcceptsReturn = true, Height = 80, PlaceholderText = "����(��ѡ)" };
-            var defaultSwitch = new Microsoft.UI.Xaml.Controls.ToggleSwitch { Header = "��ΪĬ��", IsOn = false };
+            var descBox = new Microsoft.UI.Xaml.Controls.TextBox { AcceptsReturn = true, Height = 80, PlaceholderText = "描述(可选)" };
+            var defaultSwitch = new Microsoft.UI.Xaml.Controls.ToggleSwitch { Header = "设为默认", IsOn = false };
             var panel = new Microsoft.UI.Xaml.Controls.StackPanel { Spacing = 8 };
-            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "����:" });
+            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "名称:" });
             panel.Children.Add(nameBox);
-            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "����:" });
+            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "类型:" });
             panel.Children.Add(typeBox);
-            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "����:" });
+            panel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock { Text = "描述:" });
             panel.Children.Add(descBox);
             panel.Children.Add(defaultSwitch);
             var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
             {
-                Title = "����Ϊģ��",
+                Title = "另存为模板",
                 Content = panel,
-                PrimaryButtonText = "����",
-                SecondaryButtonText = "ȡ��",
+                PrimaryButtonText = "保存",
+                SecondaryButtonText = "取消",
                 DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
                 XamlRoot = App.MainWindow?.Content?.XamlRoot
             };
             var result = await dialog.ShowAsync();
             if (result != Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary) return;
             var name = nameBox.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(name)) { await _dialogService.ShowWarningAsync("���Ʋ���Ϊ��"); return; }
+            if (string.IsNullOrWhiteSpace(name)) { await _dialogService.ShowWarningAsync("名称不能为空"); return; }
             var type = typeBox.SelectedItem?.ToString() ?? "regular";
-            if (name.Length > 100) { await _dialogService.ShowWarningAsync("���Ʋ��ܳ���100�ַ�"); return; }
+            if (name.Length > 100) { await _dialogService.ShowWarningAsync("名称不能超过100字符"); return; }
             var createDto = new CreateTemplateDto
             {
                 Name = name,
@@ -466,53 +466,53 @@ namespace AutoScheduling3.ViewModels.Scheduling
             try
             {
                 var tpl = await _templateService.CreateAsync(createDto);
-                await _dialogService.ShowSuccessAsync($"ģ�� '{tpl.Name}' �ѱ���");
+                await _dialogService.ShowSuccessAsync($"模板 '{tpl.Name}' 已保存");
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("����ģ��ʧ��", ex);
+                await _dialogService.ShowErrorAsync("保存模板失败", ex);
             }
         }
 
-        // ������5������
+        // 准备第5步概览
         private void BuildSummarySections()
         {
             var sections = new List<SummarySection>();
-            // ������Ϣ
-            var basic = new SummarySection { Header = "������Ϣ" };
-            basic.Lines.Add($"�Ű�����: {ScheduleTitle}");
-            basic.Lines.Add($"���ڷ�Χ: {StartDate:yyyy-MM-dd} �� {EndDate:yyyy-MM-dd} (�ϼ� {(EndDate.Date - StartDate.Date).TotalDays + 1} ��) ");
+            // 基本信息
+            var basic = new SummarySection { Header = "基本信息" };
+            basic.Lines.Add($"排班标题: {ScheduleTitle}");
+            basic.Lines.Add($"日期范围: {StartDate:yyyy-MM-dd} 到 {EndDate:yyyy-MM-dd} (共计 {(EndDate.Date - StartDate.Date).TotalDays + 1} 天) ");
             sections.Add(basic);
-            // ��Ա
-            var per = new SummarySection { Header = $"������Ա ({SelectedPersonnels.Count})" };
-            foreach (var p in SelectedPersonnels.Take(20)) // �������
+            // 人员
+            var per = new SummarySection { Header = $"参与人员 ({SelectedPersonnels.Count})" };
+            foreach (var p in SelectedPersonnels.Take(20)) // 限制预览
                 per.Lines.Add($"{p.Name} (ID:{p.Id})");
-            if (SelectedPersonnels.Count > 20) per.Lines.Add($"... �� {SelectedPersonnels.Count} ��");
+            if (SelectedPersonnels.Count > 20) per.Lines.Add($"... 等 {SelectedPersonnels.Count} 人");
             sections.Add(per);
-            // ��λ
-            var pos = new SummarySection { Header = $"������λ ({SelectedPositions.Count})" };
+            // 岗位
+            var pos = new SummarySection { Header = $"涉及岗位 ({SelectedPositions.Count})" };
             foreach (var p in SelectedPositions.Take(20))
                 pos.Lines.Add($"{p.Name} (ID:{p.Id})");
-            if (SelectedPositions.Count > 20) pos.Lines.Add($"... �� {SelectedPositions.Count} ����λ");
+            if (SelectedPositions.Count > 20) pos.Lines.Add($"... 等 {SelectedPositions.Count} 个岗位");
             sections.Add(pos);
-            //Լ��
-            var cons = new SummarySection { Header = "Լ������" };
-            cons.Lines.Add(UseActiveHolidayConfig ? "��Ϣ������: ʹ�õ�ǰ�����" : $"��Ϣ������: �Զ�������ID={SelectedHolidayConfigId}");
+            //约束
+            var cons = new SummarySection { Header = "约束配置" };
+            cons.Lines.Add(UseActiveHolidayConfig ? "节假日配置: 使用当前活动配置" : $"节假日配置: 自定义配置ID={SelectedHolidayConfigId}");
             var enabledRulesCount = FixedPositionRules.Count(r => r.IsEnabled);
             var enabledAssignmentsCount = ManualAssignments.Count(a => a.IsEnabled);
-            cons.Lines.Add($"���ö��ڹ���: {enabledRulesCount} ��");
-            cons.Lines.Add($"�����ֶ�ָ��: {enabledAssignmentsCount} ��");
+            cons.Lines.Add($"固定岗位规则: {enabledRulesCount} 条");
+            cons.Lines.Add($"手动指定排班: {enabledAssignmentsCount} 条");
             sections.Add(cons);
-            // ģ����Ϣ
+            // 模板信息
             if (TemplateApplied && LoadedTemplateId.HasValue)
             {
-                sections.Add(new SummarySection { Header = "ģ����Դ", Lines = { $"��Դģ��ID: {LoadedTemplateId}" } });
+                sections.Add(new SummarySection { Header = "模板来源", Lines = { $"来源模板ID: {LoadedTemplateId}" } });
             }
-            // �� BuildSummarySections ������
+            // 在 BuildSummarySections 方法中
             SummarySections = new ObservableCollection<SummarySection>(sections);
         }
 
-        // ���Ա���ص�
+        // 属性变化回调
         partial void OnCurrentStepChanged(int value)
         {
             RefreshCommandStates();

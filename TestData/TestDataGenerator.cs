@@ -158,14 +158,17 @@ public class TestDataGenerator
 
             usedNames.Add(name);
 
+            var createdAt = DateTime.UtcNow.AddDays(-_random.Next(365));
+            var updatedAt = createdAt.AddDays(_random.Next(0, (int)(DateTime.UtcNow - createdAt).TotalDays + 1));
+            
             skills.Add(new SkillDto
             {
                 Id = i,
                 Name = name,
                 Description = $"{name}相关的专业技能",
                 IsActive = _random.Next(100) < 90, // 90%激活
-                CreatedAt = DateTime.UtcNow.AddDays(-_random.Next(365)),
-                UpdatedAt = DateTime.UtcNow.AddDays(-_random.Next(30))
+                CreatedAt = createdAt,
+                UpdatedAt = updatedAt
             });
         }
 
@@ -284,6 +287,10 @@ public class TestDataGenerator
 
             var skillNames = string.Join("、", requiredSkills.Select(s => s.Name));
 
+            // 生成时间戳，确保UpdatedAt不早于CreatedAt
+            var positionCreatedAt = DateTime.UtcNow.AddDays(-_random.Next(180));
+            var positionUpdatedAt = positionCreatedAt.AddDays(_random.Next(0, (int)(DateTime.UtcNow - positionCreatedAt).TotalDays + 1));
+
             positions.Add(new PositionDto
             {
                 Id = i,
@@ -296,8 +303,8 @@ public class TestDataGenerator
                 AvailablePersonnelIds = availablePersonnel.Select(p => p.Id).ToList(),
                 AvailablePersonnelNames = availablePersonnel.Select(p => p.Name).ToList(),
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow.AddDays(-_random.Next(180)),
-                UpdatedAt = DateTime.UtcNow.AddDays(-_random.Next(30))
+                CreatedAt = positionCreatedAt,
+                UpdatedAt = positionUpdatedAt
             });
         }
 
@@ -333,7 +340,7 @@ public class TestDataGenerator
             ExcludedDates = new List<DateTime>(),
             IsActive = true,
             CreatedAt = baseDate.AddDays(-90),
-            UpdatedAt = baseDate.AddDays(-10)
+            UpdatedAt = baseDate.AddDays(-10) // -10 > -90，所以这个是正确的
         });
 
         // 配置2: 单休配置
@@ -365,6 +372,9 @@ public class TestDataGenerator
         // 配置3+: 额外的自定义配置
         for (int i = 3; i <= _config.HolidayConfigCount; i++)
         {
+            var holidayConfigCreatedAt = baseDate.AddDays(-_random.Next(30, 90));
+            var holidayConfigUpdatedAt = holidayConfigCreatedAt.AddDays(_random.Next(0, (int)(baseDate - holidayConfigCreatedAt).TotalDays + 1));
+            
             configs.Add(new HolidayConfigDto
             {
                 Id = i,
@@ -384,8 +394,8 @@ public class TestDataGenerator
                     .ToList(),
                 ExcludedDates = new List<DateTime>(),
                 IsActive = false,
-                CreatedAt = baseDate.AddDays(-_random.Next(30, 90)),
-                UpdatedAt = baseDate.AddDays(-_random.Next(1, 15))
+                CreatedAt = holidayConfigCreatedAt,
+                UpdatedAt = holidayConfigUpdatedAt
             });
         }
 
@@ -430,6 +440,10 @@ public class TestDataGenerator
                 .Take(positionsToSelect)
                 .ToList();
 
+            // 生成时间戳，确保UpdatedAt不早于CreatedAt
+            var templateCreatedAt = baseDate.AddDays(-_random.Next(120));
+            var templateUpdatedAt = templateCreatedAt.AddDays(_random.Next(0, (int)(baseDate - templateCreatedAt).TotalDays + 1));
+
             templates.Add(new SchedulingTemplateDto
             {
                 Id = i,
@@ -447,10 +461,10 @@ public class TestDataGenerator
                 StrategyConfig = "{}",
                 UsageCount = _random.Next(0, 50),
                 IsActive = true,
-                CreatedAt = baseDate.AddDays(-_random.Next(120)),
-                UpdatedAt = baseDate.AddDays(-_random.Next(20)),
+                CreatedAt = templateCreatedAt,
+                UpdatedAt = templateUpdatedAt,
                 LastUsedAt = _random.Next(100) < 70
-                    ? baseDate.AddDays(-_random.Next(10))
+                    ? templateUpdatedAt.AddDays(_random.Next(0, (int)(baseDate - templateUpdatedAt).TotalDays + 1))
                     : null
             });
         }
@@ -490,6 +504,10 @@ public class TestDataGenerator
             var startDate = baseDate.AddDays(_random.Next(-30, 30));
             var endDate = startDate.AddDays(_random.Next(30, 180));
 
+            // 生成时间戳，确保UpdatedAt不早于CreatedAt
+            var fixedAssignmentCreatedAt = baseDate.AddDays(-_random.Next(60));
+            var fixedAssignmentUpdatedAt = fixedAssignmentCreatedAt.AddDays(_random.Next(0, (int)(baseDate - fixedAssignmentCreatedAt).TotalDays + 1));
+
             assignments.Add(new FixedAssignmentDto
             {
                 Id = i,
@@ -503,8 +521,8 @@ public class TestDataGenerator
                 IsEnabled = _random.Next(100) < 80, // 80%启用
                 RuleName = $"{person.Name}的定岗规则",
                 Description = $"限制{person.Name}只能在指定哨位和时段工作",
-                CreatedAt = baseDate.AddDays(-_random.Next(60)),
-                UpdatedAt = baseDate.AddDays(-_random.Next(10))
+                CreatedAt = fixedAssignmentCreatedAt,
+                UpdatedAt = fixedAssignmentUpdatedAt
             });
         }
 
@@ -555,6 +573,10 @@ public class TestDataGenerator
 
             usedCombinations.Add(key);
 
+            // 生成时间戳，确保UpdatedAt不早于CreatedAt
+            var manualAssignmentCreatedAt = baseDate.AddDays(-_random.Next(30));
+            var manualAssignmentUpdatedAt = manualAssignmentCreatedAt.AddDays(_random.Next(0, (int)(baseDate - manualAssignmentCreatedAt).TotalDays + 1));
+
             assignments.Add(new ManualAssignmentDto
             {
                 Id = i,
@@ -566,8 +588,8 @@ public class TestDataGenerator
                 Date = date,
                 IsEnabled = _random.Next(100) < 90, // 90%启用
                 Remarks = $"手动指定{person.Name}在{_sampleData.GetTimeSlotName(timeSlot)}值班",
-                CreatedAt = baseDate.AddDays(-_random.Next(30)),
-                UpdatedAt = baseDate.AddDays(-_random.Next(5))
+                CreatedAt = manualAssignmentCreatedAt,
+                UpdatedAt = manualAssignmentUpdatedAt
             });
         }
 

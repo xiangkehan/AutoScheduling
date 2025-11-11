@@ -6,10 +6,12 @@ using AutoScheduling3.Helpers;
 using AutoScheduling3.Data.Logging;
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
+using Microsoft.UI.Xaml.Controls;
 
 namespace AutoScheduling3.ViewModels.Settings;
 
@@ -424,31 +426,88 @@ public partial class TestDataGeneratorViewModel : ObservableObject
     [RelayCommand]
     private async Task ImportFileAsync(GeneratedFileInfo fileInfo)
     {
-        if (fileInfo?.StorageFile == null)
+        _logger.Log($"ImportFileAsync called with fileInfo: {fileInfo?.FileName ?? "null"}");
+        _logger.Log($"StorageFile is null: {fileInfo?.StorageFile == null}");
+        
+        if (fileInfo == null)
         {
-            await _dialogService.ShowWarningAsync("文件信息无效");
+            await _dialogService.ShowWarningAsync("文件信息为空");
+            return;
+        }
+        
+        if (fileInfo.StorageFile == null)
+        {
+            _logger.LogError($"StorageFile is null for file: {fileInfo.FileName}");
+            await _dialogService.ShowWarningAsync($"无法访问文件：{fileInfo.FileName}\n\n文件可能已被删除或移动。");
+            // 刷新列表
+            await LoadRecentFilesAsync();
             return;
         }
 
         try
         {
-            // 确认导入
-            var confirmed = await _dialogService.ShowConfirmAsync(
-                "确认导入",
-                $"是否导入文件 {fileInfo.FileName}？\n\n此操作将修改数据库中的数据。",
-                "导入",
-                "取消"
-            );
+            // 选择导入策略
+            var strategyDialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+            {
+                Title = "选择导入策略",
+                Content = new StackPanel
+                {
+                    Spacing = 12,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = $"即将导入文件：{fileInfo.FileName}\n\n请选择遇到重复记录时的处理策略：",
+                            TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap
+                        },
+                        new RadioButtons
+                        {
+                            Header = "冲突解决策略",
+                            SelectedIndex = 0,
+                            Items =
+                            {
+                                new RadioButton { Content = "覆盖 - 用新数据替换现有数据", Tag = "Replace" },
+                                new RadioButton { Content = "跳过 - 保留现有数据，跳过重复项", Tag = "Skip" },
+                                new RadioButton { Content = "合并 - 合并新旧数据", Tag = "Merge" }
+                            }
+                        }
+                    }
+                },
+                PrimaryButtonText = "导入",
+                CloseButtonText = "取消",
+                DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
+                XamlRoot = App.MainWindow?.Content?.XamlRoot
+            };
 
-            if (!confirmed)
+            var strategyResult = await strategyDialog.ShowAsync();
+            if (strategyResult != Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
             {
                 return;
             }
 
+            // 获取选择的策略
+            var radioButtons = (strategyDialog.Content as StackPanel)?.Children
+                .OfType<RadioButtons>()
+                .FirstOrDefault();
+            
+            var selectedRadio = radioButtons?.Items
+                .OfType<RadioButton>()
+                .FirstOrDefault(r => r.IsChecked == true);
+            
+            var strategyTag = selectedRadio?.Tag?.ToString() ?? "Replace";
+            var strategy = strategyTag switch
+            {
+                "Skip" => DTOs.ImportExport.ConflictResolutionStrategy.Skip,
+                "Merge" => DTOs.ImportExport.ConflictResolutionStrategy.Merge,
+                _ => DTOs.ImportExport.ConflictResolutionStrategy.Replace
+            };
+
+            _logger.Log($"Selected import strategy: {strategy}");
+
             // 使用DataImportExportService导入
             var options = new DTOs.ImportExport.ImportOptions
             {
-                Strategy = DTOs.ImportExport.ConflictResolutionStrategy.Skip,
+                Strategy = strategy,
                 CreateBackupBeforeImport = true,
                 ValidateReferences = true,
                 ContinueOnError = false
