@@ -380,6 +380,27 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 // Pre-fill selections
                 var selectedPers = AvailablePersonnels.Where(p => template.PersonnelIds.Contains(p.Id)).ToList();
                 var selectedPos = AvailablePositions.Where(p => template.PositionIds.Contains(p.Id)).ToList();
+                
+                // Validate and identify missing resources
+                var missingPersonnelIds = template.PersonnelIds
+                    .Except(selectedPers.Select(p => p.Id))
+                    .ToList();
+                var missingPositionIds = template.PositionIds
+                    .Except(selectedPos.Select(p => p.Id))
+                    .ToList();
+                
+                // Display warning if any resources are missing
+                if (missingPersonnelIds.Any() || missingPositionIds.Any())
+                {
+                    var warningMsg = "模板中的部分资源已不存在：\n";
+                    if (missingPersonnelIds.Any())
+                        warningMsg += $"- 缺失人员ID: {string.Join(", ", missingPersonnelIds)}\n";
+                    if (missingPositionIds.Any())
+                        warningMsg += $"- 缺失岗位ID: {string.Join(", ", missingPositionIds)}\n";
+                    warningMsg += "\n将仅加载可用的资源。";
+                    await _dialogService.ShowWarningAsync(warningMsg);
+                }
+                
                 SelectedPersonnels = new ObservableCollection<PersonnelDto>(selectedPers);
                 SelectedPositions = new ObservableCollection<PositionDto>(selectedPos);
 
@@ -389,10 +410,27 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 _enabledFixedRules = template.EnabledFixedRuleIds?.ToList() ?? new();
                 _enabledManualAssignments = template.EnabledManualAssignmentIds?.ToList() ?? new();
 
+                // Immediately load constraint data
+                await LoadConstraintsAsync();
+                
+                // Apply template constraints after loading
+                ApplyTemplateConstraints();
+
                 TemplateApplied = true;
                 CurrentStep = 1; // Stay on step 1
                 RefreshCommandStates();
-                await _dialogService.ShowSuccessAsync("模板已加载，请选择日期范围后直接执行排班");
+                
+                // Calculate constraint counts
+                var enabledFixedRulesCount = FixedPositionRules.Count(r => r.IsEnabled);
+                var enabledManualAssignmentsCount = ManualAssignments.Count(a => a.IsEnabled);
+                var totalConstraints = enabledFixedRulesCount + enabledManualAssignmentsCount;
+                
+                // Display success message with statistics
+                var successMsg = $"模板已加载\n" +
+                                $"人员: {selectedPers.Count}\n" +
+                                $"岗位: {selectedPos.Count}\n" +
+                                $"约束: {totalConstraints}";
+                await _dialogService.ShowSuccessAsync(successMsg);
             }
             catch (Exception ex)
             {

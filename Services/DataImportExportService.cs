@@ -1676,18 +1676,14 @@ public class DataImportExportService : IDataImportExportService
                 switch (options.Strategy)
                 {
                     case ConflictResolutionStrategy.Replace:
+                        // 覆盖策略：先删除现有记录，再创建新记录
                         if (exists)
                         {
-                            var skill = MapToSkill(skillDto);
-                            await _skillRepository.UpdateAsync(skill);
-                            importedCount++;
+                            await _skillRepository.DeleteAsync(skillDto.Id);
                         }
-                        else
-                        {
-                            var skill = MapToSkill(skillDto);
-                            await _skillRepository.CreateAsync(skill);
-                            importedCount++;
-                        }
+                        var skillToCreate = MapToSkill(skillDto);
+                        await _skillRepository.CreateAsync(skillToCreate);
+                        importedCount++;
                         break;
                         
                     case ConflictResolutionStrategy.Skip:
@@ -1741,18 +1737,14 @@ public class DataImportExportService : IDataImportExportService
                 switch (options.Strategy)
                 {
                     case ConflictResolutionStrategy.Replace:
+                        // 覆盖策略：先删除现有记录，再创建新记录
                         if (exists)
                         {
-                            var personnel = MapToPersonnel(personnelDto);
-                            await _personnelRepository.UpdateAsync(personnel);
-                            importedCount++;
+                            await _personnelRepository.DeleteAsync(personnelDto.Id);
                         }
-                        else
-                        {
-                            var personnel = MapToPersonnel(personnelDto);
-                            await _personnelRepository.CreateAsync(personnel);
-                            importedCount++;
-                        }
+                        var personnelToCreate = MapToPersonnel(personnelDto);
+                        await _personnelRepository.CreateAsync(personnelToCreate);
+                        importedCount++;
                         break;
                         
                     case ConflictResolutionStrategy.Skip:
@@ -1805,18 +1797,14 @@ public class DataImportExportService : IDataImportExportService
                 switch (options.Strategy)
                 {
                     case ConflictResolutionStrategy.Replace:
+                        // 覆盖策略：先删除现有记录，再创建新记录
                         if (exists)
                         {
-                            var position = MapToPosition(positionDto);
-                            await _positionRepository.UpdateAsync(position);
-                            importedCount++;
+                            await _positionRepository.DeleteAsync(positionDto.Id);
                         }
-                        else
-                        {
-                            var position = MapToPosition(positionDto);
-                            await _positionRepository.CreateAsync(position);
-                            importedCount++;
-                        }
+                        var positionToCreate = MapToPosition(positionDto);
+                        await _positionRepository.CreateAsync(positionToCreate);
+                        importedCount++;
                         break;
                         
                     case ConflictResolutionStrategy.Skip:
@@ -1871,18 +1859,14 @@ public class DataImportExportService : IDataImportExportService
                 switch (options.Strategy)
                 {
                     case ConflictResolutionStrategy.Replace:
+                        // 覆盖策略：先删除现有记录，再创建新记录
                         if (exists)
                         {
-                            var config = MapToHolidayConfig(configDto);
-                            await _constraintRepository.UpdateHolidayConfigAsync(config);
-                            importedCount++;
+                            await _constraintRepository.DeleteHolidayConfigAsync(configDto.Id);
                         }
-                        else
-                        {
-                            var config = MapToHolidayConfig(configDto);
-                            await _constraintRepository.AddHolidayConfigAsync(config);
-                            importedCount++;
-                        }
+                        var configToCreate = MapToHolidayConfig(configDto);
+                        await _constraintRepository.AddHolidayConfigAsync(configToCreate);
+                        importedCount++;
                         break;
                         
                     case ConflictResolutionStrategy.Skip:
@@ -1935,18 +1919,14 @@ public class DataImportExportService : IDataImportExportService
                 switch (options.Strategy)
                 {
                     case ConflictResolutionStrategy.Replace:
+                        // 覆盖策略：先删除现有记录，再创建新记录
                         if (exists)
                         {
-                            var template = MapToTemplate(templateDto);
-                            await _templateRepository.UpdateAsync(template);
-                            importedCount++;
+                            await _templateRepository.DeleteAsync(templateDto.Id);
                         }
-                        else
-                        {
-                            var template = MapToTemplate(templateDto);
-                            await _templateRepository.CreateAsync(template);
-                            importedCount++;
-                        }
+                        var templateToCreate = MapToTemplate(templateDto);
+                        await _templateRepository.CreateAsync(templateToCreate);
+                        importedCount++;
                         break;
                         
                     case ConflictResolutionStrategy.Skip:
@@ -2001,18 +1981,14 @@ public class DataImportExportService : IDataImportExportService
                 switch (options.Strategy)
                 {
                     case ConflictResolutionStrategy.Replace:
+                        // 覆盖策略：先删除现有记录，再创建新记录
                         if (exists)
                         {
-                            var assignment = MapToFixedPositionRule(assignmentDto);
-                            await _constraintRepository.UpdateFixedPositionRuleAsync(assignment);
-                            importedCount++;
+                            await _constraintRepository.DeleteFixedPositionRuleAsync(assignmentDto.Id);
                         }
-                        else
-                        {
-                            var assignment = MapToFixedPositionRule(assignmentDto);
-                            await _constraintRepository.AddFixedPositionRuleAsync(assignment);
-                            importedCount++;
-                        }
+                        var assignmentToCreate = MapToFixedPositionRule(assignmentDto);
+                        await _constraintRepository.AddFixedPositionRuleAsync(assignmentToCreate);
+                        importedCount++;
                         break;
                         
                     case ConflictResolutionStrategy.Skip:
@@ -2069,18 +2045,14 @@ public class DataImportExportService : IDataImportExportService
                 switch (options.Strategy)
                 {
                     case ConflictResolutionStrategy.Replace:
+                        // 覆盖策略：先删除现有记录，再创建新记录
                         if (exists)
                         {
-                            var assignment = MapToManualAssignment(assignmentDto);
-                            await _constraintRepository.UpdateManualAssignmentAsync(assignment);
-                            importedCount++;
+                            await _constraintRepository.DeleteManualAssignmentAsync(assignmentDto.Id);
                         }
-                        else
-                        {
-                            var assignment = MapToManualAssignment(assignmentDto);
-                            await _constraintRepository.AddManualAssignmentAsync(assignment);
-                            importedCount++;
-                        }
+                        var assignmentToCreate = MapToManualAssignment(assignmentDto);
+                        await _constraintRepository.AddManualAssignmentAsync(assignmentToCreate);
+                        importedCount++;
                         break;
                         
                     case ConflictResolutionStrategy.Skip:
