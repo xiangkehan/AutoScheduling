@@ -36,7 +36,9 @@
   - 包含版本信息、时间戳和数据统计
   - _需求: 5.1, 5.2, 5.3_
 
-- [-] 2. 实现实体生成器类
+- [x] 2. 实现实体生成器类
+
+
 
 
 
@@ -44,14 +46,18 @@
   - 每个生成器使用 UniqueNameGenerator 生成唯一名称
   - _需求: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7_
 
-- [ ] 2.1 实现 SkillGenerator 类
+
+- [x] 2.1 实现 SkillGenerator 类
+
   - 在 TestData/Generators/SkillGenerator.cs 中创建类
   - 实现 Generate() 方法生成技能数据
   - 使用 UniqueNameGenerator 生成唯一技能名称
   - 从原 TestDataGenerator.GenerateSkills() 迁移逻辑
   - _需求: 1.1_
 
-- [ ] 2.2 实现 PersonnelGenerator 类
+- [x] 2.2 实现 PersonnelGenerator 类
+
+
   - 在 TestData/Generators/PersonnelGenerator.cs 中创建类
   - 实现 Generate(List<SkillDto> skills) 方法生成人员数据
   - 使用 UniqueNameGenerator 生成唯一人员名称
@@ -59,7 +65,9 @@
   - 从原 TestDataGenerator.GeneratePersonnel() 迁移逻辑
   - _需求: 1.2_
 
-- [ ] 2.3 实现 PositionGenerator 类
+- [x] 2.3 实现 PositionGenerator 类
+
+
   - 在 TestData/Generators/PositionGenerator.cs 中创建类
   - 实现 Generate(List<SkillDto> skills, List<PersonnelDto> personnel) 方法
   - 使用 UniqueNameGenerator 生成唯一哨位名称和地点
@@ -67,7 +75,9 @@
   - 从原 TestDataGenerator.GeneratePositions() 迁移逻辑
   - _需求: 1.3_
 
-- [ ] 2.4 实现 HolidayConfigGenerator 类
+- [x] 2.4 实现 HolidayConfigGenerator 类
+
+
   - 在 TestData/Generators/HolidayConfigGenerator.cs 中创建类
   - 实现 Generate() 方法生成节假日配置数据
   - 生成标准周末配置、单休配置和自定义配置
@@ -75,7 +85,9 @@
   - 从原 TestDataGenerator.GenerateHolidayConfigs() 迁移逻辑
   - _需求: 1.4_
 
-- [ ] 2.5 实现 TemplateGenerator 类
+- [x] 2.5 实现 TemplateGenerator 类
+
+
   - 在 TestData/Generators/TemplateGenerator.cs 中创建类
   - 实现 Generate(List<PersonnelDto> personnel, List<PositionDto> positions, List<HolidayConfigDto> holidayConfigs) 方法
   - 生成不同类型的排班模板（regular、holiday、special）
@@ -83,14 +95,18 @@
   - 从原 TestDataGenerator.GenerateTemplates() 迁移逻辑
   - _需求: 1.5_
 
-- [ ] 2.6 实现 FixedAssignmentGenerator 类
+- [x] 2.6 实现 FixedAssignmentGenerator 类
+
+
   - 在 TestData/Generators/FixedAssignmentGenerator.cs 中创建类
   - 实现 Generate(List<PersonnelDto> personnel, List<PositionDto> positions) 方法
   - 为人员生成定岗规则，指定允许的哨位和时段
   - 从原 TestDataGenerator.GenerateFixedAssignments() 迁移逻辑
   - _需求: 1.6_
 
-- [ ] 2.7 实现 ManualAssignmentGenerator 类
+- [x] 2.7 实现 ManualAssignmentGenerator 类
+
+
   - 在 TestData/Generators/ManualAssignmentGenerator.cs 中创建类
   - 实现 Generate(List<PersonnelDto> personnel, List<PositionDto> positions) 方法
   - 生成手动指定数据，确保唯一性（同一哨位、日期、时段不重复）
@@ -98,7 +114,8 @@
   - 从原 TestDataGenerator.GenerateManualAssignments() 迁移逻辑
   - _需求: 1.7_
 
-- [ ] 3. 实现验证器类
+- [-] 3. 实现验证器类
+
 
   - 将所有验证逻辑从 TestDataGenerator 提取到独立的验证器类
   - _需求: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8_

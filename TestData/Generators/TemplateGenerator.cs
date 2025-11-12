@@ -1,0 +1,146 @@
+using AutoScheduling3.DTOs;
+
+namespace AutoScheduling3.TestData.Generators;
+
+/// <summary>
+/// 排班模板数据生成器
+/// </summary>
+public class TemplateGenerator : IEntityGenerator<SchedulingTemplateDto>
+{
+    private readonly TestDataConfiguration _config;
+    private readonly SampleDataProvider _sampleData;
+    private readonly Random _random;
+
+    public TemplateGenerator(
+        TestDataConfiguration config,
+        SampleDataProvider sampleData,
+        Random random)
+    {
+        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _sampleData = sampleData ?? throw new ArgumentNullException(nameof(sampleData));
+        _random = random ?? throw new ArgumentNullException(nameof(random));
+    }
+
+    /// <summary>
+    /// 生成排班模板数据
+    /// </summary>
+    /// <param name="personnel">已生成的人员列表</param>
+    /// <param name="positions">已生成的哨位列表</param>
+    /// <param name="holidayConfigs">已生成的节假日配置列表</param>
+    public List<SchedulingTemplateDto> Generate(
+        List<PersonnelDto> personnel,
+        List<PositionDto> positions,
+        List<HolidayConfigDto> holidayConfigs)
+    {
+        if (personnel == null || personnel.Count == 0)
+            throw new ArgumentException("人员列表不能为空", nameof(personnel));
+        if (positions == null || positions.Count == 0)
+            throw new ArgumentException("哨位列表不能为空", nameof(positions));
+        if (holidayConfigs == null || holidayConfigs.Count == 0)
+            throw new ArgumentException("节假日配置列表不能为空", nameof(holidayConfigs));
+
+        var templates = new List<SchedulingTemplateDto>();
+        var templateTypes = new[] { "regular", "holiday", "special" };
+        var baseDate = DateTime.UtcNow;
+        var usedNames = new HashSet<string>();
+
+        for (int i = 1; i <= _config.TemplateCount; i++)
+        {
+            var type = templateTypes[Math.Min(i - 1, templateTypes.Length - 1)];
+
+            // 选择至少5个可用人员（如果人员总数少于5，则选择所有可用人员）
+            var availablePersonnel = personnel
+                .Where(p => p.IsAvailable && !p.IsRetired)
+                .ToList();
+
+            var personnelToSelect = Math.Max(5, availablePersonnel.Count / 2);
+            personnelToSelect = Math.Min(personnelToSelect, availablePersonnel.Count);
+
+            var selectedPersonnel = availablePersonnel
+                .OrderBy(x => _random.Next())
+                .Take(personnelToSelect)
+                .ToList();
+
+            // 选择至少3个哨位（如果哨位总数少于3，则选择所有哨位）
+            var positionsToSelect = Math.Max(3, positions.Count / 2);
+            positionsToSelect = Math.Min(positionsToSelect, positions.Count);
+
+            var selectedPositions = positions
+                .OrderBy(x => _random.Next())
+                .Take(positionsToSelect)
+                .ToList();
+
+            // 生成唯一的模板名称
+            string templateName;
+            int nameIndex = i;
+            int retryCount = 0;
+            const int maxRetries = 1000;
+            
+            do
+            {
+                templateName = $"{_sampleData.GetTemplateTypeName(type)}排班模板{nameIndex}";
+                nameIndex++;
+                retryCount++;
+                
+                if (retryCount >= maxRetries)
+                {
+                    var errorDetails = new System.Text.StringBuilder();
+                    errorDetails.AppendLine($"无法生成唯一的模板名称，已达到最大重试次数限制。");
+                    errorDetails.AppendLine($"详细信息：");
+                    errorDetails.AppendLine($"  - 尝试次数: {maxRetries}");
+                    errorDetails.AppendLine($"  - 模板类型: {type}");
+                    errorDetails.AppendLine($"  - 当前模板索引: {i}");
+                    errorDetails.AppendLine($"  - 请求的模板总数: {_config.TemplateCount}");
+                    errorDetails.AppendLine($"  - 已使用名称数量: {usedNames.Count}");
+                    errorDetails.AppendLine($"  - 最后尝试的名称: {templateName}");
+                    
+                    if (usedNames.Count > 0)
+                    {
+                        var sampleNames = usedNames.Take(5).ToList();
+                        errorDetails.AppendLine($"  - 已使用名称示例: {string.Join(", ", sampleNames)}");
+                        if (usedNames.Count > 5)
+                        {
+                            errorDetails.AppendLine($"    ... 还有 {usedNames.Count - 5} 个名称");
+                        }
+                    }
+                    
+                    errorDetails.AppendLine($"建议：检查模板名称生成逻辑或减少请求的模板数量。");
+                    
+                    throw new InvalidOperationException(errorDetails.ToString());
+                }
+            } while (usedNames.Contains(templateName));
+            
+            usedNames.Add(templateName);
+
+            // 生成时间戳，确保UpdatedAt不早于CreatedAt
+            var templateCreatedAt = baseDate.AddDays(-_random.Next(120));
+            var templateUpdatedAt = templateCreatedAt.AddDays(_random.Next(0, (int)(baseDate - templateCreatedAt).TotalDays + 1));
+
+            templates.Add(new SchedulingTemplateDto
+            {
+                Id = i,
+                Name = templateName,
+                Description = $"用于{_sampleData.GetTemplateTypeName(type)}的排班模板",
+                TemplateType = type,
+                IsDefault = i == 1,
+                PersonnelIds = selectedPersonnel.Select(p => p.Id).ToList(),
+                PositionIds = selectedPositions.Select(p => p.Id).ToList(),
+                HolidayConfigId = holidayConfigs.FirstOrDefault()?.Id,
+                UseActiveHolidayConfig = true,
+                EnabledFixedRuleIds = new List<int>(),
+                EnabledManualAssignmentIds = new List<int>(),
+                DurationDays = type == "regular" ? 7 : (type == "holiday" ? 3 : 1),
+                StrategyConfig = "{}",
+                UsageCount = _random.Next(0, 50),
+                IsActive = true,
+                CreatedAt = templateCreatedAt,
+                UpdatedAt = templateUpdatedAt,
+                LastUsedAt = _random.Next(100) < 70
+                    ? templateUpdatedAt.AddDays(_random.Next(0, (int)(baseDate - templateUpdatedAt).TotalDays + 1))
+                    : null
+            });
+        }
+
+        return templates;
+    }
+}
