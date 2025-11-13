@@ -28,8 +28,9 @@ public class SkillGenerator : IEntityGenerator<SkillDto>
     /// <summary>
     /// 生成技能数据
     /// </summary>
+    /// <param name="dependencies">生成数据所需的依赖项（此生成器不需要依赖项）</param>
     /// <returns>生成的技能列表</returns>
-    public List<SkillDto> Generate()
+    public List<SkillDto> Generate(params object[] dependencies)
     {
         var skills = new List<SkillDto>();
         var availableNames = _sampleData.GetAllSkillNames();

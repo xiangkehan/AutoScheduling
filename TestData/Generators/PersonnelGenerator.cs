@@ -28,13 +28,18 @@ public class PersonnelGenerator : IEntityGenerator<PersonnelDto>
     /// <summary>
     /// 生成人员数据
     /// </summary>
-    /// <param name="skills">已生成的技能列表</param>
+    /// <param name="dependencies">生成数据所需的依赖项：[0]=技能列表(List&lt;SkillDto&gt;)</param>
     /// <returns>生成的人员列表</returns>
-    /// <exception cref="ArgumentException">当技能列表为空时抛出</exception>
-    public List<PersonnelDto> Generate(List<SkillDto> skills)
+    /// <exception cref="ArgumentException">当依赖项不足或类型不正确时抛出</exception>
+    public List<PersonnelDto> Generate(params object[] dependencies)
     {
+        if (dependencies == null || dependencies.Length < 1)
+            throw new ArgumentException("需要提供技能列表作为依赖项", nameof(dependencies));
+
+        var skills = dependencies[0] as List<SkillDto>;
+
         if (skills == null || skills.Count == 0)
-            throw new ArgumentException("技能列表不能为空", nameof(skills));
+            throw new ArgumentException("技能列表不能为空或类型不正确", nameof(dependencies));
 
         var personnel = new List<PersonnelDto>();
         var availableNames = _sampleData.GetAllNames();

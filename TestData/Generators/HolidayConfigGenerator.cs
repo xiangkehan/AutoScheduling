@@ -22,8 +22,9 @@ public class HolidayConfigGenerator : IEntityGenerator<HolidayConfigDto>
     /// 生成节假日配置数据
     /// 生成标准周末配置、单休配置和自定义配置，确保只有一个配置处于激活状态
     /// </summary>
+    /// <param name="dependencies">生成数据所需的依赖项（此生成器不需要依赖项）</param>
     /// <returns>生成的节假日配置列表</returns>
-    public List<HolidayConfigDto> Generate()
+    public List<HolidayConfigDto> Generate(params object[] dependencies)
     {
         var configs = new List<HolidayConfigDto>();
         var usedNames = new HashSet<string>();

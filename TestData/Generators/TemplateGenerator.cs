@@ -25,22 +25,24 @@ public class TemplateGenerator : IEntityGenerator<SchedulingTemplateDto>
     /// 生成排班模板数据
     /// 生成不同类型的排班模板（regular、holiday、special），为每个模板选择合适数量的人员和哨位
     /// </summary>
-    /// <param name="personnel">已生成的人员列表</param>
-    /// <param name="positions">已生成的哨位列表</param>
-    /// <param name="holidayConfigs">已生成的节假日配置列表</param>
+    /// <param name="dependencies">生成数据所需的依赖项：[0]=人员列表(List&lt;PersonnelDto&gt;), [1]=哨位列表(List&lt;PositionDto&gt;), [2]=节假日配置列表(List&lt;HolidayConfigDto&gt;)</param>
     /// <returns>生成的排班模板列表</returns>
-    /// <exception cref="ArgumentException">当任何参数列表为空时抛出</exception>
-    public List<SchedulingTemplateDto> Generate(
-        List<PersonnelDto> personnel,
-        List<PositionDto> positions,
-        List<HolidayConfigDto> holidayConfigs)
+    /// <exception cref="ArgumentException">当依赖项不足或类型不正确时抛出</exception>
+    public List<SchedulingTemplateDto> Generate(params object[] dependencies)
     {
+        if (dependencies == null || dependencies.Length < 3)
+            throw new ArgumentException("需要提供人员列表、哨位列表和节假日配置列表作为依赖项", nameof(dependencies));
+
+        var personnel = dependencies[0] as List<PersonnelDto>;
+        var positions = dependencies[1] as List<PositionDto>;
+        var holidayConfigs = dependencies[2] as List<HolidayConfigDto>;
+
         if (personnel == null || personnel.Count == 0)
-            throw new ArgumentException("人员列表不能为空", nameof(personnel));
+            throw new ArgumentException("人员列表不能为空或类型不正确", nameof(dependencies));
         if (positions == null || positions.Count == 0)
-            throw new ArgumentException("哨位列表不能为空", nameof(positions));
+            throw new ArgumentException("哨位列表不能为空或类型不正确", nameof(dependencies));
         if (holidayConfigs == null || holidayConfigs.Count == 0)
-            throw new ArgumentException("节假日配置列表不能为空", nameof(holidayConfigs));
+            throw new ArgumentException("节假日配置列表不能为空或类型不正确", nameof(dependencies));
 
         var templates = new List<SchedulingTemplateDto>();
         var templateTypes = new[] { "regular", "holiday", "special" };

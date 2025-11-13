@@ -28,16 +28,21 @@ public class PositionGenerator : IEntityGenerator<PositionDto>
     /// <summary>
     /// 生成哨位数据
     /// </summary>
-    /// <param name="skills">已生成的技能列表</param>
-    /// <param name="personnel">已生成的人员列表</param>
+    /// <param name="dependencies">生成数据所需的依赖项：[0]=技能列表(List&lt;SkillDto&gt;), [1]=人员列表(List&lt;PersonnelDto&gt;)</param>
     /// <returns>生成的哨位列表</returns>
-    /// <exception cref="ArgumentException">当技能或人员列表为空时抛出</exception>
-    public List<PositionDto> Generate(List<SkillDto> skills, List<PersonnelDto> personnel)
+    /// <exception cref="ArgumentException">当依赖项不足或类型不正确时抛出</exception>
+    public List<PositionDto> Generate(params object[] dependencies)
     {
+        if (dependencies == null || dependencies.Length < 2)
+            throw new ArgumentException("需要提供技能列表和人员列表作为依赖项", nameof(dependencies));
+
+        var skills = dependencies[0] as List<SkillDto>;
+        var personnel = dependencies[1] as List<PersonnelDto>;
+
         if (skills == null || skills.Count == 0)
-            throw new ArgumentException("技能列表不能为空", nameof(skills));
+            throw new ArgumentException("技能列表不能为空或类型不正确", nameof(dependencies));
         if (personnel == null || personnel.Count == 0)
-            throw new ArgumentException("人员列表不能为空", nameof(personnel));
+            throw new ArgumentException("人员列表不能为空或类型不正确", nameof(dependencies));
 
         var positions = new List<PositionDto>();
         var availableNames = _sampleData.GetAllPositionNames();

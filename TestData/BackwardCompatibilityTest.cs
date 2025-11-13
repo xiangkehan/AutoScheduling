@@ -479,27 +479,33 @@ public static class BackwardCompatibilityTest
             }
             Console.WriteLine($"✓ 导出版本: {data.Metadata.ExportVersion}");
             
-            if (data.Metadata.ExportTime == default)
+            if (data.Metadata.ExportedAt == default)
             {
                 Console.WriteLine("✗ 失败: 导出时间无效");
                 return false;
             }
-            Console.WriteLine($"✓ 导出时间: {data.Metadata.ExportTime}");
+            Console.WriteLine($"✓ 导出时间: {data.Metadata.ExportedAt}");
             
             // 验证数据统计
-            if (data.Metadata.SkillCount != data.Skills.Count)
+            if (data.Metadata.Statistics == null)
+            {
+                Console.WriteLine("✗ 失败: 统计信息为 null");
+                return false;
+            }
+            
+            if (data.Metadata.Statistics.SkillCount != data.Skills.Count)
             {
                 Console.WriteLine($"✗ 失败: 元数据中的技能数量不匹配");
                 return false;
             }
             
-            if (data.Metadata.PersonnelCount != data.Personnel.Count)
+            if (data.Metadata.Statistics.PersonnelCount != data.Personnel.Count)
             {
                 Console.WriteLine($"✗ 失败: 元数据中的人员数量不匹配");
                 return false;
             }
             
-            if (data.Metadata.PositionCount != data.Positions.Count)
+            if (data.Metadata.Statistics.PositionCount != data.Positions.Count)
             {
                 Console.WriteLine($"✗ 失败: 元数据中的哨位数量不匹配");
                 return false;

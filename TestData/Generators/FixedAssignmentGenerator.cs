@@ -22,18 +22,21 @@ public class FixedAssignmentGenerator : IEntityGenerator<FixedAssignmentDto>
     /// 生成定岗规则数据
     /// 为人员生成定岗规则，指定允许的哨位和时段
     /// </summary>
-    /// <param name="personnel">已生成的人员列表</param>
-    /// <param name="positions">已生成的哨位列表</param>
+    /// <param name="dependencies">生成数据所需的依赖项：[0]=人员列表(List&lt;PersonnelDto&gt;), [1]=哨位列表(List&lt;PositionDto&gt;)</param>
     /// <returns>生成的定岗规则列表</returns>
-    /// <exception cref="ArgumentException">当任何参数列表为空时抛出</exception>
-    public List<FixedAssignmentDto> Generate(
-        List<PersonnelDto> personnel,
-        List<PositionDto> positions)
+    /// <exception cref="ArgumentException">当依赖项不足或类型不正确时抛出</exception>
+    public List<FixedAssignmentDto> Generate(params object[] dependencies)
     {
+        if (dependencies == null || dependencies.Length < 2)
+            throw new ArgumentException("需要提供人员列表和哨位列表作为依赖项", nameof(dependencies));
+
+        var personnel = dependencies[0] as List<PersonnelDto>;
+        var positions = dependencies[1] as List<PositionDto>;
+
         if (personnel == null || personnel.Count == 0)
-            throw new ArgumentException("人员列表不能为空", nameof(personnel));
+            throw new ArgumentException("人员列表不能为空或类型不正确", nameof(dependencies));
         if (positions == null || positions.Count == 0)
-            throw new ArgumentException("哨位列表不能为空", nameof(positions));
+            throw new ArgumentException("哨位列表不能为空或类型不正确", nameof(dependencies));
 
         var assignments = new List<FixedAssignmentDto>();
         var baseDate = DateTime.UtcNow;
