@@ -23,9 +23,13 @@ public class ManualAssignmentGenerator : IEntityGenerator<ManualAssignmentDto>
 
     /// <summary>
     /// 生成手动指定数据
+    /// 生成手动指定数据，确保唯一性（同一哨位、日期、时段不重复）
+    /// 使用重试逻辑尝试不同时段和日期以避免冲突
     /// </summary>
     /// <param name="personnel">已生成的人员列表</param>
     /// <param name="positions">已生成的哨位列表</param>
+    /// <returns>生成的手动指定列表</returns>
+    /// <exception cref="ArgumentException">当任何参数列表为空时抛出</exception>
     public List<ManualAssignmentDto> Generate(
         List<PersonnelDto> personnel,
         List<PositionDto> positions)
@@ -61,13 +65,13 @@ public class ManualAssignmentGenerator : IEntityGenerator<ManualAssignmentDto>
             var date = baseDate.AddDays(_random.Next(-10, 30));
             var timeSlot = _random.Next(0, 12);
 
-            // 确保不重复（同一哨位、日期、时段）
+            // 确保不重复（同一哨位、日期、时段的组合必须唯一）
             var key = $"{position.Id}_{date:yyyyMMdd}_{timeSlot}";
             bool foundUnique = !usedCombinations.Contains(key);
 
             if (!foundUnique)
             {
-                // 第一阶段：尝试不同的时段（最多12次）
+                // 第一阶段：尝试不同的时段（最多12次，覆盖所有可能的时段）
                 int originalTimeSlot = timeSlot;
                 for (int timeSlotRetry = 0; timeSlotRetry < 12; timeSlotRetry++)
                 {
@@ -80,7 +84,7 @@ public class ManualAssignmentGenerator : IEntityGenerator<ManualAssignmentDto>
                     }
                 }
 
-                // 第二阶段：如果所有时段都被占用，尝试不同的日期（最多5次）
+                // 第二阶段：如果当前日期的所有时段都被占用，尝试不同的日期（最多5次）
                 if (!foundUnique)
                 {
                     for (int dateRetry = 1; dateRetry <= 5; dateRetry++)
@@ -95,7 +99,7 @@ public class ManualAssignmentGenerator : IEntityGenerator<ManualAssignmentDto>
                             break;
                         }
 
-                        // 对于新日期，也尝试不同的时段
+                        // 对于新日期，也尝试所有可能的时段
                         for (int timeSlotRetry = 0; timeSlotRetry < 12; timeSlotRetry++)
                         {
                             timeSlot = (timeSlot + timeSlotRetry) % 12;
@@ -112,7 +116,7 @@ public class ManualAssignmentGenerator : IEntityGenerator<ManualAssignmentDto>
                     }
                 }
 
-                // 如果达到重试上限后仍然失败，跳过该记录
+                // 如果达到重试上限后仍然失败，跳过该记录并记录日志
                 if (!foundUnique)
                 {
                     skippedCount++;

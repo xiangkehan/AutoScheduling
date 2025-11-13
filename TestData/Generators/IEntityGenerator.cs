@@ -11,7 +11,8 @@ namespace AutoScheduling3.TestData.Generators
         /// <summary>
         /// 生成实体数据
         /// </summary>
+        /// <param name="dependencies">生成数据所需的依赖项</param>
         /// <returns>生成的实体列表</returns>
-        List<T> Generate();
+        List<T> Generate(params object[] dependencies);
     }
 }

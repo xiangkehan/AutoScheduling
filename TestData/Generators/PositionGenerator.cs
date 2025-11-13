@@ -30,6 +30,8 @@ public class PositionGenerator : IEntityGenerator<PositionDto>
     /// </summary>
     /// <param name="skills">已生成的技能列表</param>
     /// <param name="personnel">已生成的人员列表</param>
+    /// <returns>生成的哨位列表</returns>
+    /// <exception cref="ArgumentException">当技能或人员列表为空时抛出</exception>
     public List<PositionDto> Generate(List<SkillDto> skills, List<PersonnelDto> personnel)
     {
         if (skills == null || skills.Count == 0)
@@ -53,14 +55,14 @@ public class PositionGenerator : IEntityGenerator<PositionDto>
             string location = _nameGenerator.Generate(availableLocations, usedLocations, "位置", i);
             usedLocations.Add(location);
 
-            // 随机分配1-2个所需技能
+            // 随机分配1-2个所需技能（不超过可用技能总数）
             var requiredSkillCount = _random.Next(1, Math.Min(3, skills.Count + 1));
             var requiredSkills = skills
                 .OrderBy(x => _random.Next())
                 .Take(requiredSkillCount)
                 .ToList();
 
-            // 找出具备所需技能的人员
+            // 找出具备所需技能的人员（必须可用、未退役，且至少拥有一项所需技能）
             var availablePersonnel = personnel
                 .Where(p => p.IsAvailable && !p.IsRetired)
                 .Where(p => requiredSkills.Any(rs => p.SkillIds.Contains(rs.Id)))

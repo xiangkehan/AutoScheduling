@@ -29,6 +29,8 @@ public class PersonnelGenerator : IEntityGenerator<PersonnelDto>
     /// 生成人员数据
     /// </summary>
     /// <param name="skills">已生成的技能列表</param>
+    /// <returns>生成的人员列表</returns>
+    /// <exception cref="ArgumentException">当技能列表为空时抛出</exception>
     public List<PersonnelDto> Generate(List<SkillDto> skills)
     {
         if (skills == null || skills.Count == 0)
@@ -44,8 +46,9 @@ public class PersonnelGenerator : IEntityGenerator<PersonnelDto>
             string name = _nameGenerator.Generate(availableNames, usedNames, "人员", i);
             usedNames.Add(name);
 
-            // 随机分配1-3个技能
+            // 随机分配1-3个技能（不超过可用技能总数）
             var skillCount = _random.Next(1, Math.Min(4, skills.Count + 1));
+            // 使用随机排序后取前N个，确保技能分配的随机性
             var assignedSkills = skills
                 .OrderBy(x => _random.Next())
                 .Take(skillCount)

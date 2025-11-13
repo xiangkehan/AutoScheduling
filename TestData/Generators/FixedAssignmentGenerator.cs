@@ -20,9 +20,12 @@ public class FixedAssignmentGenerator : IEntityGenerator<FixedAssignmentDto>
 
     /// <summary>
     /// 生成定岗规则数据
+    /// 为人员生成定岗规则，指定允许的哨位和时段
     /// </summary>
     /// <param name="personnel">已生成的人员列表</param>
     /// <param name="positions">已生成的哨位列表</param>
+    /// <returns>生成的定岗规则列表</returns>
+    /// <exception cref="ArgumentException">当任何参数列表为空时抛出</exception>
     public List<FixedAssignmentDto> Generate(
         List<PersonnelDto> personnel,
         List<PositionDto> positions)

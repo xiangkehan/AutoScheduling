@@ -28,6 +28,7 @@ public class SkillGenerator : IEntityGenerator<SkillDto>
     /// <summary>
     /// 生成技能数据
     /// </summary>
+    /// <returns>生成的技能列表</returns>
     public List<SkillDto> Generate()
     {
         var skills = new List<SkillDto>();
@@ -40,7 +41,9 @@ public class SkillGenerator : IEntityGenerator<SkillDto>
             string name = _nameGenerator.Generate(availableNames, usedNames, "技能", i);
             usedNames.Add(name);
 
+            // 生成随机的创建时间（过去一年内）
             var createdAt = DateTime.UtcNow.AddDays(-_random.Next(365));
+            // 更新时间在创建时间和当前时间之间
             var updatedAt = createdAt.AddDays(_random.Next(0, (int)(DateTime.UtcNow - createdAt).TotalDays + 1));
             
             skills.Add(new SkillDto
@@ -48,7 +51,7 @@ public class SkillGenerator : IEntityGenerator<SkillDto>
                 Id = i,
                 Name = name,
                 Description = $"{name}相关的专业技能",
-                IsActive = _random.Next(100) < 90, // 90%激活
+                IsActive = _random.Next(100) < 90, // 90%的技能处于激活状态
                 CreatedAt = createdAt,
                 UpdatedAt = updatedAt
             });

@@ -23,10 +23,13 @@ public class TemplateGenerator : IEntityGenerator<SchedulingTemplateDto>
 
     /// <summary>
     /// 生成排班模板数据
+    /// 生成不同类型的排班模板（regular、holiday、special），为每个模板选择合适数量的人员和哨位
     /// </summary>
     /// <param name="personnel">已生成的人员列表</param>
     /// <param name="positions">已生成的哨位列表</param>
     /// <param name="holidayConfigs">已生成的节假日配置列表</param>
+    /// <returns>生成的排班模板列表</returns>
+    /// <exception cref="ArgumentException">当任何参数列表为空时抛出</exception>
     public List<SchedulingTemplateDto> Generate(
         List<PersonnelDto> personnel,
         List<PositionDto> positions,
@@ -48,11 +51,12 @@ public class TemplateGenerator : IEntityGenerator<SchedulingTemplateDto>
         {
             var type = templateTypes[Math.Min(i - 1, templateTypes.Length - 1)];
 
-            // 选择至少5个可用人员（如果人员总数少于5，则选择所有可用人员）
+            // 选择可用人员（必须可用且未退役）
             var availablePersonnel = personnel
                 .Where(p => p.IsAvailable && !p.IsRetired)
                 .ToList();
 
+            // 选择至少5个人员或可用人员的一半（取较大值），但不超过可用人员总数
             var personnelToSelect = Math.Max(5, availablePersonnel.Count / 2);
             personnelToSelect = Math.Min(personnelToSelect, availablePersonnel.Count);
 
@@ -61,7 +65,7 @@ public class TemplateGenerator : IEntityGenerator<SchedulingTemplateDto>
                 .Take(personnelToSelect)
                 .ToList();
 
-            // 选择至少3个哨位（如果哨位总数少于3，则选择所有哨位）
+            // 选择至少3个哨位或哨位总数的一半（取较大值），但不超过哨位总数
             var positionsToSelect = Math.Max(3, positions.Count / 2);
             positionsToSelect = Math.Min(positionsToSelect, positions.Count);
 

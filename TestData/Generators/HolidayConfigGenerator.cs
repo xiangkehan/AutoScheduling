@@ -20,7 +20,9 @@ public class HolidayConfigGenerator : IEntityGenerator<HolidayConfigDto>
 
     /// <summary>
     /// 生成节假日配置数据
+    /// 生成标准周末配置、单休配置和自定义配置，确保只有一个配置处于激活状态
     /// </summary>
+    /// <returns>生成的节假日配置列表</returns>
     public List<HolidayConfigDto> Generate()
     {
         var configs = new List<HolidayConfigDto>();
