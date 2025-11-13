@@ -13,6 +13,9 @@ using AutoScheduling3.DTOs.ImportExport;
 using AutoScheduling3.Helpers;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.Services.ImportExport;
+using AutoScheduling3.Services.ImportExport.Locking;
+using AutoScheduling3.Services.ImportExport.Models;
+using AutoScheduling3.Services.ImportExport.Monitoring;
 using Microsoft.Data.Sqlite;
 
 namespace AutoScheduling3.Services;
@@ -30,6 +33,7 @@ public class DataImportExportService : IDataImportExportService
     private readonly DatabaseBackupManager _backupManager;
     private readonly ILogger _logger;
     private readonly OperationAuditLogger _auditLogger;
+    private readonly JsonSerializerOptions _jsonOptions;
 
     /// <summary>
     /// 初始化数据导入导出服务
@@ -58,6 +62,11 @@ public class DataImportExportService : IDataImportExportService
         _backupManager = backupManager ?? throw new ArgumentNullException(nameof(backupManager));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _auditLogger = new OperationAuditLogger();
+        _jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true
+        };
     }
 
     /// <summary>
@@ -250,6 +259,15 @@ public class DataImportExportService : IDataImportExportService
     }
 
     /// <summary>
+    /// 获取数据库连接字符串
+    /// </summary>
+    private string GetConnectionString()
+    {
+        var databasePath = DatabaseConfiguration.GetDefaultDatabasePath();
+        return DatabaseConfiguration.GetConnectionString(databasePath);
+    }
+
+    /// <summary>
     /// 从文件导入数据
     /// </summary>
     /// <param name="filePath">导入文件路径</param>
@@ -263,16 +281,28 @@ public class DataImportExportService : IDataImportExportService
         { 
             Statistics = new ImportStatistics 
             { 
-                RecordsByTable = new Dictionary<string, int>() 
+                RecordsByTable = new Dictionary<string, int>(),
+                DetailsByTable = new Dictionary<string, TableImportStats>()
             },
             Warnings = new List<string>()
         };
+        
+        ImportLockManager? lockManager = null;
         
         try
         {
             _logger.Log($"Starting data import from: {filePath}");
             
-            // 1. 读取并解析 JSON 文件
+            // 1. 获取导入锁
+            lockManager = new ImportLockManager();
+            if (!await lockManager.TryAcquireLockAsync())
+            {
+                throw new InvalidOperationException("另一个导入操作正在进行中，请稍后再试");
+            }
+            
+            _logger.Log("Import lock acquired");
+            
+            // 2. 读取并解析 JSON 文件
             progress?.Report(new ImportProgress 
             { 
                 CurrentOperation = "Reading file", 
@@ -289,13 +319,7 @@ public class DataImportExportService : IDataImportExportService
             string json = await File.ReadAllTextAsync(filePath);
             _logger.Log($"File read successfully ({json.Length} characters)");
             
-            var jsonOptions = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                PropertyNameCaseInsensitive = true
-            };
-            
-            var exportData = JsonSerializer.Deserialize<ExportData>(json, jsonOptions);
+            var exportData = JsonSerializer.Deserialize<ExportData>(json, _jsonOptions);
             if (exportData == null)
             {
                 throw new InvalidOperationException("无法解析导入文件：反序列化结果为空");
@@ -303,7 +327,7 @@ public class DataImportExportService : IDataImportExportService
             
             _logger.Log("JSON deserialized successfully");
             
-            // 2. 验证数据
+            // 3. 验证数据（事务前）
             progress?.Report(new ImportProgress 
             { 
                 CurrentOperation = "Validating", 
@@ -324,7 +348,7 @@ public class DataImportExportService : IDataImportExportService
             
             _logger.Log("Data validation passed");
             
-            // 3. 创建备份
+            // 4. 创建备份
             if (options.CreateBackupBeforeImport)
             {
                 progress?.Report(new ImportProgress 
@@ -347,7 +371,7 @@ public class DataImportExportService : IDataImportExportService
                 }
             }
             
-            // 4. 计算总记录数
+            // 5. 计算总记录数
             int totalRecords = (exportData.Skills?.Count ?? 0) +
                              (exportData.Personnel?.Count ?? 0) +
                              (exportData.Positions?.Count ?? 0) +
@@ -358,144 +382,185 @@ public class DataImportExportService : IDataImportExportService
             
             _logger.Log($"Total records to import: {totalRecords}");
             
-            // 5. 按依赖顺序导入数据
-            int processedRecords = 0;
+            // 6. 创建性能监控器
+            var performanceMonitor = new PerformanceMonitor();
+            performanceMonitor.StartOperation("Total");
             
-            // 导入技能（无依赖）
-            progress?.Report(new ImportProgress 
-            { 
-                CurrentTable = "Skills", 
-                CurrentOperation = "Importing",
-                ProcessedRecords = processedRecords,
-                TotalRecords = totalRecords,
-                PercentComplete = 30 
-            });
+            // 7. 开始事务导入
+            var connectionString = GetConnectionString();
+            using var connection = new SqliteConnection(connectionString);
+            await connection.OpenAsync();
             
-            var skillsImported = await ImportSkillsAsync(exportData.Skills ?? new List<SkillDto>(), options);
-            processedRecords += exportData.Skills?.Count ?? 0;
-            result.Statistics.RecordsByTable["Skills"] = skillsImported;
-            _logger.Log($"Imported {skillsImported} skills");
+            using var transaction = connection.BeginTransaction();
             
-            // 导入人员（依赖技能）
-            progress?.Report(new ImportProgress 
-            { 
-                CurrentTable = "Personnel", 
-                CurrentOperation = "Importing",
-                ProcessedRecords = processedRecords,
-                TotalRecords = totalRecords,
-                PercentComplete = 45 
-            });
+            var context = new ImportContext
+            {
+                Connection = connection,
+                Transaction = transaction,
+                Options = options,
+                PerformanceMonitor = performanceMonitor,
+                Statistics = result.Statistics,
+                Warnings = result.Warnings
+            };
             
-            var personnelImported = await ImportPersonnelAsync(exportData.Personnel ?? new List<PersonnelDto>(), options);
-            processedRecords += exportData.Personnel?.Count ?? 0;
-            result.Statistics.RecordsByTable["Personnel"] = personnelImported;
-            _logger.Log($"Imported {personnelImported} personnel");
-            
-            // 导入哨位（依赖技能和人员）
-            progress?.Report(new ImportProgress 
-            { 
-                CurrentTable = "Positions", 
-                CurrentOperation = "Importing",
-                ProcessedRecords = processedRecords,
-                TotalRecords = totalRecords,
-                PercentComplete = 60 
-            });
-            
-            var positionsImported = await ImportPositionsAsync(exportData.Positions ?? new List<PositionDto>(), options);
-            processedRecords += exportData.Positions?.Count ?? 0;
-            result.Statistics.RecordsByTable["Positions"] = positionsImported;
-            _logger.Log($"Imported {positionsImported} positions");
-            
-            // 导入节假日配置（无依赖）
-            progress?.Report(new ImportProgress 
-            { 
-                CurrentTable = "HolidayConfigs", 
-                CurrentOperation = "Importing",
-                ProcessedRecords = processedRecords,
-                TotalRecords = totalRecords,
-                PercentComplete = 70 
-            });
-            
-            var holidayConfigsImported = await ImportHolidayConfigsAsync(exportData.HolidayConfigs ?? new List<HolidayConfigDto>(), options);
-            processedRecords += exportData.HolidayConfigs?.Count ?? 0;
-            result.Statistics.RecordsByTable["HolidayConfigs"] = holidayConfigsImported;
-            _logger.Log($"Imported {holidayConfigsImported} holiday configs");
-            
-            // 导入模板（依赖人员、哨位、节假日配置）
-            progress?.Report(new ImportProgress 
-            { 
-                CurrentTable = "Templates", 
-                CurrentOperation = "Importing",
-                ProcessedRecords = processedRecords,
-                TotalRecords = totalRecords,
-                PercentComplete = 80 
-            });
-            
-            var templatesImported = await ImportTemplatesAsync(exportData.Templates ?? new List<SchedulingTemplateDto>(), options);
-            processedRecords += exportData.Templates?.Count ?? 0;
-            result.Statistics.RecordsByTable["Templates"] = templatesImported;
-            _logger.Log($"Imported {templatesImported} templates");
-            
-            // 导入固定分配（依赖人员、哨位）
-            progress?.Report(new ImportProgress 
-            { 
-                CurrentTable = "FixedAssignments", 
-                CurrentOperation = "Importing",
-                ProcessedRecords = processedRecords,
-                TotalRecords = totalRecords,
-                PercentComplete = 90 
-            });
-            
-            var fixedAssignmentsImported = await ImportFixedAssignmentsAsync(exportData.FixedAssignments ?? new List<FixedAssignmentDto>(), options);
-            processedRecords += exportData.FixedAssignments?.Count ?? 0;
-            result.Statistics.RecordsByTable["FixedAssignments"] = fixedAssignmentsImported;
-            _logger.Log($"Imported {fixedAssignmentsImported} fixed assignments");
-            
-            // 导入手动分配（依赖人员、哨位）
-            progress?.Report(new ImportProgress 
-            { 
-                CurrentTable = "ManualAssignments", 
-                CurrentOperation = "Importing",
-                ProcessedRecords = processedRecords,
-                TotalRecords = totalRecords,
-                PercentComplete = 95 
-            });
-            
-            var manualAssignmentsImported = await ImportManualAssignmentsAsync(exportData.ManualAssignments ?? new List<ManualAssignmentDto>(), options);
-            processedRecords += exportData.ManualAssignments?.Count ?? 0;
-            result.Statistics.RecordsByTable["ManualAssignments"] = manualAssignmentsImported;
-            _logger.Log($"Imported {manualAssignmentsImported} manual assignments");
-            
-            // 6. 验证导入后的数据完整性
-            progress?.Report(new ImportProgress 
-            { 
-                CurrentOperation = "Verifying", 
-                ProcessedRecords = processedRecords,
-                TotalRecords = totalRecords,
-                PercentComplete = 98 
-            });
-            
-            await VerifyImportedDataIntegrity(result);
-            
-            // 7. 完成导入
-            progress?.Report(new ImportProgress 
-            { 
-                CurrentOperation = "Complete", 
-                ProcessedRecords = totalRecords,
-                TotalRecords = totalRecords,
-                PercentComplete = 100 
-            });
-            
-            result.Success = true;
-            result.Statistics.TotalRecords = totalRecords;
-            result.Statistics.ImportedRecords = skillsImported + personnelImported + positionsImported + 
-                                               holidayConfigsImported + templatesImported + 
-                                               fixedAssignmentsImported + manualAssignmentsImported;
-            result.Statistics.SkippedRecords = totalRecords - result.Statistics.ImportedRecords;
-            result.Duration = DateTime.UtcNow - startTime;
-            
-            _logger.Log($"Import completed successfully in {result.Duration.TotalSeconds:F2} seconds. " +
-                       $"Imported: {result.Statistics.ImportedRecords}, Skipped: {result.Statistics.SkippedRecords}");
+            try
+            {
+                int processedRecords = 0;
+                
+                // 按依赖顺序导入各表（使用旧的导入方法，因为新的 WithTransaction 方法还未实现）
+                // 导入技能（无依赖）
+                progress?.Report(new ImportProgress 
+                { 
+                    CurrentTable = "Skills", 
+                    CurrentOperation = "Importing",
+                    ProcessedRecords = processedRecords,
+                    TotalRecords = totalRecords,
+                    PercentComplete = 30 
+                });
+                
+                var skillsImported = await ImportSkillsAsync(exportData.Skills ?? new List<SkillDto>(), options);
+                processedRecords += exportData.Skills?.Count ?? 0;
+                result.Statistics.RecordsByTable["Skills"] = skillsImported;
+                _logger.Log($"Imported {skillsImported} skills");
+                
+                // 导入人员（依赖技能）
+                progress?.Report(new ImportProgress 
+                { 
+                    CurrentTable = "Personnel", 
+                    CurrentOperation = "Importing",
+                    ProcessedRecords = processedRecords,
+                    TotalRecords = totalRecords,
+                    PercentComplete = 45 
+                });
+                
+                var personnelImported = await ImportPersonnelAsync(exportData.Personnel ?? new List<PersonnelDto>(), options);
+                processedRecords += exportData.Personnel?.Count ?? 0;
+                result.Statistics.RecordsByTable["Personnel"] = personnelImported;
+                _logger.Log($"Imported {personnelImported} personnel");
+                
+                // 导入哨位（依赖技能和人员）
+                progress?.Report(new ImportProgress 
+                { 
+                    CurrentTable = "Positions", 
+                    CurrentOperation = "Importing",
+                    ProcessedRecords = processedRecords,
+                    TotalRecords = totalRecords,
+                    PercentComplete = 60 
+                });
+                
+                var positionsImported = await ImportPositionsAsync(exportData.Positions ?? new List<PositionDto>(), options);
+                processedRecords += exportData.Positions?.Count ?? 0;
+                result.Statistics.RecordsByTable["Positions"] = positionsImported;
+                _logger.Log($"Imported {positionsImported} positions");
+                
+                // 导入节假日配置（无依赖）
+                progress?.Report(new ImportProgress 
+                { 
+                    CurrentTable = "HolidayConfigs", 
+                    CurrentOperation = "Importing",
+                    ProcessedRecords = processedRecords,
+                    TotalRecords = totalRecords,
+                    PercentComplete = 70 
+                });
+                
+                var holidayConfigsImported = await ImportHolidayConfigsAsync(exportData.HolidayConfigs ?? new List<HolidayConfigDto>(), options);
+                processedRecords += exportData.HolidayConfigs?.Count ?? 0;
+                result.Statistics.RecordsByTable["HolidayConfigs"] = holidayConfigsImported;
+                _logger.Log($"Imported {holidayConfigsImported} holiday configs");
+                
+                // 导入模板（依赖人员、哨位、节假日配置）
+                progress?.Report(new ImportProgress 
+                { 
+                    CurrentTable = "Templates", 
+                    CurrentOperation = "Importing",
+                    ProcessedRecords = processedRecords,
+                    TotalRecords = totalRecords,
+                    PercentComplete = 80 
+                });
+                
+                var templatesImported = await ImportTemplatesAsync(exportData.Templates ?? new List<SchedulingTemplateDto>(), options);
+                processedRecords += exportData.Templates?.Count ?? 0;
+                result.Statistics.RecordsByTable["Templates"] = templatesImported;
+                _logger.Log($"Imported {templatesImported} templates");
+                
+                // 导入固定分配（依赖人员、哨位）
+                progress?.Report(new ImportProgress 
+                { 
+                    CurrentTable = "FixedAssignments", 
+                    CurrentOperation = "Importing",
+                    ProcessedRecords = processedRecords,
+                    TotalRecords = totalRecords,
+                    PercentComplete = 90 
+                });
+                
+                var fixedAssignmentsImported = await ImportFixedAssignmentsAsync(exportData.FixedAssignments ?? new List<FixedAssignmentDto>(), options);
+                processedRecords += exportData.FixedAssignments?.Count ?? 0;
+                result.Statistics.RecordsByTable["FixedAssignments"] = fixedAssignmentsImported;
+                _logger.Log($"Imported {fixedAssignmentsImported} fixed assignments");
+                
+                // 导入手动分配（依赖人员、哨位）
+                progress?.Report(new ImportProgress 
+                { 
+                    CurrentTable = "ManualAssignments", 
+                    CurrentOperation = "Importing",
+                    ProcessedRecords = processedRecords,
+                    TotalRecords = totalRecords,
+                    PercentComplete = 95 
+                });
+                
+                var manualAssignmentsImported = await ImportManualAssignmentsAsync(exportData.ManualAssignments ?? new List<ManualAssignmentDto>(), options);
+                processedRecords += exportData.ManualAssignments?.Count ?? 0;
+                result.Statistics.RecordsByTable["ManualAssignments"] = manualAssignmentsImported;
+                _logger.Log($"Imported {manualAssignmentsImported} manual assignments");
+                
+                // 提交事务
+                await transaction.CommitAsync();
+                _logger.Log("Transaction committed successfully");
+                
+                performanceMonitor.EndOperation("Total");
+                
+                // 验证导入后的数据完整性
+                progress?.Report(new ImportProgress 
+                { 
+                    CurrentOperation = "Verifying", 
+                    ProcessedRecords = processedRecords,
+                    TotalRecords = totalRecords,
+                    PercentComplete = 98 
+                });
+                
+                await VerifyImportedDataIntegrity(result);
+                
+                // 完成导入
+                progress?.Report(new ImportProgress 
+                { 
+                    CurrentOperation = "Complete", 
+                    ProcessedRecords = totalRecords,
+                    TotalRecords = totalRecords,
+                    PercentComplete = 100 
+                });
+                
+                result.Success = true;
+                result.Statistics.TotalRecords = totalRecords;
+                result.Statistics.ImportedRecords = skillsImported + personnelImported + positionsImported + 
+                                                   holidayConfigsImported + templatesImported + 
+                                                   fixedAssignmentsImported + manualAssignmentsImported;
+                result.Statistics.SkippedRecords = totalRecords - result.Statistics.ImportedRecords;
+                result.Duration = DateTime.UtcNow - startTime;
+                
+                // 生成性能报告
+                var perfReport = performanceMonitor.GenerateReport(result.Statistics.TotalRecords);
+                _logger.Log($"Import performance: {perfReport.Summary}");
+                
+                _logger.Log($"Import completed successfully in {result.Duration.TotalSeconds:F2} seconds. " +
+                           $"Imported: {result.Statistics.ImportedRecords}, Skipped: {result.Statistics.SkippedRecords}");
+            }
+            catch (Exception ex)
+            {
+                // 回滚事务
+                await transaction.RollbackAsync();
+                _logger.Log("Transaction rolled back due to error");
+                throw;
+            }
         }
         catch (Exception ex)
         {
@@ -516,6 +581,12 @@ public class DataImportExportService : IDataImportExportService
             var suggestions = ErrorRecoverySuggester.GetRecoverySuggestions(ex, "导入");
             var formattedSuggestions = ErrorRecoverySuggester.FormatSuggestions(suggestions);
             _logger.Log($"Recovery suggestions: {formattedSuggestions}");
+        }
+        finally
+        {
+            // 释放导入锁
+            lockManager?.ReleaseLock();
+            _logger.Log("Import lock released");
         }
         
         // 记录成功的审计日志
