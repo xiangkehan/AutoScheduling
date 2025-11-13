@@ -44,10 +44,16 @@ namespace AutoScheduling3.Services.ImportExport.Models
         /// </summary>
         public CancellationToken CancellationToken { get; set; }
 
+        /// <summary>
+        /// 错误上下文，用于跟踪当前操作的详细信息
+        /// </summary>
+        public ImportErrorContext ErrorContext { get; set; }
+
         public ImportContext()
         {
             Warnings = new List<string>();
             CancellationToken = CancellationToken.None;
+            ErrorContext = new ImportErrorContext();
         }
     }
 }

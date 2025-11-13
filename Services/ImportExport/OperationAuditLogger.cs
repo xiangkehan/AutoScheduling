@@ -156,6 +156,118 @@ public class OperationAuditLogger
     }
 
     /// <summary>
+    /// 记录操作开始
+    /// </summary>
+    /// <param name="operationType">操作类型</param>
+    /// <param name="context">上下文信息</param>
+    /// <param name="userName">用户名（可选）</param>
+    public void LogOperationStart(string operationType, string? context = null, string? userName = null)
+    {
+        var auditEntry = new AuditLogEntry
+        {
+            Timestamp = DateTime.Now,
+            OperationType = $"{operationType}_START",
+            UserName = userName ?? Environment.UserName,
+            Success = true,
+            Details = new Dictionary<string, object>
+            {
+                { "Context", context ?? "N/A" }
+            }
+        };
+
+        WriteAuditLog(auditEntry);
+    }
+
+    /// <summary>
+    /// 记录操作结束
+    /// </summary>
+    /// <param name="operationType">操作类型</param>
+    /// <param name="success">是否成功</param>
+    /// <param name="message">消息</param>
+    /// <param name="userName">用户名（可选）</param>
+    public void LogOperationEnd(string operationType, bool success, string? message = null, string? userName = null)
+    {
+        var auditEntry = new AuditLogEntry
+        {
+            Timestamp = DateTime.Now,
+            OperationType = $"{operationType}_END",
+            UserName = userName ?? Environment.UserName,
+            Success = success,
+            Details = new Dictionary<string, object>
+            {
+                { "Message", message ?? "N/A" }
+            }
+        };
+
+        WriteAuditLog(auditEntry);
+    }
+
+    /// <summary>
+    /// 记录事务开始
+    /// </summary>
+    /// <param name="userName">用户名（可选）</param>
+    public void LogTransactionStart(string? userName = null)
+    {
+        var auditEntry = new AuditLogEntry
+        {
+            Timestamp = DateTime.Now,
+            OperationType = "TRANSACTION_START",
+            UserName = userName ?? Environment.UserName,
+            Success = true,
+            Details = new Dictionary<string, object>
+            {
+                { "Action", "Database transaction started" }
+            }
+        };
+
+        WriteAuditLog(auditEntry);
+    }
+
+    /// <summary>
+    /// 记录事务提交
+    /// </summary>
+    /// <param name="userName">用户名（可选）</param>
+    public void LogTransactionCommit(string? userName = null)
+    {
+        var auditEntry = new AuditLogEntry
+        {
+            Timestamp = DateTime.Now,
+            OperationType = "TRANSACTION_COMMIT",
+            UserName = userName ?? Environment.UserName,
+            Success = true,
+            Details = new Dictionary<string, object>
+            {
+                { "Action", "Database transaction committed successfully" }
+            }
+        };
+
+        WriteAuditLog(auditEntry);
+    }
+
+    /// <summary>
+    /// 记录事务回滚
+    /// </summary>
+    /// <param name="reason">回滚原因</param>
+    /// <param name="userName">用户名（可选）</param>
+    public void LogTransactionRollback(string? reason = null, string? userName = null)
+    {
+        var auditEntry = new AuditLogEntry
+        {
+            Timestamp = DateTime.Now,
+            OperationType = "TRANSACTION_ROLLBACK",
+            UserName = userName ?? Environment.UserName,
+            Success = false,
+            Details = new Dictionary<string, object>
+            {
+                { "Action", "Database transaction rolled back" },
+                { "Reason", reason ?? "Unknown error" }
+            }
+        };
+
+        WriteAuditLog(auditEntry);
+    }
+
+    /// <summary>
     /// 写入审计日志
     /// </summary>
     private void WriteAuditLog(AuditLogEntry entry)

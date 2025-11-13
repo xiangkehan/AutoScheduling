@@ -291,7 +291,16 @@ public class DataImportExportService : IDataImportExportService
         
         try
         {
-            _logger.Log($"Starting data import from: {filePath}");
+            // 记录导入操作开始（需求 1.4, 7.5）
+            _logger.Log($"=== Import Operation Started ===");
+            _logger.Log($"File: {filePath}");
+            _logger.Log($"Strategy: {options.Strategy}");
+            _logger.Log($"Create Backup: {options.CreateBackupBeforeImport}");
+            _logger.Log($"Continue On Error: {options.ContinueOnError}");
+            _logger.Log($"Start Time: {startTime:yyyy-MM-dd HH:mm:ss.fff}");
+            
+            // 记录审计日志
+            _auditLogger.LogOperationStart("Import", filePath);
             
             // 1. 获取导入锁
             lockManager = new ImportLockManager();
@@ -300,9 +309,15 @@ public class DataImportExportService : IDataImportExportService
                 throw new InvalidOperationException("另一个导入操作正在进行中，请稍后再试");
             }
             
-            _logger.Log("Import lock acquired");
+            _logger.Log("Import lock acquired successfully");
             
             // 2. 读取并解析 JSON 文件
+            var tempErrorContext = new ImportErrorContext
+            {
+                CurrentOperation = "Reading file",
+                OperationStartTime = startTime
+            };
+            
             progress?.Report(new ImportProgress 
             { 
                 CurrentOperation = "Reading file", 
@@ -319,6 +334,7 @@ public class DataImportExportService : IDataImportExportService
             string json = await File.ReadAllTextAsync(filePath);
             _logger.Log($"File read successfully ({json.Length} characters)");
             
+            tempErrorContext.CurrentOperation = "Deserializing JSON";
             var exportData = JsonSerializer.Deserialize<ExportData>(json, _jsonOptions);
             if (exportData == null)
             {
@@ -328,6 +344,7 @@ public class DataImportExportService : IDataImportExportService
             _logger.Log("JSON deserialized successfully");
             
             // 3. 验证数据（事务前）
+            tempErrorContext.CurrentOperation = "Validating data";
             progress?.Report(new ImportProgress 
             { 
                 CurrentOperation = "Validating", 
@@ -351,6 +368,7 @@ public class DataImportExportService : IDataImportExportService
             // 4. 创建备份
             if (options.CreateBackupBeforeImport)
             {
+                tempErrorContext.CurrentOperation = "Creating backup";
                 progress?.Report(new ImportProgress 
                 { 
                     CurrentOperation = "Creating backup", 
@@ -382,9 +400,10 @@ public class DataImportExportService : IDataImportExportService
             
             _logger.Log($"Total records to import: {totalRecords}");
             
-            // 6. 创建性能监控器
+            // 6. 创建性能监控器（需求 9.1, 9.2, 9.3）
             var performanceMonitor = new PerformanceMonitor();
             performanceMonitor.StartOperation("Total");
+            _logger.Log("Performance monitoring started");
             
             // 7. 开始事务导入
             var connectionString = GetConnectionString();
@@ -392,6 +411,10 @@ public class DataImportExportService : IDataImportExportService
             await connection.OpenAsync();
             
             using var transaction = connection.BeginTransaction();
+            
+            // 记录事务开始（需求 1.4）
+            _logger.Log("Database transaction started");
+            _auditLogger.LogTransactionStart();
             
             var context = new ImportContext
             {
@@ -403,12 +426,20 @@ public class DataImportExportService : IDataImportExportService
                 Warnings = result.Warnings
             };
             
+            // 初始化错误上下文
+            context.ErrorContext.OperationStartTime = startTime;
+            context.ErrorContext.TotalRecords = totalRecords;
+            
             try
             {
                 int processedRecords = 0;
                 
                 // 按依赖顺序导入各表（使用旧的导入方法，因为新的 WithTransaction 方法还未实现）
                 // 导入技能（无依赖）
+                context.ErrorContext.CurrentTable = "Skills";
+                context.ErrorContext.CurrentOperation = "Importing";
+                context.ErrorContext.ProcessedRecords = processedRecords;
+                
                 progress?.Report(new ImportProgress 
                 { 
                     CurrentTable = "Skills", 
@@ -418,12 +449,25 @@ public class DataImportExportService : IDataImportExportService
                     PercentComplete = 30 
                 });
                 
+                // 记录表导入开始
+                performanceMonitor.StartOperation("Skills");
+                _logger.Log($"Starting Skills import ({exportData.Skills?.Count ?? 0} records)");
+                
                 var skillsImported = await ImportSkillsAsync(exportData.Skills ?? new List<SkillDto>(), options);
                 processedRecords += exportData.Skills?.Count ?? 0;
+                context.ErrorContext.ProcessedRecords = processedRecords;
                 result.Statistics.RecordsByTable["Skills"] = skillsImported;
-                _logger.Log($"Imported {skillsImported} skills");
+                
+                // 记录表导入完成和统计（需求 9.1, 9.2）
+                performanceMonitor.EndOperation("Skills");
+                var skillsDuration = performanceMonitor.GetOperationTime("Skills");
+                _logger.Log($"Skills import completed: {skillsImported} records in {skillsDuration.TotalSeconds:F2}s");
                 
                 // 导入人员（依赖技能）
+                context.ErrorContext.CurrentTable = "Personnel";
+                context.ErrorContext.CurrentOperation = "Importing";
+                context.ErrorContext.ProcessedRecords = processedRecords;
+                
                 progress?.Report(new ImportProgress 
                 { 
                     CurrentTable = "Personnel", 
@@ -433,12 +477,25 @@ public class DataImportExportService : IDataImportExportService
                     PercentComplete = 45 
                 });
                 
+                // 记录表导入开始
+                performanceMonitor.StartOperation("Personnel");
+                _logger.Log($"Starting Personnel import ({exportData.Personnel?.Count ?? 0} records)");
+                
                 var personnelImported = await ImportPersonnelAsync(exportData.Personnel ?? new List<PersonnelDto>(), options);
                 processedRecords += exportData.Personnel?.Count ?? 0;
+                context.ErrorContext.ProcessedRecords = processedRecords;
                 result.Statistics.RecordsByTable["Personnel"] = personnelImported;
-                _logger.Log($"Imported {personnelImported} personnel");
+                
+                // 记录表导入完成和统计
+                performanceMonitor.EndOperation("Personnel");
+                var personnelDuration = performanceMonitor.GetOperationTime("Personnel");
+                _logger.Log($"Personnel import completed: {personnelImported} records in {personnelDuration.TotalSeconds:F2}s");
                 
                 // 导入哨位（依赖技能和人员）
+                context.ErrorContext.CurrentTable = "Positions";
+                context.ErrorContext.CurrentOperation = "Importing";
+                context.ErrorContext.ProcessedRecords = processedRecords;
+                
                 progress?.Report(new ImportProgress 
                 { 
                     CurrentTable = "Positions", 
@@ -448,12 +505,25 @@ public class DataImportExportService : IDataImportExportService
                     PercentComplete = 60 
                 });
                 
+                // 记录表导入开始
+                performanceMonitor.StartOperation("Positions");
+                _logger.Log($"Starting Positions import ({exportData.Positions?.Count ?? 0} records)");
+                
                 var positionsImported = await ImportPositionsAsync(exportData.Positions ?? new List<PositionDto>(), options);
                 processedRecords += exportData.Positions?.Count ?? 0;
+                context.ErrorContext.ProcessedRecords = processedRecords;
                 result.Statistics.RecordsByTable["Positions"] = positionsImported;
-                _logger.Log($"Imported {positionsImported} positions");
+                
+                // 记录表导入完成和统计
+                performanceMonitor.EndOperation("Positions");
+                var positionsDuration = performanceMonitor.GetOperationTime("Positions");
+                _logger.Log($"Positions import completed: {positionsImported} records in {positionsDuration.TotalSeconds:F2}s");
                 
                 // 导入节假日配置（无依赖）
+                context.ErrorContext.CurrentTable = "HolidayConfigs";
+                context.ErrorContext.CurrentOperation = "Importing";
+                context.ErrorContext.ProcessedRecords = processedRecords;
+                
                 progress?.Report(new ImportProgress 
                 { 
                     CurrentTable = "HolidayConfigs", 
@@ -463,12 +533,25 @@ public class DataImportExportService : IDataImportExportService
                     PercentComplete = 70 
                 });
                 
+                // 记录表导入开始
+                performanceMonitor.StartOperation("HolidayConfigs");
+                _logger.Log($"Starting HolidayConfigs import ({exportData.HolidayConfigs?.Count ?? 0} records)");
+                
                 var holidayConfigsImported = await ImportHolidayConfigsAsync(exportData.HolidayConfigs ?? new List<HolidayConfigDto>(), options);
                 processedRecords += exportData.HolidayConfigs?.Count ?? 0;
+                context.ErrorContext.ProcessedRecords = processedRecords;
                 result.Statistics.RecordsByTable["HolidayConfigs"] = holidayConfigsImported;
-                _logger.Log($"Imported {holidayConfigsImported} holiday configs");
+                
+                // 记录表导入完成和统计
+                performanceMonitor.EndOperation("HolidayConfigs");
+                var holidayConfigsDuration = performanceMonitor.GetOperationTime("HolidayConfigs");
+                _logger.Log($"HolidayConfigs import completed: {holidayConfigsImported} records in {holidayConfigsDuration.TotalSeconds:F2}s");
                 
                 // 导入模板（依赖人员、哨位、节假日配置）
+                context.ErrorContext.CurrentTable = "Templates";
+                context.ErrorContext.CurrentOperation = "Importing";
+                context.ErrorContext.ProcessedRecords = processedRecords;
+                
                 progress?.Report(new ImportProgress 
                 { 
                     CurrentTable = "Templates", 
@@ -478,12 +561,25 @@ public class DataImportExportService : IDataImportExportService
                     PercentComplete = 80 
                 });
                 
+                // 记录表导入开始
+                performanceMonitor.StartOperation("Templates");
+                _logger.Log($"Starting Templates import ({exportData.Templates?.Count ?? 0} records)");
+                
                 var templatesImported = await ImportTemplatesAsync(exportData.Templates ?? new List<SchedulingTemplateDto>(), options);
                 processedRecords += exportData.Templates?.Count ?? 0;
+                context.ErrorContext.ProcessedRecords = processedRecords;
                 result.Statistics.RecordsByTable["Templates"] = templatesImported;
-                _logger.Log($"Imported {templatesImported} templates");
+                
+                // 记录表导入完成和统计
+                performanceMonitor.EndOperation("Templates");
+                var templatesDuration = performanceMonitor.GetOperationTime("Templates");
+                _logger.Log($"Templates import completed: {templatesImported} records in {templatesDuration.TotalSeconds:F2}s");
                 
                 // 导入固定分配（依赖人员、哨位）
+                context.ErrorContext.CurrentTable = "FixedAssignments";
+                context.ErrorContext.CurrentOperation = "Importing";
+                context.ErrorContext.ProcessedRecords = processedRecords;
+                
                 progress?.Report(new ImportProgress 
                 { 
                     CurrentTable = "FixedAssignments", 
@@ -493,12 +589,25 @@ public class DataImportExportService : IDataImportExportService
                     PercentComplete = 90 
                 });
                 
+                // 记录表导入开始
+                performanceMonitor.StartOperation("FixedAssignments");
+                _logger.Log($"Starting FixedAssignments import ({exportData.FixedAssignments?.Count ?? 0} records)");
+                
                 var fixedAssignmentsImported = await ImportFixedAssignmentsAsync(exportData.FixedAssignments ?? new List<FixedAssignmentDto>(), options);
                 processedRecords += exportData.FixedAssignments?.Count ?? 0;
+                context.ErrorContext.ProcessedRecords = processedRecords;
                 result.Statistics.RecordsByTable["FixedAssignments"] = fixedAssignmentsImported;
-                _logger.Log($"Imported {fixedAssignmentsImported} fixed assignments");
+                
+                // 记录表导入完成和统计
+                performanceMonitor.EndOperation("FixedAssignments");
+                var fixedAssignmentsDuration = performanceMonitor.GetOperationTime("FixedAssignments");
+                _logger.Log($"FixedAssignments import completed: {fixedAssignmentsImported} records in {fixedAssignmentsDuration.TotalSeconds:F2}s");
                 
                 // 导入手动分配（依赖人员、哨位）
+                context.ErrorContext.CurrentTable = "ManualAssignments";
+                context.ErrorContext.CurrentOperation = "Importing";
+                context.ErrorContext.ProcessedRecords = processedRecords;
+                
                 progress?.Report(new ImportProgress 
                 { 
                     CurrentTable = "ManualAssignments", 
@@ -508,14 +617,25 @@ public class DataImportExportService : IDataImportExportService
                     PercentComplete = 95 
                 });
                 
+                // 记录表导入开始
+                performanceMonitor.StartOperation("ManualAssignments");
+                _logger.Log($"Starting ManualAssignments import ({exportData.ManualAssignments?.Count ?? 0} records)");
+                
                 var manualAssignmentsImported = await ImportManualAssignmentsAsync(exportData.ManualAssignments ?? new List<ManualAssignmentDto>(), options);
                 processedRecords += exportData.ManualAssignments?.Count ?? 0;
+                context.ErrorContext.ProcessedRecords = processedRecords;
                 result.Statistics.RecordsByTable["ManualAssignments"] = manualAssignmentsImported;
-                _logger.Log($"Imported {manualAssignmentsImported} manual assignments");
                 
-                // 提交事务
+                // 记录表导入完成和统计
+                performanceMonitor.EndOperation("ManualAssignments");
+                var manualAssignmentsDuration = performanceMonitor.GetOperationTime("ManualAssignments");
+                _logger.Log($"ManualAssignments import completed: {manualAssignmentsImported} records in {manualAssignmentsDuration.TotalSeconds:F2}s");
+                
+                // 提交事务（需求 1.4）
+                _logger.Log("Committing database transaction...");
                 await transaction.CommitAsync();
                 _logger.Log("Transaction committed successfully");
+                _auditLogger.LogTransactionCommit();
                 
                 performanceMonitor.EndOperation("Total");
                 
@@ -547,52 +667,128 @@ public class DataImportExportService : IDataImportExportService
                 result.Statistics.SkippedRecords = totalRecords - result.Statistics.ImportedRecords;
                 result.Duration = DateTime.UtcNow - startTime;
                 
-                // 生成性能报告
+                // 生成并记录性能报告（需求 9.1, 9.2, 9.3, 9.4, 9.5）
                 var perfReport = performanceMonitor.GenerateReport(result.Statistics.TotalRecords);
-                _logger.Log($"Import performance: {perfReport.Summary}");
+                _logger.Log("=== Performance Report ===");
+                _logger.Log(perfReport.Summary);
                 
-                _logger.Log($"Import completed successfully in {result.Duration.TotalSeconds:F2} seconds. " +
-                           $"Imported: {result.Statistics.ImportedRecords}, Skipped: {result.Statistics.SkippedRecords}");
+                // 记录批量操作统计（需求 9.1, 9.2）
+                _logger.Log("=== Import Statistics by Table ===");
+                foreach (var kvp in result.Statistics.RecordsByTable)
+                {
+                    _logger.Log($"{kvp.Key}: {kvp.Value} records imported");
+                }
+                
+                // 记录导入操作结束
+                _logger.Log("=== Import Operation Completed Successfully ===");
+                _logger.Log($"Total Duration: {result.Duration.TotalSeconds:F2}s");
+                _logger.Log($"Total Records: {result.Statistics.TotalRecords}");
+                _logger.Log($"Imported: {result.Statistics.ImportedRecords}");
+                _logger.Log($"Skipped: {result.Statistics.SkippedRecords}");
+                _logger.Log($"Records/Second: {perfReport.RecordsPerSecond:F2}");
+                _logger.Log($"End Time: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff}");
             }
             catch (Exception ex)
             {
-                // 回滚事务
-                await transaction.RollbackAsync();
-                _logger.Log("Transaction rolled back due to error");
+                // 记录详细的错误上下文（需求 6.3）
+                var errorContext = context.ErrorContext.GetFormattedContext();
+                _logger.LogError($"Error occurred during import. Context: {errorContext}");
+                
+                // 回滚事务（需求 1.4）
+                _logger.Log("Rolling back transaction...");
+                try
+                {
+                    await transaction.RollbackAsync();
+                    _logger.Log("Transaction rolled back successfully");
+                    _auditLogger.LogTransactionRollback($"{ex.Message} | Context: {errorContext}");
+                }
+                catch (Exception rollbackEx)
+                {
+                    _logger.LogError($"Failed to rollback transaction: {rollbackEx.Message}");
+                    // 继续抛出原始异常
+                }
+                
                 throw;
             }
         }
         catch (Exception ex)
         {
-            // 记录详细的技术错误信息
-            _logger.LogError($"Import failed: {ex.Message}");
-            _logger.LogError($"Detailed error info: {ErrorMessageTranslator.GetDetailedErrorInfo(ex)}");
+            // 记录详细的技术错误信息（需求 6.1, 6.2）
+            _logger.LogError("=== Import Operation Failed ===");
+            _logger.LogError($"Error Type: {ex.GetType().Name}");
+            _logger.LogError($"Error Message: {ex.Message}");
             
-            // 转换为用户友好的错误消息
+            // 记录详细的错误上下文（需求 6.3, 6.4）
+            string errorContext = "Unknown context";
+            try
+            {
+                // 尝试从 context 获取错误上下文
+                if (context?.ErrorContext != null)
+                {
+                    errorContext = context.ErrorContext.GetFormattedContext();
+                }
+                else if (tempErrorContext != null)
+                {
+                    // 如果 context 不可用，使用临时错误上下文
+                    errorContext = tempErrorContext.GetFormattedContext();
+                }
+            }
+            catch
+            {
+                // 如果获取上下文失败，使用默认值
+            }
+            
+            _logger.LogError($"Error Context: {errorContext}");
+            _logger.LogError($"Stack Trace: {ex.StackTrace}");
+            _logger.LogError($"Detailed Error Info: {ErrorMessageTranslator.GetDetailedErrorInfo(ex)}");
+            
+            // 转换为用户友好的错误消息（需求 6.4）
             var userFriendlyMessage = ErrorMessageTranslator.TranslateException(ex, "数据导入");
             result.Success = false;
-            result.ErrorMessage = userFriendlyMessage;
+            result.ErrorMessage = $"{userFriendlyMessage}\n\n错误位置: {errorContext}";
             result.Duration = DateTime.UtcNow - startTime;
             
-            // 记录审计日志
+            // 记录失败的审计日志
             _auditLogger.LogImportOperation(filePath, options, result);
+            _auditLogger.LogOperationEnd("Import", false, $"{ex.Message} | Context: {errorContext}");
             
-            // 获取并记录恢复建议
+            // 获取并记录恢复建议（需求 6.5）
             var suggestions = ErrorRecoverySuggester.GetRecoverySuggestions(ex, "导入");
             var formattedSuggestions = ErrorRecoverySuggester.FormatSuggestions(suggestions);
-            _logger.Log($"Recovery suggestions: {formattedSuggestions}");
+            _logger.Log($"Recovery Suggestions:\n{formattedSuggestions}");
+            
+            // 将恢复建议添加到结果中
+            if (result.Warnings == null)
+            {
+                result.Warnings = new List<string>();
+            }
+            result.Warnings.Add($"恢复建议:\n{formattedSuggestions}");
+            
+            _logger.LogError($"Import failed after {result.Duration.TotalSeconds:F2}s");
         }
         finally
         {
-            // 释放导入锁
-            lockManager?.ReleaseLock();
-            _logger.Log("Import lock released");
+            // 确保导入锁在异常时也能释放（需求 6.5）
+            if (lockManager != null)
+            {
+                try
+                {
+                    lockManager.ReleaseLock();
+                    _logger.Log("Import lock released");
+                }
+                catch (Exception lockEx)
+                {
+                    _logger.LogError($"Failed to release import lock: {lockEx.Message}");
+                    // 不抛出异常，避免掩盖原始错误
+                }
+            }
         }
         
         // 记录成功的审计日志
         if (result.Success)
         {
             _auditLogger.LogImportOperation(filePath, options, result);
+            _auditLogger.LogOperationEnd("Import", true, "Import completed successfully");
         }
         
         return result;
@@ -600,6 +796,16 @@ public class DataImportExportService : IDataImportExportService
 
     /// <summary>
     /// 验证导入数据的完整性和正确性
+    /// 
+    /// 验证内容包括：
+    /// 1. 文件存在性和格式验证
+    /// 2. 必需字段验证
+    /// 3. 主键重复检查（需求 10.5, 11.5）
+    /// 4. 数据约束验证（长度、范围等）
+    /// 5. 重复名称检测（警告，不阻止导入）（需求 11.2, 11.3）
+    /// 6. 外键引用完整性验证（需求 10.3, 10.4）
+    /// 
+    /// 所有验证在事务开始前完成（需求 10.1, 10.2）
     /// </summary>
     /// <param name="filePath">要验证的文件路径</param>
     /// <returns>验证结果</returns>
@@ -1237,11 +1443,31 @@ public class DataImportExportService : IDataImportExportService
         // 验证 Skills 约束
         if (exportData.Skills != null)
         {
+            var skillIds = new HashSet<int>();
             var skillNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var duplicateNames = new List<string>();
             
             for (int i = 0; i < exportData.Skills.Count; i++)
             {
                 var skill = exportData.Skills[i];
+                
+                // 验证主键重复（需求 10.5, 11.5）
+                if (skillIds.Contains(skill.Id))
+                {
+                    result.IsValid = false;
+                    result.Errors.Add(new ValidationError
+                    {
+                        Table = "Skills",
+                        RecordId = skill.Id,
+                        Field = "Id",
+                        Message = $"技能主键ID重复: {skill.Id} (记录索引: {i})",
+                        Type = ValidationErrorType.DuplicateKey
+                    });
+                }
+                else
+                {
+                    skillIds.Add(skill.Id);
+                }
                 
                 // 验证名称长度
                 if (!string.IsNullOrWhiteSpace(skill.Name))
@@ -1259,18 +1485,13 @@ public class DataImportExportService : IDataImportExportService
                         });
                     }
                     
-                    // 验证名称唯一性
+                    // 检测重复名称并记录警告（需求 11.2, 11.3）
                     if (skillNames.Contains(skill.Name))
                     {
-                        result.IsValid = false;
-                        result.Errors.Add(new ValidationError
+                        if (!duplicateNames.Contains(skill.Name))
                         {
-                            Table = "Skills",
-                            RecordId = skill.Id,
-                            Field = "Name",
-                            Message = $"技能名称重复: {skill.Name} (记录索引: {i})",
-                            Type = ValidationErrorType.DuplicateKey
-                        });
+                            duplicateNames.Add(skill.Name);
+                        }
                     }
                     else
                     {
@@ -1292,27 +1513,75 @@ public class DataImportExportService : IDataImportExportService
                     });
                 }
             }
+            
+            // 记录重复名称警告（不阻止导入）
+            foreach (var duplicateName in duplicateNames)
+            {
+                result.Warnings.Add(new ValidationWarning
+                {
+                    Table = "Skills",
+                    Message = $"检测到重复的技能名称: {duplicateName}。记录将通过主键ID进行匹配。"
+                });
+            }
         }
         
         // 验证 Personnel 约束
         if (exportData.Personnel != null)
         {
+            var personnelIds = new HashSet<int>();
+            var personnelNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var duplicatePersonnelNames = new List<string>();
+            
             for (int i = 0; i < exportData.Personnel.Count; i++)
             {
                 var personnel = exportData.Personnel[i];
                 
-                // 验证名称长度（假设最大100字符）
-                if (!string.IsNullOrWhiteSpace(personnel.Name) && personnel.Name.Length > 100)
+                // 验证主键重复（需求 10.5, 11.5）
+                if (personnelIds.Contains(personnel.Id))
                 {
                     result.IsValid = false;
                     result.Errors.Add(new ValidationError
                     {
                         Table = "Personnel",
                         RecordId = personnel.Id,
-                        Field = "Name",
-                        Message = $"人员名称长度不能超过100字符 (当前: {personnel.Name.Length}, 记录索引: {i})",
-                        Type = ValidationErrorType.ConstraintViolation
+                        Field = "Id",
+                        Message = $"人员主键ID重复: {personnel.Id} (记录索引: {i})",
+                        Type = ValidationErrorType.DuplicateKey
                     });
+                }
+                else
+                {
+                    personnelIds.Add(personnel.Id);
+                }
+                
+                // 验证名称长度（假设最大100字符）
+                if (!string.IsNullOrWhiteSpace(personnel.Name))
+                {
+                    if (personnel.Name.Length > 100)
+                    {
+                        result.IsValid = false;
+                        result.Errors.Add(new ValidationError
+                        {
+                            Table = "Personnel",
+                            RecordId = personnel.Id,
+                            Field = "Name",
+                            Message = $"人员名称长度不能超过100字符 (当前: {personnel.Name.Length}, 记录索引: {i})",
+                            Type = ValidationErrorType.ConstraintViolation
+                        });
+                    }
+                    
+                    // 检测重复名称并记录警告（需求 11.2, 11.3）
+                    if (personnelNames.Contains(personnel.Name))
+                    {
+                        if (!duplicatePersonnelNames.Contains(personnel.Name))
+                        {
+                            duplicatePersonnelNames.Add(personnel.Name);
+                        }
+                    }
+                    else
+                    {
+                        personnelNames.Add(personnel.Name);
+                    }
                 }
                 
                 // 验证数值范围
@@ -1352,27 +1621,75 @@ public class DataImportExportService : IDataImportExportService
                     });
                 }
             }
+            
+            // 记录重复名称警告（不阻止导入）
+            foreach (var duplicateName in duplicatePersonnelNames)
+            {
+                result.Warnings.Add(new ValidationWarning
+                {
+                    Table = "Personnel",
+                    Message = $"检测到重复的人员名称: {duplicateName}。记录将通过主键ID进行匹配。"
+                });
+            }
         }
         
         // 验证 Positions 约束
         if (exportData.Positions != null)
         {
+            var positionIds = new HashSet<int>();
+            var positionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var duplicatePositionNames = new List<string>();
+            
             for (int i = 0; i < exportData.Positions.Count; i++)
             {
                 var position = exportData.Positions[i];
                 
-                // 验证名称长度
-                if (!string.IsNullOrWhiteSpace(position.Name) && position.Name.Length > 100)
+                // 验证主键重复（需求 10.5, 11.5）
+                if (positionIds.Contains(position.Id))
                 {
                     result.IsValid = false;
                     result.Errors.Add(new ValidationError
                     {
                         Table = "Positions",
                         RecordId = position.Id,
-                        Field = "Name",
-                        Message = $"哨位名称长度不能超过100字符 (当前: {position.Name.Length}, 记录索引: {i})",
-                        Type = ValidationErrorType.ConstraintViolation
+                        Field = "Id",
+                        Message = $"哨位主键ID重复: {position.Id} (记录索引: {i})",
+                        Type = ValidationErrorType.DuplicateKey
                     });
+                }
+                else
+                {
+                    positionIds.Add(position.Id);
+                }
+                
+                // 验证名称长度
+                if (!string.IsNullOrWhiteSpace(position.Name))
+                {
+                    if (position.Name.Length > 100)
+                    {
+                        result.IsValid = false;
+                        result.Errors.Add(new ValidationError
+                        {
+                            Table = "Positions",
+                            RecordId = position.Id,
+                            Field = "Name",
+                            Message = $"哨位名称长度不能超过100字符 (当前: {position.Name.Length}, 记录索引: {i})",
+                            Type = ValidationErrorType.ConstraintViolation
+                        });
+                    }
+                    
+                    // 检测重复名称并记录警告（需求 11.2, 11.3）
+                    if (positionNames.Contains(position.Name))
+                    {
+                        if (!duplicatePositionNames.Contains(position.Name))
+                        {
+                            duplicatePositionNames.Add(position.Name);
+                        }
+                    }
+                    else
+                    {
+                        positionNames.Add(position.Name);
+                    }
                 }
                 
                 // 验证地点长度
@@ -1417,27 +1734,75 @@ public class DataImportExportService : IDataImportExportService
                     });
                 }
             }
+            
+            // 记录重复名称警告（不阻止导入）
+            foreach (var duplicateName in duplicatePositionNames)
+            {
+                result.Warnings.Add(new ValidationWarning
+                {
+                    Table = "Positions",
+                    Message = $"检测到重复的哨位名称: {duplicateName}。记录将通过主键ID进行匹配。"
+                });
+            }
         }
         
         // 验证 Templates 约束
         if (exportData.Templates != null)
         {
+            var templateIds = new HashSet<int>();
+            var templateNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var duplicateTemplateNames = new List<string>();
+            
             for (int i = 0; i < exportData.Templates.Count; i++)
             {
                 var template = exportData.Templates[i];
                 
-                // 验证名称长度
-                if (!string.IsNullOrWhiteSpace(template.Name) && template.Name.Length > 100)
+                // 验证主键重复（需求 10.5, 11.5）
+                if (templateIds.Contains(template.Id))
                 {
                     result.IsValid = false;
                     result.Errors.Add(new ValidationError
                     {
                         Table = "Templates",
                         RecordId = template.Id,
-                        Field = "Name",
-                        Message = $"模板名称长度不能超过100字符 (当前: {template.Name.Length}, 记录索引: {i})",
-                        Type = ValidationErrorType.ConstraintViolation
+                        Field = "Id",
+                        Message = $"模板主键ID重复: {template.Id} (记录索引: {i})",
+                        Type = ValidationErrorType.DuplicateKey
                     });
+                }
+                else
+                {
+                    templateIds.Add(template.Id);
+                }
+                
+                // 验证名称长度
+                if (!string.IsNullOrWhiteSpace(template.Name))
+                {
+                    if (template.Name.Length > 100)
+                    {
+                        result.IsValid = false;
+                        result.Errors.Add(new ValidationError
+                        {
+                            Table = "Templates",
+                            RecordId = template.Id,
+                            Field = "Name",
+                            Message = $"模板名称长度不能超过100字符 (当前: {template.Name.Length}, 记录索引: {i})",
+                            Type = ValidationErrorType.ConstraintViolation
+                        });
+                    }
+                    
+                    // 检测重复名称并记录警告（需求 11.2, 11.3）
+                    if (templateNames.Contains(template.Name))
+                    {
+                        if (!duplicateTemplateNames.Contains(template.Name))
+                        {
+                            duplicateTemplateNames.Add(template.Name);
+                        }
+                    }
+                    else
+                    {
+                        templateNames.Add(template.Name);
+                    }
                 }
                 
                 // 验证描述长度
@@ -1467,6 +1832,131 @@ public class DataImportExportService : IDataImportExportService
                         Type = ValidationErrorType.InvalidValue
                     });
                 }
+            }
+            
+            // 记录重复名称警告（不阻止导入）
+            foreach (var duplicateName in duplicateTemplateNames)
+            {
+                result.Warnings.Add(new ValidationWarning
+                {
+                    Table = "Templates",
+                    Message = $"检测到重复的模板名称: {duplicateName}。记录将通过主键ID进行匹配。"
+                });
+            }
+        }
+        
+        // 验证 FixedAssignments 约束
+        if (exportData.FixedAssignments != null)
+        {
+            var fixedAssignmentIds = new HashSet<int>();
+            
+            for (int i = 0; i < exportData.FixedAssignments.Count; i++)
+            {
+                var assignment = exportData.FixedAssignments[i];
+                
+                // 验证主键重复（需求 10.5, 11.5）
+                if (fixedAssignmentIds.Contains(assignment.Id))
+                {
+                    result.IsValid = false;
+                    result.Errors.Add(new ValidationError
+                    {
+                        Table = "FixedAssignments",
+                        RecordId = assignment.Id,
+                        Field = "Id",
+                        Message = $"固定分配主键ID重复: {assignment.Id} (记录索引: {i})",
+                        Type = ValidationErrorType.DuplicateKey
+                    });
+                }
+                else
+                {
+                    fixedAssignmentIds.Add(assignment.Id);
+                }
+            }
+        }
+        
+        // 验证 ManualAssignments 约束
+        if (exportData.ManualAssignments != null)
+        {
+            var manualAssignmentIds = new HashSet<int>();
+            
+            for (int i = 0; i < exportData.ManualAssignments.Count; i++)
+            {
+                var assignment = exportData.ManualAssignments[i];
+                
+                // 验证主键重复（需求 10.5, 11.5）
+                if (manualAssignmentIds.Contains(assignment.Id))
+                {
+                    result.IsValid = false;
+                    result.Errors.Add(new ValidationError
+                    {
+                        Table = "ManualAssignments",
+                        RecordId = assignment.Id,
+                        Field = "Id",
+                        Message = $"手动分配主键ID重复: {assignment.Id} (记录索引: {i})",
+                        Type = ValidationErrorType.DuplicateKey
+                    });
+                }
+                else
+                {
+                    manualAssignmentIds.Add(assignment.Id);
+                }
+            }
+        }
+        
+        // 验证 HolidayConfigs 约束
+        if (exportData.HolidayConfigs != null)
+        {
+            var holidayConfigIds = new HashSet<int>();
+            var holidayConfigNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var duplicateHolidayConfigNames = new List<string>();
+            
+            for (int i = 0; i < exportData.HolidayConfigs.Count; i++)
+            {
+                var config = exportData.HolidayConfigs[i];
+                
+                // 验证主键重复（需求 10.5, 11.5）
+                if (holidayConfigIds.Contains(config.Id))
+                {
+                    result.IsValid = false;
+                    result.Errors.Add(new ValidationError
+                    {
+                        Table = "HolidayConfigs",
+                        RecordId = config.Id,
+                        Field = "Id",
+                        Message = $"节假日配置主键ID重复: {config.Id} (记录索引: {i})",
+                        Type = ValidationErrorType.DuplicateKey
+                    });
+                }
+                else
+                {
+                    holidayConfigIds.Add(config.Id);
+                }
+                
+                // 检测重复名称并记录警告（需求 11.2, 11.3）
+                if (!string.IsNullOrWhiteSpace(config.ConfigName))
+                {
+                    if (holidayConfigNames.Contains(config.ConfigName))
+                    {
+                        if (!duplicateHolidayConfigNames.Contains(config.ConfigName))
+                        {
+                            duplicateHolidayConfigNames.Add(config.ConfigName);
+                        }
+                    }
+                    else
+                    {
+                        holidayConfigNames.Add(config.ConfigName);
+                    }
+                }
+            }
+            
+            // 记录重复名称警告（不阻止导入）
+            foreach (var duplicateName in duplicateHolidayConfigNames)
+            {
+                result.Warnings.Add(new ValidationWarning
+                {
+                    Table = "HolidayConfigs",
+                    Message = $"检测到重复的节假日配置名称: {duplicateName}。记录将通过主键ID进行匹配。"
+                });
             }
         }
     }
@@ -1734,6 +2224,11 @@ public class DataImportExportService : IDataImportExportService
     /// <summary>
     /// 导入技能数据
     /// </summary>
+    /// <remarks>
+    /// 此方法已过时，请使用 ImportSkillsWithTransactionAsync 方法。
+    /// 新方法提供了事务保护、批量操作和更好的性能。
+    /// </remarks>
+    [Obsolete("此方法已过时，请使用 ImportSkillsWithTransactionAsync 方法，该方法提供事务保护和批量操作支持。", false)]
     private async Task<int> ImportSkillsAsync(List<SkillDto> skills, ImportOptions options)
     {
         int importedCount = 0;
@@ -1793,8 +2288,201 @@ public class DataImportExportService : IDataImportExportService
     }
 
     /// <summary>
+    /// 使用事务导入技能数据（新实现）
+    /// 使用 SkillImporter 执行批量导入操作
+    /// </summary>
+    /// <param name="skills">技能列表</param>
+    /// <param name="context">导入上下文</param>
+    /// <param name="progress">进度报告器</param>
+    private async Task ImportSkillsWithTransactionAsync(
+        List<SkillDto> skills,
+        ImportContext context,
+        IProgress<ImportProgress>? progress = null)
+    {
+        if (skills == null || skills.Count == 0)
+        {
+            _logger.Log("Skills: No records to import");
+            return;
+        }
+
+        _logger.Log($"Skills: Starting transaction-based import of {skills.Count} records");
+
+        var importer = new ImportExport.Importers.SkillImporter(_skillRepository, _logger);
+        await importer.ImportAsync(skills, context, progress);
+
+        _logger.Log($"Skills: Transaction-based import completed");
+    }
+
+    /// <summary>
+    /// 使用事务导入人员数据（新实现）
+    /// 使用 PersonnelImporter 执行批量导入操作
+    /// 处理数组字段（SkillIds, RecentPeriodShiftIntervals）
+    /// </summary>
+    /// <param name="personnelList">人员列表</param>
+    /// <param name="context">导入上下文</param>
+    /// <param name="progress">进度报告器</param>
+    private async Task ImportPersonnelWithTransactionAsync(
+        List<PersonnelDto> personnelList,
+        ImportContext context,
+        IProgress<ImportProgress>? progress = null)
+    {
+        if (personnelList == null || personnelList.Count == 0)
+        {
+            _logger.Log("Personnel: No records to import");
+            return;
+        }
+
+        _logger.Log($"Personnel: Starting transaction-based import of {personnelList.Count} records");
+
+        var importer = new ImportExport.Importers.PersonnelImporter(_personnelRepository, _logger);
+        await importer.ImportAsync(personnelList, context, progress);
+
+        _logger.Log($"Personnel: Transaction-based import completed");
+    }
+
+    /// <summary>
+    /// 使用事务导入哨位数据（新实现）
+    /// 使用 PositionImporter 执行批量导入操作
+    /// 处理数组字段（RequiredSkillIds, AvailablePersonnelIds）
+    /// </summary>
+    /// <param name="positionList">哨位列表</param>
+    /// <param name="context">导入上下文</param>
+    /// <param name="progress">进度报告器</param>
+    private async Task ImportPositionsWithTransactionAsync(
+        List<PositionDto> positionList,
+        ImportContext context,
+        IProgress<ImportProgress>? progress = null)
+    {
+        if (positionList == null || positionList.Count == 0)
+        {
+            _logger.Log("Positions: No records to import");
+            return;
+        }
+
+        _logger.Log($"Positions: Starting transaction-based import of {positionList.Count} records");
+
+        var importer = new ImportExport.Importers.PositionImporter(_positionRepository, _logger);
+        await importer.ImportAsync(positionList, context, progress);
+
+        _logger.Log($"Positions: Transaction-based import completed");
+    }
+
+    /// <summary>
+    /// 使用事务导入模板数据（新实现）
+    /// 使用 TemplateImporter 执行批量导入操作
+    /// 处理复杂的模板字段（PersonnelIds, PositionIds, EnabledFixedRuleIds, EnabledManualAssignmentIds）
+    /// </summary>
+    /// <param name="templateList">模板列表</param>
+    /// <param name="context">导入上下文</param>
+    /// <param name="progress">进度报告器</param>
+    private async Task ImportTemplatesWithTransactionAsync(
+        List<SchedulingTemplateDto> templateList,
+        ImportContext context,
+        IProgress<ImportProgress>? progress = null)
+    {
+        if (templateList == null || templateList.Count == 0)
+        {
+            _logger.Log("Templates: No records to import");
+            return;
+        }
+
+        _logger.Log($"Templates: Starting transaction-based import of {templateList.Count} records");
+
+        var importer = new ImportExport.Importers.TemplateImporter(_templateRepository, _logger);
+        await importer.ImportAsync(templateList, context, progress);
+
+        _logger.Log($"Templates: Transaction-based import completed");
+    }
+
+    /// <summary>
+    /// 使用事务导入节假日配置数据（新实现）
+    /// 使用 HolidayConfigImporter 执行批量导入操作
+    /// 处理复杂的日期列表字段（LegalHolidays, CustomHolidays, ExcludedDates）
+    /// </summary>
+    /// <param name="holidayConfigList">节假日配置列表</param>
+    /// <param name="context">导入上下文</param>
+    /// <param name="progress">进度报告器</param>
+    private async Task ImportHolidayConfigsWithTransactionAsync(
+        List<HolidayConfigDto> holidayConfigList,
+        ImportContext context,
+        IProgress<ImportProgress>? progress = null)
+    {
+        if (holidayConfigList == null || holidayConfigList.Count == 0)
+        {
+            _logger.Log("HolidayConfigs: No records to import");
+            return;
+        }
+
+        _logger.Log($"HolidayConfigs: Starting transaction-based import of {holidayConfigList.Count} records");
+
+        var importer = new ImportExport.Importers.HolidayConfigImporter(_constraintRepository, _logger);
+        await importer.ImportAsync(holidayConfigList, context, progress);
+
+        _logger.Log($"HolidayConfigs: Transaction-based import completed");
+    }
+
+    /// <summary>
+    /// 使用事务导入固定分配数据（新实现）
+    /// 使用 FixedAssignmentImporter 执行批量导入操作
+    /// 处理数组字段（AllowedPositionIds, AllowedTimeSlots）
+    /// </summary>
+    /// <param name="fixedAssignmentList">固定分配列表</param>
+    /// <param name="context">导入上下文</param>
+    /// <param name="progress">进度报告器</param>
+    private async Task ImportFixedAssignmentsWithTransactionAsync(
+        List<FixedAssignmentDto> fixedAssignmentList,
+        ImportContext context,
+        IProgress<ImportProgress>? progress = null)
+    {
+        if (fixedAssignmentList == null || fixedAssignmentList.Count == 0)
+        {
+            _logger.Log("FixedAssignments: No records to import");
+            return;
+        }
+
+        _logger.Log($"FixedAssignments: Starting transaction-based import of {fixedAssignmentList.Count} records");
+
+        var importer = new ImportExport.Importers.FixedAssignmentImporter(_constraintRepository, _logger);
+        await importer.ImportAsync(fixedAssignmentList, context, progress);
+
+        _logger.Log($"FixedAssignments: Transaction-based import completed");
+    }
+
+    /// <summary>
+    /// 使用事务导入手动分配数据（新实现）
+    /// 使用 ManualAssignmentImporter 执行批量导入操作
+    /// 处理日期字段和时段索引
+    /// </summary>
+    /// <param name="manualAssignmentList">手动分配列表</param>
+    /// <param name="context">导入上下文</param>
+    /// <param name="progress">进度报告器</param>
+    private async Task ImportManualAssignmentsWithTransactionAsync(
+        List<ManualAssignmentDto> manualAssignmentList,
+        ImportContext context,
+        IProgress<ImportProgress>? progress = null)
+    {
+        if (manualAssignmentList == null || manualAssignmentList.Count == 0)
+        {
+            _logger.Log("ManualAssignments: No records to import");
+            return;
+        }
+
+        _logger.Log($"ManualAssignments: Starting transaction-based import of {manualAssignmentList.Count} records");
+
+        var importer = new ImportExport.Importers.ManualAssignmentImporter(_constraintRepository, _logger);
+        await importer.ImportAsync(manualAssignmentList, context, progress);
+
+        _logger.Log($"ManualAssignments: Transaction-based import completed");
+    }
+
+    /// <summary>
     /// 导入人员数据
     /// </summary>
+    /// <remarks>
+    /// 此方法已过时，请使用 ImportPersonnelWithTransactionAsync 方法。
+    /// 新方法提供了事务保护、批量操作和更好的性能。
+    /// </remarks>
+    [Obsolete("此方法已过时，请使用 ImportPersonnelWithTransactionAsync 方法，该方法提供事务保护和批量操作支持。", false)]
     private async Task<int> ImportPersonnelAsync(List<PersonnelDto> personnelList, ImportOptions options)
     {
         int importedCount = 0;
@@ -1855,6 +2543,11 @@ public class DataImportExportService : IDataImportExportService
     /// <summary>
     /// 导入哨位数据
     /// </summary>
+    /// <remarks>
+    /// 此方法已过时，请使用 ImportPositionsWithTransactionAsync 方法。
+    /// 新方法提供了事务保护、批量操作和更好的性能。
+    /// </remarks>
+    [Obsolete("此方法已过时，请使用 ImportPositionsWithTransactionAsync 方法，该方法提供事务保护和批量操作支持。", false)]
     private async Task<int> ImportPositionsAsync(List<PositionDto> positions, ImportOptions options)
     {
         int importedCount = 0;
@@ -1915,6 +2608,11 @@ public class DataImportExportService : IDataImportExportService
     /// <summary>
     /// 导入节假日配置数据
     /// </summary>
+    /// <remarks>
+    /// 此方法已过时，请使用 ImportHolidayConfigsWithTransactionAsync 方法。
+    /// 新方法提供了事务保护、批量操作和更好的性能。
+    /// </remarks>
+    [Obsolete("此方法已过时，请使用 ImportHolidayConfigsWithTransactionAsync 方法，该方法提供事务保护和批量操作支持。", false)]
     private async Task<int> ImportHolidayConfigsAsync(List<HolidayConfigDto> holidayConfigs, ImportOptions options)
     {
         int importedCount = 0;
@@ -1977,6 +2675,11 @@ public class DataImportExportService : IDataImportExportService
     /// <summary>
     /// 导入排班模板数据
     /// </summary>
+    /// <remarks>
+    /// 此方法已过时，请使用 ImportTemplatesWithTransactionAsync 方法。
+    /// 新方法提供了事务保护、批量操作和更好的性能。
+    /// </remarks>
+    [Obsolete("此方法已过时，请使用 ImportTemplatesWithTransactionAsync 方法，该方法提供事务保护和批量操作支持。", false)]
     private async Task<int> ImportTemplatesAsync(List<SchedulingTemplateDto> templates, ImportOptions options)
     {
         int importedCount = 0;
@@ -2037,6 +2740,11 @@ public class DataImportExportService : IDataImportExportService
     /// <summary>
     /// 导入固定分配约束数据
     /// </summary>
+    /// <remarks>
+    /// 此方法已过时，请使用 ImportFixedAssignmentsWithTransactionAsync 方法。
+    /// 新方法提供了事务保护、批量操作和更好的性能。
+    /// </remarks>
+    [Obsolete("此方法已过时，请使用 ImportFixedAssignmentsWithTransactionAsync 方法，该方法提供事务保护和批量操作支持。", false)]
     private async Task<int> ImportFixedAssignmentsAsync(List<FixedAssignmentDto> fixedAssignments, ImportOptions options)
     {
         int importedCount = 0;
@@ -2099,6 +2807,11 @@ public class DataImportExportService : IDataImportExportService
     /// <summary>
     /// 导入手动分配约束数据
     /// </summary>
+    /// <remarks>
+    /// 此方法已过时，请使用 ImportManualAssignmentsWithTransactionAsync 方法。
+    /// 新方法提供了事务保护、批量操作和更好的性能。
+    /// </remarks>
+    [Obsolete("此方法已过时，请使用 ImportManualAssignmentsWithTransactionAsync 方法，该方法提供事务保护和批量操作支持。", false)]
     private async Task<int> ImportManualAssignmentsAsync(List<ManualAssignmentDto> manualAssignments, ImportOptions options)
     {
         int importedCount = 0;
