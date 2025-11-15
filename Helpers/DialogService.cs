@@ -34,7 +34,55 @@ public class DialogService
     }
 
     /// <summary>
+    /// 显示错误对话框（标题 + 文本消息）
+    /// 新增重载：支持传入标题和详细消息（解决调用处传入两个字符串的情况）
+    /// </summary>
+    public async Task ShowErrorAsync(string title, string message)
+    {
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = message,
+                CloseButtonText = "确定",
+                XamlRoot = App.MainWindow?.Content?.XamlRoot
+            };
+
+            // 创建一个任务来在5秒后自动关闭对话框
+            var autoCloseTask = Task.Run(async () =>
+            {
+                await Task.Delay(5000); // 等待5秒
+
+                // 在UI线程上关闭对话框
+                if (App.MainWindow?.DispatcherQueue != null)
+                {
+                    App.MainWindow.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        try
+                        {
+                            dialog.Hide();
+                        }
+                        catch
+                        {
+                            // 对话框可能已经被用户关闭
+                        }
+                    });
+                }
+            });
+
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            // 如果对话框显示失败，回退到调试输出
+            System.Diagnostics.Debug.WriteLine($"Error dialog failed to show: {title} - {message}. Dialog error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// 显示错误对话框（5秒后自动关闭）
+    /// 保持原有签名：message + optional exception
     /// </summary>
     public async Task ShowErrorAsync(string message, Exception? exception = null)
     {
@@ -58,7 +106,7 @@ public class DialogService
             var autoCloseTask = Task.Run(async () =>
             {
                 await Task.Delay(5000); // 等待5秒
-                
+
                 // 在UI线程上关闭对话框
                 if (App.MainWindow?.DispatcherQueue != null)
                 {

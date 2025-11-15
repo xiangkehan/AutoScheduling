@@ -146,11 +146,8 @@
                                 
                                 <!-- Empty State for Holiday Configs -->
                                 <InfoBar Severity="Warning" IsOpen="True" 
-                                         Visibility="{x:Bind ViewModel.HolidayConfigs.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0, Mode=OneWay}">
-                                    <InfoBar.Message>
-                                        <TextBlock Text="没有找到休息日配置。请前往设置页面创建休息日配置。"/>
-                                    </InfoBar.Message>
-                                </InfoBar>
+                                         Visibility="{x:Bind ViewModel.HolidayConfigs.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0, Mode=OneWay}"
+                                         Message="没有找到休息日配置。请前往设置页面创建休息日配置。"/>
                                 
                                 <ComboBox Header="选择一个休息日配置" 
                                           ItemsSource="{x:Bind ViewModel.HolidayConfigs, Mode=OneWay}"

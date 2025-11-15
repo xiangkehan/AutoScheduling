@@ -16,7 +16,12 @@ public class BoolToVisibilityConverter : IValueConverter
     public object Convert(object value, Type targetType, object parameter, string language)
     {
         var boolValue = value is bool b && b;
-        if (Inverted)
+        
+        // 支持通过 ConverterParameter 或 Inverted 属性反转
+        var shouldInvert = Inverted || 
+                          (parameter is string str && str.Equals("Inverse", StringComparison.OrdinalIgnoreCase));
+        
+        if (shouldInvert)
         {
             boolValue = !boolValue;
         }
@@ -26,7 +31,12 @@ public class BoolToVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, string language)
     {
         var visibility = value is Visibility v && v == Visibility.Visible;
-        if (Inverted)
+        
+        // 支持通过 ConverterParameter 或 Inverted 属性反转
+        var shouldInvert = Inverted || 
+                          (parameter is string str && str.Equals("Inverse", StringComparison.OrdinalIgnoreCase));
+        
+        if (shouldInvert)
         {
             visibility = !visibility;
         }
