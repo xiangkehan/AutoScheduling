@@ -267,7 +267,49 @@ public class SchedulingRequestDto
     /// 启用的手动指定ID列表（可选，将根据日期范围过滤）
     /// </summary>
     public List<int>? EnabledManualAssignmentIds { get; set; }
+    
+    /// <summary>
+    /// 临时手动指定列表（未保存到数据库的手动指定）
+    /// </summary>
+    public List<ManualAssignmentRequestItem>? TemporaryManualAssignments { get; set; }
+    
     public int? HolidayConfigId { get; set; }
+}
+
+/// <summary>
+/// 手动指定请求项 - 用于排班请求
+/// </summary>
+public class ManualAssignmentRequestItem
+{
+    /// <summary>
+    /// 数据库ID，null表示临时手动指定
+    /// </summary>
+    public int? Id { get; set; }
+
+    /// <summary>
+    /// 日期
+    /// </summary>
+    public DateTime Date { get; set; }
+
+    /// <summary>
+    /// 人员ID
+    /// </summary>
+    public int PersonnelId { get; set; }
+
+    /// <summary>
+    /// 哨位ID
+    /// </summary>
+    public int PositionId { get; set; }
+
+    /// <summary>
+    /// 时段（0-11）
+    /// </summary>
+    public int TimeSlot { get; set; }
+
+    /// <summary>
+    /// 备注
+    /// </summary>
+    public string Remarks { get; set; } = string.Empty;
 }
 
 /// <summary>

@@ -85,4 +85,9 @@ public interface ISchedulingService
  /// 清理过期的草稿排班
  /// </summary>
  Task CleanupExpiredDraftsAsync(int daysToKeep = 7);
+
+ /// <summary>
+ /// 创建手动指定
+ /// </summary>
+ Task<ManualAssignmentDto> CreateManualAssignmentAsync(CreateManualAssignmentDto dto);
 }

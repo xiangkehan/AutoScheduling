@@ -344,6 +344,54 @@ public class SchedulingService : ISchedulingService
     public async Task<List<FixedPositionRule>> GetFixedPositionRulesAsync(bool enabledOnly = true) => await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly);
     public async Task<List<ManualAssignment>> GetManualAssignmentsAsync(DateTime startDate, DateTime endDate, bool enabledOnly = true) => await _constraintRepo.GetManualAssignmentsByDateRangeAsync(startDate, endDate, enabledOnly);
 
+    /// <summary>
+    /// 创建手动指定
+    /// </summary>
+    public async Task<ManualAssignmentDto> CreateManualAssignmentAsync(CreateManualAssignmentDto dto)
+    {
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        // 验证人员和哨位是否存在
+        var personnel = await _personalRepo.GetByIdAsync(dto.PersonnelId);
+        if (personnel == null)
+            throw new ArgumentException($"人员ID {dto.PersonnelId} 不存在", nameof(dto.PersonnelId));
+
+        var position = await _positionRepo.GetByIdAsync(dto.PositionId);
+        if (position == null)
+            throw new ArgumentException($"哨位ID {dto.PositionId} 不存在", nameof(dto.PositionId));
+
+        // 创建ManualAssignment模型
+        var assignment = new ManualAssignment
+        {
+            PositionId = dto.PositionId,
+            PeriodIndex = dto.TimeSlot,
+            PersonalId = dto.PersonnelId,
+            Date = dto.Date.Date,
+            IsEnabled = dto.IsEnabled,
+            Remarks = dto.Remarks ?? string.Empty
+        };
+
+        // 保存到数据库
+        var id = await _constraintRepo.AddManualAssignmentAsync(assignment);
+
+        // 返回DTO
+        return new ManualAssignmentDto
+        {
+            Id = id,
+            PositionId = assignment.PositionId,
+            PositionName = position.Name,
+            TimeSlot = assignment.PeriodIndex,
+            PersonnelId = assignment.PersonalId,
+            PersonnelName = personnel.Name,
+            Date = assignment.Date,
+            IsEnabled = assignment.IsEnabled,
+            Remarks = assignment.Remarks,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
+
     private static void ValidateRequest(SchedulingRequestDto request)
     {
         if (string.IsNullOrWhiteSpace(request.Title)) throw new ArgumentException("排班标题不能为空", nameof(request));
