@@ -87,6 +87,31 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISchedulingService, SchedulingService>();
         services.AddSingleton<IStoragePathService, StoragePathService>();
 
+        // 注册数据导入导出相关服务
+        // Register data validation service
+        services.AddSingleton<Services.ImportExport.IDataValidationService>(sp =>
+        {
+            var logger = new AutoScheduling3.Data.Logging.DebugLogger("DataValidation");
+            return new Services.ImportExport.DataValidationService(logger);
+        });
+
+        // Register data export service
+        services.AddSingleton<Services.ImportExport.IDataExportService>(sp =>
+        {
+            var logger = new AutoScheduling3.Data.Logging.DebugLogger("DataExport");
+            return new Services.ImportExport.DataExportService(
+                sp.GetRequiredService<IPersonalRepository>(),
+                sp.GetRequiredService<IPositionRepository>(),
+                sp.GetRequiredService<ISkillRepository>(),
+                sp.GetRequiredService<ITemplateRepository>(),
+                sp.GetRequiredService<IConstraintRepository>(),
+                logger
+            );
+        });
+
+        // Register data mapping service
+        services.AddSingleton<Services.ImportExport.IDataMappingService, Services.ImportExport.DataMappingService>();
+
         // 注册数据导入导出服务
         services.AddSingleton<IDataImportExportService>(sp =>
         {
@@ -98,7 +123,10 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<ITemplateRepository>(),
                 sp.GetRequiredService<IConstraintRepository>(),
                 sp.GetRequiredService<DatabaseBackupManager>(),
-                logger
+                logger,
+                sp.GetRequiredService<Services.ImportExport.IDataValidationService>(),
+                sp.GetRequiredService<Services.ImportExport.IDataExportService>(),
+                sp.GetRequiredService<Services.ImportExport.IDataMappingService>()
             );
         });
 

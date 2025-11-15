@@ -21,7 +21,16 @@ using Microsoft.Data.Sqlite;
 namespace AutoScheduling3.Services;
 
 /// <summary>
-/// 数据导入导出服务实现
+/// 数据导入导出服务实现 - 作为协调器协调导入导出流程
+/// 
+/// 职责：
+/// - 协调导入导出流程
+/// - 管理事务和锁
+/// - 处理进度报告
+/// - 错误处理和日志记录
+/// - 审计日志记录
+/// 
+/// 注意：具体的验证、导出和映射逻辑已迁移到专门的服务中
 /// </summary>
 public class DataImportExportService : IDataImportExportService
 {
@@ -34,6 +43,11 @@ public class DataImportExportService : IDataImportExportService
     private readonly ILogger _logger;
     private readonly OperationAuditLogger _auditLogger;
     private readonly JsonSerializerOptions _jsonOptions;
+    
+    // 新增的专门服务
+    private readonly IDataValidationService _validationService;
+    private readonly IDataExportService _exportService;
+    private readonly IDataMappingService _mappingService;
 
     /// <summary>
     /// 初始化数据导入导出服务
@@ -45,6 +59,9 @@ public class DataImportExportService : IDataImportExportService
     /// <param name="constraintRepository">约束仓储</param>
     /// <param name="backupManager">数据库备份管理器</param>
     /// <param name="logger">日志记录器</param>
+    /// <param name="validationService">数据验证服务</param>
+    /// <param name="exportService">数据导出服务</param>
+    /// <param name="mappingService">数据映射服务</param>
     public DataImportExportService(
         IPersonalRepository personnelRepository,
         IPositionRepository positionRepository,
@@ -52,7 +69,10 @@ public class DataImportExportService : IDataImportExportService
         ITemplateRepository templateRepository,
         IConstraintRepository constraintRepository,
         DatabaseBackupManager backupManager,
-        ILogger logger)
+        ILogger logger,
+        IDataValidationService validationService,
+        IDataExportService exportService,
+        IDataMappingService mappingService)
     {
         _personnelRepository = personnelRepository ?? throw new ArgumentNullException(nameof(personnelRepository));
         _positionRepository = positionRepository ?? throw new ArgumentNullException(nameof(positionRepository));
@@ -61,6 +81,9 @@ public class DataImportExportService : IDataImportExportService
         _constraintRepository = constraintRepository ?? throw new ArgumentNullException(nameof(constraintRepository));
         _backupManager = backupManager ?? throw new ArgumentNullException(nameof(backupManager));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
+        _exportService = exportService ?? throw new ArgumentNullException(nameof(exportService));
+        _mappingService = mappingService ?? throw new ArgumentNullException(nameof(mappingService));
         _auditLogger = new OperationAuditLogger();
         _jsonOptions = new JsonSerializerOptions
         {
@@ -111,19 +134,22 @@ public class DataImportExportService : IDataImportExportService
             }
             
             // 1. 创建导出数据对象
+            // 使用 DataExportService 获取版本信息
             var exportData = new ExportData
             {
                 Metadata = new ExportMetadata
                 {
                     ExportedAt = DateTime.UtcNow,
-                    DatabaseVersion = await GetDatabaseVersionAsync(),
-                    ApplicationVersion = GetApplicationVersion()
+                    DatabaseVersion = await _exportService.GetDatabaseVersionAsync(),
+                    ApplicationVersion = _exportService.GetApplicationVersion()
                 }
             };
             
             _logger.Log("Export metadata created");
             
             // 2. 按表导出数据（带进度报告）
+            // 使用 DataExportService 导出各表数据
+            
             // 导出技能
             progress?.Report(new ExportProgress 
             { 
@@ -132,7 +158,7 @@ public class DataImportExportService : IDataImportExportService
                 TotalRecords = 0,
                 PercentComplete = 0 
             });
-            exportData.Skills = await ExportSkillsAsync();
+            exportData.Skills = await _exportService.ExportSkillsAsync();
             _logger.Log($"Exported {exportData.Skills.Count} skills");
             
             // 导出人员
@@ -143,7 +169,7 @@ public class DataImportExportService : IDataImportExportService
                 TotalRecords = 0,
                 PercentComplete = 20 
             });
-            exportData.Personnel = await ExportPersonnelAsync();
+            exportData.Personnel = await _exportService.ExportPersonnelAsync();
             _logger.Log($"Exported {exportData.Personnel.Count} personnel");
             
             // 导出哨位
@@ -154,7 +180,7 @@ public class DataImportExportService : IDataImportExportService
                 TotalRecords = 0,
                 PercentComplete = 40 
             });
-            exportData.Positions = await ExportPositionsAsync();
+            exportData.Positions = await _exportService.ExportPositionsAsync();
             _logger.Log($"Exported {exportData.Positions.Count} positions");
             
             // 导出模板
@@ -165,7 +191,7 @@ public class DataImportExportService : IDataImportExportService
                 TotalRecords = 0,
                 PercentComplete = 60 
             });
-            exportData.Templates = await ExportTemplatesAsync();
+            exportData.Templates = await _exportService.ExportTemplatesAsync();
             _logger.Log($"Exported {exportData.Templates.Count} templates");
             
             // 导出约束
@@ -176,15 +202,16 @@ public class DataImportExportService : IDataImportExportService
                 TotalRecords = 0,
                 PercentComplete = 80 
             });
-            exportData.FixedAssignments = await ExportFixedAssignmentsAsync();
-            exportData.ManualAssignments = await ExportManualAssignmentsAsync();
-            exportData.HolidayConfigs = await ExportHolidayConfigsAsync();
+            exportData.FixedAssignments = await _exportService.ExportFixedAssignmentsAsync();
+            exportData.ManualAssignments = await _exportService.ExportManualAssignmentsAsync();
+            exportData.HolidayConfigs = await _exportService.ExportHolidayConfigsAsync();
             _logger.Log($"Exported {exportData.FixedAssignments.Count} fixed assignments, " +
                        $"{exportData.ManualAssignments.Count} manual assignments, " +
                        $"{exportData.HolidayConfigs.Count} holiday configs");
             
             // 3. 更新统计信息
-            exportData.Metadata.Statistics = CalculateStatistics(exportData);
+            // 使用 DataExportService 计算统计信息
+            exportData.Metadata.Statistics = _exportService.CalculateStatistics(exportData);
             _logger.Log("Statistics calculated");
             
             // 4. 序列化为 JSON
@@ -288,6 +315,8 @@ public class DataImportExportService : IDataImportExportService
         };
         
         ImportLockManager? lockManager = null;
+        ImportContext? context = null;
+        ImportErrorContext? tempErrorContext = null;
         
         try
         {
@@ -312,7 +341,7 @@ public class DataImportExportService : IDataImportExportService
             _logger.Log("Import lock acquired successfully");
             
             // 2. 读取并解析 JSON 文件
-            var tempErrorContext = new ImportErrorContext
+            tempErrorContext = new ImportErrorContext
             {
                 CurrentOperation = "Reading file",
                 OperationStartTime = startTime
@@ -416,7 +445,7 @@ public class DataImportExportService : IDataImportExportService
             _logger.Log("Database transaction started");
             _auditLogger.LogTransactionStart();
             
-            var context = new ImportContext
+            context = new ImportContext
             {
                 Connection = connection,
                 Transaction = transaction,
@@ -813,1410 +842,20 @@ public class DataImportExportService : IDataImportExportService
     {
         _logger.Log($"Starting data validation for: {filePath}");
         
-        var result = new ValidationResult
-        {
-            IsValid = true,
-            Errors = new List<ValidationError>(),
-            Warnings = new List<ValidationWarning>()
-        };
+        // 委托给验证服务
+        var result = await _validationService.ValidateImportDataAsync(filePath);
         
-        try
-        {
-            // 1. 验证文件存在性
-            if (!File.Exists(filePath))
-            {
-                result.IsValid = false;
-                result.Errors.Add(new ValidationError
-                {
-                    Table = "File",
-                    Message = $"文件不存在: {filePath}",
-                    Type = ValidationErrorType.MissingField
-                });
-                return result;
-            }
-            
-            // 2. 读取并解析 JSON 文件
-            string json;
-            try
-            {
-                json = await File.ReadAllTextAsync(filePath);
-            }
-            catch (Exception ex)
-            {
-                result.IsValid = false;
-                result.Errors.Add(new ValidationError
-                {
-                    Table = "File",
-                    Message = $"无法读取文件: {ex.Message}",
-                    Type = ValidationErrorType.InvalidDataType
-                });
-                return result;
-            }
-            
-            // 3. 验证 JSON 格式
-            ExportData? exportData;
-            try
-            {
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    PropertyNameCaseInsensitive = true
-                };
-                exportData = JsonSerializer.Deserialize<ExportData>(json, options);
-                
-                if (exportData == null)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "JSON",
-                        Message = "JSON 反序列化结果为空",
-                        Type = ValidationErrorType.InvalidDataType
-                    });
-                    return result;
-                }
-            }
-            catch (JsonException ex)
-            {
-                result.IsValid = false;
-                result.Errors.Add(new ValidationError
-                {
-                    Table = "JSON",
-                    Message = $"JSON 格式无效: {ex.Message}",
-                    Type = ValidationErrorType.InvalidDataType
-                });
-                return result;
-            }
-            
-            // 4. 验证元数据
-            if (exportData.Metadata == null)
-            {
-                result.Warnings.Add(new ValidationWarning
-                {
-                    Table = "Metadata",
-                    Message = "缺少元数据信息"
-                });
-            }
-            else
-            {
-                result.Metadata = exportData.Metadata;
-            }
-            
-            // 5. 验证必需字段和数据类型
-            ValidateRequiredFields(exportData, result);
-            
-            // 6. 验证数据约束
-            ValidateDataConstraints(exportData, result);
-            
-            // 7. 验证外键引用
-            await ValidateForeignKeyReferences(exportData, result);
-            
-            _logger.Log($"Validation completed. IsValid: {result.IsValid}, Errors: {result.Errors.Count}, Warnings: {result.Warnings.Count}");
-            
-            // 记录审计日志
-            _auditLogger.LogValidationOperation(filePath, result);
-        }
-        catch (Exception ex)
-        {
-            // 记录详细的技术错误信息
-            _logger.LogError($"Validation failed with exception: {ex.Message}");
-            _logger.LogError($"Detailed error info: {ErrorMessageTranslator.GetDetailedErrorInfo(ex)}");
-            
-            // 转换为用户友好的错误消息
-            var userFriendlyMessage = ErrorMessageTranslator.TranslateException(ex, "数据验证");
-            
-            result.IsValid = false;
-            result.Errors.Add(new ValidationError
-            {
-                Table = "System",
-                Message = userFriendlyMessage,
-                Type = ValidationErrorType.InvalidValue
-            });
-            
-            // 记录审计日志
-            _auditLogger.LogErrorOperation("Validation", ex, filePath);
-            
-            // 获取并记录恢复建议
-            var suggestions = ErrorRecoverySuggester.GetRecoverySuggestions(ex, "验证");
-            var formattedSuggestions = ErrorRecoverySuggester.FormatSuggestions(suggestions);
-            _logger.Log($"Recovery suggestions: {formattedSuggestions}");
-        }
+        _logger.Log($"Validation completed. IsValid: {result.IsValid}, Errors: {result.Errors.Count}, Warnings: {result.Warnings.Count}");
+        
+        // 记录审计日志
+        _auditLogger.LogValidationOperation(filePath, result);
         
         return result;
     }
 
     #region Helper Methods for Export
-
-    /// <summary>
-    /// 获取数据库版本
-    /// </summary>
-    private async Task<int> GetDatabaseVersionAsync()
-    {
-        try
-        {
-            // 使用 SkillRepository 的连接字符串来访问数据库
-            // 由于我们没有直接访问连接字符串，我们将使用一个合理的默认值
-            // 在实际实现中，这应该从配置或数据库服务获取
-            return 1; // 当前数据库版本
-        }
-        catch (Exception ex)
-        {
-            _logger.Log($"Failed to get database version: {ex.Message}");
-            return 1; // 默认版本
-        }
-    }
-
-    /// <summary>
-    /// 获取应用程序版本
-    /// </summary>
-    private string GetApplicationVersion()
-    {
-        try
-        {
-            // 从程序集获取版本信息
-            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-            var version = assembly.GetName().Version;
-            return version?.ToString() ?? "1.0.0.0";
-        }
-        catch (Exception ex)
-        {
-            _logger.Log($"Failed to get application version: {ex.Message}");
-            return "1.0.0.0";
-        }
-    }
-
-    /// <summary>
-    /// 计算数据统计信息
-    /// </summary>
-    private DataStatistics CalculateStatistics(ExportData exportData)
-    {
-        return new DataStatistics
-        {
-            SkillCount = exportData.Skills?.Count ?? 0,
-            PersonnelCount = exportData.Personnel?.Count ?? 0,
-            PositionCount = exportData.Positions?.Count ?? 0,
-            TemplateCount = exportData.Templates?.Count ?? 0,
-            ConstraintCount = (exportData.FixedAssignments?.Count ?? 0) +
-                            (exportData.ManualAssignments?.Count ?? 0) +
-                            (exportData.HolidayConfigs?.Count ?? 0)
-        };
-    }
-
-    /// <summary>
-    /// 导出技能数据
-    /// </summary>
-    private async Task<List<SkillDto>> ExportSkillsAsync()
-    {
-        try
-        {
-            var skills = await _skillRepository.GetAllAsync();
-            return skills.Select(s => new SkillDto
-            {
-                Id = s.Id,
-                Name = s.Name,
-                Description = s.Description,
-                IsActive = s.IsActive,
-                CreatedAt = s.CreatedAt,
-                UpdatedAt = s.UpdatedAt
-            }).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Failed to export skills: {ex.Message}");
-            _logger.LogError($"Details: {ErrorMessageTranslator.GetDetailedErrorInfo(ex)}");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// 导出人员数据
-    /// </summary>
-    private async Task<List<PersonnelDto>> ExportPersonnelAsync()
-    {
-        try
-        {
-            var personnel = await _personnelRepository.GetAllAsync();
-            return personnel.Select(p => new PersonnelDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                SkillIds = p.SkillIds,
-                IsAvailable = p.IsAvailable,
-                IsRetired = p.IsRetired,
-                RecentShiftIntervalCount = p.RecentShiftIntervalCount,
-                RecentHolidayShiftIntervalCount = p.RecentHolidayShiftIntervalCount,
-                RecentPeriodShiftIntervals = p.RecentPeriodShiftIntervals
-            }).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Failed to export personnel: {ex.Message}");
-            _logger.LogError($"Details: {ErrorMessageTranslator.GetDetailedErrorInfo(ex)}");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// 导出哨位数据
-    /// </summary>
-    private async Task<List<PositionDto>> ExportPositionsAsync()
-    {
-        try
-        {
-            var positions = await _positionRepository.GetAllAsync();
-            return positions.Select(p => new PositionDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Location = p.Location,
-                Description = p.Description,
-                Requirements = p.Requirements,
-                RequiredSkillIds = p.RequiredSkillIds,
-                AvailablePersonnelIds = p.AvailablePersonnelIds,
-                IsActive = p.IsActive,
-                CreatedAt = p.CreatedAt,
-                UpdatedAt = p.UpdatedAt
-            }).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Failed to export positions: {ex.Message}");
-            _logger.LogError($"Details: {ErrorMessageTranslator.GetDetailedErrorInfo(ex)}");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// 导出排班模板数据
-    /// </summary>
-    private async Task<List<SchedulingTemplateDto>> ExportTemplatesAsync()
-    {
-        try
-        {
-            var templates = await _templateRepository.GetAllAsync();
-            return templates.Select(t => new SchedulingTemplateDto
-            {
-                Id = t.Id,
-                Name = t.Name,
-                Description = t.Description,
-                TemplateType = t.TemplateType,
-                IsDefault = t.IsDefault,
-                PersonnelIds = t.PersonnelIds,
-                PositionIds = t.PositionIds,
-                HolidayConfigId = t.HolidayConfigId,
-                UseActiveHolidayConfig = t.UseActiveHolidayConfig,
-                EnabledFixedRuleIds = t.EnabledFixedRuleIds,
-                EnabledManualAssignmentIds = t.EnabledManualAssignmentIds,
-                DurationDays = t.DurationDays,
-                StrategyConfig = t.StrategyConfig,
-                UsageCount = t.UsageCount,
-                IsActive = t.IsActive,
-                CreatedAt = t.CreatedAt,
-                UpdatedAt = t.UpdatedAt,
-                LastUsedAt = t.LastUsedAt
-            }).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Failed to export templates: {ex.Message}");
-            _logger.LogError($"Details: {ErrorMessageTranslator.GetDetailedErrorInfo(ex)}");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// 导出固定分配约束数据
-    /// </summary>
-    private async Task<List<FixedAssignmentDto>> ExportFixedAssignmentsAsync()
-    {
-        try
-        {
-            var fixedAssignments = await _constraintRepository.GetAllFixedPositionRulesAsync(enabledOnly: false);
-            return fixedAssignments.Select(f => new FixedAssignmentDto
-            {
-                Id = f.Id,
-                PersonnelId = f.PersonalId,
-                AllowedPositionIds = f.AllowedPositionIds,
-                AllowedTimeSlots = f.AllowedPeriods,
-                StartDate = DateTime.MinValue, // Not stored in database
-                EndDate = DateTime.MaxValue, // Not stored in database
-                IsEnabled = f.IsEnabled,
-                RuleName = $"Rule_{f.Id}",
-                Description = f.Description,
-                CreatedAt = DateTime.UtcNow, // Not stored in database
-                UpdatedAt = DateTime.UtcNow // Not stored in database
-            }).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Failed to export fixed assignments: {ex.Message}");
-            _logger.LogError($"Details: {ErrorMessageTranslator.GetDetailedErrorInfo(ex)}");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// 导出手动分配约束数据
-    /// </summary>
-    private async Task<List<ManualAssignmentDto>> ExportManualAssignmentsAsync()
-    {
-        try
-        {
-            // Get manual assignments for a wide date range to capture all records
-            var startDate = DateTime.Now.AddYears(-10);
-            var endDate = DateTime.Now.AddYears(10);
-            var manualAssignments = await _constraintRepository.GetManualAssignmentsByDateRangeAsync(startDate, endDate, enabledOnly: false);
-            return manualAssignments.Select(m => new ManualAssignmentDto
-            {
-                Id = m.Id,
-                PositionId = m.PositionId,
-                TimeSlot = m.PeriodIndex,
-                PersonnelId = m.PersonalId,
-                Date = m.Date,
-                IsEnabled = m.IsEnabled,
-                Remarks = m.Remarks,
-                CreatedAt = DateTime.UtcNow, // Not stored in database
-                UpdatedAt = DateTime.UtcNow // Not stored in database
-            }).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Failed to export manual assignments: {ex.Message}");
-            _logger.LogError($"Details: {ErrorMessageTranslator.GetDetailedErrorInfo(ex)}");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// 导出节假日配置数据
-    /// </summary>
-    private async Task<List<HolidayConfigDto>> ExportHolidayConfigsAsync()
-    {
-        try
-        {
-            var holidayConfigs = await _constraintRepository.GetAllHolidayConfigsAsync();
-            return holidayConfigs.Select(h => new HolidayConfigDto
-            {
-                Id = h.Id,
-                ConfigName = h.ConfigName,
-                EnableWeekendRule = h.EnableWeekendRule,
-                WeekendDays = h.WeekendDays,
-                LegalHolidays = h.LegalHolidays,
-                CustomHolidays = h.CustomHolidays,
-                ExcludedDates = h.ExcludedDates,
-                IsActive = h.IsActive
-            }).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Failed to export holiday configs: {ex.Message}");
-            _logger.LogError($"Details: {ErrorMessageTranslator.GetDetailedErrorInfo(ex)}");
-            throw;
-        }
-    }
-
-    #endregion
-
-    #region Validation Helper Methods
-
-    /// <summary>
-    /// 验证必需字段存在性和数据类型
-    /// </summary>
-    private void ValidateRequiredFields(ExportData exportData, ValidationResult result)
-    {
-        // 验证 Skills
-        if (exportData.Skills != null)
-        {
-            for (int i = 0; i < exportData.Skills.Count; i++)
-            {
-                var skill = exportData.Skills[i];
-                
-                if (string.IsNullOrWhiteSpace(skill.Name))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Skills",
-                        RecordId = skill.Id,
-                        Field = "Name",
-                        Message = $"技能名称不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-            }
-        }
-        
-        // 验证 Personnel
-        if (exportData.Personnel != null)
-        {
-            for (int i = 0; i < exportData.Personnel.Count; i++)
-            {
-                var personnel = exportData.Personnel[i];
-                
-                if (string.IsNullOrWhiteSpace(personnel.Name))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Personnel",
-                        RecordId = personnel.Id,
-                        Field = "Name",
-                        Message = $"人员名称不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-                
-                if (personnel.SkillIds == null)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Personnel",
-                        RecordId = personnel.Id,
-                        Field = "SkillIds",
-                        Message = $"人员技能列表不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-                
-                if (personnel.RecentPeriodShiftIntervals == null)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Personnel",
-                        RecordId = personnel.Id,
-                        Field = "RecentPeriodShiftIntervals",
-                        Message = $"人员班次间隔数组不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-            }
-        }
-        
-        // 验证 Positions
-        if (exportData.Positions != null)
-        {
-            for (int i = 0; i < exportData.Positions.Count; i++)
-            {
-                var position = exportData.Positions[i];
-                
-                if (string.IsNullOrWhiteSpace(position.Name))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Positions",
-                        RecordId = position.Id,
-                        Field = "Name",
-                        Message = $"哨位名称不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-                
-                if (string.IsNullOrWhiteSpace(position.Location))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Positions",
-                        RecordId = position.Id,
-                        Field = "Location",
-                        Message = $"哨位地点不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-                
-                if (position.RequiredSkillIds == null)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Positions",
-                        RecordId = position.Id,
-                        Field = "RequiredSkillIds",
-                        Message = $"哨位所需技能列表不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-                
-                if (position.AvailablePersonnelIds == null)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Positions",
-                        RecordId = position.Id,
-                        Field = "AvailablePersonnelIds",
-                        Message = $"哨位可用人员列表不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-            }
-        }
-        
-        // 验证 Templates
-        if (exportData.Templates != null)
-        {
-            for (int i = 0; i < exportData.Templates.Count; i++)
-            {
-                var template = exportData.Templates[i];
-                
-                if (string.IsNullOrWhiteSpace(template.Name))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Templates",
-                        RecordId = template.Id,
-                        Field = "Name",
-                        Message = $"模板名称不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-            }
-        }
-        
-        // 验证 FixedAssignments
-        if (exportData.FixedAssignments != null)
-        {
-            for (int i = 0; i < exportData.FixedAssignments.Count; i++)
-            {
-                var assignment = exportData.FixedAssignments[i];
-                
-                if (assignment.AllowedPositionIds == null)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "FixedAssignments",
-                        RecordId = assignment.Id,
-                        Field = "AllowedPositionIds",
-                        Message = $"固定分配允许哨位列表不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-                
-                if (assignment.AllowedTimeSlots == null)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "FixedAssignments",
-                        RecordId = assignment.Id,
-                        Field = "AllowedTimeSlots",
-                        Message = $"固定分配允许时间段列表不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-            }
-        }
-        
-        // 验证 HolidayConfigs
-        if (exportData.HolidayConfigs != null)
-        {
-            for (int i = 0; i < exportData.HolidayConfigs.Count; i++)
-            {
-                var config = exportData.HolidayConfigs[i];
-                
-                if (string.IsNullOrWhiteSpace(config.ConfigName))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "HolidayConfigs",
-                        RecordId = config.Id,
-                        Field = "ConfigName",
-                        Message = $"节假日配置名称不能为空 (记录索引: {i})",
-                        Type = ValidationErrorType.MissingField
-                    });
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// 验证数据约束（字符串长度、数值范围、唯一性）
-    /// </summary>
-    private void ValidateDataConstraints(ExportData exportData, ValidationResult result)
-    {
-        // 验证 Skills 约束
-        if (exportData.Skills != null)
-        {
-            var skillIds = new HashSet<int>();
-            var skillNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var duplicateNames = new List<string>();
-            
-            for (int i = 0; i < exportData.Skills.Count; i++)
-            {
-                var skill = exportData.Skills[i];
-                
-                // 验证主键重复（需求 10.5, 11.5）
-                if (skillIds.Contains(skill.Id))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Skills",
-                        RecordId = skill.Id,
-                        Field = "Id",
-                        Message = $"技能主键ID重复: {skill.Id} (记录索引: {i})",
-                        Type = ValidationErrorType.DuplicateKey
-                    });
-                }
-                else
-                {
-                    skillIds.Add(skill.Id);
-                }
-                
-                // 验证名称长度
-                if (!string.IsNullOrWhiteSpace(skill.Name))
-                {
-                    if (skill.Name.Length > 50)
-                    {
-                        result.IsValid = false;
-                        result.Errors.Add(new ValidationError
-                        {
-                            Table = "Skills",
-                            RecordId = skill.Id,
-                            Field = "Name",
-                            Message = $"技能名称长度不能超过50字符 (当前: {skill.Name.Length}, 记录索引: {i})",
-                            Type = ValidationErrorType.ConstraintViolation
-                        });
-                    }
-                    
-                    // 检测重复名称并记录警告（需求 11.2, 11.3）
-                    if (skillNames.Contains(skill.Name))
-                    {
-                        if (!duplicateNames.Contains(skill.Name))
-                        {
-                            duplicateNames.Add(skill.Name);
-                        }
-                    }
-                    else
-                    {
-                        skillNames.Add(skill.Name);
-                    }
-                }
-                
-                // 验证描述长度
-                if (!string.IsNullOrWhiteSpace(skill.Description) && skill.Description.Length > 200)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Skills",
-                        RecordId = skill.Id,
-                        Field = "Description",
-                        Message = $"技能描述长度不能超过200字符 (当前: {skill.Description.Length}, 记录索引: {i})",
-                        Type = ValidationErrorType.ConstraintViolation
-                    });
-                }
-            }
-            
-            // 记录重复名称警告（不阻止导入）
-            foreach (var duplicateName in duplicateNames)
-            {
-                result.Warnings.Add(new ValidationWarning
-                {
-                    Table = "Skills",
-                    Message = $"检测到重复的技能名称: {duplicateName}。记录将通过主键ID进行匹配。"
-                });
-            }
-        }
-        
-        // 验证 Personnel 约束
-        if (exportData.Personnel != null)
-        {
-            var personnelIds = new HashSet<int>();
-            var personnelNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var duplicatePersonnelNames = new List<string>();
-            
-            for (int i = 0; i < exportData.Personnel.Count; i++)
-            {
-                var personnel = exportData.Personnel[i];
-                
-                // 验证主键重复（需求 10.5, 11.5）
-                if (personnelIds.Contains(personnel.Id))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Personnel",
-                        RecordId = personnel.Id,
-                        Field = "Id",
-                        Message = $"人员主键ID重复: {personnel.Id} (记录索引: {i})",
-                        Type = ValidationErrorType.DuplicateKey
-                    });
-                }
-                else
-                {
-                    personnelIds.Add(personnel.Id);
-                }
-                
-                // 验证名称长度（假设最大100字符）
-                if (!string.IsNullOrWhiteSpace(personnel.Name))
-                {
-                    if (personnel.Name.Length > 100)
-                    {
-                        result.IsValid = false;
-                        result.Errors.Add(new ValidationError
-                        {
-                            Table = "Personnel",
-                            RecordId = personnel.Id,
-                            Field = "Name",
-                            Message = $"人员名称长度不能超过100字符 (当前: {personnel.Name.Length}, 记录索引: {i})",
-                            Type = ValidationErrorType.ConstraintViolation
-                        });
-                    }
-                    
-                    // 检测重复名称并记录警告（需求 11.2, 11.3）
-                    if (personnelNames.Contains(personnel.Name))
-                    {
-                        if (!duplicatePersonnelNames.Contains(personnel.Name))
-                        {
-                            duplicatePersonnelNames.Add(personnel.Name);
-                        }
-                    }
-                    else
-                    {
-                        personnelNames.Add(personnel.Name);
-                    }
-                }
-                
-                // 验证数值范围
-                if (personnel.RecentShiftIntervalCount < 0)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Personnel",
-                        RecordId = personnel.Id,
-                        Field = "RecentShiftIntervalCount",
-                        Message = $"班次间隔计数不能为负数 (当前: {personnel.RecentShiftIntervalCount}, 记录索引: {i})",
-                        Type = ValidationErrorType.InvalidValue
-                    });
-                }
-                
-                if (personnel.RecentHolidayShiftIntervalCount < 0)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Personnel",
-                        RecordId = personnel.Id,
-                        Field = "RecentHolidayShiftIntervalCount",
-                        Message = $"节假日班次间隔计数不能为负数 (当前: {personnel.RecentHolidayShiftIntervalCount}, 记录索引: {i})",
-                        Type = ValidationErrorType.InvalidValue
-                    });
-                }
-                
-                // 验证数组长度
-                if (personnel.RecentPeriodShiftIntervals != null && personnel.RecentPeriodShiftIntervals.Length != 12)
-                {
-                    result.Warnings.Add(new ValidationWarning
-                    {
-                        Table = "Personnel",
-                        Message = $"人员 {personnel.Name} 的班次间隔数组长度应为12 (当前: {personnel.RecentPeriodShiftIntervals.Length}, 记录索引: {i})"
-                    });
-                }
-            }
-            
-            // 记录重复名称警告（不阻止导入）
-            foreach (var duplicateName in duplicatePersonnelNames)
-            {
-                result.Warnings.Add(new ValidationWarning
-                {
-                    Table = "Personnel",
-                    Message = $"检测到重复的人员名称: {duplicateName}。记录将通过主键ID进行匹配。"
-                });
-            }
-        }
-        
-        // 验证 Positions 约束
-        if (exportData.Positions != null)
-        {
-            var positionIds = new HashSet<int>();
-            var positionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var duplicatePositionNames = new List<string>();
-            
-            for (int i = 0; i < exportData.Positions.Count; i++)
-            {
-                var position = exportData.Positions[i];
-                
-                // 验证主键重复（需求 10.5, 11.5）
-                if (positionIds.Contains(position.Id))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Positions",
-                        RecordId = position.Id,
-                        Field = "Id",
-                        Message = $"哨位主键ID重复: {position.Id} (记录索引: {i})",
-                        Type = ValidationErrorType.DuplicateKey
-                    });
-                }
-                else
-                {
-                    positionIds.Add(position.Id);
-                }
-                
-                // 验证名称长度
-                if (!string.IsNullOrWhiteSpace(position.Name))
-                {
-                    if (position.Name.Length > 100)
-                    {
-                        result.IsValid = false;
-                        result.Errors.Add(new ValidationError
-                        {
-                            Table = "Positions",
-                            RecordId = position.Id,
-                            Field = "Name",
-                            Message = $"哨位名称长度不能超过100字符 (当前: {position.Name.Length}, 记录索引: {i})",
-                            Type = ValidationErrorType.ConstraintViolation
-                        });
-                    }
-                    
-                    // 检测重复名称并记录警告（需求 11.2, 11.3）
-                    if (positionNames.Contains(position.Name))
-                    {
-                        if (!duplicatePositionNames.Contains(position.Name))
-                        {
-                            duplicatePositionNames.Add(position.Name);
-                        }
-                    }
-                    else
-                    {
-                        positionNames.Add(position.Name);
-                    }
-                }
-                
-                // 验证地点长度
-                if (!string.IsNullOrWhiteSpace(position.Location) && position.Location.Length > 200)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Positions",
-                        RecordId = position.Id,
-                        Field = "Location",
-                        Message = $"哨位地点长度不能超过200字符 (当前: {position.Location.Length}, 记录索引: {i})",
-                        Type = ValidationErrorType.ConstraintViolation
-                    });
-                }
-                
-                // 验证描述长度
-                if (!string.IsNullOrWhiteSpace(position.Description) && position.Description.Length > 500)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Positions",
-                        RecordId = position.Id,
-                        Field = "Description",
-                        Message = $"哨位描述长度不能超过500字符 (当前: {position.Description.Length}, 记录索引: {i})",
-                        Type = ValidationErrorType.ConstraintViolation
-                    });
-                }
-                
-                // 验证要求长度
-                if (!string.IsNullOrWhiteSpace(position.Requirements) && position.Requirements.Length > 1000)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Positions",
-                        RecordId = position.Id,
-                        Field = "Requirements",
-                        Message = $"哨位要求长度不能超过1000字符 (当前: {position.Requirements.Length}, 记录索引: {i})",
-                        Type = ValidationErrorType.ConstraintViolation
-                    });
-                }
-            }
-            
-            // 记录重复名称警告（不阻止导入）
-            foreach (var duplicateName in duplicatePositionNames)
-            {
-                result.Warnings.Add(new ValidationWarning
-                {
-                    Table = "Positions",
-                    Message = $"检测到重复的哨位名称: {duplicateName}。记录将通过主键ID进行匹配。"
-                });
-            }
-        }
-        
-        // 验证 Templates 约束
-        if (exportData.Templates != null)
-        {
-            var templateIds = new HashSet<int>();
-            var templateNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var duplicateTemplateNames = new List<string>();
-            
-            for (int i = 0; i < exportData.Templates.Count; i++)
-            {
-                var template = exportData.Templates[i];
-                
-                // 验证主键重复（需求 10.5, 11.5）
-                if (templateIds.Contains(template.Id))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Templates",
-                        RecordId = template.Id,
-                        Field = "Id",
-                        Message = $"模板主键ID重复: {template.Id} (记录索引: {i})",
-                        Type = ValidationErrorType.DuplicateKey
-                    });
-                }
-                else
-                {
-                    templateIds.Add(template.Id);
-                }
-                
-                // 验证名称长度
-                if (!string.IsNullOrWhiteSpace(template.Name))
-                {
-                    if (template.Name.Length > 100)
-                    {
-                        result.IsValid = false;
-                        result.Errors.Add(new ValidationError
-                        {
-                            Table = "Templates",
-                            RecordId = template.Id,
-                            Field = "Name",
-                            Message = $"模板名称长度不能超过100字符 (当前: {template.Name.Length}, 记录索引: {i})",
-                            Type = ValidationErrorType.ConstraintViolation
-                        });
-                    }
-                    
-                    // 检测重复名称并记录警告（需求 11.2, 11.3）
-                    if (templateNames.Contains(template.Name))
-                    {
-                        if (!duplicateTemplateNames.Contains(template.Name))
-                        {
-                            duplicateTemplateNames.Add(template.Name);
-                        }
-                    }
-                    else
-                    {
-                        templateNames.Add(template.Name);
-                    }
-                }
-                
-                // 验证描述长度
-                if (!string.IsNullOrWhiteSpace(template.Description) && template.Description.Length > 500)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Templates",
-                        RecordId = template.Id,
-                        Field = "Description",
-                        Message = $"模板描述长度不能超过500字符 (当前: {template.Description.Length}, 记录索引: {i})",
-                        Type = ValidationErrorType.ConstraintViolation
-                    });
-                }
-                
-                // 验证持续天数
-                if (template.DurationDays <= 0)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "Templates",
-                        RecordId = template.Id,
-                        Field = "DurationDays",
-                        Message = $"模板持续天数必须大于0 (当前: {template.DurationDays}, 记录索引: {i})",
-                        Type = ValidationErrorType.InvalidValue
-                    });
-                }
-            }
-            
-            // 记录重复名称警告（不阻止导入）
-            foreach (var duplicateName in duplicateTemplateNames)
-            {
-                result.Warnings.Add(new ValidationWarning
-                {
-                    Table = "Templates",
-                    Message = $"检测到重复的模板名称: {duplicateName}。记录将通过主键ID进行匹配。"
-                });
-            }
-        }
-        
-        // 验证 FixedAssignments 约束
-        if (exportData.FixedAssignments != null)
-        {
-            var fixedAssignmentIds = new HashSet<int>();
-            
-            for (int i = 0; i < exportData.FixedAssignments.Count; i++)
-            {
-                var assignment = exportData.FixedAssignments[i];
-                
-                // 验证主键重复（需求 10.5, 11.5）
-                if (fixedAssignmentIds.Contains(assignment.Id))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "FixedAssignments",
-                        RecordId = assignment.Id,
-                        Field = "Id",
-                        Message = $"固定分配主键ID重复: {assignment.Id} (记录索引: {i})",
-                        Type = ValidationErrorType.DuplicateKey
-                    });
-                }
-                else
-                {
-                    fixedAssignmentIds.Add(assignment.Id);
-                }
-            }
-        }
-        
-        // 验证 ManualAssignments 约束
-        if (exportData.ManualAssignments != null)
-        {
-            var manualAssignmentIds = new HashSet<int>();
-            
-            for (int i = 0; i < exportData.ManualAssignments.Count; i++)
-            {
-                var assignment = exportData.ManualAssignments[i];
-                
-                // 验证主键重复（需求 10.5, 11.5）
-                if (manualAssignmentIds.Contains(assignment.Id))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "ManualAssignments",
-                        RecordId = assignment.Id,
-                        Field = "Id",
-                        Message = $"手动分配主键ID重复: {assignment.Id} (记录索引: {i})",
-                        Type = ValidationErrorType.DuplicateKey
-                    });
-                }
-                else
-                {
-                    manualAssignmentIds.Add(assignment.Id);
-                }
-            }
-        }
-        
-        // 验证 HolidayConfigs 约束
-        if (exportData.HolidayConfigs != null)
-        {
-            var holidayConfigIds = new HashSet<int>();
-            var holidayConfigNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var duplicateHolidayConfigNames = new List<string>();
-            
-            for (int i = 0; i < exportData.HolidayConfigs.Count; i++)
-            {
-                var config = exportData.HolidayConfigs[i];
-                
-                // 验证主键重复（需求 10.5, 11.5）
-                if (holidayConfigIds.Contains(config.Id))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "HolidayConfigs",
-                        RecordId = config.Id,
-                        Field = "Id",
-                        Message = $"节假日配置主键ID重复: {config.Id} (记录索引: {i})",
-                        Type = ValidationErrorType.DuplicateKey
-                    });
-                }
-                else
-                {
-                    holidayConfigIds.Add(config.Id);
-                }
-                
-                // 检测重复名称并记录警告（需求 11.2, 11.3）
-                if (!string.IsNullOrWhiteSpace(config.ConfigName))
-                {
-                    if (holidayConfigNames.Contains(config.ConfigName))
-                    {
-                        if (!duplicateHolidayConfigNames.Contains(config.ConfigName))
-                        {
-                            duplicateHolidayConfigNames.Add(config.ConfigName);
-                        }
-                    }
-                    else
-                    {
-                        holidayConfigNames.Add(config.ConfigName);
-                    }
-                }
-            }
-            
-            // 记录重复名称警告（不阻止导入）
-            foreach (var duplicateName in duplicateHolidayConfigNames)
-            {
-                result.Warnings.Add(new ValidationWarning
-                {
-                    Table = "HolidayConfigs",
-                    Message = $"检测到重复的节假日配置名称: {duplicateName}。记录将通过主键ID进行匹配。"
-                });
-            }
-        }
-    }
-
-    /// <summary>
-    /// 验证外键引用完整性
-    /// </summary>
-    private async Task ValidateForeignKeyReferences(ExportData exportData, ValidationResult result)
-    {
-        // 收集所有有效的 ID
-        var validSkillIds = new HashSet<int>();
-        var validPersonnelIds = new HashSet<int>();
-        var validPositionIds = new HashSet<int>();
-        var validHolidayConfigIds = new HashSet<int>();
-        
-        if (exportData.Skills != null)
-        {
-            foreach (var skill in exportData.Skills)
-            {
-                validSkillIds.Add(skill.Id);
-            }
-        }
-        
-        if (exportData.Personnel != null)
-        {
-            foreach (var personnel in exportData.Personnel)
-            {
-                validPersonnelIds.Add(personnel.Id);
-            }
-        }
-        
-        if (exportData.Positions != null)
-        {
-            foreach (var position in exportData.Positions)
-            {
-                validPositionIds.Add(position.Id);
-            }
-        }
-        
-        if (exportData.HolidayConfigs != null)
-        {
-            foreach (var config in exportData.HolidayConfigs)
-            {
-                validHolidayConfigIds.Add(config.Id);
-            }
-        }
-        
-        // 验证 Personnel.SkillIds 引用
-        if (exportData.Personnel != null)
-        {
-            for (int i = 0; i < exportData.Personnel.Count; i++)
-            {
-                var personnel = exportData.Personnel[i];
-                
-                if (personnel.SkillIds != null)
-                {
-                    foreach (var skillId in personnel.SkillIds)
-                    {
-                        if (!validSkillIds.Contains(skillId))
-                        {
-                            result.IsValid = false;
-                            result.Errors.Add(new ValidationError
-                            {
-                                Table = "Personnel",
-                                RecordId = personnel.Id,
-                                Field = "SkillIds",
-                                Message = $"人员 {personnel.Name} 引用了不存在的技能ID: {skillId} (记录索引: {i})",
-                                Type = ValidationErrorType.BrokenReference
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        
-        // 验证 Position.RequiredSkillIds 引用
-        if (exportData.Positions != null)
-        {
-            for (int i = 0; i < exportData.Positions.Count; i++)
-            {
-                var position = exportData.Positions[i];
-                
-                if (position.RequiredSkillIds != null)
-                {
-                    foreach (var skillId in position.RequiredSkillIds)
-                    {
-                        if (!validSkillIds.Contains(skillId))
-                        {
-                            result.IsValid = false;
-                            result.Errors.Add(new ValidationError
-                            {
-                                Table = "Positions",
-                                RecordId = position.Id,
-                                Field = "RequiredSkillIds",
-                                Message = $"哨位 {position.Name} 引用了不存在的技能ID: {skillId} (记录索引: {i})",
-                                Type = ValidationErrorType.BrokenReference
-                            });
-                        }
-                    }
-                }
-                
-                // 验证 Position.AvailablePersonnelIds 引用
-                if (position.AvailablePersonnelIds != null)
-                {
-                    foreach (var personnelId in position.AvailablePersonnelIds)
-                    {
-                        if (!validPersonnelIds.Contains(personnelId))
-                        {
-                            result.IsValid = false;
-                            result.Errors.Add(new ValidationError
-                            {
-                                Table = "Positions",
-                                RecordId = position.Id,
-                                Field = "AvailablePersonnelIds",
-                                Message = $"哨位 {position.Name} 引用了不存在的人员ID: {personnelId} (记录索引: {i})",
-                                Type = ValidationErrorType.BrokenReference
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        
-        // 验证 Template 中的引用
-        if (exportData.Templates != null)
-        {
-            for (int i = 0; i < exportData.Templates.Count; i++)
-            {
-                var template = exportData.Templates[i];
-                
-                // 验证 PersonnelIds
-                if (template.PersonnelIds != null)
-                {
-                    foreach (var personnelId in template.PersonnelIds)
-                    {
-                        if (!validPersonnelIds.Contains(personnelId))
-                        {
-                            result.Warnings.Add(new ValidationWarning
-                            {
-                                Table = "Templates",
-                                Message = $"模板 {template.Name} 引用了不存在的人员ID: {personnelId} (记录索引: {i})"
-                            });
-                        }
-                    }
-                }
-                
-                // 验证 PositionIds
-                if (template.PositionIds != null)
-                {
-                    foreach (var positionId in template.PositionIds)
-                    {
-                        if (!validPositionIds.Contains(positionId))
-                        {
-                            result.Warnings.Add(new ValidationWarning
-                            {
-                                Table = "Templates",
-                                Message = $"模板 {template.Name} 引用了不存在的哨位ID: {positionId} (记录索引: {i})"
-                            });
-                        }
-                    }
-                }
-                
-                // 验证 HolidayConfigId (nullable int)
-                if (template.HolidayConfigId.HasValue && template.HolidayConfigId.Value > 0)
-                {
-                    if (!validHolidayConfigIds.Contains(template.HolidayConfigId.Value))
-                    {
-                        result.Warnings.Add(new ValidationWarning
-                        {
-                            Table = "Templates",
-                            Message = $"模板 {template.Name} 引用了不存在的节假日配置ID: {template.HolidayConfigId.Value} (记录索引: {i})"
-                        });
-                    }
-                }
-            }
-        }
-        
-        // 验证 FixedAssignments 中的引用
-        if (exportData.FixedAssignments != null)
-        {
-            for (int i = 0; i < exportData.FixedAssignments.Count; i++)
-            {
-                var assignment = exportData.FixedAssignments[i];
-                
-                // 验证 PersonnelId (int type, not nullable)
-                if (assignment.PersonnelId > 0 && !validPersonnelIds.Contains(assignment.PersonnelId))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "FixedAssignments",
-                        RecordId = assignment.Id,
-                        Field = "PersonnelId",
-                        Message = $"固定分配引用了不存在的人员ID: {assignment.PersonnelId} (记录索引: {i})",
-                        Type = ValidationErrorType.BrokenReference
-                    });
-                }
-                
-                // 验证 AllowedPositionIds
-                if (assignment.AllowedPositionIds != null)
-                {
-                    foreach (var positionId in assignment.AllowedPositionIds)
-                    {
-                        if (!validPositionIds.Contains(positionId))
-                        {
-                            result.IsValid = false;
-                            result.Errors.Add(new ValidationError
-                            {
-                                Table = "FixedAssignments",
-                                RecordId = assignment.Id,
-                                Field = "AllowedPositionIds",
-                                Message = $"固定分配引用了不存在的哨位ID: {positionId} (记录索引: {i})",
-                                Type = ValidationErrorType.BrokenReference
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        
-        // 验证 ManualAssignments 中的引用
-        if (exportData.ManualAssignments != null)
-        {
-            for (int i = 0; i < exportData.ManualAssignments.Count; i++)
-            {
-                var assignment = exportData.ManualAssignments[i];
-                
-                // 验证 PersonnelId (int type, not nullable)
-                if (assignment.PersonnelId > 0 && !validPersonnelIds.Contains(assignment.PersonnelId))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "ManualAssignments",
-                        RecordId = assignment.Id,
-                        Field = "PersonnelId",
-                        Message = $"手动分配引用了不存在的人员ID: {assignment.PersonnelId} (记录索引: {i})",
-                        Type = ValidationErrorType.BrokenReference
-                    });
-                }
-                
-                // 验证 PositionId
-                if (!validPositionIds.Contains(assignment.PositionId))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add(new ValidationError
-                    {
-                        Table = "ManualAssignments",
-                        RecordId = assignment.Id,
-                        Field = "PositionId",
-                        Message = $"手动分配引用了不存在的哨位ID: {assignment.PositionId} (记录索引: {i})",
-                        Type = ValidationErrorType.BrokenReference
-                    });
-                }
-            }
-        }
-        
-        await Task.CompletedTask;
-    }
-
+    // Export methods have been migrated to DataExportService
+    // This region is kept for backward compatibility with obsolete import methods
     #endregion
 
     #region Helper Methods for Import
@@ -2903,138 +1542,77 @@ public class DataImportExportService : IDataImportExportService
     #endregion
 
     #region Mapping Methods
-
+    // Mapping methods have been migrated to DataMappingService
+    // This region is kept for backward compatibility with obsolete import methods
+    
     /// <summary>
     /// 将 SkillDto 映射到 Skill 模型
     /// </summary>
+    /// <remarks>已迁移到 DataMappingService，此方法仅用于向后兼容</remarks>
+    [Obsolete("此方法已迁移到 DataMappingService，请使用 IDataMappingService.MapToSkill", false)]
     private Models.Skill MapToSkill(SkillDto dto)
     {
-        return new Models.Skill
-        {
-            Id = dto.Id,
-            Name = dto.Name,
-            Description = dto.Description,
-            IsActive = dto.IsActive,
-            CreatedAt = dto.CreatedAt,
-            UpdatedAt = dto.UpdatedAt
-        };
+        return _mappingService.MapToSkill(dto);
     }
 
     /// <summary>
     /// 将 PersonnelDto 映射到 Personal 模型
     /// </summary>
+    /// <remarks>已迁移到 DataMappingService，此方法仅用于向后兼容</remarks>
+    [Obsolete("此方法已迁移到 DataMappingService，请使用 IDataMappingService.MapToPersonnel", false)]
     private Models.Personal MapToPersonnel(PersonnelDto dto)
     {
-        return new Models.Personal
-        {
-            Id = dto.Id,
-            Name = dto.Name,
-            SkillIds = dto.SkillIds,
-            IsAvailable = dto.IsAvailable,
-            IsRetired = dto.IsRetired,
-            RecentShiftIntervalCount = dto.RecentShiftIntervalCount,
-            RecentHolidayShiftIntervalCount = dto.RecentHolidayShiftIntervalCount,
-            RecentPeriodShiftIntervals = dto.RecentPeriodShiftIntervals
-        };
+        return _mappingService.MapToPersonnel(dto);
     }
 
     /// <summary>
     /// 将 PositionDto 映射到 PositionLocation 模型
     /// </summary>
+    /// <remarks>已迁移到 DataMappingService，此方法仅用于向后兼容</remarks>
+    [Obsolete("此方法已迁移到 DataMappingService，请使用 IDataMappingService.MapToPosition", false)]
     private Models.PositionLocation MapToPosition(PositionDto dto)
     {
-        return new Models.PositionLocation
-        {
-            Id = dto.Id,
-            Name = dto.Name,
-            Location = dto.Location,
-            Description = dto.Description,
-            Requirements = dto.Requirements,
-            RequiredSkillIds = dto.RequiredSkillIds,
-            AvailablePersonnelIds = dto.AvailablePersonnelIds,
-            IsActive = dto.IsActive,
-            CreatedAt = dto.CreatedAt,
-            UpdatedAt = dto.UpdatedAt
-        };
+        return _mappingService.MapToPosition(dto);
     }
 
     /// <summary>
     /// 将 HolidayConfigDto 映射到 HolidayConfig 模型
     /// </summary>
+    /// <remarks>已迁移到 DataMappingService，此方法仅用于向后兼容</remarks>
+    [Obsolete("此方法已迁移到 DataMappingService，请使用 IDataMappingService.MapToHolidayConfig", false)]
     private Models.Constraints.HolidayConfig MapToHolidayConfig(HolidayConfigDto dto)
     {
-        return new Models.Constraints.HolidayConfig
-        {
-            Id = dto.Id,
-            ConfigName = dto.ConfigName,
-            EnableWeekendRule = dto.EnableWeekendRule,
-            WeekendDays = dto.WeekendDays,
-            LegalHolidays = dto.LegalHolidays,
-            CustomHolidays = dto.CustomHolidays,
-            ExcludedDates = dto.ExcludedDates,
-            IsActive = dto.IsActive
-        };
+        return _mappingService.MapToHolidayConfig(dto);
     }
 
     /// <summary>
     /// 将 SchedulingTemplateDto 映射到 SchedulingTemplate 模型
     /// </summary>
+    /// <remarks>已迁移到 DataMappingService，此方法仅用于向后兼容</remarks>
+    [Obsolete("此方法已迁移到 DataMappingService，请使用 IDataMappingService.MapToTemplate", false)]
     private Models.SchedulingTemplate MapToTemplate(SchedulingTemplateDto dto)
     {
-        return new Models.SchedulingTemplate
-        {
-            Id = dto.Id,
-            Name = dto.Name,
-            Description = dto.Description,
-            TemplateType = dto.TemplateType,
-            IsDefault = dto.IsDefault,
-            PersonnelIds = dto.PersonnelIds,
-            PositionIds = dto.PositionIds,
-            HolidayConfigId = dto.HolidayConfigId,
-            UseActiveHolidayConfig = dto.UseActiveHolidayConfig,
-            EnabledFixedRuleIds = dto.EnabledFixedRuleIds,
-            EnabledManualAssignmentIds = dto.EnabledManualAssignmentIds,
-            DurationDays = dto.DurationDays,
-            StrategyConfig = dto.StrategyConfig,
-            UsageCount = dto.UsageCount,
-            IsActive = dto.IsActive,
-            CreatedAt = dto.CreatedAt,
-            UpdatedAt = dto.UpdatedAt,
-            LastUsedAt = dto.LastUsedAt
-        };
+        return _mappingService.MapToTemplate(dto);
     }
 
     /// <summary>
     /// 将 FixedAssignmentDto 映射到 FixedPositionRule 模型
     /// </summary>
+    /// <remarks>已迁移到 DataMappingService，此方法仅用于向后兼容</remarks>
+    [Obsolete("此方法已迁移到 DataMappingService，请使用 IDataMappingService.MapToFixedPositionRule", false)]
     private Models.Constraints.FixedPositionRule MapToFixedPositionRule(FixedAssignmentDto dto)
     {
-        return new Models.Constraints.FixedPositionRule
-        {
-            Id = dto.Id,
-            PersonalId = dto.PersonnelId,
-            AllowedPositionIds = dto.AllowedPositionIds,
-            AllowedPeriods = dto.AllowedTimeSlots,
-            IsEnabled = dto.IsEnabled,
-            Description = dto.Description
-        };
+        return _mappingService.MapToFixedPositionRule(dto);
     }
 
     /// <summary>
     /// 将 ManualAssignmentDto 映射到 ManualAssignment 模型
     /// </summary>
+    /// <remarks>已迁移到 DataMappingService，此方法仅用于向后兼容</remarks>
+    [Obsolete("此方法已迁移到 DataMappingService，请使用 IDataMappingService.MapToManualAssignment", false)]
     private Models.Constraints.ManualAssignment MapToManualAssignment(ManualAssignmentDto dto)
     {
-        return new Models.Constraints.ManualAssignment
-        {
-            Id = dto.Id,
-            PositionId = dto.PositionId,
-            PeriodIndex = dto.TimeSlot,
-            PersonalId = dto.PersonnelId,
-            Date = dto.Date,
-            IsEnabled = dto.IsEnabled,
-            Remarks = dto.Remarks
-        };
+        return _mappingService.MapToManualAssignment(dto);
     }
 
     #endregion
