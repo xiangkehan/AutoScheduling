@@ -18,6 +18,8 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
 {
     private readonly IPersonnelService _personnelService;
     private readonly ISkillService _skillService;
+    private readonly IConstraintService _constraintService;
+    private readonly IPositionService _positionService;
     private readonly DialogService _dialogService;
 
     private bool _isEditing;
@@ -28,6 +30,16 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     private bool _areSkillsValid = true; // 允许没有技能，初始为true
     private string _nameValidationMessage = string.Empty;
     private string _skillsValidationMessage = string.Empty;
+    private bool _isCreatingRule = false;
+    private CreateFixedAssignmentDto _newFixedPositionRule = new();
+    private bool _isEditingRule = false;
+    private UpdateFixedAssignmentDto? _editingFixedPositionRule;
+    private FixedAssignmentDto? _selectedRule;
+    private FixedAssignmentDto? _originalRuleData; // 保存原始规则数据用于取消操作
+    
+    // 定岗规则验证相关字段
+    private string _ruleValidationMessage = string.Empty;
+    private bool _isRuleValid = false;
 
     /// <summary>
     /// 是否正在编辑模式
@@ -102,13 +114,90 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     /// </summary>
     public ObservableCollection<SkillDto> AvailableSkills { get; } = new();
 
+    /// <summary>
+    /// 定岗规则集合
+    /// </summary>
+    public ObservableCollection<FixedAssignmentDto> FixedPositionRules { get; } = new();
+
+    /// <summary>
+    /// 可选哨位列表
+    /// </summary>
+    public ObservableCollection<PositionDto> AvailablePositions { get; } = new();
+
+    /// <summary>
+    /// 是否正在创建规则
+    /// </summary>
+    public bool IsCreatingRule
+    {
+        get => _isCreatingRule;
+        set => SetProperty(ref _isCreatingRule, value);
+    }
+
+    /// <summary>
+    /// 新建定岗规则DTO
+    /// </summary>
+    public CreateFixedAssignmentDto NewFixedPositionRule
+    {
+        get => _newFixedPositionRule;
+        set => SetProperty(ref _newFixedPositionRule, value);
+    }
+
+    /// <summary>
+    /// 是否正在编辑规则
+    /// </summary>
+    public bool IsEditingRule
+    {
+        get => _isEditingRule;
+        set => SetProperty(ref _isEditingRule, value);
+    }
+
+    /// <summary>
+    /// 编辑中的定岗规则DTO
+    /// </summary>
+    public UpdateFixedAssignmentDto? EditingFixedPositionRule
+    {
+        get => _editingFixedPositionRule;
+        set => SetProperty(ref _editingFixedPositionRule, value);
+    }
+
+    /// <summary>
+    /// 选中的规则
+    /// </summary>
+    public FixedAssignmentDto? SelectedRule
+    {
+        get => _selectedRule;
+        set => SetProperty(ref _selectedRule, value);
+    }
+
+    /// <summary>
+    /// 规则验证消息
+    /// </summary>
+    public string RuleValidationMessage
+    {
+        get => _ruleValidationMessage;
+        set => SetProperty(ref _ruleValidationMessage, value);
+    }
+
+    /// <summary>
+    /// 规则是否有效
+    /// </summary>
+    public bool IsRuleValid
+    {
+        get => _isRuleValid;
+        set => SetProperty(ref _isRuleValid, value);
+    }
+
     public PersonnelViewModel(
         IPersonnelService personnelService,
         ISkillService skillService,
+        IConstraintService constraintService,
+        IPositionService positionService,
         DialogService dialogService)
     {
         _personnelService = personnelService ?? throw new ArgumentNullException(nameof(personnelService));
         _skillService = skillService ?? throw new ArgumentNullException(nameof(skillService));
+        _constraintService = constraintService ?? throw new ArgumentNullException(nameof(constraintService));
+        _positionService = positionService ?? throw new ArgumentNullException(nameof(positionService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
         CreateCommand = new AsyncRelayCommand(CreatePersonnelAsync, () => CanCreate);
@@ -116,6 +205,12 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
         SaveCommand = new AsyncRelayCommand(SavePersonnelAsync, () => IsEditing);
         CancelCommand = new RelayCommand(CancelEdit, () => IsEditing);
         DeleteCommand = new AsyncRelayCommand(DeletePersonnelAsync, () => SelectedItem != null);
+        LoadFixedPositionRulesCommand = new AsyncRelayCommand(LoadFixedPositionRulesAsync);
+        CreateFixedPositionRuleCommand = new AsyncRelayCommand(CreateFixedPositionRuleAsync);
+        StartEditRuleCommand = new AsyncRelayCommand<FixedAssignmentDto>(StartEditRuleAsync);
+        SaveFixedPositionRuleCommand = new AsyncRelayCommand(SaveFixedPositionRuleAsync);
+        CancelRuleEditCommand = new RelayCommand(CancelRuleEdit);
+        DeleteFixedPositionRuleCommand = new AsyncRelayCommand<FixedAssignmentDto>(DeleteFixedPositionRuleAsync);
     }
 
     /// <summary>
@@ -144,6 +239,36 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
     public IAsyncRelayCommand DeleteCommand { get; }
 
     /// <summary>
+    /// 加载定岗规则命令
+    /// </summary>
+    public IAsyncRelayCommand LoadFixedPositionRulesCommand { get; }
+
+    /// <summary>
+    /// 创建定岗规则命令
+    /// </summary>
+    public IAsyncRelayCommand CreateFixedPositionRuleCommand { get; }
+
+    /// <summary>
+    /// 开始编辑规则命令
+    /// </summary>
+    public IAsyncRelayCommand<FixedAssignmentDto> StartEditRuleCommand { get; }
+
+    /// <summary>
+    /// 保存定岗规则编辑命令
+    /// </summary>
+    public IAsyncRelayCommand SaveFixedPositionRuleCommand { get; }
+
+    /// <summary>
+    /// 取消规则编辑命令
+    /// </summary>
+    public IRelayCommand CancelRuleEditCommand { get; }
+
+    /// <summary>
+    /// 删除定岗规则命令
+    /// </summary>
+    public IAsyncRelayCommand<FixedAssignmentDto> DeleteFixedPositionRuleCommand { get; }
+
+    /// <summary>
     /// 重写选中项变更处理，通知命令状态更新
     /// </summary>
     protected override void OnSelectedItemChanged(PersonnelDto? newItem)
@@ -153,6 +278,9 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
         // 通知所有依赖于SelectedItem的命令状态更新
         EditCommand.NotifyCanExecuteChanged();
         DeleteCommand.NotifyCanExecuteChanged();
+
+        // 加载选中人员的定岗规则
+        _ = LoadFixedPositionRulesCommand.ExecuteAsync(null);
     }
 
     /// <summary>
@@ -176,6 +304,14 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
             foreach (var skill in skills)
             {
                 AvailableSkills.Add(skill);
+            }
+
+            // 加载可选哨位
+            var positions = await _positionService.GetAllAsync();
+            AvailablePositions.Clear();
+            foreach (var position in positions)
+            {
+                AvailablePositions.Add(position);
             }
         }, "正在加载人员数据...");
     }
@@ -420,6 +556,403 @@ public partial class PersonnelViewModel : ListViewModelBase<PersonnelDto>
 
             // 根据需求8.5，成功操作不显示提示消息
         }, "正在删除...");
+    }
+
+    /// <summary>
+    /// 加载定岗规则列表
+    /// </summary>
+    private async Task LoadFixedPositionRulesAsync()
+    {
+        // 如果没有选中人员，清空规则列表
+        if (SelectedItem == null)
+        {
+            FixedPositionRules.Clear();
+            return;
+        }
+
+        try
+        {
+            // 获取选中人员的定岗规则
+            var rules = await _constraintService.GetFixedAssignmentDtosByPersonAsync(SelectedItem.Id);
+            
+            // 更新规则集合
+            FixedPositionRules.Clear();
+            foreach (var rule in rules)
+            {
+                FixedPositionRules.Add(rule);
+            }
+        }
+        catch (ArgumentException argEx)
+        {
+            // 验证错误 - 人员ID无效
+            await _dialogService.ShowErrorAsync("加载定岗规则失败：人员ID无效", argEx);
+        }
+        catch (InvalidOperationException invEx)
+        {
+            // 业务逻辑错误 - 数据不一致
+            await _dialogService.ShowErrorAsync("加载定岗规则失败：数据不一致或人员不存在", invEx);
+        }
+        catch (Exception ex)
+        {
+            // 数据库或网络错误
+            await _dialogService.ShowErrorAsync("加载定岗规则失败，请检查网络连接或稍后重试", ex);
+        }
+    }
+
+    /// <summary>
+    /// 创建定岗规则
+    /// </summary>
+    private async Task CreateFixedPositionRuleAsync()
+    {
+        // 验证是否选中了人员
+        if (SelectedItem == null)
+        {
+            await _dialogService.ShowErrorAsync("请先选择一个人员");
+            return;
+        }
+
+        // 如果已经在创建模式，则提交表单
+        if (IsCreatingRule)
+        {
+            try
+            {
+                // 验证表单输入
+                if (!ValidateCreateRuleForm())
+                {
+                    await _dialogService.ShowErrorAsync(RuleValidationMessage);
+                    return;
+                }
+
+                // 设置人员ID
+                NewFixedPositionRule.PersonnelId = SelectedItem.Id;
+
+                await ExecuteAsync(async () =>
+                {
+                    // 调用ConstraintService创建规则
+                    await _constraintService.CreateFixedAssignmentAsync(NewFixedPositionRule);
+
+                    // 创建成功后刷新规则列表
+                    await LoadFixedPositionRulesAsync();
+
+                    // 重置表单并关闭创建界面
+                    ResetFixedPositionRuleForm();
+                    IsCreatingRule = false;
+
+                }, "正在创建定岗规则...");
+            }
+            catch (ArgumentException argEx)
+            {
+                // 验证错误
+                await _dialogService.ShowErrorAsync("输入验证失败", argEx);
+            }
+            catch (InvalidOperationException invEx)
+            {
+                // 业务逻辑错误
+                await _dialogService.ShowErrorAsync("操作失败：规则可能已存在或数据不一致", invEx);
+            }
+            catch (Exception ex)
+            {
+                // 数据库或网络错误
+                await _dialogService.ShowErrorAsync("创建定岗规则失败，请检查网络连接或稍后重试", ex);
+            }
+        }
+        else
+        {
+            // 进入创建模式，显示表单
+            ResetFixedPositionRuleForm();
+            IsCreatingRule = true;
+        }
+    }
+
+    /// <summary>
+    /// 重置定岗规则创建表单
+    /// </summary>
+    public void ResetFixedPositionRuleForm()
+    {
+        NewFixedPositionRule = new CreateFixedAssignmentDto
+        {
+            PersonnelId = SelectedItem?.Id ?? 0,
+            AllowedPositionIds = new List<int>(),
+            AllowedTimeSlots = new List<int>(),
+            StartDate = DateTime.Today,
+            EndDate = DateTime.Today.AddYears(1),
+            IsEnabled = true,
+            RuleName = string.Empty,
+            Description = string.Empty
+        };
+        
+        // 重置验证状态
+        RuleValidationMessage = string.Empty;
+        IsRuleValid = false;
+    }
+
+    /// <summary>
+    /// 验证定岗规则表单（创建）
+    /// </summary>
+    public bool ValidateCreateRuleForm()
+    {
+        // 验证至少选择一个哨位或时段
+        if ((NewFixedPositionRule.AllowedPositionIds == null || NewFixedPositionRule.AllowedPositionIds.Count == 0) &&
+            (NewFixedPositionRule.AllowedTimeSlots == null || NewFixedPositionRule.AllowedTimeSlots.Count == 0))
+        {
+            RuleValidationMessage = "请至少选择一个哨位或一个时段";
+            IsRuleValid = false;
+            return false;
+        }
+
+        // 验证规则描述长度
+        if (!string.IsNullOrEmpty(NewFixedPositionRule.Description) && NewFixedPositionRule.Description.Length > 500)
+        {
+            RuleValidationMessage = "规则描述长度不能超过500字符";
+            IsRuleValid = false;
+            return false;
+        }
+
+        // 验证时段索引范围
+        if (NewFixedPositionRule.AllowedTimeSlots != null)
+        {
+            foreach (var timeSlot in NewFixedPositionRule.AllowedTimeSlots)
+            {
+                if (timeSlot < 0 || timeSlot > 11)
+                {
+                    RuleValidationMessage = "时段索引必须在0-11范围内";
+                    IsRuleValid = false;
+                    return false;
+                }
+            }
+        }
+
+        // 所有验证通过
+        RuleValidationMessage = string.Empty;
+        IsRuleValid = true;
+        return true;
+    }
+
+    /// <summary>
+    /// 验证定岗规则表单（编辑）
+    /// </summary>
+    public bool ValidateEditRuleForm()
+    {
+        if (EditingFixedPositionRule == null)
+        {
+            RuleValidationMessage = "编辑数据无效";
+            IsRuleValid = false;
+            return false;
+        }
+
+        // 验证至少选择一个哨位或时段
+        if ((EditingFixedPositionRule.AllowedPositionIds == null || EditingFixedPositionRule.AllowedPositionIds.Count == 0) &&
+            (EditingFixedPositionRule.AllowedTimeSlots == null || EditingFixedPositionRule.AllowedTimeSlots.Count == 0))
+        {
+            RuleValidationMessage = "请至少选择一个哨位或一个时段";
+            IsRuleValid = false;
+            return false;
+        }
+
+        // 验证规则名称
+        if (string.IsNullOrWhiteSpace(EditingFixedPositionRule.RuleName))
+        {
+            RuleValidationMessage = "规则名称不能为空";
+            IsRuleValid = false;
+            return false;
+        }
+
+        // 验证规则描述长度
+        if (!string.IsNullOrEmpty(EditingFixedPositionRule.Description) && EditingFixedPositionRule.Description.Length > 500)
+        {
+            RuleValidationMessage = "规则描述长度不能超过500字符";
+            IsRuleValid = false;
+            return false;
+        }
+
+        // 验证时段索引范围
+        if (EditingFixedPositionRule.AllowedTimeSlots != null)
+        {
+            foreach (var timeSlot in EditingFixedPositionRule.AllowedTimeSlots)
+            {
+                if (timeSlot < 0 || timeSlot > 11)
+                {
+                    RuleValidationMessage = "时段索引必须在0-11范围内";
+                    IsRuleValid = false;
+                    return false;
+                }
+            }
+        }
+
+        // 所有验证通过
+        RuleValidationMessage = string.Empty;
+        IsRuleValid = true;
+        return true;
+    }
+
+    /// <summary>
+    /// 开始编辑规则
+    /// </summary>
+    private async Task StartEditRuleAsync(FixedAssignmentDto? rule)
+    {
+        if (rule == null)
+            return;
+
+        await ExecuteAsync(async () =>
+        {
+            // 保存选中的规则
+            SelectedRule = rule;
+
+            // 保存原始数据副本用于取消操作
+            _originalRuleData = new FixedAssignmentDto
+            {
+                Id = rule.Id,
+                PersonnelId = rule.PersonnelId,
+                PersonnelName = rule.PersonnelName,
+                AllowedPositionIds = new List<int>(rule.AllowedPositionIds),
+                AllowedPositionNames = new List<string>(rule.AllowedPositionNames),
+                AllowedTimeSlots = new List<int>(rule.AllowedTimeSlots),
+                StartDate = rule.StartDate,
+                EndDate = rule.EndDate,
+                IsEnabled = rule.IsEnabled,
+                RuleName = rule.RuleName,
+                Description = rule.Description,
+                CreatedAt = rule.CreatedAt,
+                UpdatedAt = rule.UpdatedAt
+            };
+
+            // 将选中规则数据复制到EditingFixedPositionRule
+            EditingFixedPositionRule = new UpdateFixedAssignmentDto
+            {
+                PersonnelId = rule.PersonnelId,
+                AllowedPositionIds = new List<int>(rule.AllowedPositionIds),
+                AllowedTimeSlots = new List<int>(rule.AllowedTimeSlots),
+                StartDate = rule.StartDate,
+                EndDate = rule.EndDate,
+                IsEnabled = rule.IsEnabled,
+                RuleName = rule.RuleName,
+                Description = rule.Description
+            };
+
+            IsEditingRule = true;
+            await Task.CompletedTask;
+        });
+    }
+
+    /// <summary>
+    /// 保存定岗规则编辑
+    /// </summary>
+    private async Task SaveFixedPositionRuleAsync()
+    {
+        if (SelectedRule == null || EditingFixedPositionRule == null)
+            return;
+
+        try
+        {
+            // 验证表单输入
+            if (!ValidateEditRuleForm())
+            {
+                await _dialogService.ShowErrorAsync(RuleValidationMessage);
+                return;
+            }
+
+            var ruleId = SelectedRule.Id;
+
+            await ExecuteAsync(async () =>
+            {
+                // 调用ConstraintService更新规则
+                await _constraintService.UpdateFixedAssignmentAsync(ruleId, EditingFixedPositionRule);
+
+                // 更新成功后刷新规则列表
+                await LoadFixedPositionRulesAsync();
+
+                // 关闭编辑界面
+                IsEditingRule = false;
+                EditingFixedPositionRule = null;
+                SelectedRule = null;
+                _originalRuleData = null;
+
+            }, "正在保存定岗规则...");
+        }
+        catch (ArgumentException argEx)
+        {
+            // 验证错误
+            await _dialogService.ShowErrorAsync("输入验证失败", argEx);
+        }
+        catch (InvalidOperationException invEx)
+        {
+            // 业务逻辑错误
+            await _dialogService.ShowErrorAsync("操作失败：规则可能不存在或数据不一致", invEx);
+        }
+        catch (Exception ex)
+        {
+            // 数据库或网络错误
+            await _dialogService.ShowErrorAsync("更新定岗规则失败，请检查网络连接或稍后重试", ex);
+        }
+    }
+
+    /// <summary>
+    /// 取消规则编辑
+    /// </summary>
+    private void CancelRuleEdit()
+    {
+        // 恢复原始数据
+        if (_originalRuleData != null && SelectedRule != null)
+        {
+            SelectedRule.AllowedPositionIds = new List<int>(_originalRuleData.AllowedPositionIds);
+            SelectedRule.AllowedPositionNames = new List<string>(_originalRuleData.AllowedPositionNames);
+            SelectedRule.AllowedTimeSlots = new List<int>(_originalRuleData.AllowedTimeSlots);
+            SelectedRule.StartDate = _originalRuleData.StartDate;
+            SelectedRule.EndDate = _originalRuleData.EndDate;
+            SelectedRule.IsEnabled = _originalRuleData.IsEnabled;
+            SelectedRule.RuleName = _originalRuleData.RuleName;
+            SelectedRule.Description = _originalRuleData.Description;
+        }
+
+        IsEditingRule = false;
+        EditingFixedPositionRule = null;
+        SelectedRule = null;
+        _originalRuleData = null;
+    }
+
+    /// <summary>
+    /// 删除定岗规则
+    /// </summary>
+    private async Task DeleteFixedPositionRuleAsync(FixedAssignmentDto? rule)
+    {
+        if (rule == null)
+            return;
+
+        // 显示确认对话框
+        var confirmed = await _dialogService.ShowConfirmAsync(
+            "确认删除",
+            "确定要删除此定岗规则吗？此操作无法撤销。");
+
+        if (!confirmed)
+            return;
+
+        try
+        {
+            await ExecuteAsync(async () =>
+            {
+                // 调用ConstraintService删除规则
+                await _constraintService.DeleteFixedPositionRuleAsync(rule.Id);
+
+                // 删除成功后从FixedPositionRules集合中移除该规则
+                FixedPositionRules.Remove(rule);
+
+            }, "正在删除定岗规则...");
+        }
+        catch (ArgumentException argEx)
+        {
+            // 验证错误
+            await _dialogService.ShowErrorAsync("删除失败：规则ID无效", argEx);
+        }
+        catch (InvalidOperationException invEx)
+        {
+            // 业务逻辑错误
+            await _dialogService.ShowErrorAsync("删除失败：规则可能不存在或已被删除", invEx);
+        }
+        catch (Exception ex)
+        {
+            // 数据库或网络错误
+            await _dialogService.ShowErrorAsync("删除定岗规则失败，请检查网络连接或稍后重试", ex);
+        }
     }
 
     protected override void OnError(Exception exception)
