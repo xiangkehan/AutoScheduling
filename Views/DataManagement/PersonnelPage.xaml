@@ -1,5 +1,6 @@
 <Page
     x:Class="AutoScheduling3.Views.DataManagement.PersonnelPage"
+    x:Name="RootPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -14,6 +15,9 @@
         <conv:BoolToTextConverter x:Key="BoolToTextConverter"/>
         <conv:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
         <conv:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+        <conv:PeriodIndexToTimeConverter x:Key="PeriodIndexToTimeConverter"/>
+        <conv:InvertedBooleanConverter x:Key="InvertedBooleanConverter"/>
+        <conv:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
     </Page.Resources>
 
     <Grid Padding="24">
@@ -292,6 +296,380 @@
                     <TextBlock Text="选择左侧人员查看详情" 
                                Visibility="{x:Bind ViewModel.SelectedItem, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                    <!-- 定岗规则区域 -->
+                    <Expander Header="定岗规则" 
+                              IsExpanded="False"
+                              Visibility="{x:Bind ViewModel.SelectedItem, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"
+                              Margin="0,12,0,0">
+                        <StackPanel Spacing="12" Margin="0,12,0,0">
+                            <!-- 规则创建表单 -->
+                            <StackPanel Spacing="12" 
+                                        Visibility="{x:Bind ViewModel.IsCreatingRule, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="创建定岗规则" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                
+                                <!-- 验证错误消息 -->
+                                <InfoBar x:Name="CreateRuleValidationInfoBar"
+                                         Severity="Error"
+                                         IsOpen="{x:Bind ViewModel.IsRuleValid, Mode=OneWay, Converter={StaticResource InvertedBooleanConverter}}"
+                                         Message="{x:Bind ViewModel.RuleValidationMessage, Mode=OneWay}"
+                                         IsClosable="False"
+                                         Visibility="{x:Bind ViewModel.RuleValidationMessage, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                
+                                <!-- 哨位选择 -->
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="允许的哨位" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                        <TextBlock x:Name="CreateSelectedPositionCountText" 
+                                                   Grid.Column="2" 
+                                                   Text="已选择: 0"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
+                                            BorderThickness="1" 
+                                            CornerRadius="4"
+                                            Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                            Padding="4">
+                                        <Grid MinHeight="60">
+                                            <ListView x:Name="CreatePositionsListView"
+                                                      ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
+                                                      SelectionMode="Multiple"
+                                                      MaxHeight="120"
+                                                      SelectionChanged="CreatePositionsListView_SelectionChanged">
+                                                <ListView.ItemTemplate>
+                                                    <DataTemplate x:DataType="local:PositionDto">
+                                                        <TextBlock Text="{x:Bind Name}"/>
+                                                    </DataTemplate>
+                                                </ListView.ItemTemplate>
+                                            </ListView>
+                                            <TextBlock Text="暂无哨位数据，请先添加哨位"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Margin="8"
+                                                       Visibility="{x:Bind ViewModel.AvailablePositions.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- 时段选择 -->
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="允许的时段" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                        <TextBlock x:Name="CreateSelectedTimeSlotCountText" 
+                                                   Grid.Column="2" 
+                                                   Text="已选择: 0"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
+                                            BorderThickness="1" 
+                                            CornerRadius="4"
+                                            Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                            Padding="4">
+                                        <ListView x:Name="CreateTimeSlotsListView"
+                                                  SelectionMode="Multiple"
+                                                  MaxHeight="200"
+                                                  SelectionChanged="CreateTimeSlotsListView_SelectionChanged">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate x:DataType="x:Int32">
+                                                    <TextBlock>
+                                                        <Run Text="{x:Bind}"/>
+                                                        <Run Text=" "/>
+                                                        <Run Text="{x:Bind Converter={StaticResource PeriodIndexToTimeConverter}}"/>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- 规则名称 -->
+                                <TextBox Header="规则名称*" 
+                                         Text="{x:Bind ViewModel.NewFixedPositionRule.RuleName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         PlaceholderText="请输入规则名称"
+                                         MaxLength="100"/>
+
+                                <!-- 规则描述 -->
+                                <TextBox Header="规则描述" 
+                                         Text="{x:Bind ViewModel.NewFixedPositionRule.Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         PlaceholderText="请输入规则描述（可选）"
+                                         MaxLength="500"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"
+                                         Height="80"/>
+
+                                <!-- 启用状态 -->
+                                <ToggleSwitch Header="启用规则" 
+                                              IsOn="{x:Bind ViewModel.NewFixedPositionRule.IsEnabled, Mode=TwoWay}"/>
+
+                                <!-- 操作按钮 -->
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="提交" 
+                                            Command="{x:Bind ViewModel.CreateFixedPositionRuleCommand}"
+                                            Style="{StaticResource AccentButtonStyle}"/>
+                                    <Button Content="取消" Click="CancelCreateRule_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- 规则编辑表单 -->
+                            <StackPanel Spacing="12" 
+                                        Visibility="{x:Bind ViewModel.IsEditingRule, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="编辑定岗规则" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                
+                                <!-- 验证错误消息 -->
+                                <InfoBar x:Name="EditRuleValidationInfoBar"
+                                         Severity="Error"
+                                         IsOpen="{x:Bind ViewModel.IsRuleValid, Mode=OneWay, Converter={StaticResource InvertedBooleanConverter}}"
+                                         Message="{x:Bind ViewModel.RuleValidationMessage, Mode=OneWay}"
+                                         IsClosable="False"
+                                         Visibility="{x:Bind ViewModel.RuleValidationMessage, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                
+                                <!-- 哨位选择 -->
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="允许的哨位" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                        <TextBlock x:Name="EditSelectedPositionCountText" 
+                                                   Grid.Column="2" 
+                                                   Text="已选择: 0"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
+                                            BorderThickness="1" 
+                                            CornerRadius="4"
+                                            Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                            Padding="4">
+                                        <Grid MinHeight="60">
+                                            <ListView x:Name="EditPositionsListView"
+                                                      ItemsSource="{x:Bind ViewModel.AvailablePositions, Mode=OneWay}"
+                                                      SelectionMode="Multiple"
+                                                      MaxHeight="120"
+                                                      SelectionChanged="EditPositionsListView_SelectionChanged">
+                                                <ListView.ItemTemplate>
+                                                    <DataTemplate x:DataType="local:PositionDto">
+                                                        <TextBlock Text="{x:Bind Name}"/>
+                                                    </DataTemplate>
+                                                </ListView.ItemTemplate>
+                                            </ListView>
+                                            <TextBlock Text="暂无哨位数据，请先添加哨位"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Margin="8"
+                                                       Visibility="{x:Bind ViewModel.AvailablePositions.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- 时段选择 -->
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="允许的时段" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                        <TextBlock x:Name="EditSelectedTimeSlotCountText" 
+                                                   Grid.Column="2" 
+                                                   Text="已选择: 0"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Border BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" 
+                                            BorderThickness="1" 
+                                            CornerRadius="4"
+                                            Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                            Padding="4">
+                                        <ListView x:Name="EditTimeSlotsListView"
+                                                  SelectionMode="Multiple"
+                                                  MaxHeight="200"
+                                                  SelectionChanged="EditTimeSlotsListView_SelectionChanged">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate x:DataType="x:Int32">
+                                                    <TextBlock>
+                                                        <Run Text="{x:Bind}"/>
+                                                        <Run Text=" "/>
+                                                        <Run Text="{x:Bind Converter={StaticResource PeriodIndexToTimeConverter}}"/>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- 规则名称 -->
+                                <TextBox Header="规则名称*" 
+                                         Text="{x:Bind ViewModel.EditingFixedPositionRule.RuleName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         PlaceholderText="请输入规则名称"
+                                         MaxLength="100"/>
+
+                                <!-- 规则描述 -->
+                                <TextBox Header="规则描述" 
+                                         Text="{x:Bind ViewModel.EditingFixedPositionRule.Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         PlaceholderText="请输入规则描述（可选）"
+                                         MaxLength="500"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"
+                                         Height="80"/>
+
+                                <!-- 启用状态 -->
+                                <ToggleSwitch Header="启用规则" 
+                                              IsOn="{x:Bind ViewModel.EditingFixedPositionRule.IsEnabled, Mode=TwoWay}"/>
+
+                                <!-- 操作按钮 -->
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="保存" 
+                                            Command="{x:Bind ViewModel.SaveFixedPositionRuleCommand}"
+                                            Style="{StaticResource AccentButtonStyle}"/>
+                                    <Button Content="取消" 
+                                            Command="{x:Bind ViewModel.CancelRuleEditCommand}"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- 规则列表显示 -->
+                            <StackPanel Spacing="12" 
+                                        Visibility="{x:Bind ViewModel.IsCreatingRule, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                                
+                                <!-- 添加规则按钮 -->
+                                <Button Content="添加定岗规则" 
+                                        Click="AddFixedPositionRule_Click"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Visibility="{x:Bind ViewModel.IsEditingRule, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                
+                                <!-- 规则列表 -->
+                                <ItemsRepeater ItemsSource="{x:Bind ViewModel.FixedPositionRules, Mode=OneWay}">
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate x:DataType="local:FixedAssignmentDto">
+                                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="16"
+                                                    Margin="0,0,0,8">
+                                                <StackPanel Spacing="8">
+                                                    <!-- 规则标题和状态 -->
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" 
+                                                                   Text="{x:Bind RuleName}" 
+                                                                   Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                                        <Border Grid.Column="1" 
+                                                                Background="{x:Bind IsEnabled, Converter={StaticResource BoolToBrushConverter}, ConverterParameter='Success|Error'}"
+                                                                CornerRadius="4" 
+                                                                Padding="8,4">
+                                                            <TextBlock Text="{x:Bind IsEnabled, Converter={StaticResource BoolToTextConverter}, ConverterParameter='已启用|已禁用'}" 
+                                                                       FontSize="12" 
+                                                                       Foreground="White"/>
+                                                        </Border>
+                                                    </Grid>
+                                                    
+                                                    <!-- 规则描述 -->
+                                                    <TextBlock Text="{x:Bind Description}" 
+                                                               TextWrapping="Wrap"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                               Visibility="{x:Bind Description, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                    
+                                                    <!-- 允许的哨位 -->
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Text="允许的哨位:" FontWeight="SemiBold" FontSize="12"/>
+                                                        <ItemsRepeater ItemsSource="{x:Bind AllowedPositionNames}">
+                                                            <ItemsRepeater.Layout>
+                                                                <StackLayout Orientation="Horizontal" Spacing="4"/>
+                                                            </ItemsRepeater.Layout>
+                                                            <ItemsRepeater.ItemTemplate>
+                                                                <DataTemplate x:DataType="x:String">
+                                                                    <Border Background="{ThemeResource AccentFillColorDefaultBrush}" 
+                                                                            CornerRadius="4" 
+                                                                            Padding="6,3">
+                                                                        <TextBlock Text="{x:Bind}" 
+                                                                                   FontSize="12" 
+                                                                                   Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsRepeater.ItemTemplate>
+                                                        </ItemsRepeater>
+                                                    </StackPanel>
+                                                    
+                                                    <!-- 允许的时段 -->
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Text="允许的时段:" FontWeight="SemiBold" FontSize="12"/>
+                                                        <ItemsRepeater ItemsSource="{x:Bind AllowedTimeSlots}">
+                                                            <ItemsRepeater.Layout>
+                                                                <StackLayout Orientation="Horizontal" Spacing="4"/>
+                                                            </ItemsRepeater.Layout>
+                                                            <ItemsRepeater.ItemTemplate>
+                                                                <DataTemplate x:DataType="x:Int32">
+                                                                    <Border Background="{ThemeResource SystemFillColorAttentionBrush}" 
+                                                                            CornerRadius="4" 
+                                                                            Padding="6,3">
+                                                                        <TextBlock FontSize="12">
+                                                                            <Run Text="时段"/>
+                                                                            <Run Text="{x:Bind}"/>
+                                                                        </TextBlock>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsRepeater.ItemTemplate>
+                                                        </ItemsRepeater>
+                                                    </StackPanel>
+                                                    
+                                                    <!-- 有效期 -->
+                                                    <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                                        <Run Text="有效期: "/>
+                                                        <Run Text="{x:Bind StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
+                                                        <Run Text=" 至 "/>
+                                                        <Run Text="{x:Bind EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
+                                                    </TextBlock>
+                                                    
+                                                    <!-- 操作按钮 -->
+                                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                                                        <Button Content="编辑" 
+                                                                Command="{Binding ElementName=RootPage, Path=ViewModel.StartEditRuleCommand}"
+                                                                CommandParameter="{x:Bind}"
+                                                                Style="{StaticResource AccentButtonStyle}"/>
+                                                        <Button Content="删除" 
+                                                                Command="{Binding ElementName=RootPage, Path=ViewModel.DeleteFixedPositionRuleCommand}"
+                                                                CommandParameter="{x:Bind}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
+                                
+                                <!-- 空状态提示 -->
+                                <TextBlock Text="暂无定岗规则，点击上方按钮添加" 
+                                           Visibility="{x:Bind ViewModel.FixedPositionRules.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,24,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

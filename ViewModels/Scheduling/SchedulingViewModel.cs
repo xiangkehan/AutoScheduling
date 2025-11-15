@@ -170,7 +170,32 @@ namespace AutoScheduling3.ViewModels.Scheduling
             5 => false, // Cannot go next from summary
             _ => false
         };
-        private bool CanExecuteScheduling() => CurrentStep == 5 && !IsExecuting && ValidateStep1(out _) && ValidateStep2(out _) && ValidateStep3(out _);
+        private bool CanExecuteScheduling()
+        {
+            var step5 = CurrentStep == 5;
+            var notExecuting = !IsExecuting;
+            var step1Valid = ValidateStep1(out var step1Error);
+            var step2Valid = ValidateStep2(out var step2Error);
+            var step3Valid = ValidateStep3(out var step3Error);
+            
+            var canExecute = step5 && notExecuting && step1Valid && step2Valid && step3Valid;
+            
+            // 只在步骤5且验证失败时输出调试信息
+            if (step5 && !canExecute)
+            {
+                System.Diagnostics.Debug.WriteLine($"=== 开始排班按钮被禁用 ===");
+                if (IsExecuting)
+                    System.Diagnostics.Debug.WriteLine($"原因: 正在执行排班");
+                if (!step1Valid)
+                    System.Diagnostics.Debug.WriteLine($"原因: 步骤1验证失败 - {step1Error}");
+                if (!step2Valid)
+                    System.Diagnostics.Debug.WriteLine($"原因: 步骤2验证失败 - {step2Error}");
+                if (!step3Valid)
+                    System.Diagnostics.Debug.WriteLine($"原因: 步骤3验证失败 - {step3Error}");
+            }
+            
+            return canExecute;
+        }
         private void RefreshCommandStates()
         {
             NextStepCommand.NotifyCanExecuteChanged();
