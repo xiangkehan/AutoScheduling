@@ -14,6 +14,7 @@
         <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:InvertedBooleanConverter x:Key="InvertedBooleanConverter"/>
+        <converters:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
 
         <DataTemplate x:Key="PersonnelListViewTemplate" x:DataType="dto:PersonnelDto">
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -124,23 +125,54 @@
                 <Grid Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=4, Mode=OneWay}">
                     <StackPanel Spacing="24">
                         <TextBlock Text="步骤 4: 配置约束" Style="{ThemeResource SubtitleTextBlockStyle}"/>
-                        <ProgressRing IsActive="{x:Bind ViewModel.IsLoadingConstraints, Mode=OneWay}" HorizontalAlignment="Center"/>
+                        
+                        <!-- Loading Indicator -->
+                        <StackPanel Spacing="12" HorizontalAlignment="Center" 
+                                    Visibility="{x:Bind ViewModel.IsLoadingConstraints, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                            <ProgressRing IsActive="True" Width="48" Height="48"/>
+                            <TextBlock Text="正在加载约束数据..." Style="{ThemeResource BodyTextBlockStyle}"/>
+                        </StackPanel>
 
-                        <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.IsLoadingConstraints, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}">
+                        <!-- Content -->
+                        <StackPanel Spacing="12" 
+                                    Visibility="{x:Bind ViewModel.IsLoadingConstraints, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}">
+                            
                             <!-- Holiday Config -->
-                            <StackPanel Spacing="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Padding="12" CornerRadius="{StaticResource ControlCornerRadius}">
+                            <StackPanel Spacing="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" Padding="12" CornerRadius="{StaticResource ControlCornerRadius}">
                                 <TextBlock Text="休息日配置" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
-                                <ToggleSwitch IsOn="{x:Bind ViewModel.UseActiveHolidayConfig, Mode=TwoWay}" OffContent="使用自定义配置" OnContent="使用当前活动配置"/>
-                                <ComboBox Header="选择一个休息日配置" ItemsSource="{x:Bind ViewModel.HolidayConfigs, Mode=OneWay}"
+                                <ToggleSwitch IsOn="{x:Bind ViewModel.UseActiveHolidayConfig, Mode=TwoWay}" 
+                                              OffContent="使用自定义配置" OnContent="使用当前活动配置"/>
+                                
+                                <!-- Empty State for Holiday Configs -->
+                                <InfoBar Severity="Warning" IsOpen="True" 
+                                         Visibility="{x:Bind ViewModel.HolidayConfigs.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0, Mode=OneWay}">
+                                    <InfoBar.Message>
+                                        <TextBlock Text="没有找到休息日配置。请前往设置页面创建休息日配置。"/>
+                                    </InfoBar.Message>
+                                </InfoBar>
+                                
+                                <ComboBox Header="选择一个休息日配置" 
+                                          ItemsSource="{x:Bind ViewModel.HolidayConfigs, Mode=OneWay}"
                                           SelectedValue="{x:Bind ViewModel.SelectedHolidayConfigId, Mode=TwoWay, FallbackValue=-1}"
                                           SelectedValuePath="Id" DisplayMemberPath="ConfigName"
-                                          IsEnabled="{x:Bind ViewModel.UseActiveHolidayConfig, Converter={StaticResource InvertedBooleanConverter}, Mode=OneWay}"/>
+                                          IsEnabled="{x:Bind ViewModel.UseActiveHolidayConfig, Converter={StaticResource InvertedBooleanConverter}, Mode=OneWay}"
+                                          Visibility="{x:Bind ViewModel.HolidayConfigs.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='&gt;0', Mode=OneWay}"/>
                             </StackPanel>
 
                             <!-- Fixed Position Rules -->
-                            <StackPanel Spacing="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Padding="12" CornerRadius="{StaticResource ControlCornerRadius}">
+                            <StackPanel Spacing="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" Padding="12" CornerRadius="{StaticResource ControlCornerRadius}">
                                 <TextBlock Text="定岗规则" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
-                                <ListView ItemsSource="{x:Bind ViewModel.FixedPositionRules, Mode=OneWay}" SelectionMode="None" MaxHeight="200">
+                                
+                                <!-- Empty State for Fixed Rules -->
+                                <TextBlock Text="没有找到定岗规则" 
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           Visibility="{x:Bind ViewModel.FixedPositionRules.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0, Mode=OneWay}"/>
+                                
+                                <ListView ItemsSource="{x:Bind ViewModel.FixedPositionRules, Mode=OneWay}" 
+                                          SelectionMode="None" MaxHeight="200"
+                                          Visibility="{x:Bind ViewModel.FixedPositionRules.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='&gt;0', Mode=OneWay}">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="models:FixedPositionRule">
                                             <CheckBox Content="{x:Bind Description}" IsChecked="{x:Bind IsEnabled, Mode=TwoWay}"/>
@@ -150,9 +182,18 @@
                             </StackPanel>
 
                             <!-- Manual Assignments -->
-                            <StackPanel Spacing="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Padding="12" CornerRadius="{StaticResource ControlCornerRadius}">
+                            <StackPanel Spacing="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" Padding="12" CornerRadius="{StaticResource ControlCornerRadius}">
                                 <TextBlock Text="手动指定" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
-                                <ListView ItemsSource="{x:Bind ViewModel.ManualAssignments, Mode=OneWay}" SelectionMode="None" MaxHeight="200">
+                                
+                                <!-- Empty State for Manual Assignments -->
+                                <TextBlock Text="在当前日期范围内没有找到手动指定" 
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           Visibility="{x:Bind ViewModel.ManualAssignments.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0, Mode=OneWay}"/>
+                                
+                                <ListView ItemsSource="{x:Bind ViewModel.ManualAssignments, Mode=OneWay}" 
+                                          SelectionMode="None" MaxHeight="200"
+                                          Visibility="{x:Bind ViewModel.ManualAssignments.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='&gt;0', Mode=OneWay}">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="models:ManualAssignment">
                                             <CheckBox IsChecked="{x:Bind IsEnabled, Mode=TwoWay}">

@@ -227,33 +227,110 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
         private async Task LoadConstraintsAsync()
         {
-            // 使用新字段，确保 UI绑定更新
-            if (IsLoadingConstraints) return;
+            // 重复加载检查
+            if (IsLoadingConstraints)
+            {
+                System.Diagnostics.Debug.WriteLine("约束数据正在加载中，跳过重复请求");
+                return;
+            }
+            
             IsLoadingConstraints = true;
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            
+            System.Diagnostics.Debug.WriteLine("=== 开始加载约束数据 ===");
+            System.Diagnostics.Debug.WriteLine($"日期范围: {StartDate:yyyy-MM-dd} 到 {EndDate:yyyy-MM-dd}");
+            
             try
             {
+                // 并行加载三种约束数据
                 var configsTask = _schedulingService.GetHolidayConfigsAsync();
                 var rulesTask = _schedulingService.GetFixedPositionRulesAsync(true);
                 var manualTask = _schedulingService.GetManualAssignmentsAsync(StartDate.Date, EndDate.Date, true);
+                
                 await Task.WhenAll(configsTask, rulesTask, manualTask);
-                HolidayConfigs = new ObservableCollection<HolidayConfig>(configsTask.Result);
-                FixedPositionRules = new ObservableCollection<FixedPositionRule>(rulesTask.Result);
-                ManualAssignments = new ObservableCollection<ManualAssignment>(manualTask.Result);
-
-                // After loading, re-evaluate which ones are enabled based on the template or previous state
+                
+                var configs = configsTask.Result;
+                var rules = rulesTask.Result;
+                var manuals = manualTask.Result;
+                
+                System.Diagnostics.Debug.WriteLine($"加载完成 - 休息日配置: {configs.Count}, 定岗规则: {rules.Count}, 手动指定: {manuals.Count}");
+                
+                // 更新 ObservableCollection
+                HolidayConfigs = new ObservableCollection<HolidayConfig>(configs);
+                FixedPositionRules = new ObservableCollection<FixedPositionRule>(rules);
+                ManualAssignments = new ObservableCollection<ManualAssignment>(manuals);
+                
+                // 空数据警告日志
+                if (configs.Count == 0)
+                    System.Diagnostics.Debug.WriteLine("警告: 没有找到休息日配置");
+                if (rules.Count == 0)
+                    System.Diagnostics.Debug.WriteLine("警告: 没有找到定岗规则");
+                if (manuals.Count == 0)
+                    System.Diagnostics.Debug.WriteLine("警告: 没有找到手动指定");
+                
+                // 应用模板约束（如果有）
                 if (TemplateApplied)
                 {
+                    System.Diagnostics.Debug.WriteLine("应用模板约束设置");
                     ApplyTemplateConstraints();
                 }
             }
+            catch (Microsoft.Data.Sqlite.SqliteException sqlEx)
+            {
+                System.Diagnostics.Debug.WriteLine("=== 加载约束数据失败 (数据库错误) ===");
+                System.Diagnostics.Debug.WriteLine($"异常类型: {sqlEx.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"错误代码: {sqlEx.SqliteErrorCode}");
+                System.Diagnostics.Debug.WriteLine($"错误消息: {sqlEx.Message}");
+                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {sqlEx.StackTrace}");
+                
+                await _dialogService.ShowErrorAsync(
+                    "无法连接到数据库",
+                    $"请检查数据库文件是否存在且未被占用。\n\n错误详情: {sqlEx.Message}");
+            }
+            catch (System.Text.Json.JsonException jsonEx)
+            {
+                System.Diagnostics.Debug.WriteLine("=== 加载约束数据失败 (数据格式错误) ===");
+                System.Diagnostics.Debug.WriteLine($"异常类型: {jsonEx.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"错误消息: {jsonEx.Message}");
+                System.Diagnostics.Debug.WriteLine($"路径: {jsonEx.Path}");
+                System.Diagnostics.Debug.WriteLine($"行号: {jsonEx.LineNumber}");
+                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {jsonEx.StackTrace}");
+                
+                await _dialogService.ShowErrorAsync(
+                    "约束数据格式错误",
+                    $"数据库中的约束数据格式不正确，可能需要重新创建。\n\n错误详情: {jsonEx.Message}");
+            }
+            catch (TaskCanceledException taskEx)
+            {
+                System.Diagnostics.Debug.WriteLine("=== 加载约束数据失败 (超时) ===");
+                System.Diagnostics.Debug.WriteLine($"异常类型: {taskEx.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"错误消息: {taskEx.Message}");
+                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {taskEx.StackTrace}");
+                
+                await _dialogService.ShowWarningAsync("加载约束数据超时，请重试");
+            }
             catch (Exception ex)
             {
-                // 使用注入的 _dialogService
-                await _dialogService.ShowErrorAsync("加载约束数据失败", ex);
+                System.Diagnostics.Debug.WriteLine("=== 加载约束数据失败 (未知错误) ===");
+                System.Diagnostics.Debug.WriteLine($"异常类型: {ex.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"内部异常: {ex.InnerException.GetType().Name}");
+                    System.Diagnostics.Debug.WriteLine($"内部异常消息: {ex.InnerException.Message}");
+                }
+                
+                await _dialogService.ShowErrorAsync(
+                    "加载约束数据失败",
+                    $"发生了意外错误。\n\n错误类型: {ex.GetType().Name}\n错误消息: {ex.Message}");
             }
             finally
             {
                 IsLoadingConstraints = false;
+                stopwatch.Stop();
+                System.Diagnostics.Debug.WriteLine($"约束数据加载耗时: {stopwatch.ElapsedMilliseconds}ms");
+                System.Diagnostics.Debug.WriteLine("=== 约束数据加载流程结束 ===");
             }
         }
 
@@ -363,19 +440,29 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private async Task LoadTemplateAsync(int templateId)
         {
             IsLoadingInitial = true;
+            System.Diagnostics.Debug.WriteLine($"=== 开始加载模板 (ID: {templateId}) ===");
+            
             try
             {
                 var template = await _templateService.GetByIdAsync(templateId);
                 if (template == null)
                 {
+                    System.Diagnostics.Debug.WriteLine($"模板不存在 (ID: {templateId})");
                     await _dialogService.ShowWarningAsync("模板不存在");
                     return;
                 }
+                
+                System.Diagnostics.Debug.WriteLine($"模板加载成功: {template.Name}");
+                System.Diagnostics.Debug.WriteLine($"模板包含 - 人员: {template.PersonnelIds.Count}, 岗位: {template.PositionIds.Count}");
+                
                 LoadedTemplateId = template.Id;
 
                 // Load base data first
                 if (AvailablePersonnels.Count == 0 || AvailablePositions.Count == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("加载基础数据（人员和岗位）");
                     await LoadInitialDataAsync();
+                }
 
                 // Pre-fill selections
                 var selectedPers = AvailablePersonnels.Where(p => template.PersonnelIds.Contains(p.Id)).ToList();
@@ -392,6 +479,12 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 // Display warning if any resources are missing
                 if (missingPersonnelIds.Any() || missingPositionIds.Any())
                 {
+                    System.Diagnostics.Debug.WriteLine("警告: 模板中的部分资源已不存在");
+                    if (missingPersonnelIds.Any())
+                        System.Diagnostics.Debug.WriteLine($"- 缺失人员ID: {string.Join(", ", missingPersonnelIds)}");
+                    if (missingPositionIds.Any())
+                        System.Diagnostics.Debug.WriteLine($"- 缺失岗位ID: {string.Join(", ", missingPositionIds)}");
+                    
                     var warningMsg = "模板中的部分资源已不存在：\n";
                     if (missingPersonnelIds.Any())
                         warningMsg += $"- 缺失人员ID: {string.Join(", ", missingPersonnelIds)}\n";
@@ -409,11 +502,16 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 SelectedHolidayConfigId = template.HolidayConfigId;
                 _enabledFixedRules = template.EnabledFixedRuleIds?.ToList() ?? new();
                 _enabledManualAssignments = template.EnabledManualAssignmentIds?.ToList() ?? new();
+                
+                System.Diagnostics.Debug.WriteLine($"模板约束配置 - 固定规则: {_enabledFixedRules.Count}, 手动指定: {_enabledManualAssignments.Count}");
+                System.Diagnostics.Debug.WriteLine($"节假日配置 - 使用活动配置: {UseActiveHolidayConfig}, 配置ID: {SelectedHolidayConfigId}");
 
                 // Immediately load constraint data
+                System.Diagnostics.Debug.WriteLine("开始加载约束数据以应用模板设置");
                 await LoadConstraintsAsync();
                 
                 // Apply template constraints after loading
+                System.Diagnostics.Debug.WriteLine("约束数据加载完成，开始应用模板约束设置");
                 ApplyTemplateConstraints();
 
                 TemplateApplied = true;
@@ -425,6 +523,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 var enabledManualAssignmentsCount = ManualAssignments.Count(a => a.IsEnabled);
                 var totalConstraints = enabledFixedRulesCount + enabledManualAssignmentsCount;
                 
+                System.Diagnostics.Debug.WriteLine($"模板应用完成 - 已启用约束: {totalConstraints} (固定规则: {enabledFixedRulesCount}, 手动指定: {enabledManualAssignmentsCount})");
+                System.Diagnostics.Debug.WriteLine("=== 模板加载流程结束 ===");
+                
                 // Display success message with statistics
                 var successMsg = $"模板已加载\n" +
                                 $"人员: {selectedPers.Count}\n" +
@@ -434,6 +535,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"=== 加载模板失败 ===");
+                System.Diagnostics.Debug.WriteLine($"异常类型: {ex.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
+                
                 await _dialogService.ShowErrorAsync("加载模板失败", ex);
             }
             finally
@@ -444,16 +550,108 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
         private void ApplyTemplateConstraints()
         {
-            if (!TemplateApplied) return;
+            if (!TemplateApplied)
+            {
+                System.Diagnostics.Debug.WriteLine("ApplyTemplateConstraints: 模板未应用，跳过");
+                return;
+            }
 
+            System.Diagnostics.Debug.WriteLine("=== 开始应用模板约束 ===");
+            System.Diagnostics.Debug.WriteLine($"模板中的固定规则ID: [{string.Join(", ", _enabledFixedRules)}]");
+            System.Diagnostics.Debug.WriteLine($"模板中的手动指定ID: [{string.Join(", ", _enabledManualAssignments)}]");
+            System.Diagnostics.Debug.WriteLine($"数据库中的固定规则数量: {FixedPositionRules.Count}");
+            System.Diagnostics.Debug.WriteLine($"数据库中的手动指定数量: {ManualAssignments.Count}");
+
+            // 验证并应用固定规则
+            var appliedFixedRules = 0;
+            var missingFixedRuleIds = new List<int>();
+            
             foreach (var rule in FixedPositionRules)
             {
-                rule.IsEnabled = _enabledFixedRules.Contains(rule.Id);
+                if (_enabledFixedRules.Contains(rule.Id))
+                {
+                    rule.IsEnabled = true;
+                    appliedFixedRules++;
+                    System.Diagnostics.Debug.WriteLine($"启用固定规则: ID={rule.Id}, 描述={rule.Description}");
+                }
+                else
+                {
+                    rule.IsEnabled = false;
+                }
             }
+            
+            // 检查模板中的规则是否在数据库中存在
+            var existingFixedRuleIds = FixedPositionRules.Select(r => r.Id).ToHashSet();
+            foreach (var templateRuleId in _enabledFixedRules)
+            {
+                if (!existingFixedRuleIds.Contains(templateRuleId))
+                {
+                    missingFixedRuleIds.Add(templateRuleId);
+                }
+            }
+
+            // 验证并应用手动指定
+            var appliedManualAssignments = 0;
+            var missingManualAssignmentIds = new List<int>();
+            
             foreach (var assignment in ManualAssignments)
             {
-                assignment.IsEnabled = _enabledManualAssignments.Contains(assignment.Id);
+                if (_enabledManualAssignments.Contains(assignment.Id))
+                {
+                    assignment.IsEnabled = true;
+                    appliedManualAssignments++;
+                    System.Diagnostics.Debug.WriteLine($"启用手动指定: ID={assignment.Id}, 日期={assignment.Date:yyyy-MM-dd}, 人员={assignment.PersonalId}, 岗位={assignment.PositionId}");
+                }
+                else
+                {
+                    assignment.IsEnabled = false;
+                }
             }
+            
+            // 检查模板中的手动指定是否在数据库中存在
+            var existingManualAssignmentIds = ManualAssignments.Select(a => a.Id).ToHashSet();
+            foreach (var templateAssignmentId in _enabledManualAssignments)
+            {
+                if (!existingManualAssignmentIds.Contains(templateAssignmentId))
+                {
+                    missingManualAssignmentIds.Add(templateAssignmentId);
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine($"应用结果 - 固定规则: {appliedFixedRules}/{_enabledFixedRules.Count}, 手动指定: {appliedManualAssignments}/{_enabledManualAssignments.Count}");
+
+            // 记录缺失的约束
+            if (missingFixedRuleIds.Any() || missingManualAssignmentIds.Any())
+            {
+                System.Diagnostics.Debug.WriteLine("警告: 模板中的部分约束在数据库中不存在");
+                
+                if (missingFixedRuleIds.Any())
+                {
+                    System.Diagnostics.Debug.WriteLine($"- 缺失的固定规则ID: {string.Join(", ", missingFixedRuleIds)}");
+                }
+                
+                if (missingManualAssignmentIds.Any())
+                {
+                    System.Diagnostics.Debug.WriteLine($"- 缺失的手动指定ID: {string.Join(", ", missingManualAssignmentIds)}");
+                }
+                
+                // 构建警告消息并显示给用户
+                var warningMsg = "模板中的部分约束已不存在：\n";
+                if (missingFixedRuleIds.Any())
+                {
+                    warningMsg += $"- 缺失的固定规则: {missingFixedRuleIds.Count} 条 (ID: {string.Join(", ", missingFixedRuleIds)})\n";
+                }
+                if (missingManualAssignmentIds.Any())
+                {
+                    warningMsg += $"- 缺失的手动指定: {missingManualAssignmentIds.Count} 条 (ID: {string.Join(", ", missingManualAssignmentIds)})\n";
+                }
+                warningMsg += "\n将仅应用存在的约束。";
+                
+                // 异步显示警告（不阻塞当前流程）
+                _ = _dialogService.ShowWarningAsync(warningMsg);
+            }
+            
+            System.Diagnostics.Debug.WriteLine("=== 模板约束应用完成 ===");
         }
 
         private bool CanSaveTemplate() => SelectedPersonnels.Count > 0 && SelectedPositions.Count > 0;
