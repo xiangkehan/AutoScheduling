@@ -16,6 +16,7 @@ namespace AutoScheduling3.Views.Scheduling
         {
             this.InitializeComponent();
             ViewModel = (App.Current as App).ServiceProvider.GetRequiredService<SchedulingViewModel>();
+            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -35,6 +36,54 @@ namespace AutoScheduling3.Views.Scheduling
             }
             // Always load constraints, this is now called from ViewModel when needed.
             // _ = ViewModel.LoadConstraintsCommand.ExecuteAsync(null);
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        }
+
+        private async void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ViewModel.IsCreatingManualAssignment))
+            {
+                if (ManualAssignmentDialog == null)
+                    return;
+
+                if (ViewModel.IsCreatingManualAssignment)
+                {
+                    // 确保对话框有 XamlRoot
+                    if (ManualAssignmentDialog.XamlRoot == null)
+                    {
+                        ManualAssignmentDialog.XamlRoot = this.XamlRoot;
+                    }
+                    await ManualAssignmentDialog.ShowAsync();
+                }
+                else
+                {
+                    ManualAssignmentDialog.Hide();
+                }
+            }
+            else if (e.PropertyName == nameof(ViewModel.IsEditingManualAssignment))
+            {
+                if (ManualAssignmentEditDialog == null)
+                    return;
+
+                if (ViewModel.IsEditingManualAssignment)
+                {
+                    // 确保对话框有 XamlRoot
+                    if (ManualAssignmentEditDialog.XamlRoot == null)
+                    {
+                        ManualAssignmentEditDialog.XamlRoot = this.XamlRoot;
+                    }
+                    await ManualAssignmentEditDialog.ShowAsync();
+                }
+                else
+                {
+                    ManualAssignmentEditDialog.Hide();
+                }
+            }
         }
 
         private void AddPersonnel_Click(object sender, RoutedEventArgs e)

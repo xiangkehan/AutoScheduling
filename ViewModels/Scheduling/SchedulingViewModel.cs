@@ -79,8 +79,152 @@ namespace AutoScheduling3.ViewModels.Scheduling
         [ObservableProperty]
         private UpdateManualAssignmentDto? _editingManualAssignmentDto;
 
+        // Wrapper properties for form binding (to handle null cases)
+        public DateTimeOffset? NewManualAssignmentDate
+        {
+            get => NewManualAssignment != null ? new DateTimeOffset(NewManualAssignment.Date) : null;
+            set
+            {
+                if (NewManualAssignment != null && value.HasValue)
+                {
+                    NewManualAssignment.Date = value.Value.DateTime;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int NewManualAssignmentPersonnelId
+        {
+            get => NewManualAssignment?.PersonnelId ?? 0;
+            set
+            {
+                if (NewManualAssignment != null)
+                {
+                    NewManualAssignment.PersonnelId = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int NewManualAssignmentPositionId
+        {
+            get => NewManualAssignment?.PositionId ?? 0;
+            set
+            {
+                if (NewManualAssignment != null)
+                {
+                    NewManualAssignment.PositionId = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int NewManualAssignmentTimeSlot
+        {
+            get => NewManualAssignment?.TimeSlot ?? 0;
+            set
+            {
+                if (NewManualAssignment != null)
+                {
+                    NewManualAssignment.TimeSlot = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string NewManualAssignmentRemarks
+        {
+            get => NewManualAssignment?.Remarks ?? string.Empty;
+            set
+            {
+                if (NewManualAssignment != null)
+                {
+                    NewManualAssignment.Remarks = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public DateTimeOffset? EditingManualAssignmentDate
+        {
+            get => EditingManualAssignmentDto != null ? new DateTimeOffset(EditingManualAssignmentDto.Date) : null;
+            set
+            {
+                if (EditingManualAssignmentDto != null && value.HasValue)
+                {
+                    EditingManualAssignmentDto.Date = value.Value.DateTime;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int EditingManualAssignmentPersonnelId
+        {
+            get => EditingManualAssignmentDto?.PersonnelId ?? 0;
+            set
+            {
+                if (EditingManualAssignmentDto != null)
+                {
+                    EditingManualAssignmentDto.PersonnelId = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int EditingManualAssignmentPositionId
+        {
+            get => EditingManualAssignmentDto?.PositionId ?? 0;
+            set
+            {
+                if (EditingManualAssignmentDto != null)
+                {
+                    EditingManualAssignmentDto.PositionId = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int EditingManualAssignmentTimeSlot
+        {
+            get => EditingManualAssignmentDto?.TimeSlot ?? 0;
+            set
+            {
+                if (EditingManualAssignmentDto != null)
+                {
+                    EditingManualAssignmentDto.TimeSlot = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string EditingManualAssignmentRemarks
+        {
+            get => EditingManualAssignmentDto?.Remarks ?? string.Empty;
+            set
+            {
+                if (EditingManualAssignmentDto != null)
+                {
+                    EditingManualAssignmentDto.Remarks = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         // 时段选项（静态列表）
         public List<TimeSlotOption> TimeSlotOptions { get; } = TimeSlotOption.GetAll();
+
+        // 表单验证错误消息
+        [ObservableProperty]
+        private string _dateValidationError = string.Empty;
+
+        [ObservableProperty]
+        private string _personnelValidationError = string.Empty;
+
+        [ObservableProperty]
+        private string _positionValidationError = string.Empty;
+
+        [ObservableProperty]
+        private string _timeSlotValidationError = string.Empty;
 
         [ObservableProperty]
         private ScheduleDto _resultSchedule;
@@ -332,8 +476,29 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 FixedPositionRules = new ObservableCollection<FixedPositionRule>(rules);
                 ManualAssignments = new ObservableCollection<ManualAssignment>(manuals);
                 
-                // 加载手动指定到ManualAssignmentManager
-                _manualAssignmentManager.LoadSaved(manuals);
+                // 转换为DTO并加载手动指定到ManualAssignmentManager
+                var manualDtos = manuals.Select(m =>
+                {
+                    // 查找人员和岗位名称
+                    var personnel = AvailablePersonnels.FirstOrDefault(p => p.Id == m.PersonalId);
+                    var position = AvailablePositions.FirstOrDefault(p => p.Id == m.PositionId);
+                    
+                    return new ManualAssignmentDto
+                    {
+                        Id = m.Id,
+                        Date = m.Date,
+                        PersonnelId = m.PersonalId,
+                        PersonnelName = personnel?.Name ?? "未知人员",
+                        PositionId = m.PositionId,
+                        PositionName = position?.Name ?? "未知哨位",
+                        TimeSlot = m.PeriodIndex,
+                        Remarks = m.Remarks,
+                        IsEnabled = m.IsEnabled,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    };
+                }).ToList();
+                _manualAssignmentManager.LoadSaved(manualDtos);
                 System.Diagnostics.Debug.WriteLine($"已加载 {manuals.Count} 条手动指定到ManualAssignmentManager");
                 
                 // 空数据警告日志
@@ -840,7 +1005,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 
                 System.Diagnostics.Debug.WriteLine($"模板将包含 {allEnabledManualAssignmentIds.Count} 条启用的手动指定");
                 
-                var createDto = new CreateTemplateDto
+                var templateDto = new CreateTemplateDto
                 {
                     Name = name,
                     TemplateType = type,
@@ -854,7 +1019,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     EnabledManualAssignmentIds = allEnabledManualAssignmentIds
                 };
                 
-                var tpl = await _templateService.CreateAsync(createDto);
+                var tpl = await _templateService.CreateAsync(templateDto);
                 System.Diagnostics.Debug.WriteLine($"模板 '{tpl.Name}' 保存成功，ID={tpl.Id}");
                 System.Diagnostics.Debug.WriteLine("=== 模板保存完成 ===");
                 
@@ -909,6 +1074,49 @@ namespace AutoScheduling3.ViewModels.Scheduling
             cons.Lines.Add($"固定岗位规则: {enabledRulesCount} 条");
             cons.Lines.Add($"手动指定排班: {enabledAssignmentsCount} 条");
             sections.Add(cons);
+            
+            // 手动指定详情
+            var manualAssignmentSection = new SummarySection { Header = "手动指定" };
+            var allEnabledAssignments = _manualAssignmentManager.GetAllEnabled();
+            
+            if (allEnabledAssignments.Count > 0)
+            {
+                // 按日期和时段排序
+                var sortedAssignments = allEnabledAssignments
+                    .OrderBy(a => a.Date)
+                    .ThenBy(a => a.TimeSlot)
+                    .ToList();
+                
+                foreach (var assignment in sortedAssignments)
+                {
+                    // 获取人员和哨位名称
+                    var personnelName = SelectedPersonnels.FirstOrDefault(p => p.Id == assignment.PersonnelId)?.Name ?? $"人员ID:{assignment.PersonnelId}";
+                    var positionName = SelectedPositions.FirstOrDefault(p => p.Id == assignment.PositionId)?.Name ?? $"哨位ID:{assignment.PositionId}";
+                    
+                    // 格式化时段显示
+                    var startHour = assignment.TimeSlot * 2;
+                    var endHour = (assignment.TimeSlot + 1) * 2;
+                    var timeSlotDisplay = $"时段 {assignment.TimeSlot} ({startHour:D2}:00-{endHour:D2}:00)";
+                    
+                    // 构建详细信息行
+                    var detailLine = $"{assignment.Date:yyyy-MM-dd} | {timeSlotDisplay} | {personnelName} → {positionName}";
+                    
+                    // 如果有描述，添加到详细信息中
+                    if (!string.IsNullOrWhiteSpace(assignment.Remarks))
+                    {
+                        detailLine += $" | 备注: {assignment.Remarks}";
+                    }
+                    
+                    manualAssignmentSection.Lines.Add(detailLine);
+                }
+            }
+            else
+            {
+                manualAssignmentSection.Lines.Add("无启用的手动指定");
+            }
+            
+            sections.Add(manualAssignmentSection);
+            
             // 模板信息
             if (TemplateApplied && LoadedTemplateId.HasValue)
             {
@@ -930,6 +1138,14 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 Date = StartDate.DateTime.Date,
                 IsEnabled = true
             };
+            
+            // 通知所有包装属性
+            OnPropertyChanged(nameof(NewManualAssignmentDate));
+            OnPropertyChanged(nameof(NewManualAssignmentPersonnelId));
+            OnPropertyChanged(nameof(NewManualAssignmentPositionId));
+            OnPropertyChanged(nameof(NewManualAssignmentTimeSlot));
+            OnPropertyChanged(nameof(NewManualAssignmentRemarks));
+            
             IsCreatingManualAssignment = true;
         }
 
@@ -944,7 +1160,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             // 验证表单
             if (!ValidateManualAssignment(NewManualAssignment, out var error))
             {
-                await _dialogService.ShowWarningAsync(error);
+                // 验证错误已经设置到各个字段的错误属性中，不需要显示对话框
                 return;
             }
 
@@ -965,9 +1181,21 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 position.Name
             );
 
+            // 清空验证错误
+            ClearValidationErrors();
+
+            // 先清空 DTO
+            NewManualAssignment = null;
+            
+            // 通知包装属性更新
+            OnPropertyChanged(nameof(NewManualAssignmentDate));
+            OnPropertyChanged(nameof(NewManualAssignmentPersonnelId));
+            OnPropertyChanged(nameof(NewManualAssignmentPositionId));
+            OnPropertyChanged(nameof(NewManualAssignmentTimeSlot));
+            OnPropertyChanged(nameof(NewManualAssignmentRemarks));
+
             // 关闭表单
             IsCreatingManualAssignment = false;
-            NewManualAssignment = null;
 
             // 通知UI更新
             OnPropertyChanged(nameof(AllManualAssignments));
@@ -978,8 +1206,18 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private void CancelCreateManualAssignment()
         {
-            IsCreatingManualAssignment = false;
+            // 先清空 DTO，避免对话框关闭时绑定更新导致 null 引用
             NewManualAssignment = null;
+            
+            // 通知包装属性更新
+            OnPropertyChanged(nameof(NewManualAssignmentDate));
+            OnPropertyChanged(nameof(NewManualAssignmentPersonnelId));
+            OnPropertyChanged(nameof(NewManualAssignmentPositionId));
+            OnPropertyChanged(nameof(NewManualAssignmentTimeSlot));
+            OnPropertyChanged(nameof(NewManualAssignmentRemarks));
+            
+            // 最后关闭对话框
+            IsCreatingManualAssignment = false;
         }
 
         /// <summary>
@@ -1000,6 +1238,14 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 Remarks = assignment.Remarks,
                 IsEnabled = assignment.IsEnabled
             };
+            
+            // 通知所有包装属性
+            OnPropertyChanged(nameof(EditingManualAssignmentDate));
+            OnPropertyChanged(nameof(EditingManualAssignmentPersonnelId));
+            OnPropertyChanged(nameof(EditingManualAssignmentPositionId));
+            OnPropertyChanged(nameof(EditingManualAssignmentTimeSlot));
+            OnPropertyChanged(nameof(EditingManualAssignmentRemarks));
+            
             IsEditingManualAssignment = true;
         }
 
@@ -1014,7 +1260,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             // 验证表单
             if (!ValidateManualAssignment(EditingManualAssignmentDto, out var error))
             {
-                await _dialogService.ShowWarningAsync(error);
+                // 验证错误已经设置到各个字段的错误属性中，不需要显示对话框
                 return;
             }
 
@@ -1036,10 +1282,22 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 position.Name
             );
 
-            // 关闭表单
-            IsEditingManualAssignment = false;
+            // 清空验证错误
+            ClearValidationErrors();
+
+            // 先清空 DTO
             EditingManualAssignment = null;
             EditingManualAssignmentDto = null;
+            
+            // 通知包装属性更新
+            OnPropertyChanged(nameof(EditingManualAssignmentDate));
+            OnPropertyChanged(nameof(EditingManualAssignmentPersonnelId));
+            OnPropertyChanged(nameof(EditingManualAssignmentPositionId));
+            OnPropertyChanged(nameof(EditingManualAssignmentTimeSlot));
+            OnPropertyChanged(nameof(EditingManualAssignmentRemarks));
+
+            // 关闭表单
+            IsEditingManualAssignment = false;
 
             // 通知UI更新
             OnPropertyChanged(nameof(AllManualAssignments));
@@ -1050,9 +1308,19 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private void CancelEditManualAssignment()
         {
-            IsEditingManualAssignment = false;
+            // 先清空 DTO，避免对话框关闭时绑定更新导致 null 引用
             EditingManualAssignment = null;
             EditingManualAssignmentDto = null;
+            
+            // 通知包装属性更新
+            OnPropertyChanged(nameof(EditingManualAssignmentDate));
+            OnPropertyChanged(nameof(EditingManualAssignmentPersonnelId));
+            OnPropertyChanged(nameof(EditingManualAssignmentPositionId));
+            OnPropertyChanged(nameof(EditingManualAssignmentTimeSlot));
+            OnPropertyChanged(nameof(EditingManualAssignmentRemarks));
+            
+            // 最后关闭对话框
+            IsEditingManualAssignment = false;
         }
 
         /// <summary>
@@ -1090,48 +1358,62 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private bool ValidateManualAssignment(CreateManualAssignmentDto dto, out string error)
         {
+            // 清空之前的错误
+            ClearValidationErrors();
+
+            bool isValid = true;
+
             // 验证日期范围
             if (dto.Date < StartDate.Date || dto.Date > EndDate.Date)
             {
-                error = "日期必须在排班开始日期和结束日期之间";
-                return false;
+                DateValidationError = "日期必须在排班开始日期和结束日期之间";
+                isValid = false;
             }
 
             // 验证人员
             if (dto.PersonnelId <= 0)
             {
-                error = "请选择人员";
-                return false;
+                PersonnelValidationError = "请选择人员";
+                isValid = false;
             }
-
-            if (!SelectedPersonnels.Any(p => p.Id == dto.PersonnelId))
+            else if (!SelectedPersonnels.Any(p => p.Id == dto.PersonnelId))
             {
-                error = "选择的人员不在已选人员列表中";
-                return false;
+                PersonnelValidationError = "选择的人员不在已选人员列表中";
+                isValid = false;
             }
 
             // 验证哨位
             if (dto.PositionId <= 0)
             {
-                error = "请选择哨位";
-                return false;
+                PositionValidationError = "请选择哨位";
+                isValid = false;
             }
-
-            if (!SelectedPositions.Any(p => p.Id == dto.PositionId))
+            else if (!SelectedPositions.Any(p => p.Id == dto.PositionId))
             {
-                error = "选择的哨位不在已选哨位列表中";
-                return false;
+                PositionValidationError = "选择的哨位不在已选哨位列表中";
+                isValid = false;
             }
 
             // 验证时段
             if (dto.TimeSlot < 0 || dto.TimeSlot > 11)
             {
-                error = "请选择时段";
-                return false;
+                TimeSlotValidationError = "请选择时段";
+                isValid = false;
             }
 
-            error = string.Empty;
-            return true;
+            error = isValid ? string.Empty : "请修正表单中的错误";
+            return isValid;
+        }
+
+        /// <summary>
+        /// 清空验证错误消息
+        /// </summary>
+        private void ClearValidationErrors()
+        {
+            DateValidationError = string.Empty;
+            PersonnelValidationError = string.Empty;
+            PositionValidationError = string.Empty;
+            TimeSlotValidationError = string.Empty;
         }
 
         /// <summary>
@@ -1139,48 +1421,51 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private bool ValidateManualAssignment(UpdateManualAssignmentDto dto, out string error)
         {
+            // 清空之前的错误
+            ClearValidationErrors();
+
+            bool isValid = true;
+
             // 验证日期范围
             if (dto.Date < StartDate.Date || dto.Date > EndDate.Date)
             {
-                error = "日期必须在排班开始日期和结束日期之间";
-                return false;
+                DateValidationError = "日期必须在排班开始日期和结束日期之间";
+                isValid = false;
             }
 
             // 验证人员
             if (dto.PersonnelId <= 0)
             {
-                error = "请选择人员";
-                return false;
+                PersonnelValidationError = "请选择人员";
+                isValid = false;
             }
-
-            if (!SelectedPersonnels.Any(p => p.Id == dto.PersonnelId))
+            else if (!SelectedPersonnels.Any(p => p.Id == dto.PersonnelId))
             {
-                error = "选择的人员不在已选人员列表中";
-                return false;
+                PersonnelValidationError = "选择的人员不在已选人员列表中";
+                isValid = false;
             }
 
             // 验证哨位
             if (dto.PositionId <= 0)
             {
-                error = "请选择哨位";
-                return false;
+                PositionValidationError = "请选择哨位";
+                isValid = false;
             }
-
-            if (!SelectedPositions.Any(p => p.Id == dto.PositionId))
+            else if (!SelectedPositions.Any(p => p.Id == dto.PositionId))
             {
-                error = "选择的哨位不在已选哨位列表中";
-                return false;
+                PositionValidationError = "选择的哨位不在已选哨位列表中";
+                isValid = false;
             }
 
             // 验证时段
             if (dto.TimeSlot < 0 || dto.TimeSlot > 11)
             {
-                error = "请选择时段";
-                return false;
+                TimeSlotValidationError = "请选择时段";
+                isValid = false;
             }
 
-            error = string.Empty;
-            return true;
+            error = isValid ? string.Empty : "请修正表单中的错误";
+            return isValid;
         }
 
         #endregion

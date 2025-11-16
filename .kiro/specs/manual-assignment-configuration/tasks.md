@@ -136,7 +136,12 @@
   - 将临时手动指定数据添加到TemporaryManualAssignments
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 6. 更新BuildSummarySections方法显示手动指定详情
+- [x] 6. 更新BuildSummarySections方法显示手动指定详情
+
+
+
+
+
 
 
   - 在确认步骤的摘要信息中添加"手动指定"部分
@@ -147,7 +152,12 @@
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
 
-- [ ] 7. 创建手动指定UI组件
+
+- [x] 7. 创建手动指定UI组件
+
+
+
+
 
   - 在CreateSchedulingPage.xaml的步骤4中扩展手动指定区域
   - 添加"添加手动指定"按钮
@@ -156,7 +166,9 @@
   - 实现空状态提示
   - _Requirements: 1.1, 1.3, 1.4, 1.5_
 
-- [ ] 7.1 创建手动指定卡片UI
+- [x] 7.1 创建手动指定卡片UI
+
+
   - 创建手动指定卡片DataTemplate
   - 显示状态标签（临时/已保存）
   - 显示日期和时段
@@ -166,7 +178,9 @@
   - 添加编辑和删除按钮（仅临时手动指定）
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7_
 
-- [ ] 7.2 创建手动指定表单UI
+- [x] 7.2 创建手动指定表单UI
+
+
   - 创建ContentDialog用于创建/编辑手动指定
   - 添加日期选择器（限制在排班日期范围内）
   - 添加人员下拉列表（绑定到SelectedPersonnels）
@@ -177,7 +191,9 @@
   - 添加提交和取消按钮
   - _Requirements: 1.3, 1.4, 1.5, 1.6, 1.7_
 
-- [ ] 7.3 实现表单验证UI反馈
+- [x] 7.3 实现表单验证UI反馈
+
+
   - 在日期字段下方显示验证错误消息
   - 在人员字段下方显示验证错误消息
   - 在哨位字段下方显示验证错误消息
@@ -186,14 +202,22 @@
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6_
 
 
-- [ ] 8. 更新SchedulingRequestDto添加临时手动指定字段
+
+- [x] 8. 更新SchedulingRequestDto添加临时手动指定字段
+
+
+
+
 
   - 在SchedulingRequestDto中添加TemporaryManualAssignments属性
   - 定义ManualAssignmentRequestItem类
   - _Requirements: 6.1, 6.2_
 
 
-- [ ] 9. 更新CancelWizard方法清空手动指定
+- [x] 9. 更新CancelWizard方法清空手动指定
+
+
+
 
   - 在CancelWizard方法中调用ManualAssignmentManager.Clear
   - 清空所有临时和已保存的手动指定

@@ -9,12 +9,14 @@
     xmlns:dto="using:AutoScheduling3.DTOs"
     xmlns:models="using:AutoScheduling3.Models.Constraints"
     mc:Ignorable="d"
+    x:Name="Root"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
     <Page.Resources>
         <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:InvertedBooleanConverter x:Key="InvertedBooleanConverter"/>
         <converters:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
 
         <DataTemplate x:Key="PersonnelListViewTemplate" x:DataType="dto:PersonnelDto">
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -181,30 +183,81 @@
                             <!-- Manual Assignments -->
                             <StackPanel Spacing="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
                                         BorderThickness="1" Padding="12" CornerRadius="{StaticResource ControlCornerRadius}">
-                                <TextBlock Text="手动指定" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
+                                <Grid>
+                                    <TextBlock Text="手动指定" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
+                                    <Button Content="添加手动指定" 
+                                            Command="{x:Bind ViewModel.StartCreateManualAssignmentCommand}"
+                                            HorizontalAlignment="Right"
+                                            Style="{ThemeResource AccentButtonStyle}"/>
+                                </Grid>
                                 
                                 <!-- Empty State for Manual Assignments -->
-                                <TextBlock Text="在当前日期范围内没有找到手动指定" 
+                                <TextBlock Text="暂无手动指定" 
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                           Visibility="{x:Bind ViewModel.ManualAssignments.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0, Mode=OneWay}"/>
+                                           Visibility="{x:Bind ViewModel.AllManualAssignments.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0, Mode=OneWay}"/>
                                 
-                                <ListView ItemsSource="{x:Bind ViewModel.ManualAssignments, Mode=OneWay}" 
-                                          SelectionMode="None" MaxHeight="200"
-                                          Visibility="{x:Bind ViewModel.ManualAssignments.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='&gt;0', Mode=OneWay}">
-                                    <ListView.ItemTemplate>
-                                        <DataTemplate x:DataType="models:ManualAssignment">
-                                            <CheckBox IsChecked="{x:Bind IsEnabled, Mode=TwoWay}">
-                                                <TextBlock>
-                                                    <Run Text="{x:Bind Date, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
-                                                    <Run Text=" - "/>
-                                                    <Run Text="{x:Bind PersonalId}"/>
-                                                    <Run Text=" -> "/>
-                                                    <Run Text="{x:Bind PositionId}"/>
-                                                </TextBlock>
-                                            </CheckBox>
+                                <!-- Manual Assignment List -->
+                                <ItemsRepeater ItemsSource="{x:Bind ViewModel.AllManualAssignments, Mode=OneWay}"
+                                               Visibility="{x:Bind ViewModel.AllManualAssignments.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='&gt;0', Mode=OneWay}">
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate x:DataType="viewmodels:ManualAssignmentViewModel">
+                                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                    BorderThickness="1" Padding="12" CornerRadius="4" Margin="0,4">
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/> <!-- Status Badge -->
+                                                        <ColumnDefinition Width="*"/>    <!-- Content -->
+                                                        <ColumnDefinition Width="Auto"/> <!-- Actions -->
+                                                    </Grid.ColumnDefinitions>
+                                                    
+                                                    <!-- Status Badge -->
+                                                    <Border Grid.Column="0" 
+                                                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                            Padding="8,4" 
+                                                            CornerRadius="4"
+                                                            Visibility="{x:Bind IsTemporary, Mode=OneWay}">
+                                                        <TextBlock Text="{x:Bind StatusBadge}" 
+                                                                   FontSize="12"
+                                                                   Foreground="White"/>
+                                                    </Border>
+                                                    
+                                                    <!-- Content -->
+                                                    <StackPanel Grid.Column="1" Spacing="4">
+                                                        <TextBlock>
+                                                            <Run Text="{x:Bind Date}" FontWeight="SemiBold"/>
+                                                            <Run Text=" | "/>
+                                                            <Run Text="{x:Bind TimeSlotDisplay}"/>
+                                                        </TextBlock>
+                                                        <TextBlock>
+                                                            <Run Text="{x:Bind PersonnelName}" FontWeight="SemiBold"/>
+                                                            <Run Text=" → "/>
+                                                            <Run Text="{x:Bind PositionName}" FontWeight="SemiBold"/>
+                                                        </TextBlock>
+                                                        <TextBlock Text="{x:Bind Remarks}" 
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                                   Visibility="{x:Bind Remarks, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                    </StackPanel>
+                                                    
+                                                    <!-- Actions -->
+                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                        <ToggleSwitch IsOn="{x:Bind IsEnabled, Mode=TwoWay}" 
+                                                                      OnContent="" 
+                                                                      OffContent=""
+                                                                      MinWidth="40"/>
+                                                        <Button Content="编辑" 
+                                                                Command="{Binding ElementName=Root, Path=ViewModel.StartEditManualAssignmentCommand}"
+                                                                CommandParameter="{x:Bind}"
+                                                                Visibility="{x:Bind CanEdit}"/>
+                                                        <Button Content="删除" 
+                                                                Command="{Binding ElementName=Root, Path=ViewModel.DeleteManualAssignmentCommand}"
+                                                                CommandParameter="{x:Bind}"
+                                                                Visibility="{x:Bind CanDelete}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
                                         </DataTemplate>
-                                    </ListView.ItemTemplate>
-                                </ListView>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
@@ -266,5 +319,175 @@
                 </Button>
             </StackPanel>
         </Grid>
+
+        <!-- Manual Assignment Create/Edit Dialog -->
+        <ContentDialog x:Name="ManualAssignmentDialog"
+                       Title="手动指定"
+                       PrimaryButtonText="提交"
+                       CloseButtonText="取消"
+                       DefaultButton="Primary"
+                       x:Load="{x:Bind ViewModel.IsCreatingManualAssignment, Mode=OneWay}"
+                       PrimaryButtonCommand="{x:Bind ViewModel.SubmitCreateManualAssignmentCommand}"
+                       CloseButtonCommand="{x:Bind ViewModel.CancelCreateManualAssignmentCommand}">
+            <ScrollViewer MaxHeight="500">
+                <StackPanel Spacing="12">
+                    <!-- Date Picker -->
+                    <StackPanel Spacing="4">
+                        <CalendarDatePicker Header="日期*" 
+                                            Date="{x:Bind ViewModel.NewManualAssignmentDate, Mode=TwoWay}"
+                                            MinDate="{x:Bind ViewModel.StartDate, Mode=OneWay}"
+                                            MaxDate="{x:Bind ViewModel.EndDate, Mode=OneWay}"
+                                            PlaceholderText="选择日期"/>
+                        <TextBlock Text="{x:Bind ViewModel.DateValidationError, Mode=OneWay}"
+                                   Foreground="{ThemeResource SystemErrorTextColor}"
+                                   FontSize="12"
+                                   Visibility="{x:Bind ViewModel.DateValidationError, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}"/>
+                    </StackPanel>
+                    
+                    <!-- Personnel Selection -->
+                    <StackPanel Spacing="4">
+                        <ComboBox Header="人员*"
+                                  ItemsSource="{x:Bind ViewModel.SelectedPersonnels, Mode=OneWay}"
+                                  SelectedValue="{x:Bind ViewModel.NewManualAssignmentPersonnelId, Mode=TwoWay}"
+                                  SelectedValuePath="Id"
+                                  DisplayMemberPath="Name"
+                                  PlaceholderText="选择人员"
+                                  HorizontalAlignment="Stretch"/>
+                        <TextBlock Text="{x:Bind ViewModel.PersonnelValidationError, Mode=OneWay}"
+                                   Foreground="{ThemeResource SystemErrorTextColor}"
+                                   FontSize="12"
+                                   Visibility="{x:Bind ViewModel.PersonnelValidationError, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}"/>
+                    </StackPanel>
+                    
+                    <!-- Position Selection -->
+                    <StackPanel Spacing="4">
+                        <ComboBox Header="哨位*"
+                                  ItemsSource="{x:Bind ViewModel.SelectedPositions, Mode=OneWay}"
+                                  SelectedValue="{x:Bind ViewModel.NewManualAssignmentPositionId, Mode=TwoWay}"
+                                  SelectedValuePath="Id"
+                                  DisplayMemberPath="Name"
+                                  PlaceholderText="选择哨位"
+                                  HorizontalAlignment="Stretch"/>
+                        <TextBlock Text="{x:Bind ViewModel.PositionValidationError, Mode=OneWay}"
+                                   Foreground="{ThemeResource SystemErrorTextColor}"
+                                   FontSize="12"
+                                   Visibility="{x:Bind ViewModel.PositionValidationError, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}"/>
+                    </StackPanel>
+                    
+                    <!-- Time Slot Selection -->
+                    <StackPanel Spacing="4">
+                        <ComboBox Header="时段*"
+                                  ItemsSource="{x:Bind ViewModel.TimeSlotOptions, Mode=OneWay}"
+                                  SelectedValue="{x:Bind ViewModel.NewManualAssignmentTimeSlot, Mode=TwoWay}"
+                                  SelectedValuePath="Index"
+                                  DisplayMemberPath="DisplayText"
+                                  PlaceholderText="选择时段"
+                                  HorizontalAlignment="Stretch"/>
+                        <TextBlock Text="{x:Bind ViewModel.TimeSlotValidationError, Mode=OneWay}"
+                                   Foreground="{ThemeResource SystemErrorTextColor}"
+                                   FontSize="12"
+                                   Visibility="{x:Bind ViewModel.TimeSlotValidationError, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}"/>
+                    </StackPanel>
+                    
+                    <!-- Remarks -->
+                    <TextBox Header="描述（可选）"
+                             Text="{x:Bind ViewModel.NewManualAssignmentRemarks, Mode=TwoWay}"
+                             MaxLength="200"
+                             PlaceholderText="输入描述信息"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             Height="80"/>
+                    
+                    <!-- Enabled Toggle -->
+                    <ToggleSwitch Header="启用"
+                                  IsOn="{x:Bind ViewModel.NewManualAssignment.IsEnabled, Mode=TwoWay}"/>
+                </StackPanel>
+            </ScrollViewer>
+        </ContentDialog>
+
+        <!-- Manual Assignment Edit Dialog -->
+        <ContentDialog x:Name="ManualAssignmentEditDialog"
+                       Title="编辑手动指定"
+                       PrimaryButtonText="提交"
+                       CloseButtonText="取消"
+                       DefaultButton="Primary"
+                       x:Load="{x:Bind ViewModel.IsEditingManualAssignment, Mode=OneWay}"
+                       PrimaryButtonCommand="{x:Bind ViewModel.SubmitEditManualAssignmentCommand}"
+                       CloseButtonCommand="{x:Bind ViewModel.CancelEditManualAssignmentCommand}">
+            <ScrollViewer MaxHeight="500">
+                <StackPanel Spacing="12">
+                    <!-- Date Picker -->
+                    <StackPanel Spacing="4">
+                        <CalendarDatePicker Header="日期*" 
+                                            Date="{x:Bind ViewModel.EditingManualAssignmentDate, Mode=TwoWay}"
+                                            MinDate="{x:Bind ViewModel.StartDate, Mode=OneWay}"
+                                            MaxDate="{x:Bind ViewModel.EndDate, Mode=OneWay}"
+                                            PlaceholderText="选择日期"/>
+                        <TextBlock Text="{x:Bind ViewModel.DateValidationError, Mode=OneWay}"
+                                   Foreground="{ThemeResource SystemErrorTextColor}"
+                                   FontSize="12"
+                                   Visibility="{x:Bind ViewModel.DateValidationError, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}"/>
+                    </StackPanel>
+                    
+                    <!-- Personnel Selection -->
+                    <StackPanel Spacing="4">
+                        <ComboBox Header="人员*"
+                                  ItemsSource="{x:Bind ViewModel.SelectedPersonnels, Mode=OneWay}"
+                                  SelectedValue="{x:Bind ViewModel.EditingManualAssignmentPersonnelId, Mode=TwoWay}"
+                                  SelectedValuePath="Id"
+                                  DisplayMemberPath="Name"
+                                  PlaceholderText="选择人员"
+                                  HorizontalAlignment="Stretch"/>
+                        <TextBlock Text="{x:Bind ViewModel.PersonnelValidationError, Mode=OneWay}"
+                                   Foreground="{ThemeResource SystemErrorTextColor}"
+                                   FontSize="12"
+                                   Visibility="{x:Bind ViewModel.PersonnelValidationError, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}"/>
+                    </StackPanel>
+                    
+                    <!-- Position Selection -->
+                    <StackPanel Spacing="4">
+                        <ComboBox Header="哨位*"
+                                  ItemsSource="{x:Bind ViewModel.SelectedPositions, Mode=OneWay}"
+                                  SelectedValue="{x:Bind ViewModel.EditingManualAssignmentPositionId, Mode=TwoWay}"
+                                  SelectedValuePath="Id"
+                                  DisplayMemberPath="Name"
+                                  PlaceholderText="选择哨位"
+                                  HorizontalAlignment="Stretch"/>
+                        <TextBlock Text="{x:Bind ViewModel.PositionValidationError, Mode=OneWay}"
+                                   Foreground="{ThemeResource SystemErrorTextColor}"
+                                   FontSize="12"
+                                   Visibility="{x:Bind ViewModel.PositionValidationError, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}"/>
+                    </StackPanel>
+                    
+                    <!-- Time Slot Selection -->
+                    <StackPanel Spacing="4">
+                        <ComboBox Header="时段*"
+                                  ItemsSource="{x:Bind ViewModel.TimeSlotOptions, Mode=OneWay}"
+                                  SelectedValue="{x:Bind ViewModel.EditingManualAssignmentTimeSlot, Mode=TwoWay}"
+                                  SelectedValuePath="Index"
+                                  DisplayMemberPath="DisplayText"
+                                  PlaceholderText="选择时段"
+                                  HorizontalAlignment="Stretch"/>
+                        <TextBlock Text="{x:Bind ViewModel.TimeSlotValidationError, Mode=OneWay}"
+                                   Foreground="{ThemeResource SystemErrorTextColor}"
+                                   FontSize="12"
+                                   Visibility="{x:Bind ViewModel.TimeSlotValidationError, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}"/>
+                    </StackPanel>
+                    
+                    <!-- Remarks -->
+                    <TextBox Header="描述（可选）"
+                             Text="{x:Bind ViewModel.EditingManualAssignmentRemarks, Mode=TwoWay}"
+                             MaxLength="200"
+                             PlaceholderText="输入描述信息"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             Height="80"/>
+                    
+                    <!-- Enabled Toggle -->
+                    <ToggleSwitch Header="启用"
+                                  IsOn="{x:Bind ViewModel.EditingManualAssignmentDto.IsEnabled, Mode=TwoWay}"/>
+                </StackPanel>
+            </ScrollViewer>
+        </ContentDialog>
     </Grid>
 </Page>
