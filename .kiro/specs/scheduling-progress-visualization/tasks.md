@@ -157,11 +157,6 @@
 
 - [x] 5.3 实现结果数据处理
 
-
-
-
-
-- [ ] 5.3 实现结果数据处理
   - 添加结果数据属性：`Result`、`PersonnelWorkloads`、`PositionCoverages`、`Conflicts`、`GridData`
 
 
@@ -170,7 +165,12 @@
   - 填充 `PersonnelWorkloads`、`PositionCoverages`、`Conflicts` 集合
   - _需求: 3.1, 3.2, 3.3, 3.4, 3.5, 5.1, 5.2_
 
-- [ ] 5.4 实现取消和操作命令
+- [x] 5.4 实现取消和操作命令
+
+
+
+
+
 
   - 实现 `CancelSchedulingCommand`，调用 `_cancellationTokenSource.Cancel()`
   - 实现 `SaveScheduleCommand`，调用 `SchedulingService` 保存排班结果
@@ -179,7 +179,12 @@
   - 实现 `ReturnToConfigCommand`，导航回 `CreateSchedulingPage`
   - _需求: 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 5.5 实现表格相关命令
+
+
+- [x] 5.5 实现表格相关命令
+
+
+
   - 添加属性：`IsGridFullScreen`
   - 实现 `ToggleGridFullScreenCommand`，切换全屏状态
   - 实现 `ExportGridCommand`，显示"功能开发中"对话框（预留接口）
@@ -187,7 +192,11 @@
   - _需求: 5.1, 5.2, 5.3_
 
 - [ ] 6. 创建 ScheduleGridControl 自定义控件
-- [ ] 6.1 创建控件基础结构
+- [x] 6.1 创建控件基础结构
+
+
+
+
 
 
   - 创建 `ScheduleGridControl` 类，继承 `Control`
@@ -198,7 +207,11 @@
   - 将控件放置在 `Controls/` 目录下
   - _需求: 5.1, 5.2_
 
-- [ ] 6.2 实现表格结构构建
+
+- [x] 6.2 实现表格结构构建
+
+
+
 
 
   - 实现 `BuildGridStructure` 方法，根据 `GridData` 构建表格
@@ -208,8 +221,8 @@
   - 使用 `Grid` 或自定义 `Panel` 布局单元格
   - _需求: 5.1, 5.2_
 
-
 - [ ] 6.3 实现虚拟化渲染
+
 
   - 创建 `VirtualizedGridPanel` 类，继承 `Panel`
   - 重写 `MeasureOverride` 和 `ArrangeOverride` 方法
@@ -222,6 +235,9 @@
 
 - [ ] 6.4 实现单元格样式和交互
 
+
+
+
   - 创建单元格控件 `ScheduleGridCell`，继承 `Border`
   - 实现单元格数据绑定：`PersonnelName`、`IsManualAssignment`、`HasConflict`
   - 应用样式：普通单元格、手动指定单元格（蓝色边框）、冲突单元格（红色边框）
@@ -230,6 +246,7 @@
   - _需求: 5.1, 5.2, 5.3, 5.4, 5.5_
 
 - [ ] 6.5 添加工具栏按钮
+
 
 
   - 在控件模板中添加工具栏 `StackPanel`
@@ -241,6 +258,7 @@
 
 - [ ] 7. 创建 SchedulingProgressPage 视图
 - [ ] 7.1 创建页面基础结构和布局
+
   - 创建 `SchedulingProgressPage.xaml` 和 `SchedulingProgressPage.xaml.cs`
   - 在 Code-behind 中注入 `SchedulingProgressViewModel`
   - 实现 `OnNavigatedTo` 方法，接收 `SchedulingRequestDto` 参数并启动排班
@@ -249,6 +267,7 @@
   - _需求: 1.1_
 
 - [ ] 7.2 实现顶部标题栏和进度指示区
+
   - 添加顶部标题栏，显示排班标题和状态图标
   - 添加进度指示区，包含 `ProgressBar`、阶段名称、阶段描述
   - 绑定 `ProgressBar.Value` 到 `ViewModel.ProgressPercentage`
@@ -257,6 +276,7 @@
   - _需求: 1.1, 1.2, 1.3, 1.4, 1.5_
 
 - [ ] 7.3 实现左侧实时信息区
+
   - 创建左侧列，宽度约 30%，使用 `ScrollViewer` 支持滚动
   - 添加当前处理信息卡片，显示哨位名称、时段、日期
   - 绑定到 `ViewModel.CurrentPositionName`、`ViewModel.CurrentTimeSlot`
@@ -266,6 +286,7 @@
   - _需求: 2.1, 2.2, 2.3, 2.4, 2.5_
 
 - [ ] 7.4 实现右侧结果展示区
+
   - 创建右侧列，宽度约 70%，分为上下两部分
   - 上部使用 `ScrollViewer` 支持滚动
   - 添加 `ScheduleGridControl`，绑定 `GridData` 到 `ViewModel.GridData`
@@ -277,6 +298,7 @@
   - _需求: 3.1, 3.2, 3.3, 3.4, 3.5, 5.1, 5.2, 5.3, 5.4, 5.5_
 
 - [ ] 7.5 实现操作按钮区
+
   - 在右侧下部添加操作按钮区，固定高度
   - 添加"取消排班"按钮，绑定到 `ViewModel.CancelSchedulingCommand`
   - 根据 `ViewModel.IsExecuting` 控制取消按钮可见性
@@ -289,6 +311,7 @@
   - _需求: 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
 
 - [ ] 8. 实现全屏表格对话框
+
   - 创建 `ScheduleGridFullScreenView.xaml` 和 `ScheduleGridFullScreenView.xaml.cs`
   - 在全屏视图中嵌入 `ScheduleGridControl`
   - 添加关闭按钮，点击后关闭对话框
@@ -298,12 +321,14 @@
   - _需求: 5.1, 5.2, 5.3_
 
 - [ ] 9. 修改 CreateSchedulingPage 导航逻辑
+
   - 修改 `CreateSchedulingPage.xaml.cs` 或 `SchedulingViewModel`
   - 在"开始排班"按钮点击时，导航到 `SchedulingProgressPage`，传递 `SchedulingRequestDto` 参数
   - 确保导航参数正确传递
   - _需求: 1.1_
 
 - [ ] 10. 注册依赖注入和导航路由
+
   - 在 `Extensions/ServiceCollectionExtensions.cs` 中注册 `SchedulingProgressViewModel`
   - 在 `Extensions/ServiceCollectionExtensions.cs` 中注册 `IScheduleGridExporter` 和 `ScheduleGridExporter`
   - 在导航服务中注册 `SchedulingProgressPage` 路由
@@ -311,6 +336,7 @@
   - _需求: 所有需求_
 
 - [ ] 11. 实现错误处理和用户反馈
+
   - 在 `SchedulingProgressViewModel` 中添加错误处理逻辑
   - 捕获 `ArgumentException`、`InvalidOperationException`、`OperationCanceledException` 等异常
   - 根据异常类型显示相应的错误消息
@@ -320,6 +346,7 @@
   - _需求: 4.1, 4.2, 4.3, 4.4, 4.5, 7.4, 7.5_
 
 - [ ] 12. 添加样式和主题支持
+
   - 创建 `SchedulingProgressResources.xaml` 资源字典
   - 定义表格单元格样式：`ScheduleGridCellStyle`、`ManualAssignmentCellStyle`、`ConflictCellStyle`
   - 定义卡片样式、按钮样式、进度条样式
@@ -329,6 +356,7 @@
   - _需求: 所有需求_
 
 - [ ] 13. 实现可访问性支持
+
   - 为所有控件设置 `AutomationProperties.Name`
   - 为进度条设置 `AutomationProperties.LiveSetting="Polite"`
   - 为错误消息设置 `AutomationProperties.LiveSetting="Assertive"`

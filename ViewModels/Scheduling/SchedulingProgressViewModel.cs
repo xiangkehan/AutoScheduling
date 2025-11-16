@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Threading;
@@ -9,6 +10,8 @@ using CommunityToolkit.Mvvm.Input;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.Helpers;
+using AutoScheduling3.History;
+using AutoScheduling3.Models;
 
 namespace AutoScheduling3.ViewModels.Scheduling;
 
@@ -22,6 +25,8 @@ public partial class SchedulingProgressViewModel : ObservableObject
     private readonly ISchedulingService _schedulingService;
     private readonly NavigationService _navigationService;
     private readonly IScheduleGridExporter _gridExporter;
+    private readonly DialogService _dialogService;
+    private readonly IHistoryManagement _historyManagement;
 
     #endregion
 
@@ -166,20 +171,33 @@ public partial class SchedulingProgressViewModel : ObservableObject
     /// <param name="schedulingService">排班服务</param>
     /// <param name="navigationService">导航服务</param>
     /// <param name="gridExporter">表格导出服务</param>
+    /// <param name="dialogService">对话框服务</param>
+    /// <param name="historyManagement">历史管理服务</param>
     public SchedulingProgressViewModel(
         ISchedulingService schedulingService,
         NavigationService navigationService,
-        IScheduleGridExporter gridExporter)
+        IScheduleGridExporter gridExporter,
+        DialogService dialogService,
+        IHistoryManagement historyManagement)
     {
         _schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
         _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
         _gridExporter = gridExporter ?? throw new ArgumentNullException(nameof(gridExporter));
+        _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+        _historyManagement = historyManagement ?? throw new ArgumentNullException(nameof(historyManagement));
         
         // 获取当前线程的 DispatcherQueue
         _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
         
         // 初始化命令
         StartSchedulingCommand = new AsyncRelayCommand<SchedulingRequestDto>(ExecuteStartSchedulingAsync);
+        CancelSchedulingCommand = new AsyncRelayCommand(ExecuteCancelSchedulingAsync, CanCancelScheduling);
+        SaveScheduleCommand = new AsyncRelayCommand(ExecuteSaveScheduleAsync, CanSaveSchedule);
+        DiscardScheduleCommand = new AsyncRelayCommand(ExecuteDiscardScheduleAsync, CanDiscardSchedule);
+        ViewDetailedResultCommand = new RelayCommand(ExecuteViewDetailedResult, CanViewDetailedResult);
+        ReturnToConfigCommand = new RelayCommand(ExecuteReturnToConfig);
+        ToggleGridFullScreenCommand = new AsyncRelayCommand(ExecuteToggleGridFullScreenAsync, CanToggleGridFullScreen);
+        ExportGridCommand = new AsyncRelayCommand<string>(ExecuteExportGridAsync, CanExportGrid);
     }
 
     #endregion
@@ -190,6 +208,41 @@ public partial class SchedulingProgressViewModel : ObservableObject
     /// 开始排班命令
     /// </summary>
     public IAsyncRelayCommand<SchedulingRequestDto> StartSchedulingCommand { get; }
+
+    /// <summary>
+    /// 取消排班命令
+    /// </summary>
+    public IAsyncRelayCommand CancelSchedulingCommand { get; }
+
+    /// <summary>
+    /// 保存排班命令
+    /// </summary>
+    public IAsyncRelayCommand SaveScheduleCommand { get; }
+
+    /// <summary>
+    /// 放弃排班命令
+    /// </summary>
+    public IAsyncRelayCommand DiscardScheduleCommand { get; }
+
+    /// <summary>
+    /// 查看详细结果命令
+    /// </summary>
+    public IRelayCommand ViewDetailedResultCommand { get; }
+
+    /// <summary>
+    /// 返回配置页面命令
+    /// </summary>
+    public IRelayCommand ReturnToConfigCommand { get; }
+
+    /// <summary>
+    /// 切换表格全屏命令
+    /// </summary>
+    public IAsyncRelayCommand ToggleGridFullScreenCommand { get; }
+
+    /// <summary>
+    /// 导出表格命令
+    /// </summary>
+    public IAsyncRelayCommand<string> ExportGridCommand { get; }
 
     #endregion
 
@@ -216,6 +269,9 @@ public partial class SchedulingProgressViewModel : ObservableObject
             IsCompleted = false;
             IsFailed = false;
             IsCancelled = false;
+
+            // 通知命令状态变化
+            CancelSchedulingCommand.NotifyCanExecuteChanged();
 
             // 创建取消令牌源
             _cancellationTokenSource = new CancellationTokenSource();
@@ -252,6 +308,12 @@ public partial class SchedulingProgressViewModel : ObservableObject
 
             // 清理资源
             IsExecuting = false;
+
+            // 通知命令状态变化
+            CancelSchedulingCommand.NotifyCanExecuteChanged();
+            SaveScheduleCommand.NotifyCanExecuteChanged();
+            DiscardScheduleCommand.NotifyCanExecuteChanged();
+            ViewDetailedResultCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -331,6 +393,11 @@ public partial class SchedulingProgressViewModel : ObservableObject
                 }
             }
         }
+
+        // 通知命令状态变化
+        SaveScheduleCommand.NotifyCanExecuteChanged();
+        DiscardScheduleCommand.NotifyCanExecuteChanged();
+        ViewDetailedResultCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
@@ -370,6 +437,9 @@ public partial class SchedulingProgressViewModel : ObservableObject
         IsFailed = false;
         CurrentStage = "已取消";
         StageDescription = "排班任务已被用户取消";
+
+        // 通知命令状态变化
+        CancelSchedulingCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
@@ -472,6 +542,282 @@ public partial class SchedulingProgressViewModel : ObservableObject
             SchedulingStage.Failed => "失败",
             _ => "未知阶段"
         };
+    }
+
+    #endregion
+
+    #region 命令实现
+
+    /// <summary>
+    /// 执行取消排班命令
+    /// </summary>
+    private async Task ExecuteCancelSchedulingAsync()
+    {
+        // 显示确认对话框
+        var confirmed = await _dialogService.ShowConfirmAsync(
+            "取消排班",
+            "确定要取消正在执行的排班任务吗？",
+            "确定",
+            "取消");
+
+        if (confirmed)
+        {
+            // 调用取消令牌
+            _cancellationTokenSource?.Cancel();
+        }
+    }
+
+    /// <summary>
+    /// 判断是否可以取消排班
+    /// </summary>
+    private bool CanCancelScheduling()
+    {
+        return IsExecuting && !IsCancelled;
+    }
+
+    /// <summary>
+    /// 执行保存排班命令
+    /// </summary>
+    private async Task ExecuteSaveScheduleAsync()
+    {
+        if (Result?.Schedule == null)
+        {
+            await _dialogService.ShowErrorAsync("保存失败", "没有可保存的排班结果");
+            return;
+        }
+
+        try
+        {
+            // 将排班结果转换为 Schedule 模型
+            var schedule = ConvertToScheduleModel(Result.Schedule);
+
+            // 添加到缓冲区（草稿）
+            var bufferId = await _historyManagement.AddToBufferAsync(schedule);
+
+            // 确认缓冲区排班（转为历史记录）
+            await _historyManagement.ConfirmBufferScheduleAsync(bufferId);
+
+            // 显示成功消息
+            await _dialogService.ShowSuccessAsync("排班已成功保存到历史记录");
+
+            // 导航到排班结果页面，传递排班ID
+            _navigationService.NavigateTo("ScheduleResult", Result.Schedule.Id);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("保存失败", $"保存排班时发生错误：{ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 判断是否可以保存排班
+    /// </summary>
+    private bool CanSaveSchedule()
+    {
+        return IsCompleted && Result?.IsSuccess == true && Result?.Schedule != null;
+    }
+
+    /// <summary>
+    /// 执行放弃排班命令
+    /// </summary>
+    private async Task ExecuteDiscardScheduleAsync()
+    {
+        // 显示确认对话框
+        var confirmed = await _dialogService.ShowConfirmAsync(
+            "放弃排班",
+            "确定要放弃当前的排班结果吗？此操作无法撤销。",
+            "确定",
+            "取消");
+
+        if (confirmed)
+        {
+            // 清除结果数据
+            ResetState();
+
+            // 显示提示消息
+            await _dialogService.ShowMessageAsync("已放弃", "排班结果已清除");
+
+            // 返回到创建排班页面
+            _navigationService.NavigateTo("CreateScheduling");
+        }
+    }
+
+    /// <summary>
+    /// 判断是否可以放弃排班
+    /// </summary>
+    private bool CanDiscardSchedule()
+    {
+        return IsCompleted && Result != null;
+    }
+
+    /// <summary>
+    /// 执行查看详细结果命令
+    /// </summary>
+    private void ExecuteViewDetailedResult()
+    {
+        if (Result?.Schedule != null)
+        {
+            // 导航到排班结果页面，传递排班ID
+            _navigationService.NavigateTo("ScheduleResult", Result.Schedule.Id);
+        }
+    }
+
+    /// <summary>
+    /// 判断是否可以查看详细结果
+    /// </summary>
+    private bool CanViewDetailedResult()
+    {
+        return IsCompleted && Result?.IsSuccess == true && Result?.Schedule != null;
+    }
+
+    /// <summary>
+    /// 执行返回配置页面命令
+    /// </summary>
+    private void ExecuteReturnToConfig()
+    {
+        // 导航回创建排班页面
+        _navigationService.NavigateTo("CreateScheduling");
+    }
+
+    /// <summary>
+    /// 将 ScheduleDto 转换为 Schedule 模型
+    /// </summary>
+    private Schedule ConvertToScheduleModel(ScheduleDto dto)
+    {
+        var schedule = new Schedule
+        {
+            Id = dto.Id,
+            Header = dto.Title,
+            StartDate = dto.StartDate,
+            EndDate = dto.EndDate,
+            CreatedAt = dto.CreatedAt,
+            PersonnelIds = dto.PersonnelIds,
+            PositionIds = dto.PositionIds,
+            Results = new List<SingleShift>()
+        };
+
+        // 转换班次数据
+        if (dto.Shifts != null)
+        {
+            foreach (var shift in dto.Shifts)
+            {
+                schedule.Results.Add(new SingleShift
+                {
+                    ScheduleId = dto.Id,
+                    PersonnelId = shift.PersonnelId,
+                    PositionId = shift.PositionId,
+                    StartTime = shift.StartTime,
+                    EndTime = shift.EndTime,
+                    TimeSlotIndex = shift.PeriodIndex
+                });
+            }
+        }
+
+        return schedule;
+    }
+
+    #endregion
+
+    #region 表格相关命令实现
+
+    /// <summary>
+    /// 执行切换表格全屏命令
+    /// </summary>
+    private async Task ExecuteToggleGridFullScreenAsync()
+    {
+        if (IsGridFullScreen)
+        {
+            // 如果已经是全屏，则退出全屏
+            IsGridFullScreen = false;
+        }
+        else
+        {
+            // 显示全屏对话框
+            await ShowGridFullScreenAsync();
+        }
+    }
+
+    /// <summary>
+    /// 判断是否可以切换表格全屏
+    /// </summary>
+    private bool CanToggleGridFullScreen()
+    {
+        return GridData != null;
+    }
+
+    /// <summary>
+    /// 显示全屏表格对话框
+    /// </summary>
+    public async Task ShowGridFullScreenAsync()
+    {
+        if (GridData == null)
+        {
+            await _dialogService.ShowWarningAsync("没有可显示的排班表格数据");
+            return;
+        }
+
+        try
+        {
+            // 创建全屏对话框
+            var dialog = new ContentDialog
+            {
+                Title = "排班结果表格",
+                Content = new Microsoft.UI.Xaml.Controls.ScrollViewer
+                {
+                    HorizontalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto,
+                    VerticalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto,
+                    Content = new Microsoft.UI.Xaml.Controls.TextBlock
+                    {
+                        Text = $"排班表格全屏视图\n\n开始日期: {GridData.StartDate:yyyy-MM-dd}\n结束日期: {GridData.EndDate:yyyy-MM-dd}\n总天数: {GridData.TotalDays}\n总时段数: {GridData.TotalPeriods}\n哨位数: {GridData.Columns?.Count ?? 0}\n\n注意：完整的表格控件将在后续任务中实现。",
+                        TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                        Margin = new Microsoft.UI.Xaml.Thickness(20)
+                    }
+                },
+                CloseButtonText = "关闭",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = App.MainWindow?.Content?.XamlRoot
+            };
+
+            // 设置对话框样式为全屏（如果有自定义样式）
+            // dialog.Style = (Style)Application.Current.Resources["FullScreenDialogStyle"];
+
+            IsGridFullScreen = true;
+            await dialog.ShowAsync();
+            IsGridFullScreen = false;
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("显示全屏表格失败", $"无法显示全屏表格：{ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 执行导出表格命令
+    /// </summary>
+    /// <param name="format">导出格式（如 "excel", "csv", "pdf"）</param>
+    private async Task ExecuteExportGridAsync(string? format)
+    {
+        if (GridData == null)
+        {
+            await _dialogService.ShowWarningAsync("没有可导出的排班表格数据");
+            return;
+        }
+
+        // 当前版本显示"功能开发中"对话框
+        var supportedFormats = _gridExporter.GetSupportedFormats();
+        var formatsText = string.Join("、", supportedFormats);
+
+        await _dialogService.ShowMessageAsync(
+            "功能开发中",
+            $"表格导出功能正在开发中。\n\n计划支持的格式：{formatsText}\n\n此功能将在后续版本中提供。");
+    }
+
+    /// <summary>
+    /// 判断是否可以导出表格
+    /// </summary>
+    private bool CanExportGrid(string? format)
+    {
+        return GridData != null;
     }
 
     #endregion

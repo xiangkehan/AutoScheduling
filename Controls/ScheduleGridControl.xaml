@@ -4,151 +4,65 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:controls="using:AutoScheduling3.Controls"
-    mc:Ignorable="d"
-    d:DesignHeight="600"
-    d:DesignWidth="1200">
+    mc:Ignorable="d">
 
-    <UserControl.Resources>
-        <Style TargetType="Border" x:Key="CellBorderStyle">
-            <Setter Property="BorderBrush" Value="{ThemeResource CardBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="0,0,1,1"/>
-            <Setter Property="Padding" Value="4"/>
-            <Setter Property="MinWidth" Value="120"/>
-            <Setter Property="MinHeight" Value="60"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="VerticalAlignment" Value="Stretch"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <ScaleTransform/>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
-        </Style>
-
-        <Storyboard x:Key="DragEnterStoryboard">
-            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.05" Duration="0:0:0.2"/>
-            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.05" Duration="0:0:0.2"/>
-        </Storyboard>
-        <Storyboard x:Key="DragLeaveStoryboard">
-            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.0" Duration="0:0:0.2"/>
-            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.0" Duration="0:0:0.2"/>
-        </Storyboard>
-
-        <DataTemplate x:Key="CellDataTemplate" x:DataType="controls:CellModel">
-            <Border Style="{StaticResource CellBorderStyle}"
-                    PointerPressed="OnCellPointerPressed"
-                    PointerReleased="OnCellPointerReleased"
-                    PointerEntered="OnCellPointerEntered"
-                    PointerExited="OnCellPointerExited"
-                    RightTapped="OnCellRightTapped"
-                    Background="{x:Bind Path=Shift, Converter={StaticResource ShiftToBrushConverter}, Mode=OneWay}">
-                <VisualStateManager.VisualStateGroups>
-                    <VisualStateGroup x:Name="CommonStates">
-                        <VisualState x:Name="Normal" />
-                        <VisualState x:Name="PointerOver" />
-                    </VisualStateGroup>
-                    <VisualStateGroup x:Name="DragStates">
-                        <VisualState x:Name="NotDragging" />
-                        <VisualState x:Name="IsDragSource">
-                            <VisualState.Setters>
-                                <Setter Target="Opacity" Value="0.5"/>
-                            </VisualState.Setters>
-                        </VisualState>
-                        <VisualState x:Name="IsDragTarget">
-                            <Storyboard>
-                                <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="Gold" Duration="0:0:0.2"/>
-                            </Storyboard>
-                        </VisualState>
-                    </VisualStateGroup>
-                </VisualStateManager.VisualStateGroups>
-
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Text="{x:Bind Shift.PersonnelName, Mode=OneWay}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Style="{StaticResource AccessibleTextStyle}"/>
-
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock Text="{x:Bind PersonnelIdText, Mode=OneWay}"
-                                   FontSize="10"
-                                   Foreground="{ThemeResource TextSecondaryBrush}"
-                                   Margin="0,0,4,0"/>
-                        <Border Width="8" Height="8" CornerRadius="4"
-                                Background="{x:Bind ConflictBrush, Mode=OneWay}"
-                                Visibility="{x:Bind HasConflict, Mode=OneWay}"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
-        <DataTemplate x:Key="HeaderTemplate" x:DataType="x:String">
-            <Border BorderBrush="{ThemeResource CardBorderBrush}" BorderThickness="0,0,1,1" Padding="8">
-                <TextBlock Text="{x:Bind}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-            </Border>
-        </DataTemplate>
-    </UserControl.Resources>
-
-    <Grid>
+    <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
+            <!-- 工具栏区域 -->
             <RowDefinition Height="Auto"/>
+            <!-- 表头区域 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 表体区域 -->
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
 
-        <!-- Corner -->
-        <Border Grid.Row="0" Grid.Column="0" BorderBrush="{ThemeResource CardBorderBrush}" BorderThickness="0,0,1,1"/>
+        <!-- 工具栏区域 -->
+        <StackPanel x:Name="ToolbarPanel" 
+                    Grid.Row="0" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,0,0,8">
+            
+            <Button x:Name="ExportButton"
+                    Content="导出"
+                    ToolTipService.ToolTip="导出表格（开发中）"
+                    IsEnabled="False"
+                    Click="ExportButton_Click"/>
+            
+            <Button x:Name="FullScreenButton"
+                    Content="&#xE740;"
+                    FontFamily="Segoe MDL2 Assets"
+                    ToolTipService.ToolTip="全屏查看"
+                    Click="FullScreenButton_Click"/>
+        </StackPanel>
 
-        <!-- Time Headers -->
-        <ScrollViewer Grid.Row="0" Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
-            <ItemsRepeater x:Name="TimeHeaderRepeater" ItemTemplate="{StaticResource HeaderTemplate}">
-                <ItemsRepeater.Layout>
-                    <StackLayout Orientation="Horizontal"/>
-                </ItemsRepeater.Layout>
-            </ItemsRepeater>
-        </ScrollViewer>
+        <!-- 表头区域 -->
+        <Border x:Name="HeaderBorder" 
+                Grid.Row="1"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                Padding="8,4">
+            <Grid x:Name="HeaderGrid">
+                <TextBlock Text="表头区域（待实现）" 
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           FontStyle="Italic"/>
+            </Grid>
+        </Border>
 
-        <!-- Position Headers -->
-        <ScrollViewer Grid.Row="1" Grid.Column="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
-            <ItemsRepeater x:Name="PositionHeaderRepeater" ItemTemplate="{StaticResource HeaderTemplate}">
-                <ItemsRepeater.Layout>
-                    <StackLayout Orientation="Vertical"/>
-                </ItemsRepeater.Layout>
-            </ItemsRepeater>
-        </ScrollViewer>
-
-        <!-- Main Grid -->
-        <ScrollViewer Grid.Row="1" Grid.Column="1"
+        <!-- 表体区域 -->
+        <ScrollViewer x:Name="GridScrollViewer"
+                      Grid.Row="2"
                       HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-            <ItemsRepeater x:Name="MainGridRepeater" ItemTemplate="{StaticResource CellDataTemplate}">
-                <ItemsRepeater.Layout>
-                    <UniformGridLayout x:Name="GridLayout" Orientation="Horizontal"/>
-                </ItemsRepeater.Layout>
-            </ItemsRepeater>
+                      VerticalScrollBarVisibility="Auto"
+                      Margin="0,8,0,0">
+            <Grid x:Name="GridBody">
+                <TextBlock Text="表体区域（待实现）" 
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           FontStyle="Italic"
+                           Margin="8"/>
+            </Grid>
         </ScrollViewer>
-
-        <!-- Status Bar -->
-        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Padding="8" Background="{ThemeResource AppBackgroundBrush}">
-            <TextBlock Text="{x:Bind TotalCellsText, Mode=OneWay}" Margin="0,0,16,0"/>
-            <TextBlock Text="{x:Bind ConflictCountText, Mode=OneWay}" Foreground="{ThemeResource ErrorBrush}"/>
-        </StackPanel>
-
-        <!-- Loading/Empty States -->
-        <ProgressRing x:Name="LoadingRing" Grid.Row="1" Grid.Column="1" IsActive="False" Width="60" Height="60"/>
-        <StackPanel x:Name="EmptyStatePanel" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
-            <TextBlock Text="没有可显示的排班数据" Style="{StaticResource SubtitleTextStyle}"/>
-            <TextBlock Text="请先生成或加载一个排班表" Style="{StaticResource AccessibleTextStyle}" HorizontalAlignment="Center"/>
-        </StackPanel>
     </Grid>
 </UserControl>

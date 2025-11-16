@@ -87,6 +87,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISchedulingService, SchedulingService>();
         services.AddSingleton<IStoragePathService, StoragePathService>();
         services.AddSingleton<ISchedulingDraftService, SchedulingDraftService>();
+        services.AddSingleton<IScheduleGridExporter, ScheduleGridExporter>();
 
         // 注册数据导入导出相关服务
         // Register data validation service
@@ -164,6 +165,7 @@ public static class ServiceCollectionExtensions
         // 排班ViewModels
         services.AddTransient<SchedulingViewModel>();
         services.AddTransient<ScheduleResultViewModel>();
+        services.AddTransient<SchedulingProgressViewModel>();
 
         // 历史ViewModels
         services.AddTransient<HistoryViewModel>();

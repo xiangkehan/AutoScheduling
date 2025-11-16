@@ -1,10 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Services.Interfaces;
 
 namespace AutoScheduling3.Services;
 
 /// <summary>
-/// 排班表格导出服务（预留未来实现）
+/// 排班表格导出服务（预留实现）
 /// </summary>
 public class ScheduleGridExporter : IScheduleGridExporter
 {
@@ -15,7 +18,6 @@ public class ScheduleGridExporter : IScheduleGridExporter
     /// <param name="format">导出格式（如 "excel", "csv", "pdf"）</param>
     /// <param name="options">导出选项</param>
     /// <returns>导出的文件字节数组</returns>
-    /// <exception cref="NotImplementedException">当前版本未实现导出功能</exception>
     public Task<byte[]> ExportAsync(
         ScheduleGridData gridData,
         string format,
@@ -29,7 +31,6 @@ public class ScheduleGridExporter : IScheduleGridExporter
     /// <summary>
     /// 获取支持的导出格式列表
     /// </summary>
-    /// <returns>支持的格式列表</returns>
     public List<string> GetSupportedFormats()
     {
         // 预留支持的格式列表
@@ -39,8 +40,6 @@ public class ScheduleGridExporter : IScheduleGridExporter
     /// <summary>
     /// 验证导出格式是否支持
     /// </summary>
-    /// <param name="format">格式名称</param>
-    /// <returns>是否支持该格式</returns>
     public bool IsFormatSupported(string format)
     {
         return GetSupportedFormats().Contains(format.ToLower());

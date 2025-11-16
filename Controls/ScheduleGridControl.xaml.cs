@@ -1,706 +1,386 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using System.Collections.ObjectModel;
+using Microsoft.UI.Xaml.Media;
 using AutoScheduling3.DTOs;
 using System.Linq;
-using System;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using AutoScheduling3.Models.Constraints;
-using System.Collections.Generic;
-using AutoScheduling3.Helpers;
-using System.Threading.Tasks;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI;
-using System.Collections.Specialized;
-using System.ComponentModel;
-using AutoScheduling3.Services;
-using Microsoft.UI.Xaml.Automation;
 
 namespace AutoScheduling3.Controls
 {
-    public sealed partial class ScheduleGridControl : UserControl, INotifyPropertyChanged
+    /// <summary>
+    /// 排班结果表格控件
+    /// </summary>
+    public sealed partial class ScheduleGridControl : UserControl
     {
-        public ScheduleGridControl() 
-        { 
-            this.InitializeComponent();
-            Loaded += OnLoaded;
-            SizeChanged += OnSizeChanged;
-            
-            // 初始化虚拟化支持
-            _virtualizedCells = new ObservableCollection<CellModel>();
-            _virtualizedCells.CollectionChanged += OnVirtualizedCellsChanged;
+        /// <summary>
+        /// GridData 依赖属性
+        /// </summary>
+        public static readonly DependencyProperty GridDataProperty =
+            DependencyProperty.Register(
+                nameof(GridData),
+                typeof(ScheduleGridData),
+                typeof(ScheduleGridControl),
+                new PropertyMetadata(null, OnGridDataChanged));
+
+        /// <summary>
+        /// 表格数据
+        /// </summary>
+        public ScheduleGridData? GridData
+        {
+            get => (ScheduleGridData?)GetValue(GridDataProperty);
+            set => SetValue(GridDataProperty, value);
         }
 
-        public static readonly DependencyProperty ScheduleProperty = DependencyProperty.Register(nameof(Schedule), typeof(ScheduleDto), typeof(ScheduleGridControl), new PropertyMetadata(null, OnDataChanged));
-        public ScheduleDto? Schedule { get => (ScheduleDto?)GetValue(ScheduleProperty); set => SetValue(ScheduleProperty, value); }
-        public static readonly DependencyProperty PositionsProperty = DependencyProperty.Register(nameof(Positions), typeof(ObservableCollection<PositionDto>), typeof(ScheduleGridControl), new PropertyMetadata(null, OnDataChanged));
-        public ObservableCollection<PositionDto>? Positions { get => (ObservableCollection<PositionDto>?)GetValue(PositionsProperty); set => SetValue(PositionsProperty, value); }
-        public static readonly DependencyProperty PersonnelsProperty = DependencyProperty.Register(nameof(Personnels), typeof(ObservableCollection<PersonnelDto>), typeof(ScheduleGridControl), new PropertyMetadata(null));
-        public ObservableCollection<PersonnelDto>? Personnels { get => (ObservableCollection<PersonnelDto>?)GetValue(PersonnelsProperty); set => SetValue(PersonnelsProperty, value); }
-        public static readonly DependencyProperty IsReadOnlyProperty = DependencyProperty.Register(nameof(IsReadOnly), typeof(bool), typeof(ScheduleGridControl), new PropertyMetadata(false));
-        public bool IsReadOnly { get => (bool)GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, value); }
-        public static readonly DependencyProperty ShowConflictsProperty = DependencyProperty.Register(nameof(ShowConflicts), typeof(bool), typeof(ScheduleGridControl), new PropertyMetadata(true));
-        public bool ShowConflicts { get => (bool)GetValue(ShowConflictsProperty); set => SetValue(ShowConflictsProperty, value); }
-        
-        public static readonly DependencyProperty EnableVirtualizationProperty = DependencyProperty.Register(nameof(EnableVirtualization), typeof(bool), typeof(ScheduleGridControl), new PropertyMetadata(true));
-        public bool EnableVirtualization { get => (bool)GetValue(EnableVirtualizationProperty); set => SetValue(EnableVirtualizationProperty, value); }
-        
-        public static readonly DependencyProperty MaxVisibleRowsProperty = DependencyProperty.Register(nameof(MaxVisibleRows), typeof(int), typeof(ScheduleGridControl), new PropertyMetadata(20));
-        public int MaxVisibleRows { get => (int)GetValue(MaxVisibleRowsProperty); set => SetValue(MaxVisibleRowsProperty, value); }
-        
-        public static readonly DependencyProperty MaxVisibleColumnsProperty = DependencyProperty.Register(nameof(MaxVisibleColumns), typeof(int), typeof(ScheduleGridControl), new PropertyMetadata(12));
-        public int MaxVisibleColumns { get => (int)GetValue(MaxVisibleColumnsProperty); set => SetValue(MaxVisibleColumnsProperty, value); }
+        /// <summary>
+        /// 全屏请求事件
+        /// </summary>
+        public event EventHandler? FullScreenRequested;
 
-        // External events for data updates
-        public event EventHandler<ShiftDto>? ShiftChanged; // Triggered after shift editing
-        public event EventHandler<IReadOnlyList<ConflictDto>>? ConflictsRecomputed; // Triggered after conflict recomputation
-        
-        // Computed properties for UI binding
-        public int TotalCells => _cells.Count;
-        public int ConflictCount => Schedule?.Conflicts?.Count ?? 0;
-        public bool HasConflicts => ConflictCount > 0;
+        /// <summary>
+        /// 导出请求事件
+        /// </summary>
+        public event EventHandler<ExportRequestedEventArgs>? ExportRequested;
 
-        // Computed properties for UI binding (StringFormat replacement)
-        public string TotalCellsText => $"总计: {_cells.Count} 个班次";
-        public string ConflictCountText => $"冲突: {Schedule?.Conflicts?.Count ?? 0} 个";
+        /// <summary>
+        /// 单元格点击事件
+        /// </summary>
+        public event EventHandler<CellClickedEventArgs>? CellClicked;
 
-        // ѡõĶڹֶָןϷУ飨ⲿ)
-        public List<FixedPositionRule>? ActiveFixedRules { get; set; }
-        public List<ManualAssignment>? ActiveManualAssignments { get; set; }
-
-        private static void OnDataChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        public ScheduleGridControl()
         {
-            if (d is ScheduleGridControl c && c.IsLoaded)
-                c.BuildGrid();
+            InitializeComponent();
         }
-        private void OnLoaded(object sender, RoutedEventArgs e) => BuildGrid();
 
-        // Enhanced Cell model with virtualization and drag-drop support
-        
-
-        // Collections for virtualization
-        private readonly ObservableCollection<CellModel> _cells = new();
-        private readonly ObservableCollection<CellModel> _virtualizedCells;
-        private readonly ObservableCollection<string> _timeHeaders = new();
-        private readonly ObservableCollection<string> _positionHeaders = new();
-
-        // Drag and drop state
-        private CellModel? _dragSource;
-        private readonly List<CellModel> _dragTargets = new();
-        
-        // Virtualization parameters
-        private int _visibleRows = 20;
-        private int _visibleColumns = 12;
-        private int _scrollOffsetRow = 0;
-        private int _scrollOffsetColumn = 0;
-
-        private async void BuildGrid()
+        /// <summary>
+        /// GridData 属性变化回调
+        /// </summary>
+        private static void OnGridDataChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            if (Schedule == null || Positions == null) return;
-
-            // Show loading indicator
-            if (LoadingRing != null) LoadingRing.IsActive = true;
-            if (EmptyStatePanel != null) EmptyStatePanel.Visibility = Visibility.Collapsed;
-
-            await Task.Run(() =>
+            if (d is ScheduleGridControl control)
             {
-                _cells.Clear();
-                
-                var shiftsByKey = Schedule.Shifts.GroupBy(s => (s.StartTime.Date, s.PositionId, s.PeriodIndex))
-                    .ToDictionary(g => g.Key, g => g.First());
-                
-                var totalDays = (Schedule.EndDate.Date - Schedule.StartDate.Date).Days + 1;
-                var dates = Enumerable.Range(0, totalDays).Select(i => Schedule.StartDate.Date.AddDays(i)).ToList();
-                
-                // Build time headers
-                DispatcherQueue.TryEnqueue(() =>
-                {
-                    _timeHeaders.Clear();
-                    for (int period = 0; period < 12; period++)
-                    {
-                        _timeHeaders.Add($"{period * 2:D2}:00-{(period * 2 + 2) % 24:D2}:00");
-                    }
-                });
-
-                // Build position headers
-                DispatcherQueue.TryEnqueue(() =>
-                {
-                    _positionHeaders.Clear();
-                    foreach (var pos in Positions)
-                    {
-                        _positionHeaders.Add(pos.Name);
-                    }
-                });
-
-                // Build cells
-                foreach (var pos in Positions)
-                {
-                    foreach (var date in dates)
-                    {
-                        for (int period = 0; period < 12; period++)
-                        {
-                            shiftsByKey.TryGetValue((date, pos.Id, period), out var shift);
-                            var cell = new CellModel
-                            {
-                                Shift = shift,
-                                Date = date,
-                                Position = pos,
-                                PeriodIndex = period,
-                                HasConflict = false
-                            };
-                            
-                            DispatcherQueue.TryEnqueue(() => _cells.Add(cell));
-                        }
-                    }
-                }
-            });
-
-            // Update UI bindings
-            OnPropertyChanged(nameof(TotalCells));
-            OnPropertyChanged(nameof(ConflictCount));
-            OnPropertyChanged(nameof(TotalCellsText));
-            OnPropertyChanged(nameof(ConflictCountText));
-            UpdateVirtualizedView();
-            
-            // Bind headers
-            if (TimeHeaderRepeater != null) TimeHeaderRepeater.ItemsSource = _timeHeaders;
-            if (PositionHeaderRepeater != null) PositionHeaderRepeater.ItemsSource = _positionHeaders;
-            
-            // Configure grid layout
-            if (GridLayout != null)
-            {
-                GridLayout.MaximumRowsOrColumns = _timeHeaders.Count;
-            }
-
-            // Hide loading indicator
-            if (LoadingRing != null) LoadingRing.IsActive = false;
-            
-            // Show empty state if no data
-            if (_cells.Count == 0 && EmptyStatePanel != null)
-            {
-                EmptyStatePanel.Visibility = Visibility.Visible;
-            }
-
-            await RecomputeConflictsAsync();
-        }
-        // Virtualization support
-        private void UpdateVirtualizedView()
-        {
-            if (_cells.Count == 0) return;
-
-            _virtualizedCells.Clear();
-            
-            // Calculate visible range based on scroll position and viewport size
-            var startRow = Math.Max(0, _scrollOffsetRow);
-            var endRow = Math.Min(_positionHeaders.Count, startRow + _visibleRows);
-            var startCol = Math.Max(0, _scrollOffsetColumn);
-            var endCol = Math.Min(_timeHeaders.Count, startCol + _visibleColumns);
-
-            // Add visible cells to virtualized collection
-            for (int row = startRow; row < endRow; row++)
-            {
-                for (int col = startCol; col < endCol; col++)
-                {
-                    var cellIndex = row * _timeHeaders.Count + col;
-                    if (cellIndex < _cells.Count)
-                    {
-                        _virtualizedCells.Add(_cells[cellIndex]);
-                    }
-                }
-            }
-
-            // Bind to main repeater
-            if (MainGridRepeater != null)
-            {
-                MainGridRepeater.ItemsSource = _virtualizedCells;
+                control.OnGridDataChangedInternal(e.NewValue as ScheduleGridData);
             }
         }
 
-        private void OnVirtualizedCellsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        /// <summary>
+        /// 处理 GridData 变化
+        /// </summary>
+        private void OnGridDataChangedInternal(ScheduleGridData? newData)
         {
-            // Handle virtualized collection changes if needed
-        }
-
-        private void OnSizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            // Recalculate visible items based on new size
-            if (e.NewSize.Width > 0 && e.NewSize.Height > 0)
+            if (newData == null)
             {
-                _visibleColumns = Math.Max(1, (int)(e.NewSize.Width / 120)); // 120 is min cell width
-                _visibleRows = Math.Max(1, (int)(e.NewSize.Height / 60));    // 60 is min cell height
-                UpdateVirtualizedView();
-            }
-        }
-
-        private async Task RecomputeConflictsAsync()
-        {
-            if (Schedule == null) return;
-            var conflicts = new List<ConflictDto>();
-            // ����: δ���䵥Ԫ��
-            foreach (var cell in _cells)
-            {
-                if (cell.Shift == null)
-                {
-                    cell.HasConflict = true;
-                    cell.Conflict = new ConflictDto
-                    {
-                        Type = "unassigned",
-                        Message = "δ������Ա",
-                        PositionId = cell.Position?.Id,
-                        StartTime = cell.Date.AddHours(cell.PeriodIndex *2),
-                        EndTime = cell.Date.AddHours(cell.PeriodIndex *2 +2),
-                        PeriodIndex = cell.PeriodIndex
-                    };
-                    conflicts.Add(cell.Conflict);
-                    continue;
-                }
-                cell.HasConflict = false;
-                cell.Conflict = null;
-            }
-            // ����/�����ͻ������ʱ�μ��ж�
-            if (Personnels != null && Positions != null)
-            {
-                var personnelDict = Personnels.ToDictionary(p => p.Id);
-                var positionDict = Positions.ToDictionary(p => p.Id);
-                foreach (var cell in _cells.Where(c => c.Shift != null))
-                {
-                    var shift = cell.Shift!;
-                    if (!personnelDict.TryGetValue(shift.PersonnelId, out var person) || !positionDict.TryGetValue(shift.PositionId, out var pos)) continue;
-                    // ���ܲ�ƥ��
-                    bool skillOk = pos.RequiredSkillIds.All(id => person.SkillIds.Contains(id));
-                    if (!skillOk)
-                    {
-                        cell.HasConflict = true;
-                        cell.Conflict = new ConflictDto
-                        {
-                            Type = "hard",
-                            Message = "���ܲ�ƥ��",
-                            PositionId = pos.Id,
-                            PersonnelId = person.Id,
-                            StartTime = shift.StartTime,
-                            EndTime = shift.EndTime,
-                            PeriodIndex = shift.PeriodIndex
-                        };
-                        conflicts.Add(cell.Conflict);
-                        continue; // ������ʾ���ܳ�ͻ
-                    }
-                    // ���ڹ�����(����л����)
-                    if (ActiveFixedRules?.Any() == true)
-                    {
-                        var personRules = ActiveFixedRules.Where(r => r.PersonalId == person.Id && r.IsEnabled).ToList();
-                        if (personRules.Any())
-                        {
-                            bool positionAllowed = personRules.All(r => r.AllowedPositionIds.Count ==0 || r.AllowedPositionIds.Contains(pos.Id));
-                            bool periodAllowed = personRules.All(r => r.AllowedPeriods.Count ==0 || r.AllowedPeriods.Contains(shift.PeriodIndex));
-                            if (!positionAllowed || !periodAllowed)
-                            {
-                                cell.HasConflict = true;
-                                cell.Conflict = new ConflictDto
-                                {
-                                    Type = "hard",
-                                    Message = "Υ�����ڹ���",
-                                    PositionId = pos.Id,
-                                    PersonnelId = person.Id,
-                                    StartTime = shift.StartTime,
-                                    EndTime = shift.EndTime,
-                                    PeriodIndex = shift.PeriodIndex
-                                };
-                                conflicts.Add(cell.Conflict);
-                                continue;
-                            }
-                        }
-                    }
-                }
-            }
-            // ��������ʱ�γ�ͻ��ͬһ��Ա����ʱ��ͬһ��)
-            var groupedByPersonDate = _cells.Where(c => c.Shift != null).GroupBy(c => (c.Shift!.PersonnelId, c.Date.Date));
-            foreach (var grp in groupedByPersonDate)
-            {
-                var ordered = grp.OrderBy(c => c.PeriodIndex).ToList();
-                for (int i =1; i < ordered.Count; i++)
-                {
-                    if (ordered[i].PeriodIndex - ordered[i -1].PeriodIndex ==1)
-                    {
-                        // �������ͻ���ɵ���)
-                        var cell = ordered[i];
-                        if (!cell.HasConflict)
-                        {
-                            cell.HasConflict = true;
-                            cell.Conflict = new ConflictDto
-                            {
-                                Type = "soft",
-                                Message = "����ʱ���Ű�",
-                                PositionId = cell.Position?.Id,
-                                PersonnelId = cell.Shift!.PersonnelId,
-                                StartTime = cell.Shift!.StartTime,
-                                EndTime = cell.Shift!.EndTime,
-                                PeriodIndex = cell.PeriodIndex
-                            };
-                            conflicts.Add(cell.Conflict);
-                        }
-                    }
-                }
-            }
-            Schedule.Conflicts = conflicts; //  DTO ͻ
-            ConflictsRecomputed?.Invoke(this, conflicts);
-            OnPropertyChanged(nameof(ConflictCount));
-            OnPropertyChanged(nameof(ConflictCountText));
-        }
-
-        // Enhanced drag-drop event handlers
-        private void OnCellPointerPressed(object sender, PointerRoutedEventArgs e)
-        {
-            if (IsReadOnly) return;
-            
-            if (sender is FrameworkElement element && element.DataContext is CellModel cell)
-            {
-                if (e.GetCurrentPoint(element).Properties.IsLeftButtonPressed)
-                {
-                    _dragSource = cell;
-                    cell.IsDragSource = true;
-                    element.CapturePointer(e.Pointer);
-                }
-            }
-        }
-
-        private void OnCellPointerReleased(object sender, PointerRoutedEventArgs e)
-        {
-            if (IsReadOnly || _dragSource == null) 
-            {
-                ClearDragState();
+                // 清空表格
+                ClearGrid();
                 return;
             }
 
-            if (sender is FrameworkElement element && element.DataContext is CellModel target && target != _dragSource)
-            {
-                _ = TrySwapCellsAsync(_dragSource, target);
-            }
+            // 构建表格结构（后续任务实现）
+            BuildGridStructure(newData);
+        }
+
+        /// <summary>
+        /// 清空表格
+        /// </summary>
+        private void ClearGrid()
+        {
+            // 清空表头
+            HeaderGrid.Children.Clear();
             
-            ClearDragState();
-            if (sender is FrameworkElement fe) fe.ReleasePointerCapture(e.Pointer);
+            // 清空表体
+            GridBody.Children.Clear();
         }
 
-        private void OnCellPointerEntered(object sender, PointerRoutedEventArgs e)
+        /// <summary>
+        /// 构建表格结构
+        /// </summary>
+        private void BuildGridStructure(ScheduleGridData data)
         {
-            if (_dragSource == null || IsReadOnly) return;
-            
-            if (sender is FrameworkElement element && element.DataContext is CellModel cell && cell != _dragSource)
-            {
-                cell.IsDragTarget = true;
-                _dragTargets.Add(cell);
-            }
+            // 清空现有内容
+            ClearGrid();
+
+            // 1. 创建列头
+            CreateColumnHeaders(data);
+
+            // 2. 创建行头和单元格
+            CreateRowsAndCells(data);
         }
 
-        private void OnCellPointerExited(object sender, PointerRoutedEventArgs e)
+        /// <summary>
+        /// 创建列头（哨位列）
+        /// </summary>
+        private void CreateColumnHeaders(ScheduleGridData data)
         {
-            if (sender is FrameworkElement element && element.DataContext is CellModel cell)
-            {
-                cell.IsDragTarget = false;
-                _dragTargets.Remove(cell);
-            }
-        }
+            // 清空列定义
+            HeaderGrid.ColumnDefinitions.Clear();
+            HeaderGrid.RowDefinitions.Clear();
 
-        private void OnCellRightTapped(object sender, RightTappedRoutedEventArgs e)
-        {
-            if (IsReadOnly) return;
-            
-            if (sender is FrameworkElement element && element.DataContext is CellModel cell)
-            {
-                ShowContextMenu(element, cell);
-            }
-        }
+            // 添加行定义（单行表头）
+            HeaderGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        private void ClearDragState()
-        {
-            if (_dragSource != null)
-            {
-                _dragSource.IsDragSource = false;
-                _dragSource = null;
-            }
-            
-            foreach (var target in _dragTargets)
-            {
-                target.IsDragTarget = false;
-            }
-            _dragTargets.Clear();
-        }
+            // 第一列：空白列（对应行头）
+            HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
 
-        private async Task TrySwapCellsAsync(CellModel a, CellModel b)
-        {
-            if (Schedule == null || a.Shift == null || b.Shift == null) return;
-            // ϷУ飺 + ڹ + ͬԱһҹڼ򵥼
-            if (!ValidateSwap(a, b, out var warn))
+            // 添加空白单元格
+            var emptyHeader = new Border
             {
-                await new Helpers.DialogService().ShowWarningAsync(warn);
-                return;
-            }
-            //Α
-            var tmpPersonId = a.Shift.PersonnelId;
-            var tmpPersonName = a.Shift.PersonnelName;
-            a.Shift.PersonnelId = b.Shift.PersonnelId;
-            a.Shift.PersonnelName = b.Shift.PersonnelName;
-            b.Shift.PersonnelId = tmpPersonId;
-            b.Shift.PersonnelName = tmpPersonName;
-            ShiftChanged?.Invoke(this, a.Shift);
-            ShiftChanged?.Invoke(this, b.Shift);
-            await RecomputeConflictsAsync();
-            UpdateVirtualizedView(); // Update virtualized view instead of full rebuild
-        }
+                BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+                BorderThickness = new Thickness(1),
+                Background = (Brush)Application.Current.Resources["CardBackgroundFillColorSecondaryBrush"],
+                Padding = new Thickness(8, 4)
+            };
+            var emptyText = new TextBlock
+            {
+                Text = "日期/时段",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            emptyHeader.Child = emptyText;
+            Grid.SetColumn(emptyHeader, 0);
+            Grid.SetRow(emptyHeader, 0);
+            HeaderGrid.Children.Add(emptyHeader);
 
-        private bool ValidateSwap(CellModel a, CellModel b, out string warn)
-        {
-            warn = string.Empty;
-            if (Personnels == null || Positions == null || a.Shift == null || b.Shift == null) return true;
-            var pa = Personnels.FirstOrDefault(p => p.Id == a.Shift.PersonnelId);
-            var pb = Personnels.FirstOrDefault(p => p.Id == b.Shift.PersonnelId);
-            var posa = Positions.FirstOrDefault(p => p.Id == a.Shift.PositionId);
-            var posb = Positions.FirstOrDefault(p => p.Id == b.Shift.PositionId);
-            if (pa == null || pb == null || posa == null || posb == null) return true;
-            // ����У��
-            bool paFitsPosB = posb.RequiredSkillIds.All(id => pa.SkillIds.Contains(id));
-            bool pbFitsPosA = posa.RequiredSkillIds.All(id => pb.SkillIds.Contains(id));
-            if (!paFitsPosB || !pbFitsPosA)
+            // 为每个哨位创建列头
+            foreach (var column in data.Columns.OrderBy(c => c.ColumnIndex))
             {
-                warn = "���ܲ�ƥ�䣬�޷�����";
-                return false;
-            }
-            // ���ڹ���У��
-            if (ActiveFixedRules?.Any() == true)
-            {
-                bool ruleOk = CheckFixedRule(pa.Id, posb.Id, b.PeriodIndex) && CheckFixedRule(pb.Id, posa.Id, a.PeriodIndex);
-                if (!ruleOk)
+                // 添加列定义
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120, GridUnitType.Pixel) });
+
+                // 创建列头单元格
+                var headerBorder = new Border
                 {
-                    warn = "���ڹ��������˽���";
-                    return false;
-                }
-            }
-            // ҹ��Ψһ(��: period11/0/1/2��Ϊҹ�ڣ�������ͬһ��Ա����Щʱ�γ���>1�򾯸�)
-            int[] night = {11,0,1,2};
-            if (night.Contains(a.PeriodIndex) || night.Contains(b.PeriodIndex))
-            {
-                //ͳ�� b ��Ա�ڵ���ҹ������ (�ų���ǰ������ģ�⽻����)
-                int countPaNight = _cells.Count(c => c.Shift != null && c.Shift.PersonnelId == pa.Id && night.Contains(c.PeriodIndex) && c != a && c != b);
-                int countPbNight = _cells.Count(c => c.Shift != null && c.Shift.PersonnelId == pb.Id && night.Contains(c.PeriodIndex) && c != a && c != b);
-                if (countPaNight >=1 || countPbNight >=1)
-                {
-                    warn = "ҹ��Ψһ������ܱ��ƻ�";
-                    //��������ʾ
-                }
-            }
-            return true;
-        }
-        private bool CheckFixedRule(int personId, int positionId, int periodIdx)
-        {
-            var rules = ActiveFixedRules?.Where(r => r.PersonalId == personId && r.IsEnabled).ToList();
-            if (rules == null || rules.Count ==0) return true;
-            return rules.All(r => (r.AllowedPositionIds.Count ==0 || r.AllowedPositionIds.Contains(positionId)) && (r.AllowedPeriods.Count ==0 || r.AllowedPeriods.Contains(periodIdx)));
-        }
-
-        //�Ҽ��˵�
-        protected override void OnRightTapped(RightTappedRoutedEventArgs e)
-        {
-            base.OnRightTapped(e);
-            if (IsReadOnly) return;
-            if (e.OriginalSource is FrameworkElement fe && fe.DataContext is CellModel cell)
-            {
-                var menu = new MenuFlyout();
-                if (cell.Shift != null)
-                {
-                    var clearItem = new MenuFlyoutItem { Text = "" };
-                    clearItem.Click += async (s, args) => { Schedule!.Shifts.Remove(cell.Shift!); cell.Shift = null; ShiftChanged?.Invoke(this, null); await RecomputeConflictsAsync(); UpdateVirtualizedView(); };
-                    menu.Items.Add(clearItem);
-                }
-                var infoItem = new MenuFlyoutItem { Text = "" };
-                infoItem.Click += (s, args) => { new Helpers.DialogService().ShowMessageAsync("", cell.Shift == null ? "δ" : $"Α: {cell.Shift.PersonnelName}\nλ: {cell.Position?.Name}\nʱ: {cell.Shift.StartTime:yyyy-MM-dd HH:mm} - {cell.Shift.EndTime:HH:mm}"); };
-                menu.Items.Add(infoItem);
-                menu.ShowAt(this);
-            }
-        }
-
-        // Context menu functionality
-        private void ShowContextMenu(FrameworkElement element, CellModel cell)
-        {
-            var menu = new MenuFlyout();
-            
-            if (cell.Shift != null)
-            {
-                var clearItem = new MenuFlyoutItem { Text = "清除分配" };
-                clearItem.Click += async (s, args) => 
-                { 
-                    if (Schedule != null)
-                    {
-                        Schedule.Shifts.Remove(cell.Shift); 
-                        cell.Shift = null; 
-                        ShiftChanged?.Invoke(this, null); 
-                        await RecomputeConflictsAsync(); 
-                        UpdateVirtualizedView(); 
-                    }
+                    BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+                    BorderThickness = new Thickness(1),
+                    Background = (Brush)Application.Current.Resources["CardBackgroundFillColorSecondaryBrush"],
+                    Padding = new Thickness(8, 4)
                 };
-                menu.Items.Add(clearItem);
-                
-                var editItem = new MenuFlyoutItem { Text = "编辑分配" };
-                editItem.Click += (s, args) => ShowEditDialog(cell);
-                menu.Items.Add(editItem);
-            }
-            else
-            {
-                var assignItem = new MenuFlyoutItem { Text = "分配人员" };
-                assignItem.Click += (s, args) => ShowAssignDialog(cell);
-                menu.Items.Add(assignItem);
-            }
-            
-            menu.Items.Add(new MenuFlyoutSeparator());
-            
-            var infoItem = new MenuFlyoutItem { Text = "详细信息" };
-            infoItem.Click += (s, args) => ShowCellInfo(cell);
-            menu.Items.Add(infoItem);
-            
-            if (cell.HasConflict)
-            {
-                var conflictItem = new MenuFlyoutItem { Text = "冲突详情" };
-                conflictItem.Click += (s, args) => ShowConflictInfo(cell);
-                menu.Items.Add(conflictItem);
-            }
-            
-            menu.ShowAt(element);
-        }
 
-        private async void ShowCellInfo(CellModel cell)
-        {
-            var info = $"哨位: {cell.Position?.Name ?? "未知"}\n";
-            info += $"日期: {cell.Date:yyyy-MM-dd}\n";
-            info += $"时段: {cell.PeriodDisplayText}\n";
-            
-            if (cell.Shift != null)
-            {
-                info += $"人员: {cell.Shift.PersonnelName}\n";
-                info += $"人员ID: {cell.Shift.PersonnelId}\n";
-            }
-            else
-            {
-                info += "状态: 未分配\n";
-            }
-            
-            if (cell.HasConflict && cell.Conflict != null)
-            {
-                info += $"冲突: {cell.Conflict.Message}";
-            }
-            
-            await new Helpers.DialogService().ShowMessageAsync("单元格信息", info);
-        }
-
-        private async void ShowConflictInfo(CellModel cell)
-        {
-            if (cell.Conflict == null) return;
-            
-            var info = $"冲突类型: {cell.ConflictDisplayText}\n";
-            info += $"描述: {cell.Conflict.Message}\n";
-            
-            if (cell.Conflict.PersonnelId.HasValue)
-            {
-                info += $"相关人员ID: {cell.Conflict.PersonnelId}\n";
-            }
-            
-            if (cell.Conflict.PositionId.HasValue)
-            {
-                info += $"相关哨位ID: {cell.Conflict.PositionId}\n";
-            }
-            
-            await new Helpers.DialogService().ShowMessageAsync("冲突详情", info);
-        }
-
-        private void ShowEditDialog(CellModel cell)
-        {
-            // TODO: Implement edit dialog for personnel assignment
-            // This would show a dialog to change the assigned personnel
-        }
-
-        private void ShowAssignDialog(CellModel cell)
-        {
-            // TODO: Implement assignment dialog for empty cells
-            // This would show a dialog to assign personnel to empty cells
-        }
-
-        // Toolbar event handlers
-        private async void OnRefreshClick(object sender, RoutedEventArgs e)
-        {
-            BuildGrid();
-        }
-
-        private async void OnExportClick(object sender, RoutedEventArgs e)
-        {
-            // TODO: Implement export functionality
-            await new Helpers.DialogService().ShowMessageAsync("导出", "导出功能正在开发中...");
-        }
-
-        // Performance optimization methods
-        private void OptimizeForLargeDatasets()
-        {
-            // Enable virtualization for large datasets
-            if (_cells.Count > 1000)
-            {
-                _visibleRows = Math.Min(_visibleRows, 50);
-                _visibleColumns = Math.Min(_visibleColumns, 20);
-            }
-        }
-
-        // Responsive layout support
-        private void UpdateLayoutForScreenSize()
-        {
-            if (ActualWidth < 800)
-            {
-                // Compact layout for smaller screens
-                if (GridLayout != null)
+                var headerText = new TextBlock
                 {
-                    GridLayout.MinItemWidth = 100;
-                    GridLayout.MinItemHeight = 50;
+                    Text = column.PositionName,
+                    FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextWrapping = TextWrapping.Wrap
+                };
+
+                headerBorder.Child = headerText;
+                Grid.SetColumn(headerBorder, column.ColumnIndex + 1); // +1 因为第一列是行头
+                Grid.SetRow(headerBorder, 0);
+                HeaderGrid.Children.Add(headerBorder);
+            }
+        }
+
+        /// <summary>
+        /// 创建行头和单元格
+        /// </summary>
+        private void CreateRowsAndCells(ScheduleGridData data)
+        {
+            // 清空列定义和行定义
+            GridBody.ColumnDefinitions.Clear();
+            GridBody.RowDefinitions.Clear();
+
+            // 第一列：行头列（日期+时段）
+            GridBody.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
+
+            // 为每个哨位添加列定义
+            foreach (var column in data.Columns.OrderBy(c => c.ColumnIndex))
+            {
+                GridBody.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120, GridUnitType.Pixel) });
+            }
+
+            // 为每一行创建行头和单元格
+            foreach (var row in data.Rows.OrderBy(r => r.RowIndex))
+            {
+                // 添加行定义
+                GridBody.RowDefinitions.Add(new RowDefinition { Height = new GridLength(40, GridUnitType.Pixel) });
+
+                // 创建行头（日期+时段）
+                CreateRowHeader(row);
+
+                // 创建该行的所有单元格
+                CreateCells(data, row);
+            }
+        }
+
+        /// <summary>
+        /// 创建行头（日期+时段）
+        /// </summary>
+        private void CreateRowHeader(ScheduleGridRow row)
+        {
+            var rowHeaderBorder = new Border
+            {
+                BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+                BorderThickness = new Thickness(1),
+                Background = (Brush)Application.Current.Resources["CardBackgroundFillColorSecondaryBrush"],
+                Padding = new Thickness(8, 4)
+            };
+
+            var rowHeaderText = new TextBlock
+            {
+                Text = row.DisplayText,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextWrapping = TextWrapping.NoWrap
+            };
+
+            rowHeaderBorder.Child = rowHeaderText;
+            Grid.SetColumn(rowHeaderBorder, 0);
+            Grid.SetRow(rowHeaderBorder, row.RowIndex);
+            GridBody.Children.Add(rowHeaderBorder);
+        }
+
+        /// <summary>
+        /// 创建人员单元格
+        /// </summary>
+        private void CreateCells(ScheduleGridData data, ScheduleGridRow row)
+        {
+            // 为该行的每一列创建单元格
+            foreach (var column in data.Columns.OrderBy(c => c.ColumnIndex))
+            {
+                // 获取单元格数据
+                var cellKey = $"{row.RowIndex}_{column.ColumnIndex}";
+                var cellData = data.Cells.ContainsKey(cellKey) ? data.Cells[cellKey] : null;
+
+                // 创建单元格
+                var cellBorder = CreateCellBorder(cellData);
+
+                // 设置位置
+                Grid.SetColumn(cellBorder, column.ColumnIndex + 1); // +1 因为第一列是行头
+                Grid.SetRow(cellBorder, row.RowIndex);
+
+                // 添加点击事件
+                cellBorder.Tapped += (s, e) =>
+                {
+                    CellClicked?.Invoke(this, new CellClickedEventArgs(row.RowIndex, column.ColumnIndex, cellData));
+                };
+
+                GridBody.Children.Add(cellBorder);
+            }
+        }
+
+        /// <summary>
+        /// 创建单元格边框
+        /// </summary>
+        private Border CreateCellBorder(ScheduleGridCell? cellData)
+        {
+            var border = new Border
+            {
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(8, 4),
+                MinWidth = 120,
+                MinHeight = 40
+            };
+
+            // 根据单元格状态设置样式
+            if (cellData == null || !cellData.IsAssigned)
+            {
+                // 未分配单元格
+                border.BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
+                border.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
+
+                var emptyText = new TextBlock
+                {
+                    Text = "-",
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+                };
+                border.Child = emptyText;
+            }
+            else
+            {
+                // 已分配单元格
+                if (cellData.HasConflict)
+                {
+                    // 冲突单元格
+                    border.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Red);
+                    border.BorderThickness = new Thickness(2);
+                    border.Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(30, 255, 0, 0));
+                }
+                else if (cellData.IsManualAssignment)
+                {
+                    // 手动指定单元格
+                    border.BorderBrush = (Brush)Application.Current.Resources["SystemAccentColor"];
+                    border.BorderThickness = new Thickness(2);
+                    border.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
+                }
+                else
+                {
+                    // 普通分配单元格
+                    border.BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
+                    border.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
+                }
+
+                var personnelText = new TextBlock
+                {
+                    Text = cellData.PersonnelName ?? "未知",
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextWrapping = TextWrapping.Wrap
+                };
+                border.Child = personnelText;
+
+                // 添加工具提示
+                if (cellData.HasConflict && !string.IsNullOrEmpty(cellData.ConflictMessage))
+                {
+                    ToolTipService.SetToolTip(border, cellData.ConflictMessage);
+                }
+                else if (cellData.IsManualAssignment)
+                {
+                    ToolTipService.SetToolTip(border, $"{cellData.PersonnelName} (手动指定)");
+                }
+                else
+                {
+                    ToolTipService.SetToolTip(border, cellData.PersonnelName);
                 }
             }
-            else
-            {
-                // Standard layout for larger screens
-                if (GridLayout != null)
-                {
-                    GridLayout.MinItemWidth = 120;
-                    GridLayout.MinItemHeight = 60;
-                }
-            }
+
+            return border;
         }
 
-        // Accessibility support
-        private void SetupAccessibility()
+        /// <summary>
+        /// 导出按钮点击事件
+        /// </summary>
+        private void ExportButton_Click(object sender, RoutedEventArgs e)
         {
-            // Set automation properties for screen readers
-            AutomationProperties.SetName(this, "排班网格控件");
-            AutomationProperties.SetHelpText(this, "显示排班表数据，支持拖拽交换和右键菜单操作");
+            ExportRequested?.Invoke(this, new ExportRequestedEventArgs("excel"));
         }
 
-        // Public methods for external control
-        public async Task RefreshAsync()
+        /// <summary>
+        /// 全屏按钮点击事件
+        /// </summary>
+        private void FullScreenButton_Click(object sender, RoutedEventArgs e)
         {
-            BuildGrid();
+            FullScreenRequested?.Invoke(this, EventArgs.Empty);
         }
+    }
 
-        public void ClearSelection()
+    /// <summary>
+    /// 导出请求事件参数
+    /// </summary>
+    public class ExportRequestedEventArgs : EventArgs
+    {
+        public string Format { get; }
+
+        public ExportRequestedEventArgs(string format)
         {
-            ClearDragState();
+            Format = format;
         }
+    }
 
-        public void ScrollToCell(int positionIndex, int periodIndex)
-        {
-            // TODO: Implement scrolling to specific cell
-        }
+    /// <summary>
+    /// 单元格点击事件参数
+    /// </summary>
+    public class CellClickedEventArgs : EventArgs
+    {
+        public int RowIndex { get; }
+        public int ColumnIndex { get; }
+        public ScheduleGridCell? Cell { get; }
 
-        public void HighlightConflicts(bool highlight)
+        public CellClickedEventArgs(int rowIndex, int columnIndex, ScheduleGridCell? cell)
         {
-            ShowConflicts = highlight;
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            RowIndex = rowIndex;
+            ColumnIndex = columnIndex;
+            Cell = cell;
         }
     }
 }
