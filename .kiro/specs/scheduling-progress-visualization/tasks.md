@@ -346,12 +346,17 @@
   - 添加"查看详细结果"按钮，绑定到 `ViewModel.ViewDetailedResultCommand`
 
 
+
+
   - 根据 `ViewModel.IsCompleted` 控制成功按钮可见性
   - 添加"返回修改"按钮，绑定到 `ViewModel.ReturnToConfigCommand`
   - 根据 `ViewModel.IsFailed` 控制失败按钮可见性
   - _需求: 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 8. 实现全屏表格对话框
+- [x] 8. 实现全屏表格对话框
+
+
+
 
   - 创建 `ScheduleGridFullScreenView.xaml` 和 `ScheduleGridFullScreenView.xaml.cs`
   - 在全屏视图中嵌入 `ScheduleGridControl`
@@ -359,6 +364,9 @@
   - 在 `SchedulingProgressViewModel` 中实现 `ShowGridFullScreenAsync` 方法
   - 创建全屏对话框样式 `FullScreenDialogStyle`，设置宽高为窗口大小
   - 将视图放置在 `Views/Scheduling/` 目录下
+
+
+
   - _需求: 5.1, 5.2, 5.3_
 
 - [ ] 9. 修改 CreateSchedulingPage 导航逻辑

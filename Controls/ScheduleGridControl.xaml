@@ -4,7 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    AutomationProperties.Name="排班结果表格控件">
 
     <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
@@ -22,19 +23,24 @@
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right"
                     Spacing="8"
-                    Margin="0,0,0,8">
+                    Margin="0,0,0,8"
+                    AutomationProperties.Name="表格工具栏">
             
             <Button x:Name="ExportButton"
                     Content="导出"
                     ToolTipService.ToolTip="导出表格（开发中）"
                     IsEnabled="False"
-                    Click="ExportButton_Click"/>
+                    Click="ExportButton_Click"
+                    AutomationProperties.Name="导出表格"
+                    AutomationProperties.HelpText="此功能正在开发中"/>
             
             <Button x:Name="FullScreenButton"
                     Content="&#xE740;"
                     FontFamily="Segoe MDL2 Assets"
                     ToolTipService.ToolTip="全屏查看"
-                    Click="FullScreenButton_Click"/>
+                    Click="FullScreenButton_Click"
+                    AutomationProperties.Name="全屏查看表格"
+                    AutomationProperties.HelpText="在全屏模式下查看排班表格"/>
         </StackPanel>
 
         <!-- 表头区域 -->
@@ -43,11 +49,13 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"
-                Padding="8,4">
+                Padding="8,4"
+                AutomationProperties.Name="表格列头">
             <Grid x:Name="HeaderGrid">
                 <TextBlock Text="表头区域（待实现）" 
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                           FontStyle="Italic"/>
+                           FontStyle="Italic"
+                           AutomationProperties.Name="表头占位符"/>
             </Grid>
         </Border>
 
@@ -56,12 +64,14 @@
                       Grid.Row="2"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto"
-                      Margin="0,8,0,0">
+                      Margin="0,8,0,0"
+                      AutomationProperties.Name="表格内容区域">
             <Grid x:Name="GridBody">
                 <TextBlock Text="表体区域（待实现）" 
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            FontStyle="Italic"
-                           Margin="8"/>
+                           Margin="8"
+                           AutomationProperties.Name="表体占位符"/>
             </Grid>
         </ScrollViewer>
     </Grid>

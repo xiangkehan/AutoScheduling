@@ -33,13 +33,17 @@
               Padding="24,24,24,12"
               Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
               BorderThickness="0,0,0,1"
-              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+              AutomationProperties.Name="排班执行进度页面标题栏"
+              AutomationProperties.HeadingLevel="Level1">
             <StackPanel Spacing="8">
                 <TextBlock Text="排班执行进度" 
-                           Style="{ThemeResource TitleTextBlockStyle}"/>
+                           Style="{ThemeResource TitleTextBlockStyle}"
+                           AutomationProperties.HeadingLevel="Level1"/>
                 <TextBlock Text="实时监控排班算法执行状态和结果" 
                            Style="{ThemeResource BodyTextBlockStyle}" 
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           AutomationProperties.Name="页面描述"/>
             </StackPanel>
         </Grid>
 
@@ -48,14 +52,17 @@
               Padding="24,16"
               Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
               BorderThickness="0,0,0,1"
-              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+              AutomationProperties.Name="排班进度指示区">
             <StackPanel Spacing="12">
                 <!-- 进度条 -->
                 <ProgressBar Value="{x:Bind ViewModel.ProgressPercentage, Mode=OneWay}"
                              Minimum="0"
                              Maximum="100"
                              Height="8"
-                             CornerRadius="4"/>
+                             CornerRadius="4"
+                             AutomationProperties.Name="排班执行进度"
+                             AutomationProperties.LiveSetting="Polite"/>
                 
                 <!-- 阶段信息 -->
                 <Grid>
@@ -67,16 +74,21 @@
                     <StackPanel Grid.Column="0" Spacing="4">
                         <TextBlock Text="{x:Bind ViewModel.CurrentStage, Mode=OneWay}"
                                    Style="{ThemeResource SubtitleTextBlockStyle}"
-                                   FontWeight="SemiBold"/>
+                                   FontWeight="SemiBold"
+                                   AutomationProperties.Name="当前执行阶段"
+                                   AutomationProperties.LiveSetting="Polite"/>
                         <TextBlock Text="{x:Bind ViewModel.StageDescription, Mode=OneWay}"
                                    Style="{ThemeResource BodyTextBlockStyle}"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   AutomationProperties.Name="阶段描述"/>
                     </StackPanel>
                     
                     <StackPanel Grid.Column="1" 
                                 Spacing="4"
                                 HorizontalAlignment="Right">
-                        <TextBlock HorizontalAlignment="Right">
+                        <TextBlock HorizontalAlignment="Right"
+                                   AutomationProperties.Name="已完成分配统计"
+                                   AutomationProperties.LiveSetting="Polite">
                             <Run Text="{x:Bind ViewModel.CompletedAssignments, Mode=OneWay}"/>
                             <Run Text="/"/>
                             <Run Text="{x:Bind ViewModel.TotalSlotsToAssign, Mode=OneWay}"/>
@@ -84,7 +96,9 @@
                         </TextBlock>
                         <TextBlock Style="{ThemeResource TitleTextBlockStyle}"
                                    HorizontalAlignment="Right"
-                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}">
+                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                   AutomationProperties.Name="进度百分比"
+                                   AutomationProperties.LiveSetting="Polite">
                             <Run Text="{x:Bind ViewModel.ProgressPercentage, Mode=OneWay}"/>
                             <Run Text="%"/>
                         </TextBlock>
@@ -105,33 +119,42 @@
 
             <!-- 左侧实时信息区 -->
             <ScrollViewer Grid.Column="0"
-                          VerticalScrollBarVisibility="Auto">
+                          VerticalScrollBarVisibility="Auto"
+                          AutomationProperties.Name="实时信息区">
                 <StackPanel Spacing="16">
                     <!-- 当前处理信息卡片 -->
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1"
                             CornerRadius="{StaticResource ControlCornerRadius}"
-                            Padding="16">
+                            Padding="16"
+                            AutomationProperties.Name="当前处理信息卡片">
                         <StackPanel Spacing="12">
                             <TextBlock Text="当前处理信息" 
                                        Style="{ThemeResource BaseTextBlockStyle}"
-                                       FontWeight="SemiBold"/>
+                                       FontWeight="SemiBold"
+                                       AutomationProperties.HeadingLevel="Level2"/>
                             
                             <StackPanel Spacing="8">
                                 <TextBlock Text="哨位" 
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                           FontSize="12"/>
+                                           FontSize="12"
+                                           AutomationProperties.Name="哨位标签"/>
                                 <TextBlock Text="{x:Bind ViewModel.CurrentPositionName, Mode=OneWay, FallbackValue='--'}"
-                                           Style="{ThemeResource BodyStrongTextBlockStyle}"/>
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                           AutomationProperties.Name="当前处理哨位"
+                                           AutomationProperties.LiveSetting="Polite"/>
                             </StackPanel>
                             
                             <StackPanel Spacing="8">
                                 <TextBlock Text="时段" 
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                           FontSize="12"/>
+                                           FontSize="12"
+                                           AutomationProperties.Name="时段标签"/>
                                 <TextBlock Text="{x:Bind ViewModel.CurrentTimeSlot, Mode=OneWay, FallbackValue='--'}"
-                                           Style="{ThemeResource BodyStrongTextBlockStyle}"/>
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                           AutomationProperties.Name="当前处理时段"
+                                           AutomationProperties.LiveSetting="Polite"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -141,14 +164,18 @@
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1"
                             CornerRadius="{StaticResource ControlCornerRadius}"
-                            Padding="16">
+                            Padding="16"
+                            AutomationProperties.Name="累计执行时间卡片">
                         <StackPanel Spacing="8">
                             <TextBlock Text="累计执行时间" 
                                        Style="{ThemeResource BaseTextBlockStyle}"
-                                       FontWeight="SemiBold"/>
+                                       FontWeight="SemiBold"
+                                       AutomationProperties.HeadingLevel="Level2"/>
                             <TextBlock Text="{x:Bind ViewModel.ElapsedTime, Mode=OneWay}"
                                        Style="{ThemeResource TitleTextBlockStyle}"
-                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                       AutomationProperties.Name="已用时间"
+                                       AutomationProperties.LiveSetting="Polite"/>
                         </StackPanel>
                     </Border>
 
@@ -157,15 +184,18 @@
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1"
                             CornerRadius="{StaticResource ControlCornerRadius}"
-                            Padding="16">
+                            Padding="16"
+                            AutomationProperties.Name="阶段历史卡片">
                         <StackPanel Spacing="12">
                             <TextBlock Text="阶段历史" 
                                        Style="{ThemeResource BaseTextBlockStyle}"
-                                       FontWeight="SemiBold"/>
+                                       FontWeight="SemiBold"
+                                       AutomationProperties.HeadingLevel="Level2"/>
                             
                             <ListView ItemsSource="{x:Bind ViewModel.StageHistory, Mode=OneWay}"
                                       SelectionMode="None"
-                                      MaxHeight="300">
+                                      MaxHeight="300"
+                                      AutomationProperties.Name="已完成阶段列表">
                                 <ListView.ItemContainerStyle>
                                     <Style TargetType="ListViewItem">
                                         <Setter Property="Padding" Value="0"/>
@@ -211,23 +241,28 @@
                             BorderThickness="1"
                             CornerRadius="{StaticResource ControlCornerRadius}"
                             Padding="16"
-                            Visibility="{x:Bind ViewModel.Warnings.Count, Converter={StaticResource CountToVisibilityConverter}, Mode=OneWay}">
+                            Visibility="{x:Bind ViewModel.Warnings.Count, Converter={StaticResource CountToVisibilityConverter}, Mode=OneWay}"
+                            AutomationProperties.Name="警告信息卡片">
                         <StackPanel Spacing="12">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBlock Text="&#xE7BA;" 
                                            FontFamily="Segoe MDL2 Assets"
                                            FontSize="16"
                                            Foreground="{ThemeResource SystemFillColorCautionBrush}"
-                                           VerticalAlignment="Center"/>
+                                           VerticalAlignment="Center"
+                                           AutomationProperties.Name="警告图标"/>
                                 <TextBlock Text="警告信息" 
                                            Style="{ThemeResource BaseTextBlockStyle}"
                                            FontWeight="SemiBold"
-                                           VerticalAlignment="Center"/>
+                                           VerticalAlignment="Center"
+                                           AutomationProperties.HeadingLevel="Level2"/>
                             </StackPanel>
                             
                             <ListView ItemsSource="{x:Bind ViewModel.Warnings, Mode=OneWay}"
                                       SelectionMode="None"
-                                      MaxHeight="200">
+                                      MaxHeight="200"
+                                      AutomationProperties.Name="警告消息列表"
+                                      AutomationProperties.LiveSetting="Polite">
                                 <ListView.ItemContainerStyle>
                                     <Style TargetType="ListViewItem">
                                         <Setter Property="Padding" Value="0"/>
@@ -266,31 +301,40 @@
 
                 <!-- 上部：结果展示区（可滚动） -->
                 <ScrollViewer Grid.Row="0"
-                              VerticalScrollBarVisibility="Auto">
+                              VerticalScrollBarVisibility="Auto"
+                              AutomationProperties.Name="结果展示区">
                     <StackPanel Spacing="16">
                         <!-- 执行中状态 -->
                         <InfoBar Title="正在执行排班"
                                  Message="排班算法正在运行，请稍候..."
                                  Severity="Informational"
-                                 IsOpen="{x:Bind ViewModel.IsExecuting, Mode=OneWay}"/>
+                                 IsOpen="{x:Bind ViewModel.IsExecuting, Mode=OneWay}"
+                                 AutomationProperties.Name="执行中状态通知"
+                                 AutomationProperties.LiveSetting="Polite"/>
 
                         <!-- 成功状态 -->
                         <InfoBar Title="排班成功"
                                  Message="排班任务已成功完成"
                                  Severity="Success"
-                                 IsOpen="{x:Bind ViewModel.IsCompleted, Mode=OneWay}"/>
+                                 IsOpen="{x:Bind ViewModel.IsCompleted, Mode=OneWay}"
+                                 AutomationProperties.Name="成功状态通知"
+                                 AutomationProperties.LiveSetting="Assertive"/>
 
                         <!-- 失败状态 -->
                         <InfoBar Title="排班失败"
                                  Message="{x:Bind ViewModel.Result.ErrorMessage, Mode=OneWay, FallbackValue='排班执行失败，请查看错误详情'}"
                                  Severity="Error"
-                                 IsOpen="{x:Bind ViewModel.IsFailed, Mode=OneWay}"/>
+                                 IsOpen="{x:Bind ViewModel.IsFailed, Mode=OneWay}"
+                                 AutomationProperties.Name="失败状态通知"
+                                 AutomationProperties.LiveSetting="Assertive"/>
 
                         <!-- 取消状态 -->
                         <InfoBar Title="排班已取消"
                                  Message="排班任务已被用户取消"
                                  Severity="Warning"
-                                 IsOpen="{x:Bind ViewModel.IsCancelled, Mode=OneWay}"/>
+                                 IsOpen="{x:Bind ViewModel.IsCancelled, Mode=OneWay}"
+                                 AutomationProperties.Name="取消状态通知"
+                                 AutomationProperties.LiveSetting="Assertive"/>
 
                         <!-- 排班结果表格（成功时显示） -->
                         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -298,15 +342,18 @@
                                 BorderThickness="1"
                                 CornerRadius="{StaticResource ControlCornerRadius}"
                                 Padding="16"
-                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="排班结果表格卡片">
                             <StackPanel Spacing="12">
                                 <TextBlock Text="排班结果表格" 
                                            Style="{ThemeResource SubtitleTextBlockStyle}"
-                                           FontWeight="SemiBold"/>
+                                           FontWeight="SemiBold"
+                                           AutomationProperties.HeadingLevel="Level2"/>
                                 
                                 <controls:ScheduleGridControl x:Name="ScheduleGrid"
                                                               GridData="{x:Bind ViewModel.GridData, Mode=OneWay}"
-                                                              MaxHeight="400"/>
+                                                              MaxHeight="400"
+                                                              AutomationProperties.Name="排班结果表格"/>
                             </StackPanel>
                         </Border>
 
@@ -316,11 +363,13 @@
                                 BorderThickness="1"
                                 CornerRadius="{StaticResource ControlCornerRadius}"
                                 Padding="16"
-                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="统计信息卡片">
                             <StackPanel Spacing="12">
                                 <TextBlock Text="统计信息" 
                                            Style="{ThemeResource SubtitleTextBlockStyle}"
-                                           FontWeight="SemiBold"/>
+                                           FontWeight="SemiBold"
+                                           AutomationProperties.HeadingLevel="Level2"/>
                                 
                                 <Grid ColumnSpacing="24" RowSpacing="12">
                                     <Grid.ColumnDefinitions>
@@ -362,15 +411,18 @@
                                 BorderThickness="1"
                                 CornerRadius="{StaticResource ControlCornerRadius}"
                                 Padding="16"
-                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="人员工作量卡片">
                             <StackPanel Spacing="12">
                                 <TextBlock Text="人员工作量" 
                                            Style="{ThemeResource SubtitleTextBlockStyle}"
-                                           FontWeight="SemiBold"/>
+                                           FontWeight="SemiBold"
+                                           AutomationProperties.HeadingLevel="Level2"/>
                                 
                                 <ListView ItemsSource="{x:Bind ViewModel.PersonnelWorkloads, Mode=OneWay}"
                                           SelectionMode="None"
-                                          MaxHeight="300">
+                                          MaxHeight="300"
+                                          AutomationProperties.Name="人员工作量列表">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="dto:PersonnelWorkload">
                                             <Grid ColumnSpacing="12" Padding="8">
@@ -409,15 +461,18 @@
                                 BorderThickness="1"
                                 CornerRadius="{StaticResource ControlCornerRadius}"
                                 Padding="16"
-                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="哨位覆盖率卡片">
                             <StackPanel Spacing="12">
                                 <TextBlock Text="哨位覆盖率" 
                                            Style="{ThemeResource SubtitleTextBlockStyle}"
-                                           FontWeight="SemiBold"/>
+                                           FontWeight="SemiBold"
+                                           AutomationProperties.HeadingLevel="Level2"/>
                                 
                                 <ListView ItemsSource="{x:Bind ViewModel.PositionCoverages, Mode=OneWay}"
                                           SelectionMode="None"
-                                          MaxHeight="300">
+                                          MaxHeight="300"
+                                          AutomationProperties.Name="哨位覆盖率列表">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="dto:PositionCoverage">
                                             <Grid ColumnSpacing="12" Padding="8">
@@ -454,15 +509,19 @@
                                 BorderThickness="1"
                                 CornerRadius="{StaticResource ControlCornerRadius}"
                                 Padding="16"
-                                Visibility="{x:Bind ViewModel.IsFailed, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                Visibility="{x:Bind ViewModel.IsFailed, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="冲突详情卡片">
                             <StackPanel Spacing="12">
                                 <TextBlock Text="冲突详情" 
                                            Style="{ThemeResource SubtitleTextBlockStyle}"
-                                           FontWeight="SemiBold"/>
+                                           FontWeight="SemiBold"
+                                           AutomationProperties.HeadingLevel="Level2"/>
                                 
                                 <ListView ItemsSource="{x:Bind ViewModel.Conflicts, Mode=OneWay}"
                                           SelectionMode="None"
-                                          MaxHeight="300">
+                                          MaxHeight="300"
+                                          AutomationProperties.Name="冲突列表"
+                                          AutomationProperties.LiveSetting="Assertive">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="dto:ConflictInfo">
                                             <Border Background="{ThemeResource SystemErrorBackgroundColor}"
@@ -491,7 +550,8 @@
                 <Grid Grid.Row="1"
                       Padding="0,16,0,0"
                       BorderThickness="0,1,0,0"
-                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                      AutomationProperties.Name="操作按钮区">
                     <StackPanel Orientation="Horizontal" 
                                 Spacing="12"
                                 HorizontalAlignment="Right">
@@ -499,32 +559,56 @@
                         <!-- 执行中：取消按钮 -->
                         <Button Content="取消排班"
                                 Command="{x:Bind ViewModel.CancelSchedulingCommand}"
-                                Visibility="{x:Bind ViewModel.IsExecuting, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+                                Visibility="{x:Bind ViewModel.IsExecuting, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="取消排班"
+                                ToolTipService.ToolTip="取消正在执行的排班任务 (Esc)">
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Key="Escape"/>
+                            </Button.KeyboardAccelerators>
+                        </Button>
 
                         <!-- 成功后：保存、放弃、查看详细结果按钮 -->
                         <Button Content="保存排班"
                                 Command="{x:Bind ViewModel.SaveScheduleCommand}"
                                 Style="{ThemeResource AccentButtonStyle}"
-                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="保存排班结果"
+                                ToolTipService.ToolTip="保存排班结果到数据库 (Ctrl+S)">
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Key="S" Modifiers="Control"/>
+                            </Button.KeyboardAccelerators>
+                        </Button>
                         
                         <Button Content="放弃排班"
                                 Command="{x:Bind ViewModel.DiscardScheduleCommand}"
-                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="放弃排班结果"
+                                ToolTipService.ToolTip="放弃当前排班结果"/>
                         
                         <Button Content="查看详细结果"
                                 Command="{x:Bind ViewModel.ViewDetailedResultCommand}"
-                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="查看详细结果"
+                                ToolTipService.ToolTip="查看完整的排班结果 (Enter)">
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Key="Enter"/>
+                            </Button.KeyboardAccelerators>
+                        </Button>
 
                         <!-- 失败后：返回修改按钮 -->
                         <Button Content="返回修改"
                                 Command="{x:Bind ViewModel.ReturnToConfigCommand}"
                                 Style="{ThemeResource AccentButtonStyle}"
-                                Visibility="{x:Bind ViewModel.IsFailed, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+                                Visibility="{x:Bind ViewModel.IsFailed, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="返回修改配置"
+                                ToolTipService.ToolTip="返回配置页面修改参数"/>
 
                         <!-- 取消后：返回按钮 -->
                         <Button Content="返回"
                                 Command="{x:Bind ViewModel.ReturnToConfigCommand}"
-                                Visibility="{x:Bind ViewModel.IsCancelled, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+                                Visibility="{x:Bind ViewModel.IsCancelled, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="返回配置页面"
+                                ToolTipService.ToolTip="返回配置页面"/>
                     </StackPanel>
                 </Grid>
             </Grid>

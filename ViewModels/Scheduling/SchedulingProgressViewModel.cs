@@ -269,6 +269,7 @@ public partial class SchedulingProgressViewModel : ObservableObject
     {
         if (request == null)
         {
+            await _dialogService.ShowErrorAsync("参数错误", "排班请求参数不能为空");
             return;
         }
 
@@ -307,12 +308,22 @@ public partial class SchedulingProgressViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             // 用户取消
-            HandleCancellation();
+            await HandleCancellationAsync();
+        }
+        catch (ArgumentException ex)
+        {
+            // 参数验证错误
+            await HandleArgumentExceptionAsync(ex);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // 业务逻辑错误
+            await HandleInvalidOperationExceptionAsync(ex);
         }
         catch (Exception ex)
         {
-            // 处理异常
-            HandleException(ex);
+            // 未预期的系统错误
+            await HandleUnexpectedExceptionAsync(ex);
         }
         finally
         {
@@ -449,6 +460,11 @@ public partial class SchedulingProgressViewModel : ObservableObject
             // 排班成功
             IsCompleted = true;
             IsFailed = false;
+            CurrentStage = "已完成";
+            StageDescription = "排班任务已成功完成";
+
+            // 更新阶段历史
+            UpdateStageHistory(SchedulingStage.Completed);
 
             // 填充统计数据
             if (result.Statistics != null)
@@ -461,12 +477,21 @@ public partial class SchedulingProgressViewModel : ObservableObject
             {
                 GridData = await _schedulingService.BuildScheduleGridData(result.Schedule);
             }
+
+            // 显示成功消息
+            await _dialogService.ShowSuccessAsync(
+                $"排班成功完成！\n\n总分配数：{result.Statistics?.TotalAssignments ?? 0}\n执行时间：{ElapsedTime}");
         }
         else
         {
             // 排班失败
             IsCompleted = false;
             IsFailed = true;
+            CurrentStage = "排班失败";
+            StageDescription = result.ErrorMessage ?? "排班执行失败";
+
+            // 更新阶段历史
+            UpdateStageHistory(SchedulingStage.Failed);
 
             // 填充冲突信息
             if (result.Conflicts != null && result.Conflicts.Count > 0)
@@ -477,12 +502,71 @@ public partial class SchedulingProgressViewModel : ObservableObject
                     Conflicts.Add(conflict);
                 }
             }
+
+            // 显示失败消息和建议
+            await ShowFailureMessageAsync(result);
         }
 
         // 通知命令状态变化
         SaveScheduleCommand.NotifyCanExecuteChanged();
         DiscardScheduleCommand.NotifyCanExecuteChanged();
         ViewDetailedResultCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// 显示失败消息和建议
+    /// </summary>
+    /// <param name="result">排班结果</param>
+    private async Task ShowFailureMessageAsync(SchedulingResult result)
+    {
+        var errorMessage = "排班失败\n\n";
+        
+        // 添加失败原因
+        if (!string.IsNullOrEmpty(result.ErrorMessage))
+        {
+            errorMessage += $"失败原因：{result.ErrorMessage}\n\n";
+        }
+
+        // 添加统计信息
+        errorMessage += $"已完成分配：{CompletedAssignments}/{TotalSlotsToAssign}\n";
+        errorMessage += $"执行时间：{ElapsedTime}\n";
+
+        // 添加冲突信息摘要
+        if (Conflicts.Count > 0)
+        {
+            errorMessage += $"\n发现 {Conflicts.Count} 个冲突\n";
+            
+            // 按冲突类型分组统计
+            var conflictGroups = Conflicts.GroupBy(c => c.ConflictType).ToList();
+            foreach (var group in conflictGroups)
+            {
+                errorMessage += $"• {group.Key}：{group.Count()} 个\n";
+            }
+        }
+
+        // 添加建议
+        errorMessage += "\n建议：\n";
+        errorMessage += "• 点击下方查看冲突详情\n";
+        errorMessage += "• 调整约束条件后重新排班\n";
+        errorMessage += "• 增加可用人员或减少排班需求\n";
+        errorMessage += "• 点击"返回修改"按钮返回配置页面";
+
+        await _dialogService.ShowErrorAsync("排班失败", errorMessage);
+
+        // 如果有冲突，询问是否查看详情
+        if (Conflicts.Count > 0)
+        {
+            var viewDetails = await _dialogService.ShowConfirmAsync(
+                "查看冲突详情",
+                "是否查看详细的冲突信息？",
+                "查看",
+                "稍后");
+
+            if (viewDetails)
+            {
+                await ShowConflictDetailsAsync();
+            }
+        }
     }
 
     /// <summary>
@@ -515,7 +599,7 @@ public partial class SchedulingProgressViewModel : ObservableObject
     /// <summary>
     /// 处理取消操作
     /// </summary>
-    private void HandleCancellation()
+    private async Task HandleCancellationAsync()
     {
         IsCancelled = true;
         IsCompleted = false;
@@ -523,21 +607,194 @@ public partial class SchedulingProgressViewModel : ObservableObject
         CurrentStage = "已取消";
         StageDescription = "排班任务已被用户取消";
 
+        // 更新阶段历史
+        UpdateStageHistory(SchedulingStage.Failed);
+
         // 通知命令状态变化
         CancelSchedulingCommand.NotifyCanExecuteChanged();
+
+        // 显示取消消息
+        await _dialogService.ShowMessageAsync(
+            "排班已取消",
+            $"排班任务已被取消。\n\n已完成分配：{CompletedAssignments}/{TotalSlotsToAssign}\n执行时间：{ElapsedTime}");
     }
 
     /// <summary>
-    /// 处理异常
+    /// 处理参数异常
     /// </summary>
-    /// <param name="ex">异常对象</param>
-    private void HandleException(Exception ex)
+    /// <param name="ex">参数异常对象</param>
+    private async Task HandleArgumentExceptionAsync(ArgumentException ex)
     {
         IsFailed = true;
         IsCompleted = false;
         IsCancelled = false;
-        CurrentStage = "执行失败";
-        StageDescription = $"排班执行过程中发生错误: {ex.Message}";
+        CurrentStage = "参数错误";
+        StageDescription = "排班参数验证失败";
+
+        // 更新阶段历史
+        UpdateStageHistory(SchedulingStage.Failed);
+
+        // 构建详细错误消息
+        var errorMessage = $"排班参数验证失败，请检查以下内容：\n\n{ex.Message}\n\n建议：\n";
+        errorMessage += "• 检查人员和哨位配置是否完整\n";
+        errorMessage += "• 确认日期范围设置正确\n";
+        errorMessage += "• 验证约束条件是否合理\n";
+        errorMessage += "• 确保所有必填字段已填写";
+
+        // 显示错误对话框
+        await _dialogService.ShowErrorAsync("参数验证失败", errorMessage);
+    }
+
+    /// <summary>
+    /// 处理业务逻辑异常
+    /// </summary>
+    /// <param name="ex">业务逻辑异常对象</param>
+    private async Task HandleInvalidOperationExceptionAsync(InvalidOperationException ex)
+    {
+        IsFailed = true;
+        IsCompleted = false;
+        IsCancelled = false;
+        CurrentStage = "业务逻辑错误";
+        StageDescription = "排班执行过程中遇到业务逻辑错误";
+
+        // 更新阶段历史
+        UpdateStageHistory(SchedulingStage.Failed);
+
+        // 构建详细错误消息
+        var errorMessage = $"排班执行失败：\n\n{ex.Message}\n\n";
+        
+        // 根据错误消息内容提供具体建议
+        if (ex.Message.Contains("无可行解") || ex.Message.Contains("无法分配"))
+        {
+            errorMessage += "可能的原因：\n";
+            errorMessage += "• 约束条件过于严格，导致无法找到可行的排班方案\n";
+            errorMessage += "• 人员数量不足以覆盖所有哨位和时段\n";
+            errorMessage += "• 技能匹配要求过高\n\n";
+            errorMessage += "建议：\n";
+            errorMessage += "• 适当放宽约束条件\n";
+            errorMessage += "• 增加可用人员数量\n";
+            errorMessage += "• 调整技能要求或培训更多人员\n";
+            errorMessage += "• 减少需要覆盖的哨位或时段";
+        }
+        else if (ex.Message.Contains("约束冲突") || ex.Message.Contains("冲突"))
+        {
+            errorMessage += "可能的原因：\n";
+            errorMessage += "• 存在相互矛盾的约束条件\n";
+            errorMessage += "• 手动指定的分配违反了约束规则\n";
+            errorMessage += "• 人员休假或不可用时间与排班需求冲突\n\n";
+            errorMessage += "建议：\n";
+            errorMessage += "• 检查并解决冲突的约束条件\n";
+            errorMessage += "• 调整手动指定的分配\n";
+            errorMessage += "• 更新人员可用性信息";
+        }
+        else
+        {
+            errorMessage += "建议：\n";
+            errorMessage += "• 检查排班配置是否正确\n";
+            errorMessage += "• 确认数据完整性\n";
+            errorMessage += "• 尝试调整约束条件后重新排班";
+        }
+
+        errorMessage += $"\n\n已完成分配：{CompletedAssignments}/{TotalSlotsToAssign}";
+
+        // 显示错误对话框
+        await _dialogService.ShowErrorAsync("排班执行失败", errorMessage);
+
+        // 如果有冲突信息，显示冲突详情
+        if (Conflicts.Count > 0)
+        {
+            await ShowConflictDetailsAsync();
+        }
+    }
+
+    /// <summary>
+    /// 处理未预期的系统异常
+    /// </summary>
+    /// <param name="ex">异常对象</param>
+    private async Task HandleUnexpectedExceptionAsync(Exception ex)
+    {
+        IsFailed = true;
+        IsCompleted = false;
+        IsCancelled = false;
+        CurrentStage = "系统错误";
+        StageDescription = "排班执行过程中发生系统错误";
+
+        // 更新阶段历史
+        UpdateStageHistory(SchedulingStage.Failed);
+
+        // 构建详细错误消息
+        var errorMessage = $"排班执行过程中发生系统错误：\n\n{ex.Message}\n\n";
+        errorMessage += "错误类型：" + ex.GetType().Name + "\n\n";
+        errorMessage += "建议：\n";
+        errorMessage += "• 请稍后重试\n";
+        errorMessage += "• 如果问题持续存在，请联系技术支持\n";
+        errorMessage += "• 检查系统日志以获取更多详细信息";
+
+        if (ex.InnerException != null)
+        {
+            errorMessage += $"\n\n内部错误：{ex.InnerException.Message}";
+        }
+
+        errorMessage += $"\n\n已完成分配：{CompletedAssignments}/{TotalSlotsToAssign}";
+        errorMessage += $"\n执行时间：{ElapsedTime}";
+
+        // 显示错误对话框
+        await _dialogService.ShowErrorAsync("系统错误", errorMessage);
+
+        // 记录到日志（如果有日志系统）
+        System.Diagnostics.Debug.WriteLine($"Scheduling execution failed with exception: {ex}");
+    }
+
+    /// <summary>
+    /// 显示冲突详情对话框
+    /// </summary>
+    private async Task ShowConflictDetailsAsync()
+    {
+        if (Conflicts.Count == 0)
+        {
+            return;
+        }
+
+        var conflictMessage = $"发现 {Conflicts.Count} 个冲突：\n\n";
+        
+        // 限制显示前10个冲突，避免消息过长
+        var displayConflicts = Conflicts.Take(10).ToList();
+        
+        foreach (var conflict in displayConflicts)
+        {
+            conflictMessage += $"• {conflict.ConflictType}";
+            
+            if (!string.IsNullOrEmpty(conflict.PositionName))
+            {
+                conflictMessage += $" - 哨位：{conflict.PositionName}";
+            }
+            
+            if (conflict.Date.HasValue)
+            {
+                conflictMessage += $" - 日期：{conflict.Date.Value:yyyy-MM-dd}";
+            }
+            
+            if (conflict.PeriodIndex.HasValue)
+            {
+                conflictMessage += $" - 时段：{conflict.PeriodIndex.Value}";
+            }
+            
+            if (!string.IsNullOrEmpty(conflict.Description))
+            {
+                conflictMessage += $"\n  {conflict.Description}";
+            }
+            
+            conflictMessage += "\n\n";
+        }
+
+        if (Conflicts.Count > 10)
+        {
+            conflictMessage += $"... 还有 {Conflicts.Count - 10} 个冲突未显示\n\n";
+        }
+
+        conflictMessage += "请返回修改配置后重新排班。";
+
+        await _dialogService.ShowErrorAsync("冲突详情", conflictMessage);
     }
 
     /// <summary>
@@ -675,24 +932,57 @@ public partial class SchedulingProgressViewModel : ObservableObject
 
         try
         {
-            // 将排班结果转换为 Schedule 模型
-            var schedule = ConvertToScheduleModel(Result.Schedule);
+            // 显示加载对话框
+            var loadingDialog = _dialogService.ShowLoadingDialog("正在保存排班结果...");
 
-            // 添加到缓冲区（草稿）
-            var bufferId = await _historyManagement.AddToBufferAsync(schedule);
+            try
+            {
+                // 将排班结果转换为 Schedule 模型
+                var schedule = ConvertToScheduleModel(Result.Schedule);
 
-            // 确认缓冲区排班（转为历史记录）
-            await _historyManagement.ConfirmBufferScheduleAsync(bufferId);
+                // 添加到缓冲区（草稿）
+                var bufferId = await _historyManagement.AddToBufferAsync(schedule);
 
-            // 显示成功消息
-            await _dialogService.ShowSuccessAsync("排班已成功保存到历史记录");
+                // 确认缓冲区排班（转为历史记录）
+                await _historyManagement.ConfirmBufferScheduleAsync(bufferId);
 
-            // 导航到排班结果页面，传递排班ID
-            _navigationService.NavigateTo("ScheduleResult", Result.Schedule.Id);
+                // 关闭加载对话框
+                loadingDialog.Hide();
+
+                // 显示成功消息
+                await _dialogService.ShowSuccessAsync(
+                    $"排班已成功保存到历史记录\n\n排班标题：{Result.Schedule.Title}\n总分配数：{Result.Statistics?.TotalAssignments ?? 0}");
+
+                // 导航到排班结果页面，传递排班ID
+                _navigationService.NavigateTo("ScheduleResult", Result.Schedule.Id);
+            }
+            catch
+            {
+                // 确保关闭加载对话框
+                loadingDialog.Hide();
+                throw;
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            await _dialogService.ShowErrorAsync(
+                "保存失败",
+                $"排班数据验证失败：\n\n{ex.Message}\n\n请检查排班数据的完整性。");
+        }
+        catch (InvalidOperationException ex)
+        {
+            await _dialogService.ShowErrorAsync(
+                "保存失败",
+                $"保存操作失败：\n\n{ex.Message}\n\n可能的原因：\n• 数据库连接失败\n• 数据已存在\n• 权限不足");
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowErrorAsync("保存失败", $"保存排班时发生错误：{ex.Message}");
+            await _dialogService.ShowErrorAsync(
+                "保存失败",
+                $"保存排班时发生错误：\n\n{ex.Message}\n\n请稍后重试或联系技术支持。");
+            
+            // 记录详细错误信息
+            System.Diagnostics.Debug.WriteLine($"Failed to save schedule: {ex}");
         }
     }
 
@@ -709,23 +999,54 @@ public partial class SchedulingProgressViewModel : ObservableObject
     /// </summary>
     private async Task ExecuteDiscardScheduleAsync()
     {
-        // 显示确认对话框
-        var confirmed = await _dialogService.ShowConfirmAsync(
-            "放弃排班",
-            "确定要放弃当前的排班结果吗？此操作无法撤销。",
-            "确定",
-            "取消");
-
-        if (confirmed)
+        try
         {
-            // 清除结果数据
-            ResetState();
+            // 构建确认消息
+            var confirmMessage = "确定要放弃当前的排班结果吗？此操作无法撤销。\n\n";
+            
+            if (Result?.IsSuccess == true && Result.Statistics != null)
+            {
+                confirmMessage += $"当前排班信息：\n";
+                confirmMessage += $"• 总分配数：{Result.Statistics.TotalAssignments}\n";
+                confirmMessage += $"• 执行时间：{ElapsedTime}\n";
+            }
+            else if (IsFailed)
+            {
+                confirmMessage += $"当前状态：排班失败\n";
+                confirmMessage += $"• 已完成分配：{CompletedAssignments}/{TotalSlotsToAssign}\n";
+            }
+            else if (IsCancelled)
+            {
+                confirmMessage += $"当前状态：已取消\n";
+                confirmMessage += $"• 已完成分配：{CompletedAssignments}/{TotalSlotsToAssign}\n";
+            }
 
-            // 显示提示消息
-            await _dialogService.ShowMessageAsync("已放弃", "排班结果已清除");
+            // 显示确认对话框
+            var confirmed = await _dialogService.ShowConfirmAsync(
+                "放弃排班",
+                confirmMessage,
+                "确定放弃",
+                "取消");
 
-            // 返回到创建排班页面
-            _navigationService.NavigateTo("CreateScheduling");
+            if (confirmed)
+            {
+                // 清除结果数据
+                ResetState();
+
+                // 显示提示消息
+                await _dialogService.ShowMessageAsync("已放弃", "排班结果已清除，即将返回配置页面");
+
+                // 返回到创建排班页面
+                _navigationService.NavigateTo("CreateScheduling");
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync(
+                "操作失败",
+                $"放弃排班时发生错误：\n\n{ex.Message}");
+            
+            System.Diagnostics.Debug.WriteLine($"Failed to discard schedule: {ex}");
         }
     }
 
@@ -812,15 +1133,32 @@ public partial class SchedulingProgressViewModel : ObservableObject
     /// </summary>
     private async Task ExecuteToggleGridFullScreenAsync()
     {
-        if (IsGridFullScreen)
+        try
         {
-            // 如果已经是全屏，则退出全屏
-            IsGridFullScreen = false;
+            if (GridData == null)
+            {
+                await _dialogService.ShowWarningAsync("没有可显示的排班表格数据");
+                return;
+            }
+
+            if (IsGridFullScreen)
+            {
+                // 如果已经是全屏，则退出全屏
+                IsGridFullScreen = false;
+            }
+            else
+            {
+                // 显示全屏对话框
+                await ShowGridFullScreenAsync();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            // 显示全屏对话框
-            await ShowGridFullScreenAsync();
+            await _dialogService.ShowErrorAsync(
+                "显示失败",
+                $"切换全屏模式时发生错误：\n\n{ex.Message}");
+            
+            System.Diagnostics.Debug.WriteLine($"Failed to toggle grid full screen: {ex}");
         }
     }
 
@@ -845,28 +1183,28 @@ public partial class SchedulingProgressViewModel : ObservableObject
 
         try
         {
+            // 创建全屏视图
+            var fullScreenView = new AutoScheduling3.Views.Scheduling.ScheduleGridFullScreenView(GridData);
+
             // 创建全屏对话框
-            var dialog = new ContentDialog
+            var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
             {
-                Title = "排班结果表格",
-                Content = new Microsoft.UI.Xaml.Controls.ScrollViewer
-                {
-                    HorizontalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto,
-                    VerticalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto,
-                    Content = new Microsoft.UI.Xaml.Controls.TextBlock
-                    {
-                        Text = $"排班表格全屏视图\n\n开始日期: {GridData.StartDate:yyyy-MM-dd}\n结束日期: {GridData.EndDate:yyyy-MM-dd}\n总天数: {GridData.TotalDays}\n总时段数: {GridData.TotalPeriods}\n哨位数: {GridData.Columns?.Count ?? 0}\n\n注意：完整的表格控件将在后续任务中实现。",
-                        TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
-                        Margin = new Microsoft.UI.Xaml.Thickness(20)
-                    }
-                },
-                CloseButtonText = "关闭",
-                DefaultButton = ContentDialogButton.Close,
+                Content = fullScreenView,
+                DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Close,
                 XamlRoot = App.MainWindow?.Content?.XamlRoot
             };
 
-            // 设置对话框样式为全屏（如果有自定义样式）
-            // dialog.Style = (Style)Application.Current.Resources["FullScreenDialogStyle"];
+            // 应用全屏对话框样式
+            if (Microsoft.UI.Xaml.Application.Current.Resources.ContainsKey("FullScreenDialogStyle"))
+            {
+                dialog.Style = (Microsoft.UI.Xaml.Style)Microsoft.UI.Xaml.Application.Current.Resources["FullScreenDialogStyle"];
+            }
+
+            // 处理全屏视图的关闭请求
+            fullScreenView.CloseRequested += (s, e) =>
+            {
+                dialog.Hide();
+            };
 
             IsGridFullScreen = true;
             await dialog.ShowAsync();
@@ -884,19 +1222,42 @@ public partial class SchedulingProgressViewModel : ObservableObject
     /// <param name="format">导出格式（如 "excel", "csv", "pdf"）</param>
     private async Task ExecuteExportGridAsync(string? format)
     {
-        if (GridData == null)
+        try
         {
-            await _dialogService.ShowWarningAsync("没有可导出的排班表格数据");
-            return;
+            if (GridData == null)
+            {
+                await _dialogService.ShowWarningAsync("没有可导出的排班表格数据");
+                return;
+            }
+
+            // 验证格式
+            if (!string.IsNullOrEmpty(format) && !_gridExporter.IsFormatSupported(format))
+            {
+                var supportedFormats = _gridExporter.GetSupportedFormats();
+                var formatsText = string.Join("、", supportedFormats);
+                
+                await _dialogService.ShowErrorAsync(
+                    "不支持的格式",
+                    $"不支持的导出格式：{format}\n\n支持的格式：{formatsText}");
+                return;
+            }
+
+            // 当前版本显示"功能开发中"对话框
+            var supportedFormats = _gridExporter.GetSupportedFormats();
+            var formatsText = string.Join("、", supportedFormats);
+
+            await _dialogService.ShowMessageAsync(
+                "功能开发中",
+                $"表格导出功能正在开发中。\n\n计划支持的格式：{formatsText}\n\n此功能将在后续版本中提供。");
         }
-
-        // 当前版本显示"功能开发中"对话框
-        var supportedFormats = _gridExporter.GetSupportedFormats();
-        var formatsText = string.Join("、", supportedFormats);
-
-        await _dialogService.ShowMessageAsync(
-            "功能开发中",
-            $"表格导出功能正在开发中。\n\n计划支持的格式：{formatsText}\n\n此功能将在后续版本中提供。");
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync(
+                "导出失败",
+                $"导出表格时发生错误：\n\n{ex.Message}");
+            
+            System.Diagnostics.Debug.WriteLine($"Failed to export grid: {ex}");
+        }
     }
 
     /// <summary>

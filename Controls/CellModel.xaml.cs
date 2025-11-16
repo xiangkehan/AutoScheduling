@@ -128,14 +128,32 @@ public sealed partial class CellModel : UserControl
         PersonnelNameText.Text = CellData.PersonnelName ?? "-";
 
         // 设置自动化属性
+        string automationName;
+        string automationHelpText;
+        
         if (CellData.IsAssigned && !string.IsNullOrEmpty(CellData.PersonnelName))
         {
-            AutomationProperties.SetName(CellBorder, $"已分配: {CellData.PersonnelName}");
+            automationName = $"已分配: {CellData.PersonnelName}";
+            automationHelpText = $"人员 {CellData.PersonnelName} 已分配到此时段";
+            
+            if (CellData.IsManualAssignment)
+            {
+                automationHelpText += "，手动指定";
+            }
+            
+            if (CellData.HasConflict)
+            {
+                automationHelpText += $"，存在冲突: {CellData.ConflictMessage}";
+            }
         }
         else
         {
-            AutomationProperties.SetName(CellBorder, "未分配");
+            automationName = "未分配";
+            automationHelpText = "此时段尚未分配人员";
         }
+        
+        AutomationProperties.SetName(CellBorder, automationName);
+        AutomationProperties.SetHelpText(CellBorder, automationHelpText);
 
         // 应用样式：优先级 冲突 > 手动指定 > 普通
         if (CellData.HasConflict)

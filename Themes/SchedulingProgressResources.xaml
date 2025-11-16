@@ -1,0 +1,575 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ========================================
+         排班进度可视化资源字典
+         支持浅色、深色和高对比度主题
+         ======================================== -->
+
+    <!-- 主题颜色资源 -->
+    <ResourceDictionary.ThemeDictionaries>
+        <!-- 浅色主题 -->
+        <ResourceDictionary x:Key="Light">
+            <!-- 进度相关颜色 -->
+            <SolidColorBrush x:Key="ProgressBackgroundBrush" Color="#E1E1E1"/>
+            <SolidColorBrush x:Key="ProgressForegroundBrush" Color="#0078D4"/>
+            <SolidColorBrush x:Key="ProgressSuccessBrush" Color="#107C10"/>
+            <SolidColorBrush x:Key="ProgressWarningBrush" Color="#FF8C00"/>
+            <SolidColorBrush x:Key="ProgressErrorBrush" Color="#D13438"/>
+            
+            <!-- 表格相关颜色 -->
+            <SolidColorBrush x:Key="GridHeaderBackgroundBrush" Color="#F3F3F3"/>
+            <SolidColorBrush x:Key="GridCellBackgroundBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="GridCellBorderBrush" Color="#E1E1E1"/>
+            <SolidColorBrush x:Key="GridCellHoverBrush" Color="#F5F5F5"/>
+            <SolidColorBrush x:Key="GridManualAssignmentBrush" Color="#E3F2FD"/>
+            <SolidColorBrush x:Key="GridManualAssignmentBorderBrush" Color="#0078D4"/>
+            <SolidColorBrush x:Key="GridConflictBackgroundBrush" Color="#FFEBEE"/>
+            <SolidColorBrush x:Key="GridConflictBorderBrush" Color="#D13438"/>
+            
+            <!-- 卡片相关颜色 -->
+            <SolidColorBrush x:Key="InfoCardBackgroundBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="InfoCardBorderBrush" Color="#E1E1E1"/>
+            <SolidColorBrush x:Key="SuccessCardBackgroundBrush" Color="#F1F8F4"/>
+            <SolidColorBrush x:Key="SuccessCardBorderBrush" Color="#107C10"/>
+            <SolidColorBrush x:Key="ErrorCardBackgroundBrush" Color="#FEF0F0"/>
+            <SolidColorBrush x:Key="ErrorCardBorderBrush" Color="#D13438"/>
+            <SolidColorBrush x:Key="WarningCardBackgroundBrush" Color="#FFF8E1"/>
+            <SolidColorBrush x:Key="WarningCardBorderBrush" Color="#FF8C00"/>
+        </ResourceDictionary>
+
+        <!-- 深色主题 -->
+        <ResourceDictionary x:Key="Dark">
+            <!-- 进度相关颜色 -->
+            <SolidColorBrush x:Key="ProgressBackgroundBrush" Color="#3F3F46"/>
+            <SolidColorBrush x:Key="ProgressForegroundBrush" Color="#60CDFF"/>
+            <SolidColorBrush x:Key="ProgressSuccessBrush" Color="#4CAF50"/>
+            <SolidColorBrush x:Key="ProgressWarningBrush" Color="#FF9800"/>
+            <SolidColorBrush x:Key="ProgressErrorBrush" Color="#F44336"/>
+            
+            <!-- 表格相关颜色 -->
+            <SolidColorBrush x:Key="GridHeaderBackgroundBrush" Color="#1E1E1E"/>
+            <SolidColorBrush x:Key="GridCellBackgroundBrush" Color="#2D2D30"/>
+            <SolidColorBrush x:Key="GridCellBorderBrush" Color="#3F3F46"/>
+            <SolidColorBrush x:Key="GridCellHoverBrush" Color="#3E3E42"/>
+            <SolidColorBrush x:Key="GridManualAssignmentBrush" Color="#1E3A5F"/>
+            <SolidColorBrush x:Key="GridManualAssignmentBorderBrush" Color="#60CDFF"/>
+            <SolidColorBrush x:Key="GridConflictBackgroundBrush" Color="#4A2C2C"/>
+            <SolidColorBrush x:Key="GridConflictBorderBrush" Color="#F44336"/>
+            
+            <!-- 卡片相关颜色 -->
+            <SolidColorBrush x:Key="InfoCardBackgroundBrush" Color="#2D2D30"/>
+            <SolidColorBrush x:Key="InfoCardBorderBrush" Color="#3F3F46"/>
+            <SolidColorBrush x:Key="SuccessCardBackgroundBrush" Color="#1E3A1E"/>
+            <SolidColorBrush x:Key="SuccessCardBorderBrush" Color="#4CAF50"/>
+            <SolidColorBrush x:Key="ErrorCardBackgroundBrush" Color="#3A1E1E"/>
+            <SolidColorBrush x:Key="ErrorCardBorderBrush" Color="#F44336"/>
+            <SolidColorBrush x:Key="WarningCardBackgroundBrush" Color="#3A2E1E"/>
+            <SolidColorBrush x:Key="WarningCardBorderBrush" Color="#FF9800"/>
+        </ResourceDictionary>
+
+        <!-- 高对比度主题 -->
+        <ResourceDictionary x:Key="HighContrast">
+            <!-- 进度相关颜色 -->
+            <SolidColorBrush x:Key="ProgressBackgroundBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="ProgressForegroundBrush" Color="#FFFF00"/>
+            <SolidColorBrush x:Key="ProgressSuccessBrush" Color="#00FF00"/>
+            <SolidColorBrush x:Key="ProgressWarningBrush" Color="#FFFF00"/>
+            <SolidColorBrush x:Key="ProgressErrorBrush" Color="#FF0000"/>
+            
+            <!-- 表格相关颜色 -->
+            <SolidColorBrush x:Key="GridHeaderBackgroundBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="GridCellBackgroundBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="GridCellBorderBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="GridCellHoverBrush" Color="#1A1A1A"/>
+            <SolidColorBrush x:Key="GridManualAssignmentBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="GridManualAssignmentBorderBrush" Color="#FFFF00"/>
+            <SolidColorBrush x:Key="GridConflictBackgroundBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="GridConflictBorderBrush" Color="#FF0000"/>
+            
+            <!-- 卡片相关颜色 -->
+            <SolidColorBrush x:Key="InfoCardBackgroundBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="InfoCardBorderBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="SuccessCardBackgroundBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="SuccessCardBorderBrush" Color="#00FF00"/>
+            <SolidColorBrush x:Key="ErrorCardBackgroundBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="ErrorCardBorderBrush" Color="#FF0000"/>
+            <SolidColorBrush x:Key="WarningCardBackgroundBrush" Color="#000000"/>
+            <SolidColorBrush x:Key="WarningCardBorderBrush" Color="#FFFF00"/>
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+
+    <!-- ========================================
+         表格单元格样式
+         ======================================== -->
+
+    <!-- 基础表格单元格样式 -->
+    <Style x:Key="ScheduleGridCellStyle" TargetType="Border">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource GridCellBorderBrush}"/>
+        <Setter Property="Background" Value="{ThemeResource GridCellBackgroundBrush}"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="MinWidth" Value="120"/>
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+    </Style>
+
+    <!-- 手动指定单元格样式 -->
+    <Style x:Key="ManualAssignmentCellStyle" TargetType="Border" BasedOn="{StaticResource ScheduleGridCellStyle}">
+        <Setter Property="BorderBrush" Value="{ThemeResource GridManualAssignmentBorderBrush}"/>
+        <Setter Property="Background" Value="{ThemeResource GridManualAssignmentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
+    <!-- 冲突单元格样式 -->
+    <Style x:Key="ConflictCellStyle" TargetType="Border" BasedOn="{StaticResource ScheduleGridCellStyle}">
+        <Setter Property="BorderBrush" Value="{ThemeResource GridConflictBorderBrush}"/>
+        <Setter Property="Background" Value="{ThemeResource GridConflictBackgroundBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
+    <!-- 表格表头单元格样式 -->
+    <Style x:Key="GridHeaderCellStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource GridHeaderBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource GridCellBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="MinWidth" Value="120"/>
+        <Setter Property="MinHeight" Value="44"/>
+    </Style>
+
+    <!-- 表格行头单元格样式 -->
+    <Style x:Key="GridRowHeaderCellStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource GridHeaderBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource GridCellBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="MinWidth" Value="180"/>
+        <Setter Property="MinHeight" Value="40"/>
+    </Style>
+
+    <!-- ========================================
+         卡片样式
+         ======================================== -->
+
+    <!-- 基础信息卡片样式 -->
+    <Style x:Key="ProgressInfoCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource InfoCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource InfoCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Margin" Value="0,0,0,12"/>
+    </Style>
+
+    <!-- 成功状态卡片样式 -->
+    <Style x:Key="ProgressSuccessCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource SuccessCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource SuccessCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Margin" Value="0,0,0,12"/>
+    </Style>
+
+    <!-- 错误状态卡片样式 -->
+    <Style x:Key="ProgressErrorCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource ErrorCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource ErrorCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Margin" Value="0,0,0,12"/>
+    </Style>
+
+    <!-- 警告状态卡片样式 -->
+    <Style x:Key="ProgressWarningCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource WarningCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource WarningCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Margin" Value="0,0,0,12"/>
+    </Style>
+
+    <!-- 统计信息卡片样式 -->
+    <Style x:Key="StatisticsCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource InfoCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource InfoCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="20"/>
+        <Setter Property="Margin" Value="0,0,0,16"/>
+    </Style>
+
+    <!-- ========================================
+         按钮样式
+         ======================================== -->
+
+    <!-- 主要操作按钮样式 -->
+    <Style x:Key="ProgressPrimaryButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{ThemeResource AccentButtonBackground}"/>
+        <Setter Property="Foreground" Value="{ThemeResource AccentButtonForeground}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="20,10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="MinWidth" Value="120"/>
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    </Style>
+
+    <!-- 次要操作按钮样式 -->
+    <Style x:Key="ProgressSecondaryButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="20,10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="MinWidth" Value="120"/>
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    </Style>
+
+    <!-- 取消按钮样式 -->
+    <Style x:Key="ProgressCancelButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{ThemeResource SystemFillColorCriticalBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="20,10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="MinWidth" Value="120"/>
+        <Setter Property="MinHeight" Value="36"/>
+    </Style>
+
+    <!-- 工具栏按钮样式 -->
+    <Style x:Key="ProgressToolbarButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="MinWidth" Value="40"/>
+        <Setter Property="MinHeight" Value="36"/>
+    </Style>
+
+    <!-- ========================================
+         进度条样式
+         ======================================== -->
+
+    <!-- 主进度条样式 -->
+    <Style x:Key="SchedulingProgressBarStyle" TargetType="ProgressBar">
+        <Setter Property="Background" Value="{ThemeResource ProgressBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{ThemeResource ProgressForegroundBrush}"/>
+        <Setter Property="Height" Value="8"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="IsIndeterminate" Value="False"/>
+        <Setter Property="Minimum" Value="0"/>
+        <Setter Property="Maximum" Value="100"/>
+    </Style>
+
+    <!-- 成功进度条样式 -->
+    <Style x:Key="SuccessProgressBarStyle" TargetType="ProgressBar" BasedOn="{StaticResource SchedulingProgressBarStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource ProgressSuccessBrush}"/>
+    </Style>
+
+    <!-- 警告进度条样式 -->
+    <Style x:Key="WarningProgressBarStyle" TargetType="ProgressBar" BasedOn="{StaticResource SchedulingProgressBarStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource ProgressWarningBrush}"/>
+    </Style>
+
+    <!-- 错误进度条样式 -->
+    <Style x:Key="ErrorProgressBarStyle" TargetType="ProgressBar" BasedOn="{StaticResource SchedulingProgressBarStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource ProgressErrorBrush}"/>
+    </Style>
+
+    <!-- 不确定进度条样式 -->
+    <Style x:Key="IndeterminateProgressBarStyle" TargetType="ProgressBar">
+        <Setter Property="Background" Value="{ThemeResource ProgressBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{ThemeResource ProgressForegroundBrush}"/>
+        <Setter Property="Height" Value="4"/>
+        <Setter Property="IsIndeterminate" Value="True"/>
+    </Style>
+
+    <!-- ========================================
+         文本样式
+         ======================================== -->
+
+    <!-- 页面标题样式 -->
+    <Style x:Key="ProgressPageTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="28"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+
+    <!-- 阶段标题样式 -->
+    <Style x:Key="ProgressStageTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+
+    <!-- 阶段描述样式 -->
+    <Style x:Key="ProgressStageDescriptionStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+
+    <!-- 统计数字样式 -->
+    <Style x:Key="StatisticsNumberStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="32"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{ThemeResource ProgressForegroundBrush}"/>
+    </Style>
+
+    <!-- 统计标签样式 -->
+    <Style x:Key="StatisticsLabelStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+        <Setter Property="Margin" Value="0,4,0,0"/>
+    </Style>
+
+    <!-- 表格单元格文本样式 -->
+    <Style x:Key="GridCellTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- 表头文本样式 -->
+    <Style x:Key="GridHeaderTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- ========================================
+         状态指示器样式
+         ======================================== -->
+
+    <!-- 基础状态指示器 -->
+    <Style x:Key="StatusIndicatorStyle" TargetType="Ellipse">
+        <Setter Property="Width" Value="12"/>
+        <Setter Property="Height" Value="12"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+    </Style>
+
+    <!-- 成功状态指示器 -->
+    <Style x:Key="SuccessIndicatorStyle" TargetType="Ellipse" BasedOn="{StaticResource StatusIndicatorStyle}">
+        <Setter Property="Fill" Value="{ThemeResource ProgressSuccessBrush}"/>
+    </Style>
+
+    <!-- 进行中状态指示器 -->
+    <Style x:Key="InProgressIndicatorStyle" TargetType="Ellipse" BasedOn="{StaticResource StatusIndicatorStyle}">
+        <Setter Property="Fill" Value="{ThemeResource ProgressForegroundBrush}"/>
+    </Style>
+
+    <!-- 警告状态指示器 -->
+    <Style x:Key="WarningIndicatorStyle" TargetType="Ellipse" BasedOn="{StaticResource StatusIndicatorStyle}">
+        <Setter Property="Fill" Value="{ThemeResource ProgressWarningBrush}"/>
+    </Style>
+
+    <!-- 错误状态指示器 -->
+    <Style x:Key="ErrorIndicatorStyle" TargetType="Ellipse" BasedOn="{StaticResource StatusIndicatorStyle}">
+        <Setter Property="Fill" Value="{ThemeResource ProgressErrorBrush}"/>
+    </Style>
+
+    <!-- 待处理状态指示器 -->
+    <Style x:Key="PendingIndicatorStyle" TargetType="Ellipse" BasedOn="{StaticResource StatusIndicatorStyle}">
+        <Setter Property="Fill" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+    </Style>
+
+    <!-- ========================================
+         列表和容器样式
+         ======================================== -->
+
+    <!-- 阶段历史列表项样式 -->
+    <Style x:Key="StageHistoryItemStyle" TargetType="ListViewItem">
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- 警告列表项样式 -->
+    <Style x:Key="WarningListItemStyle" TargetType="ListViewItem">
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="Background" Value="{ThemeResource WarningCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource WarningCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- 冲突列表项样式 -->
+    <Style x:Key="ConflictListItemStyle" TargetType="ListViewItem">
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="Background" Value="{ThemeResource ErrorCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource ErrorCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- 统计表格列表项样式 -->
+    <Style x:Key="StatisticsListItemStyle" TargetType="ListViewItem">
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Margin" Value="0,0,0,2"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+
+    <!-- 滚动查看器样式 -->
+    <Style x:Key="ProgressScrollViewerStyle" TargetType="ScrollViewer">
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="Padding" Value="0,0,8,0"/>
+    </Style>
+
+    <!-- 表格滚动查看器样式 -->
+    <Style x:Key="GridScrollViewerStyle" TargetType="ScrollViewer">
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <!-- ========================================
+         布局和间距样式
+         ======================================== -->
+
+    <!-- 页面容器样式 -->
+    <Style x:Key="ProgressPageContainerStyle" TargetType="Grid">
+        <Setter Property="Padding" Value="24"/>
+    </Style>
+
+    <!-- 左侧信息区容器样式 -->
+    <Style x:Key="LeftInfoPanelStyle" TargetType="StackPanel">
+        <Setter Property="Spacing" Value="16"/>
+        <Setter Property="Padding" Value="0,0,16,0"/>
+    </Style>
+
+    <!-- 右侧结果区容器样式 -->
+    <Style x:Key="RightResultPanelStyle" TargetType="StackPanel">
+        <Setter Property="Spacing" Value="16"/>
+        <Setter Property="Padding" Value="16,0,0,0"/>
+    </Style>
+
+    <!-- 操作按钮区容器样式 -->
+    <Style x:Key="ActionButtonsPanelStyle" TargetType="StackPanel">
+        <Setter Property="Orientation" Value="Horizontal"/>
+        <Setter Property="Spacing" Value="12"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="Margin" Value="0,16,0,0"/>
+    </Style>
+
+    <!-- 统计信息网格样式 -->
+    <Style x:Key="StatisticsGridStyle" TargetType="Grid">
+        <Setter Property="ColumnSpacing" Value="24"/>
+        <Setter Property="RowSpacing" Value="16"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <!-- ========================================
+         可访问性和高对比度支持
+         ======================================== -->
+
+    <!-- 高对比度文本样式 -->
+    <Style x:Key="HighContrastTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        <Setter Property="AutomationProperties.LiveSetting" Value="Polite"/>
+    </Style>
+
+    <!-- 高对比度进度文本样式 -->
+    <Style x:Key="HighContrastProgressTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        <Setter Property="AutomationProperties.LiveSetting" Value="Assertive"/>
+    </Style>
+
+    <!-- 可访问性按钮样式 -->
+    <Style x:Key="AccessibleButtonStyle" TargetType="Button">
+        <Setter Property="MinWidth" Value="120"/>
+        <Setter Property="MinHeight" Value="44"/>
+        <Setter Property="Padding" Value="20,12"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="AutomationProperties.AutomationId" Value="ProgressActionButton"/>
+    </Style>
+
+    <!-- ========================================
+         工具提示样式
+         ======================================== -->
+
+    <!-- 单元格工具提示样式 -->
+    <Style x:Key="CellToolTipStyle" TargetType="ToolTip">
+        <Setter Property="Background" Value="{ThemeResource InfoCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource InfoCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="MaxWidth" Value="300"/>
+    </Style>
+
+    <!-- ========================================
+         全屏对话框样式
+         ======================================== -->
+
+    <!-- 全屏对话框样式 -->
+    <Style x:Key="FullScreenDialogStyle" TargetType="ContentDialog">
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Padding" Value="24"/>
+        <Setter Property="MaxWidth" Value="Infinity"/>
+        <Setter Property="MaxHeight" Value="Infinity"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+    </Style>
+
+    <!-- ========================================
+         动画和过渡效果
+         ======================================== -->
+
+    <!-- 淡入动画 -->
+    <Storyboard x:Key="FadeInAnimation">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0" To="1"
+                         Duration="0:0:0.3">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+    <!-- 滑入动画 -->
+    <Storyboard x:Key="SlideInAnimation">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                         From="20" To="0"
+                         Duration="0:0:0.3">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0" To="1"
+                         Duration="0:0:0.3">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+</ResourceDictionary>
