@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoScheduling3.DTOs;
 using AutoScheduling3.Models;
 using AutoScheduling3.SchedulingEngine.Core;
 using AutoScheduling3.SchedulingEngine.Strategies;
@@ -28,6 +30,12 @@ namespace AutoScheduling3.SchedulingEngine
         // 算法配置参数
         private readonly GreedySchedulerConfig _config;
 
+        // 进度报告相关字段
+        private Stopwatch? _executionTimer;
+        private DateTime _lastProgressReport;
+        private int _totalSlotsToAssign;
+        private int _completedAssignments;
+
         public GreedyScheduler(SchedulingContext context, GreedySchedulerConfig? config = null)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -40,40 +48,103 @@ namespace AutoScheduling3.SchedulingEngine
         /// </summary>
         public async Task<Schedule> ExecuteAsync(CancellationToken cancellationToken = default)
         {
+            return await ExecuteAsync(null, cancellationToken);
+        }
+
+        /// <summary>
+        /// 执行排班算法（支持进度报告和取消） - 对应需求1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5
+        /// 按照先哨位再时段的顺序进行人员分配
+        /// </summary>
+        public async Task<Schedule> ExecuteAsync(IProgress<SchedulingProgressReport>? progress, CancellationToken cancellationToken = default)
+        {
+            // 初始化进度跟踪
+            _executionTimer = Stopwatch.StartNew();
+            _lastProgressReport = DateTime.UtcNow;
+            _completedAssignments = 0;
+            
+            // 计算总时段数
+            int totalDays = (_context.EndDate.Date - _context.StartDate.Date).Days + 1;
+            _totalSlotsToAssign = totalDays * 12 * _context.Positions.Count;
+
             cancellationToken.ThrowIfCancellationRequested();
+
+            // 报告初始化阶段
+            ReportProgress(progress, SchedulingStage.Initializing, "正在初始化排班环境...", 0);
 
             // 预处理阶段
             await PreprocessAsync();
             cancellationToken.ThrowIfCancellationRequested();
 
+            // 报告加载数据阶段
+            ReportProgress(progress, SchedulingStage.LoadingData, "正在加载排班数据...", 5);
+
             // 多天循环处理：每天重建张量与策略，保持跨日评分状态累积
             var currentDate = _context.StartDate.Date;
-            int totalDays = (_context.EndDate.Date - _context.StartDate.Date).Days + 1;
 
             for (int day = 0; day < totalDays; day++)
             {
                 var date = currentDate.AddDays(day);
                 cancellationToken.ThrowIfCancellationRequested();
 
+                // 报告构建上下文阶段
+                ReportProgress(progress, SchedulingStage.BuildingContext, 
+                    $"正在构建第 {day + 1}/{totalDays} 天的排班上下文...", 
+                    10 + (day * 80 / totalDays) * 0.1);
+
                 // 初始化当日排班环境
                 InitializeDailyScheduling();
 
+                // 报告初始化张量阶段
+                ReportProgress(progress, SchedulingStage.InitializingTensor, 
+                    $"正在初始化第 {day + 1}/{totalDays} 天的可行性张量...", 
+                    10 + (day * 80 / totalDays) * 0.2, date);
+
+                // 报告应用约束阶段
+                ReportProgress(progress, SchedulingStage.ApplyingConstraints, 
+                    $"正在应用第 {day + 1}/{totalDays} 天的约束条件...", 
+                    10 + (day * 80 / totalDays) * 0.3, date);
+
                 // 应用所有约束条件
                 ApplyAllConstraints(date);
+
+                // 报告应用手动指定阶段
+                ReportProgress(progress, SchedulingStage.ApplyingManualAssignments, 
+                    $"正在应用第 {day + 1}/{totalDays} 天的手动指定...", 
+                    10 + (day * 80 / totalDays) * 0.4, date);
 
                 // 预置手动指定分配 - 对应需求5.8
                 ApplyManualAssignmentsForDate(date);
 
                 cancellationToken.ThrowIfCancellationRequested();
 
+                // 报告贪心分配阶段
+                ReportProgress(progress, SchedulingStage.GreedyAssignment, 
+                    $"正在执行第 {day + 1}/{totalDays} 天的贪心分配...", 
+                    10 + (day * 80 / totalDays) * 0.5, date);
+
                 // 执行贪心分配算法 - 对应需求7.5
-                await PerformGreedyAssignmentsAsync(date, cancellationToken);
+                await PerformGreedyAssignmentsAsync(date, progress, cancellationToken);
+
+                // 报告更新评分阶段
+                ReportProgress(progress, SchedulingStage.UpdatingScores, 
+                    $"正在更新第 {day + 1}/{totalDays} 天的评分状态...", 
+                    10 + (day * 80 / totalDays) * 0.9, date);
 
                 // 更新评分状态
                 UpdateDailyScoreStates(date);
             }
 
-            return GenerateSchedule();
+            // 报告完成阶段
+            ReportProgress(progress, SchedulingStage.Finalizing, "正在生成最终排班结果...", 95);
+
+            var schedule = GenerateSchedule();
+
+            // 报告完成
+            ReportProgress(progress, SchedulingStage.Completed, "排班完成", 100);
+
+            _executionTimer?.Stop();
+
+            return schedule;
         }
 
         /// <summary>
@@ -311,7 +382,7 @@ namespace AutoScheduling3.SchedulingEngine
         /// 执行贪心分配算法 - 对应需求7.5
         /// 按照先哨位再时段的顺序进行人员分配
         /// </summary>
-        private async Task PerformGreedyAssignmentsAsync(DateTime date, CancellationToken cancellationToken)
+        private async Task PerformGreedyAssignmentsAsync(DateTime date, IProgress<SchedulingProgressReport>? progress, CancellationToken cancellationToken)
         {
             if (_tensor == null || _softConstraintCalculator == null) return;
 
@@ -322,6 +393,7 @@ namespace AutoScheduling3.SchedulingEngine
             // 按照先哨位再时段的顺序进行分配 - 对应需求7.5
             int maxSlots = _tensor.PositionCount * 12;
             int processedSlots = 0;
+            int dayStartAssignments = _completedAssignments;
 
             for (int iteration = 0; iteration < maxSlots; iteration++)
             {
@@ -349,6 +421,17 @@ namespace AutoScheduling3.SchedulingEngine
                     // 执行分配并更新约束
                     await AssignPersonAsync(posIdx, periodIdx, bestPersonIdx, date);
                     processedSlots++;
+                    _completedAssignments++;
+
+                    // 报告进度（每完成10%或每处理10个时段）
+                    if (processedSlots % Math.Max(1, maxSlots / 10) == 0 || processedSlots % 10 == 0)
+                    {
+                        var positionName = _context.Positions[posIdx].Name;
+                        ReportProgress(progress, SchedulingStage.GreedyAssignment,
+                            $"正在分配: {positionName} - 时段 {periodIdx}",
+                            10 + (_completedAssignments * 80.0 / _totalSlotsToAssign),
+                            date, positionName, periodIdx);
+                    }
 
                     // 定期让出控制权，避免长时间阻塞
                     if (processedSlots % _config.YieldInterval == 0)
@@ -482,6 +565,54 @@ namespace AutoScheduling3.SchedulingEngine
                 }
             }
             return schedule;
+        }
+
+        /// <summary>
+        /// 报告进度（带节流机制） - 对应需求1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5
+        /// </summary>
+        private void ReportProgress(
+            IProgress<SchedulingProgressReport>? progress,
+            SchedulingStage stage,
+            string description,
+            double progressPercentage,
+            DateTime? currentDate = null,
+            string? currentPositionName = null,
+            int? currentPeriodIndex = null)
+        {
+            if (progress == null) return;
+
+            // 节流机制：最小间隔100ms（除非是关键阶段）
+            var now = DateTime.UtcNow;
+            var isKeyStage = stage == SchedulingStage.Initializing ||
+                           stage == SchedulingStage.Completed ||
+                           stage == SchedulingStage.Failed ||
+                           stage == SchedulingStage.Finalizing;
+
+            if (!isKeyStage && (now - _lastProgressReport).TotalMilliseconds < 100)
+            {
+                return;
+            }
+
+            _lastProgressReport = now;
+
+            var report = new SchedulingProgressReport
+            {
+                ProgressPercentage = Math.Min(100, Math.Max(0, progressPercentage)),
+                CurrentStage = stage,
+                StageDescription = description,
+                CompletedAssignments = _completedAssignments,
+                TotalSlotsToAssign = _totalSlotsToAssign,
+                RemainingSlots = _totalSlotsToAssign - _completedAssignments,
+                CurrentPositionName = currentPositionName,
+                CurrentPeriodIndex = currentPeriodIndex ?? -1,
+                CurrentDate = currentDate ?? _context.StartDate,
+                ElapsedTime = _executionTimer?.Elapsed ?? TimeSpan.Zero,
+                Warnings = new List<string>(),
+                HasErrors = false,
+                ErrorMessage = null
+            };
+
+            progress.Report(report);
         }
     }
 }
