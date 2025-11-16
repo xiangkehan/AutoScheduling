@@ -105,46 +105,71 @@
     - Ensure draft is deleted before navigation to result page
     - _Requirements: 3.1_
 
-- [-] 6. Add draft handling to cancel operation
+- [x] 6. Add draft handling to cancel operation
 
 
-  - [ ] 6.1 Modify `CancelWizard` method in SchedulingViewModel
+
+
+  - [x] 6.1 Modify `CancelWizard` method in SchedulingViewModel
+
+
     - Check if there's progress worth saving
     - Show ContentDialog asking user to keep or discard draft with message "当前进度将保存为草稿"
     - Call `DeleteDraftAsync()` if user chooses to discard
     - Allow draft to be saved automatically in `OnNavigatedFrom` if user chooses to keep
     - _Requirements: 3.2_
 
-- [ ] 7. Register draft service in dependency injection
+- [x] 7. Register draft service in dependency injection
 
-  - [ ] 7.1 Update `ServiceCollectionExtensions.cs`
+
+
+  - [x] 7.1 Update `ServiceCollectionExtensions.cs`
+
+
     - Register `ISchedulingDraftService` as singleton
     - Ensure service is available for injection into ViewModel and Page
     - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 8. Handle template mode draft restoration
+- [x] 8. Handle template mode draft restoration
 
-  - [ ] 8.1 Add template mode detection in draft
+
+
+  - [x] 8.1 Add template mode detection in draft
+
+
     - Save `TemplateApplied` and `LoadedTemplateId` in draft
     - Restore template mode state when loading draft
     - Handle missing template scenario (switch to manual mode)
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 5.1_
 
-- [ ] 9. Implement draft expiration cleanup
+- [x] 9. Implement draft expiration cleanup
 
-  - [ ] 9.1 Add cleanup logic to application startup
+
+
+
+  - [x] 9.1 Add cleanup logic to application startup
+
+
     - Call `CleanupExpiredDraftsAsync()` during app initialization
     - Remove drafts older than 7 days
     - _Requirements: 3.3_
 
-- [ ] 10. Add error handling and user notifications
 
-  - [ ] 10.1 Handle draft load failures
+- [x] 10. Add error handling and user notifications
+
+
+
+
+  - [x] 10.1 Handle draft load failures
+
+
     - Catch JSON deserialization errors
     - Display warning using DialogService
     - Delete corrupted draft and show empty form
     - _Requirements: 5.3, 5.4_
-  - [ ] 10.2 Handle data inconsistency scenarios
+  - [x] 10.2 Handle data inconsistency scenarios
+
+
     - Show warnings for missing personnel/positions
     - Show warnings for missing templates
     - Show warnings for invalid manual assignments

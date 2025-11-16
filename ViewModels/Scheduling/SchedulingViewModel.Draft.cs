@@ -132,6 +132,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 CurrentStep = draft.CurrentStep;
 
                 // 4. 恢复模板信息
+                System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Restoring template mode - TemplateApplied: {draft.TemplateApplied}, LoadedTemplateId: {draft.LoadedTemplateId}");
                 TemplateApplied = draft.TemplateApplied;
                 LoadedTemplateId = draft.LoadedTemplateId;
 
@@ -168,12 +169,13 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private async Task<bool> ValidateDraftDataAsync(SchedulingDraftDto draft)
         {
             System.Diagnostics.Debug.WriteLine("[SchedulingViewModel.Draft] Validating draft data...");
+            var warnings = new System.Collections.Generic.List<string>();
 
             // 验证版本兼容性
             if (draft.Version != "1.0")
             {
                 System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Version mismatch: expected 1.0, got {draft.Version}");
-                await _dialogService.ShowWarningAsync("草稿版本不兼容，无法恢复");
+                await _dialogService.ShowWarningAsync("草稿版本不兼容，无法恢复。");
                 return false;
             }
 
@@ -183,10 +185,13 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Start date {draft.StartDate:yyyy-MM-dd} is in the past, adjusting to today");
                 
                 var daysDiff = (draft.EndDate.Date - draft.StartDate.Date).Days;
+                var oldStartDate = draft.StartDate;
+                var oldEndDate = draft.EndDate;
+                
                 draft.StartDate = DateTime.Now.Date;
                 draft.EndDate = draft.StartDate.AddDays(daysDiff);
                 
-                await _dialogService.ShowWarningAsync($"开始日期已过期，已自动调整为今天\n新的日期范围：{draft.StartDate:yyyy-MM-dd} 到 {draft.EndDate:yyyy-MM-dd}");
+                warnings.Add($"• 开始日期已过期，已自动调整：\n  原日期：{oldStartDate:yyyy-MM-dd} 到 {oldEndDate:yyyy-MM-dd}\n  新日期：{draft.StartDate:yyyy-MM-dd} 到 {draft.EndDate:yyyy-MM-dd}");
             }
 
             // 验证模板引用（如果使用了模板）
@@ -198,25 +203,34 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     if (template == null)
                     {
                         System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Template {draft.LoadedTemplateId} not found, switching to manual mode");
-                        await _dialogService.ShowWarningAsync("模板已不存在，将以手动模式继续");
+                        warnings.Add($"• 模板已不存在（ID: {draft.LoadedTemplateId}），已切换到手动模式");
                         draft.TemplateApplied = false;
                         draft.LoadedTemplateId = null;
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Template {draft.LoadedTemplateId} validated successfully: {template.Name}");
                     }
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Failed to validate template: {ex.Message}");
-                    await _dialogService.ShowWarningAsync("无法验证模板，将以手动模式继续");
+                    warnings.Add($"• 无法验证模板（错误：{ex.Message}），已切换到手动模式");
                     draft.TemplateApplied = false;
                     draft.LoadedTemplateId = null;
                 }
             }
 
+            // 如果有警告，显示汇总消息
+            if (warnings.Any())
+            {
+                var warningMessage = "草稿恢复时发现以下问题：\n\n" + string.Join("\n\n", warnings);
+                await _dialogService.ShowWarningAsync(warningMessage);
+            }
+
             System.Diagnostics.Debug.WriteLine("[SchedulingViewModel.Draft] Draft validation passed");
             return true;
         }
-    }
-}
 
         /// <summary>
         /// 恢复选中的人员和岗位
@@ -224,14 +238,15 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// 恢复流程：
         /// 1. 从可用列表中筛选出草稿中的人员和岗位
         /// 2. 验证是否有缺失的人员或岗位
-        /// 3. 如果有缺失，显示警告信息
+        /// 3. 如果有缺失，显示详细警告信息
         /// 4. 更新选中列表
         /// 
-        /// 需求: 1.4, 5.5
+        /// 需求: 1.4, 5.4, 5.5
         /// </summary>
         private async Task RestoreSelectedPersonnelAndPositionsAsync(SchedulingDraftDto draft)
         {
             System.Diagnostics.Debug.WriteLine("[SchedulingViewModel.Draft] Restoring selected personnel and positions...");
+            var warnings = new System.Collections.Generic.List<string>();
 
             // 恢复选中的人员
             var selectedPersonnels = AvailablePersonnels
@@ -245,8 +260,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             if (missingPersonnelIds.Any())
             {
                 System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Missing personnel IDs: {string.Join(", ", missingPersonnelIds)}");
-                await _dialogService.ShowWarningAsync(
-                    $"部分人员已不存在，已自动移除\n缺失人员ID: {string.Join(", ", missingPersonnelIds)}");
+                warnings.Add($"• 人员数据不一致：\n  草稿中有 {draft.SelectedPersonnelIds.Count} 名人员\n  成功恢复 {selectedPersonnels.Count} 名\n  缺失 {missingPersonnelIds.Count} 名（ID: {string.Join(", ", missingPersonnelIds)})");
             }
 
             SelectedPersonnels.Clear();
@@ -269,8 +283,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             if (missingPositionIds.Any())
             {
                 System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Missing position IDs: {string.Join(", ", missingPositionIds)}");
-                await _dialogService.ShowWarningAsync(
-                    $"部分岗位已不存在，已自动移除\n缺失岗位ID: {string.Join(", ", missingPositionIds)}");
+                warnings.Add($"• 岗位数据不一致：\n  草稿中有 {draft.SelectedPositionIds.Count} 个岗位\n  成功恢复 {selectedPositions.Count} 个\n  缺失 {missingPositionIds.Count} 个（ID: {string.Join(", ", missingPositionIds)})");
             }
 
             SelectedPositions.Clear();
@@ -280,6 +293,14 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
 
             System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Restored {SelectedPositions.Count} positions (missing: {missingPositionIds.Count})");
+
+            // 如果有缺失数据，显示汇总警告
+            if (warnings.Any())
+            {
+                var warningMessage = "恢复人员和岗位时发现数据不一致：\n\n" + string.Join("\n\n", warnings) + 
+                                   "\n\n缺失的数据已被自动移除。";
+                await _dialogService.ShowWarningAsync(warningMessage);
+            }
         }
 
         /// <summary>
@@ -288,11 +309,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// 恢复流程：
         /// 1. 恢复休息日配置
         /// 2. 加载约束数据（如果未加载）
-        /// 3. 恢复固定规则启用状态
-        /// 4. 恢复手动指定启用状态（仅已保存的）
+        /// 3. 如果是模板模式，设置模板约束字段并应用
+        /// 4. 如果是手动模式，直接恢复固定规则和手动指定启用状态
         /// 5. 验证并报告缺失的约束
         /// 
-        /// 需求: 1.4, 4.3, 4.4
+        /// 需求: 1.4, 2.3, 4.3, 4.4
         /// </summary>
         private async Task RestoreConstraintsAsync(SchedulingDraftDto draft)
         {
@@ -311,56 +332,81 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 await LoadConstraintsAsync();
             }
 
-            // 恢复固定规则启用状态
-            var missingFixedRuleIds = draft.EnabledFixedRuleIds
-                .Except(FixedPositionRules.Select(r => r.Id))
-                .ToList();
-
-            foreach (var rule in FixedPositionRules)
+            // 如果是模板模式，使用模板约束应用逻辑
+            if (draft.TemplateApplied)
             {
-                rule.IsEnabled = draft.EnabledFixedRuleIds.Contains(rule.Id);
+                System.Diagnostics.Debug.WriteLine("[SchedulingViewModel.Draft] Restoring template mode constraints...");
+                
+                // 设置模板约束字段（这些字段被 ApplyTemplateConstraints 使用）
+                _enabledFixedRules = draft.EnabledFixedRuleIds.ToList();
+                _enabledManualAssignments = draft.EnabledManualAssignmentIds.ToList();
+                
+                // 应用模板约束（这会设置 IsEnabled 状态并验证缺失的约束）
+                ApplyTemplateConstraints();
+                
+                System.Diagnostics.Debug.WriteLine("[SchedulingViewModel.Draft] Template mode constraints restored");
             }
-
-            var enabledFixedRulesCount = FixedPositionRules.Count(r => r.IsEnabled);
-            System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Restored {enabledFixedRulesCount} enabled fixed rules (missing: {missingFixedRuleIds.Count})");
-
-            if (missingFixedRuleIds.Any())
+            else
             {
-                System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Missing fixed rule IDs: {string.Join(", ", missingFixedRuleIds)}");
-            }
+                // 手动模式：直接恢复固定规则和手动指定启用状态
+                System.Diagnostics.Debug.WriteLine("[SchedulingViewModel.Draft] Restoring manual mode constraints...");
+                
+                // 恢复固定规则启用状态
+                var missingFixedRuleIds = draft.EnabledFixedRuleIds
+                    .Except(FixedPositionRules.Select(r => r.Id))
+                    .ToList();
 
-            // 恢复手动指定启用状态（仅已保存的）
-            var missingManualAssignmentIds = draft.EnabledManualAssignmentIds
-                .Except(ManualAssignments.Select(a => a.Id))
-                .ToList();
+                foreach (var rule in FixedPositionRules)
+                {
+                    rule.IsEnabled = draft.EnabledFixedRuleIds.Contains(rule.Id);
+                }
 
-            foreach (var assignment in ManualAssignments)
-            {
-                assignment.IsEnabled = draft.EnabledManualAssignmentIds.Contains(assignment.Id);
-            }
+                var enabledFixedRulesCount = FixedPositionRules.Count(r => r.IsEnabled);
+                System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Restored {enabledFixedRulesCount} enabled fixed rules (missing: {missingFixedRuleIds.Count})");
 
-            var enabledManualAssignmentsCount = ManualAssignments.Count(a => a.IsEnabled);
-            System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Restored {enabledManualAssignmentsCount} enabled manual assignments (missing: {missingManualAssignmentIds.Count})");
-
-            if (missingManualAssignmentIds.Any())
-            {
-                System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Missing manual assignment IDs: {string.Join(", ", missingManualAssignmentIds)}");
-            }
-
-            // 显示缺失约束的警告
-            if (missingFixedRuleIds.Any() || missingManualAssignmentIds.Any())
-            {
-                var warningMsg = "部分约束已不存在，已自动移除：\n";
                 if (missingFixedRuleIds.Any())
                 {
-                    warningMsg += $"- 缺失固定规则: {missingFixedRuleIds.Count} 条\n";
-                }
-                if (missingManualAssignmentIds.Any())
-                {
-                    warningMsg += $"- 缺失手动指定: {missingManualAssignmentIds.Count} 条\n";
+                    System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Missing fixed rule IDs: {string.Join(", ", missingFixedRuleIds)}");
                 }
 
-                await _dialogService.ShowWarningAsync(warningMsg);
+                // 恢复手动指定启用状态（仅已保存的）
+                var missingManualAssignmentIds = draft.EnabledManualAssignmentIds
+                    .Except(ManualAssignments.Select(a => a.Id))
+                    .ToList();
+
+                foreach (var assignment in ManualAssignments)
+                {
+                    assignment.IsEnabled = draft.EnabledManualAssignmentIds.Contains(assignment.Id);
+                }
+
+                var enabledManualAssignmentsCount = ManualAssignments.Count(a => a.IsEnabled);
+                System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Restored {enabledManualAssignmentsCount} enabled manual assignments (missing: {missingManualAssignmentIds.Count})");
+
+                if (missingManualAssignmentIds.Any())
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Missing manual assignment IDs: {string.Join(", ", missingManualAssignmentIds)}");
+                }
+
+                // 显示缺失约束的详细警告
+                if (missingFixedRuleIds.Any() || missingManualAssignmentIds.Any())
+                {
+                    var warnings = new System.Collections.Generic.List<string>();
+                    
+                    if (missingFixedRuleIds.Any())
+                    {
+                        warnings.Add($"• 固定规则不一致：\n  草稿中启用了 {draft.EnabledFixedRuleIds.Count} 条规则\n  成功恢复 {enabledFixedRulesCount} 条\n  缺失 {missingFixedRuleIds.Count} 条（ID: {string.Join(", ", missingFixedRuleIds)})");
+                    }
+                    
+                    if (missingManualAssignmentIds.Any())
+                    {
+                        warnings.Add($"• 手动指定不一致：\n  草稿中启用了 {draft.EnabledManualAssignmentIds.Count} 条指定\n  成功恢复 {enabledManualAssignmentsCount} 条\n  缺失 {missingManualAssignmentIds.Count} 条（ID: {string.Join(", ", missingManualAssignmentIds)})");
+                    }
+
+                    var warningMsg = "恢复约束配置时发现数据不一致：\n\n" + 
+                                   string.Join("\n\n", warnings) + 
+                                   "\n\n缺失的约束已被自动移除。";
+                    await _dialogService.ShowWarningAsync(warningMsg);
+                }
             }
         }
 
@@ -434,9 +480,15 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
             System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel.Draft] Restored {draft.TemporaryManualAssignments.Count - invalidCount} temporary manual assignments (invalid: {invalidCount})");
 
+            // 显示临时手动指定恢复的详细信息
             if (invalidCount > 0)
             {
-                await _dialogService.ShowWarningAsync($"部分临时手动指定无效，已自动移除（{invalidCount} 条）");
+                var warningMsg = $"临时手动指定数据不一致：\n\n" +
+                               $"• 草稿中有 {draft.TemporaryManualAssignments.Count} 条临时指定\n" +
+                               $"• 成功恢复 {draft.TemporaryManualAssignments.Count - invalidCount} 条\n" +
+                               $"• 无效 {invalidCount} 条（人员或岗位不存在）\n\n" +
+                               $"无效的临时指定已被自动移除。";
+                await _dialogService.ShowWarningAsync(warningMsg);
             }
 
             // 通知UI更新

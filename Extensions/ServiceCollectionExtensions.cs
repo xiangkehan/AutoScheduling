@@ -86,6 +86,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IHistoryService, HistoryService>();
         services.AddSingleton<ISchedulingService, SchedulingService>();
         services.AddSingleton<IStoragePathService, StoragePathService>();
+        services.AddSingleton<ISchedulingDraftService, SchedulingDraftService>();
 
         // 注册数据导入导出相关服务
         // Register data validation service

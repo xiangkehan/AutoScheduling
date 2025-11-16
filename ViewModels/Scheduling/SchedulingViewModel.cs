@@ -693,8 +693,52 @@ namespace AutoScheduling3.ViewModels.Scheduling
             };
         }
 
-        private void CancelWizard()
+        private async void CancelWizard()
         {
+            // 检查是否有值得保存的进度
+            if (ShouldPromptForDraftSave())
+            {
+                var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+                {
+                    Title = "保留进度",
+                    Content = "当前进度将保存为草稿，是否保留？下次可以继续编辑。",
+                    PrimaryButtonText = "保留",
+                    SecondaryButtonText = "放弃",
+                    DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
+                    XamlRoot = App.MainWindow?.Content?.XamlRoot
+                };
+
+                try
+                {
+                    var result = await dialog.ShowAsync();
+
+                    if (result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Secondary)
+                    {
+                        // 用户选择放弃，删除草稿
+                        if (_draftService != null)
+                        {
+                            try
+                            {
+                                await _draftService.DeleteDraftAsync();
+                                System.Diagnostics.Debug.WriteLine("[SchedulingViewModel] Draft deleted after user chose to discard");
+                            }
+                            catch (Exception draftEx)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel] Failed to delete draft: {draftEx.Message}");
+                                // 不影响主流程，仅记录日志
+                            }
+                        }
+                    }
+                    // 如果选择保留，草稿会在OnNavigatedFrom时自动保存
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel] Failed to show cancel dialog: {ex.Message}");
+                    // 如果对话框显示失败，继续执行重置逻辑
+                }
+            }
+
+            // 重置状态
             CurrentStep = 1;
             ScheduleTitle = string.Empty;
             SelectedPersonnels.Clear();
@@ -715,6 +759,24 @@ namespace AutoScheduling3.ViewModels.Scheduling
             _manualAssignmentManager.Clear();
             
             RefreshCommandStates();
+        }
+
+        /// <summary>
+        /// 判断是否应该提示用户保存草稿
+        /// </summary>
+        private bool ShouldPromptForDraftSave()
+        {
+            // 如果已经成功创建排班，不需要保存草稿
+            if (ResultSchedule != null)
+            {
+                return false;
+            }
+
+            // 检查是否有值得保存的进度
+            return !string.IsNullOrWhiteSpace(ScheduleTitle) ||
+                   SelectedPersonnels.Count > 0 ||
+                   SelectedPositions.Count > 0 ||
+                   AllManualAssignments.Count > 0;
         }
 
         private async Task LoadTemplateAsync(int templateId)

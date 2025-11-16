@@ -260,6 +260,20 @@ namespace AutoScheduling3
                     if(tsk != null) await tsk;
                 }
                 
+                // Cleanup expired drafts (older than 7 days)
+                // Requirements: 3.3
+                try
+                {
+                    var draftService = ServiceProvider.GetRequiredService<ISchedulingDraftService>();
+                    await draftService.CleanupExpiredDraftsAsync();
+                    System.Diagnostics.Debug.WriteLine("[App] Draft cleanup completed");
+                }
+                catch (Exception draftEx)
+                {
+                    // Log but don't fail initialization if draft cleanup fails
+                    System.Diagnostics.Debug.WriteLine($"[App] Draft cleanup failed (non-critical): {draftEx.Message}");
+                }
+                
                 // Log total initialization duration
                 var totalDuration = DateTime.UtcNow - initStartTime;
                 System.Diagnostics.Debug.WriteLine($"[App] Total application initialization completed in {totalDuration.TotalMilliseconds:F2}ms");

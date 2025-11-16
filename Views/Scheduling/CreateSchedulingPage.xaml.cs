@@ -38,49 +38,127 @@ namespace AutoScheduling3.Views.Scheduling
             {
                 System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] Draft detected, asking user to restore...");
                 
-                // 加载草稿以获取保存时间
-                var draft = await _draftService.LoadDraftAsync();
-                var savedTimeText = draft?.SavedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "未知";
+                SchedulingDraftDto draft = null;
+                string savedTimeText = "未知";
                 
-                // 询问用户是否恢复草稿
-                var dialog = new ContentDialog
+                try
                 {
-                    Title = "恢复进度",
-                    Content = $"检测到未完成的排班创建，是否恢复？\n\n上次编辑时间：{savedTimeText}",
-                    PrimaryButtonText = "恢复",
-                    SecondaryButtonText = "重新开始",
-                    DefaultButton = ContentDialogButton.Primary,
-                    XamlRoot = this.XamlRoot
-                };
-                
-                var result = await dialog.ShowAsync();
-                
-                if (result == ContentDialogResult.Primary)
+                    // 尝试加载草稿以获取保存时间
+                    draft = await _draftService.LoadDraftAsync();
+                    savedTimeText = draft?.SavedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "未知";
+                }
+                catch (InvalidOperationException ex)
                 {
-                    // 用户选择恢复草稿
+                    // 草稿数据损坏，显示错误并删除草稿
+                    System.Diagnostics.Debug.WriteLine($"[CreateSchedulingPage] Draft is corrupted: {ex.Message}");
+                    
+                    var errorDialog = new ContentDialog
+                    {
+                        Title = "草稿加载失败",
+                        Content = $"无法恢复之前的进度，草稿数据已损坏。\n\n错误详情：{ex.Message}\n\n将显示空白表单。",
+                        CloseButtonText = "确定",
+                        XamlRoot = this.XamlRoot
+                    };
+                    
+                    await errorDialog.ShowAsync();
+                    
+                    // 草稿已在LoadDraftAsync中删除，继续正常初始化
+                    draft = null;
+                }
+                catch (Exception ex)
+                {
+                    // 其他未预期的错误
+                    System.Diagnostics.Debug.WriteLine($"[CreateSchedulingPage] Unexpected error loading draft: {ex.Message}");
+                    
+                    var errorDialog = new ContentDialog
+                    {
+                        Title = "草稿加载失败",
+                        Content = $"加载草稿时发生错误。\n\n错误详情：{ex.Message}\n\n将显示空白表单。",
+                        CloseButtonText = "确定",
+                        XamlRoot = this.XamlRoot
+                    };
+                    
+                    await errorDialog.ShowAsync();
+                    
+                    // 尝试删除可能损坏的草稿
                     try
                     {
-                        System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] User chose to restore draft");
-                        await ViewModel.RestoreFromDraftAsync(draft);
-                        _isDraftRestored = true;
-                        
-                        // 显示恢复成功的临时通知
-                        ShowDraftRestoredNotification(savedTimeText);
-                        
-                        System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] Draft restored successfully");
-                        return;
+                        await _draftService.DeleteDraftAsync();
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        System.Diagnostics.Debug.WriteLine($"[CreateSchedulingPage] Failed to restore draft: {ex.Message}");
-                        // 恢复失败，继续正常初始化流程
+                        // 静默失败
                     }
+                    
+                    draft = null;
                 }
-                else
+                
+                // 如果成功加载草稿，询问用户是否恢复
+                if (draft != null)
                 {
-                    // 用户选择重新开始，删除草稿
-                    System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] User chose to start fresh, deleting draft");
-                    await _draftService.DeleteDraftAsync();
+                    // 在WinUI 3中，需要等待XamlRoot可用后再显示对话框
+                    var result = await ShowDialogWithXamlRoot(async () =>
+                    {
+                        var dialog = new ContentDialog
+                        {
+                            Title = "恢复进度",
+                            Content = $"检测到未完成的排班创建，是否恢复？\n\n上次编辑时间：{savedTimeText}",
+                            PrimaryButtonText = "恢复",
+                            SecondaryButtonText = "重新开始",
+                            DefaultButton = ContentDialogButton.Primary,
+                            XamlRoot = this.XamlRoot
+                        };
+
+                        return await dialog.ShowAsync();
+                    });
+                    
+                    if (result == ContentDialogResult.Primary)
+                    {
+                        // 用户选择恢复草稿
+                        try
+                        {
+                            System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] User chose to restore draft");
+                            await ViewModel.RestoreFromDraftAsync(draft);
+                            _isDraftRestored = true;
+                            
+                            // 显示恢复成功的临时通知
+                            ShowDraftRestoredNotification(savedTimeText);
+                            
+                            System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] Draft restored successfully");
+                            return;
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[CreateSchedulingPage] Failed to restore draft: {ex.Message}");
+                            
+                            // 显示恢复失败的错误消息
+                            var restoreErrorDialog = new ContentDialog
+                            {
+                                Title = "恢复失败",
+                                Content = $"无法恢复草稿数据。\n\n错误详情：{ex.Message}\n\n将显示空白表单。",
+                                CloseButtonText = "确定",
+                                XamlRoot = this.XamlRoot
+                            };
+                            
+                            await restoreErrorDialog.ShowAsync();
+                            
+                            // 删除无法恢复的草稿
+                            try
+                            {
+                                await _draftService.DeleteDraftAsync();
+                            }
+                            catch
+                            {
+                                // 静默失败
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 用户选择重新开始，删除草稿
+                        System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] User chose to start fresh, deleting draft");
+                        await _draftService.DeleteDraftAsync();
+                    }
                 }
             }
             
@@ -141,12 +219,28 @@ namespace AutoScheduling3.Views.Scheduling
 
                 if (ViewModel.IsCreatingManualAssignment)
                 {
-                    // 确保对话框有 XamlRoot
-                    if (ManualAssignmentDialog.XamlRoot == null)
+                    // 使用安全方法显示对话框
+                    if (ManualAssignmentDialog.XamlRoot == null && this.XamlRoot != null)
                     {
                         ManualAssignmentDialog.XamlRoot = this.XamlRoot;
                     }
-                    await ManualAssignmentDialog.ShowAsync();
+
+                    // 如果XamlRoot仍不可用，使用ShowDialogWithXamlRoot
+                    if (ManualAssignmentDialog.XamlRoot == null)
+                    {
+                        await ShowDialogWithXamlRoot(async () =>
+                        {
+                            if (ManualAssignmentDialog.XamlRoot == null && this.XamlRoot != null)
+                            {
+                                ManualAssignmentDialog.XamlRoot = this.XamlRoot;
+                            }
+                            return await ManualAssignmentDialog.ShowAsync();
+                        });
+                    }
+                    else
+                    {
+                        await ManualAssignmentDialog.ShowAsync();
+                    }
                 }
                 else
                 {
@@ -160,12 +254,28 @@ namespace AutoScheduling3.Views.Scheduling
 
                 if (ViewModel.IsEditingManualAssignment)
                 {
-                    // 确保对话框有 XamlRoot
-                    if (ManualAssignmentEditDialog.XamlRoot == null)
+                    // 使用安全方法显示对话框
+                    if (ManualAssignmentEditDialog.XamlRoot == null && this.XamlRoot != null)
                     {
                         ManualAssignmentEditDialog.XamlRoot = this.XamlRoot;
                     }
-                    await ManualAssignmentEditDialog.ShowAsync();
+
+                    // 如果XamlRoot仍不可用，使用ShowDialogWithXamlRoot
+                    if (ManualAssignmentEditDialog.XamlRoot == null)
+                    {
+                        await ShowDialogWithXamlRoot(async () =>
+                        {
+                            if (ManualAssignmentEditDialog.XamlRoot == null && this.XamlRoot != null)
+                            {
+                                ManualAssignmentEditDialog.XamlRoot = this.XamlRoot;
+                            }
+                            return await ManualAssignmentEditDialog.ShowAsync();
+                        });
+                    }
+                    else
+                    {
+                        await ManualAssignmentEditDialog.ShowAsync();
+                    }
                 }
                 else
                 {
@@ -263,7 +373,7 @@ namespace AutoScheduling3.Views.Scheduling
 
         /// <summary>
         /// 显示草稿恢复成功的临时通知
-        /// 
+        ///
         /// 通知会在3秒后自动消失
         /// 需求: 1.3, 1.4, 3.2
         /// </summary>
@@ -271,44 +381,101 @@ namespace AutoScheduling3.Views.Scheduling
         {
             try
             {
-                // 创建一个简单的通知对话框，3秒后自动关闭
-                var notificationDialog = new ContentDialog
+                // 使用安全方法显示对话框
+                await ShowDialogWithXamlRoot(async () =>
                 {
-                    Title = "草稿已恢复",
-                    Content = $"已从草稿恢复，上次编辑时间：{savedTime}",
-                    CloseButtonText = "确定",
-                    XamlRoot = this.XamlRoot
-                };
-
-                // 创建自动关闭任务
-                var autoCloseTask = Task.Run(async () =>
-                {
-                    await Task.Delay(3000); // 3秒后自动关闭
-
-                    // 在UI线程上关闭对话框
-                    if (this.DispatcherQueue != null)
+                    // 创建一个简单的通知对话框，3秒后自动关闭
+                    var notificationDialog = new ContentDialog
                     {
-                        this.DispatcherQueue.TryEnqueue(() =>
-                        {
-                            try
-                            {
-                                notificationDialog.Hide();
-                            }
-                            catch
-                            {
-                                // 对话框可能已经被用户关闭
-                            }
-                        });
-                    }
-                });
+                        Title = "草稿已恢复",
+                        Content = $"已从草稿恢复，上次编辑时间：{savedTime}",
+                        CloseButtonText = "确定",
+                        XamlRoot = this.XamlRoot
+                    };
 
-                await notificationDialog.ShowAsync();
+                    // 创建自动关闭任务
+                    var autoCloseTask = Task.Run(async () =>
+                    {
+                        await Task.Delay(3000); // 3秒后自动关闭
+
+                        // 在UI线程上关闭对话框
+                        if (this.DispatcherQueue != null)
+                        {
+                            this.DispatcherQueue.TryEnqueue(() =>
+                            {
+                                try
+                                {
+                                    notificationDialog.Hide();
+                                }
+                                catch
+                                {
+                                    // 对话框可能已经被用户关闭
+                                }
+                            });
+                        }
+                    });
+
+                    return await notificationDialog.ShowAsync();
+                });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[CreateSchedulingPage] Failed to show notification: {ex.Message}");
                 // 静默失败，不影响主流程
             }
+        }
+
+        /// <summary>
+        /// 安全显示对话框的辅助方法
+        /// 在WinUI 3中，确保XamlRoot可用后再显示对话框
+        /// </summary>
+        /// <typeparam name="T">对话框操作返回的类型</typeparam>
+        /// <param name="dialogAction">要执行的对话框操作</param>
+        /// <returns>对话框操作的返回值</returns>
+        private async Task<T> ShowDialogWithXamlRoot<T>(Func<Task<T>> dialogAction)
+        {
+            // 如果XamlRoot已经可用，直接执行
+            if (this.XamlRoot != null)
+            {
+                return await dialogAction();
+            }
+
+            // 否则，使用DispatcherQueue等待XamlRoot可用
+            var tcs = new TaskCompletionSource<T>();
+
+            this.DispatcherQueue.TryEnqueue(async () =>
+            {
+                try
+                {
+                    // 等待XamlRoot可用（最多等待5秒）
+                    var maxWaitTime = 5000; // 5秒
+                    var waitInterval = 50; // 每50ms检查一次
+                    var waitedTime = 0;
+
+                    while (this.XamlRoot == null && waitedTime < maxWaitTime)
+                    {
+                        await Task.Delay(waitInterval);
+                        waitedTime += waitInterval;
+                    }
+
+                    // 如果XamlRoot可用，执行对话框操作
+                    if (this.XamlRoot != null)
+                    {
+                        var result = await dialogAction();
+                        tcs.SetResult(result);
+                    }
+                    else
+                    {
+                        tcs.SetException(new InvalidOperationException("XamlRoot仍然不可用"));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+
+            return await tcs.Task;
         }
     }
 }

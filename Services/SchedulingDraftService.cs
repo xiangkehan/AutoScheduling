@@ -118,12 +118,13 @@ public class SchedulingDraftService : ISchedulingDraftService
     /// 错误处理：
     /// - 如果草稿不存在，返回null
     /// - 如果草稿过期，删除并返回null
-    /// - 如果反序列化失败，删除损坏的草稿并返回null
+    /// - 如果反序列化失败，删除损坏的草稿并抛出异常（带详细错误信息）
     /// - 如果版本不兼容，删除并返回null
     /// 
-    /// 需求: 1.3, 5.3
+    /// 需求: 1.3, 5.3, 5.4
     /// </summary>
     /// <returns>草稿数据，如果不存在或无效则返回null</returns>
+    /// <exception cref="InvalidOperationException">当草稿数据损坏时抛出</exception>
     public async Task<SchedulingDraftDto?> LoadDraftAsync()
     {
         try
@@ -154,21 +155,36 @@ public class SchedulingDraftService : ISchedulingDraftService
             var json = _localSettings.Values[DraftKey] as string;
             if (string.IsNullOrEmpty(json))
             {
-                System.Diagnostics.Debug.WriteLine("[SchedulingDraftService] Draft data is empty");
+                System.Diagnostics.Debug.WriteLine("[SchedulingDraftService] Draft data is empty, deleting");
                 await DeleteDraftAsync();
                 return null;
             }
 
-            var draft = JsonSerializer.Deserialize<SchedulingDraftDto>(json, new JsonSerializerOptions
+            SchedulingDraftDto? draft = null;
+            try
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
+                draft = JsonSerializer.Deserialize<SchedulingDraftDto>(json, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+            }
+            catch (JsonException jsonEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SchedulingDraftService] JSON反序列化失败: {jsonEx.Message}");
+                System.Diagnostics.Debug.WriteLine($"[SchedulingDraftService] JSON内容预览: {(json.Length > 200 ? json.Substring(0, 200) + "..." : json)}");
+                
+                // 删除损坏的草稿
+                await DeleteDraftAsync();
+                
+                // 抛出更详细的异常，供上层处理
+                throw new InvalidOperationException("草稿数据已损坏，无法解析。草稿已被删除。", jsonEx);
+            }
 
             if (draft == null)
             {
-                System.Diagnostics.Debug.WriteLine("[SchedulingDraftService] Failed to deserialize draft");
+                System.Diagnostics.Debug.WriteLine("[SchedulingDraftService] Deserialized draft is null, deleting");
                 await DeleteDraftAsync();
-                return null;
+                throw new InvalidOperationException("草稿数据格式错误，无法恢复。草稿已被删除。");
             }
 
             // 验证版本兼容性
@@ -179,22 +195,34 @@ public class SchedulingDraftService : ISchedulingDraftService
                 return null;
             }
 
+            // 验证必要字段
+            if (draft.SelectedPersonnelIds == null || draft.SelectedPositionIds == null || 
+                draft.EnabledFixedRuleIds == null || draft.EnabledManualAssignmentIds == null ||
+                draft.TemporaryManualAssignments == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[SchedulingDraftService] Draft has null required fields, deleting");
+                await DeleteDraftAsync();
+                throw new InvalidOperationException("草稿数据不完整，缺少必要字段。草稿已被删除。");
+            }
+
             System.Diagnostics.Debug.WriteLine($"[SchedulingDraftService] Draft loaded successfully (saved at: {draft.SavedAt})");
             return draft;
         }
-        catch (JsonException ex)
+        catch (InvalidOperationException)
         {
-            System.Diagnostics.Debug.WriteLine($"[SchedulingDraftService] JSON反序列化失败: {ex.Message}");
-            // 删除损坏的草稿
-            await DeleteDraftAsync();
-            return null;
+            // 重新抛出我们自己的异常
+            throw;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[SchedulingDraftService] 加载草稿失败: {ex.Message}");
-            // 删除损坏的草稿
+            System.Diagnostics.Debug.WriteLine($"[SchedulingDraftService] 加载草稿失败（未预期的错误）: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[SchedulingDraftService] 堆栈跟踪: {ex.StackTrace}");
+            
+            // 删除可能损坏的草稿
             await DeleteDraftAsync();
-            return null;
+            
+            // 抛出包装后的异常
+            throw new InvalidOperationException("加载草稿时发生未预期的错误。草稿已被删除。", ex);
         }
     }
 
