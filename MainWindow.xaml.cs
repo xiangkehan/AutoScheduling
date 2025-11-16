@@ -81,6 +81,7 @@ namespace AutoScheduling3
 
             // 排班流程相关页面注册
             _navigationService.RegisterPage("CreateScheduling", typeof(CreateSchedulingPage));
+            _navigationService.RegisterPage("SchedulingProgress", typeof(SchedulingProgressPage));
             _navigationService.RegisterPage("TemplateManage", typeof(TemplatePage));
             _navigationService.RegisterPage("ScheduleResult", typeof(ScheduleResultPage));
             _navigationService.RegisterPage("Drafts", typeof(DraftsPage));

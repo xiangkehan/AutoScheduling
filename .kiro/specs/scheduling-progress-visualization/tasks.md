@@ -295,6 +295,7 @@
   - 绑定阶段信息到 `ViewModel.CurrentStage` 和 `ViewModel.StageDescription`
   - 显示已完成/总数统计，绑定到 `ViewModel.CompletedAssignments` 和 `ViewModel.TotalSlotsToAssign`
 
+
   - _需求: 1.1, 1.2, 1.3, 1.4, 1.5_
 
 - [ ] 7.3 实现左侧实时信息区
@@ -305,6 +306,10 @@
   - 添加累计执行时间显示，绑定到 `ViewModel.ElapsedTime`
   - 添加阶段历史列表，使用 `ListView` 显示已完成的阶段（带状态图标）
   - 添加警告信息列表，使用 `ListView` 显示警告消息
+
+
+
+
   - _需求: 2.1, 2.2, 2.3, 2.4, 2.5_
 
 - [ ] 7.4 实现右侧结果展示区
@@ -314,19 +319,33 @@
   - 添加 `ScheduleGridControl`，绑定 `GridData` 到 `ViewModel.GridData`
   - 添加成功/失败状态卡片，根据 `ViewModel.IsCompleted` 和 `ViewModel.IsFailed` 显示
   - 添加统计信息卡片，显示总分配数、平均工作量、覆盖率
+
+
+
   - 添加人员工作量表格，使用 `ListView` 绑定到 `ViewModel.PersonnelWorkloads`
+
   - 添加哨位覆盖率表格，使用 `ListView` 绑定到 `ViewModel.PositionCoverages`
   - 添加冲突列表，使用 `ListView` 绑定到 `ViewModel.Conflicts`
   - _需求: 3.1, 3.2, 3.3, 3.4, 3.5, 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 7.5 实现操作按钮区
+- [x] 7.5 实现操作按钮区
+
+
+
+
 
   - 在右侧下部添加操作按钮区，固定高度
   - 添加"取消排班"按钮，绑定到 `ViewModel.CancelSchedulingCommand`
+
+
+
+
   - 根据 `ViewModel.IsExecuting` 控制取消按钮可见性
   - 添加"保存排班"按钮，绑定到 `ViewModel.SaveScheduleCommand`
   - 添加"放弃排班"按钮，绑定到 `ViewModel.DiscardScheduleCommand`
   - 添加"查看详细结果"按钮，绑定到 `ViewModel.ViewDetailedResultCommand`
+
+
   - 根据 `ViewModel.IsCompleted` 控制成功按钮可见性
   - 添加"返回修改"按钮，绑定到 `ViewModel.ReturnToConfigCommand`
   - 根据 `ViewModel.IsFailed` 控制失败按钮可见性

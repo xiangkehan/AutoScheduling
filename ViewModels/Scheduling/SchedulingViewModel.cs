@@ -587,78 +587,18 @@ namespace AutoScheduling3.ViewModels.Scheduling
             
             var request = BuildSchedulingRequest();
             
-            // 显示进度对话框
-            _progressDialog = _dialogService.ShowLoadingDialog("正在生成排班，请稍候...");
-            IsExecuting = true;
-            RefreshCommandStates();
+            System.Diagnostics.Debug.WriteLine($"准备导航到排班进度页面: {request.Title}");
+            System.Diagnostics.Debug.WriteLine($"人员数: {request.PersonnelIds.Count}, 哨位数: {request.PositionIds.Count}");
             
-            try
+            // 导航到排班进度可视化页面，传递 SchedulingRequestDto 参数
+            try 
+            { 
+                _navigation_service.NavigateTo("SchedulingProgress", request); 
+            } 
+            catch (Exception navEx)
             {
-                System.Diagnostics.Debug.WriteLine($"开始执行排班: {request.Title}");
-                System.Diagnostics.Debug.WriteLine($"人员数: {request.PersonnelIds.Count}, 哨位数: {request.PositionIds.Count}");
-                
-                var schedule = await _schedulingService.ExecuteSchedulingAsync(request);
-                
-                System.Diagnostics.Debug.WriteLine($"排班执行成功，生成 {schedule.Shifts.Count} 个班次");
-                
-                ResultSchedule = schedule;
-                
-                // 删除草稿（成功创建后）
-                if (_draftService != null)
-                {
-                    try
-                    {
-                        await _draftService.DeleteDraftAsync();
-                        System.Diagnostics.Debug.WriteLine("[SchedulingViewModel] Draft deleted after successful schedule creation");
-                    }
-                    catch (Exception draftEx)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel] Failed to delete draft: {draftEx.Message}");
-                        // 不影响主流程，仅记录日志
-                    }
-                }
-                
-                await _dialogService.ShowSuccessAsync("排班生成成功");
-                
-                try 
-                { 
-                    _navigation_service.NavigateTo("ScheduleResult", schedule.Id); 
-                } 
-                catch (Exception navEx)
-                {
-                    System.Diagnostics.Debug.WriteLine($"导航失败: {navEx.Message}");
-                }
-            }
-            catch (ArgumentException argEx)
-            {
-                // 业务规则验证失败
-                System.Diagnostics.Debug.WriteLine($"业务规则验证失败: {argEx.Message}");
-                await _dialogService.ShowErrorAsync($"排班参数验证失败：{argEx.Message}");
-            }
-            catch (InvalidOperationException invEx)
-            {
-                // 操作无效（如数据不存在）
-                System.Diagnostics.Debug.WriteLine($"操作无效: {invEx.Message}");
-                await _dialogService.ShowErrorAsync($"排班操作失败：{invEx.Message}");
-            }
-            catch (Exception ex)
-            {
-                // 其他未知异常
-                System.Diagnostics.Debug.WriteLine($"排班执行异常: {ex.GetType().Name}");
-                System.Diagnostics.Debug.WriteLine($"异常消息: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
-                
-                await _dialogService.ShowErrorAsync($"执行排班失败：{ex.Message}\n\n详细信息：{ex.GetType().Name}");
-            }
-            finally
-            {
-                IsExecuting = false;
-                if (_progressDialog != null)
-                {
-                    try { _progressDialog.Hide(); } catch { }
-                    _progressDialog = null;
-                }
-                RefreshCommandStates();
+                System.Diagnostics.Debug.WriteLine($"导航失败: {navEx.Message}");
+                await _dialogService.ShowErrorAsync($"无法打开排班进度页面：{navEx.Message}");
             }
         }
         private SchedulingRequestDto BuildSchedulingRequest()

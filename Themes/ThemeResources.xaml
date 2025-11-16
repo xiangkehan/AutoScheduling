@@ -241,4 +241,14 @@
         <Setter Property="BorderThickness" Value="2"/>
     </Style>
 
+    <!-- 全屏对话框样式 -->
+    <Style x:Key="FullScreenDialogStyle" TargetType="ContentDialog">
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="MaxWidth" Value="Infinity"/>
+        <Setter Property="MaxHeight" Value="Infinity"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+    </Style>
+
 </ResourceDictionary>

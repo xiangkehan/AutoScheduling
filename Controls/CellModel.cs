@@ -6,7 +6,7 @@ using System.ComponentModel;
 
 namespace AutoScheduling3.Controls
 {
-    public class CellModel : INotifyPropertyChanged
+    public partial class CellModel : INotifyPropertyChanged
     {
         private ShiftDto? _shift;
         private bool _hasConflict;
@@ -107,16 +107,16 @@ namespace AutoScheduling3.Controls
 
                 return Conflict.Type switch
                 {
-                    "hard" => "Ó²Ô¼Êø",
-                    "soft" => "ÈíÔ¼Êø",
-                    "unassigned" => "Î´·ÖÅä",
-                    _ => "³åÍ»"
+                    "hard" => "Ó²Ô¼ï¿½ï¿½",
+                    "soft" => "ï¿½ï¿½Ô¼ï¿½ï¿½",
+                    "unassigned" => "Î´ï¿½ï¿½ï¿½ï¿½",
+                    _ => "ï¿½ï¿½Í»"
                 };
             }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+        protected void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
