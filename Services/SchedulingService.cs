@@ -1311,23 +1311,30 @@ public class SchedulingService : ISchedulingService
 
         try
         {
+            // 创建人员ID到索引的映射
+            var personIdToIndex = new Dictionary<int, int>();
+            for (int i = 0; i < context.Personals.Count; i++)
+            {
+                personIdToIndex[context.Personals[i].Id] = i;
+            }
+
             // 遍历所有班次，累计评分
             foreach (var shift in schedule.Results)
             {
-                var personnelId = shift.PersonnelId;
-                var positionId = shift.PositionId;
+                if (!personIdToIndex.TryGetValue(shift.PersonnelId, out var personIdx))
+                    continue;
+
                 var date = shift.StartTime.Date;
                 var periodIndex = CalcPeriodIndex(shift.StartTime);
 
                 // 计算休息时间评分
-                var dayIndex = (date - schedule.StartDate.Date).Days;
-                restScore += softConstraintCalculator.CalculateRestScore(personnelId, dayIndex, periodIndex);
+                restScore += softConstraintCalculator.CalculateRestScore(personIdx, date);
 
                 // 计算时段平衡评分
-                timeSlotBalanceScore += softConstraintCalculator.CalculateTimeSlotBalanceScore(personnelId, periodIndex);
+                timeSlotBalanceScore += softConstraintCalculator.CalculateTimeSlotBalanceScore(personIdx, periodIndex);
 
                 // 计算节假日平衡评分
-                holidayBalanceScore += softConstraintCalculator.CalculateHolidayBalanceScore(personnelId, date);
+                holidayBalanceScore += softConstraintCalculator.CalculateHolidayBalanceScore(personIdx, date);
             }
 
             // 归一化评分（可选，根据实际需求调整）

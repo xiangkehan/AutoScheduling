@@ -125,7 +125,7 @@ namespace AutoScheduling3.Controls
                 BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
                 BorderThickness = new Thickness(1),
                 Background = (Brush)Application.Current.Resources["CardBackgroundFillColorSecondaryBrush"],
-                Padding = new Thickness(8, 4)
+                Padding = new Thickness(8, 4, 8, 4)
             };
             var emptyText = new TextBlock
             {
@@ -151,7 +151,7 @@ namespace AutoScheduling3.Controls
                     BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
                     BorderThickness = new Thickness(1),
                     Background = (Brush)Application.Current.Resources["CardBackgroundFillColorSecondaryBrush"],
-                    Padding = new Thickness(8, 4)
+                    Padding = new Thickness(8, 4, 8, 4)
                 };
 
                 var headerText = new TextBlock
@@ -212,7 +212,7 @@ namespace AutoScheduling3.Controls
                 BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
                 BorderThickness = new Thickness(1),
                 Background = (Brush)Application.Current.Resources["CardBackgroundFillColorSecondaryBrush"],
-                Padding = new Thickness(8, 4)
+                Padding = new Thickness(8, 4, 8, 4)
             };
 
             var rowHeaderText = new TextBlock

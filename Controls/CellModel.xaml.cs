@@ -4,6 +4,8 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Automation;
+using Windows.UI;
 
 namespace AutoScheduling3.Controls;
 
@@ -225,7 +227,7 @@ public sealed partial class CellModel : UserControl
         }
         catch
         {
-            CellBorder.Background = new SolidColorBrush(Color.FromArgb(30, 255, 0, 0));
+            CellBorder.Background = new SolidColorBrush(global::Windows.UI.Color.FromArgb(30, 255, 0, 0));
         }
         
         PersonnelNameText.Foreground = (Brush)Application.Current.Resources["SystemErrorTextColor"];

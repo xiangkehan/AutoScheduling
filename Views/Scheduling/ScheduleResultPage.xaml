@@ -77,8 +77,8 @@
                     <Grid Padding="24,0,24,0">
                         <!-- Grid View -->
                         <controls:ScheduleGridControl
-                            Schedule="{x:Bind ViewModel.Schedule, Mode=OneWay}"
-                            Visibility="{x:Bind ViewModel.CurrentViewMode, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0}"/>
+                            GridData="{x:Bind ViewModel.GridData, Mode=OneWay}"
+                            Visibility="{x:Bind ViewModel.CurrentViewMode, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=1}"/>
 
                         <!-- List View (Placeholder) -->
                         <Grid Visibility="{x:Bind ViewModel.CurrentViewMode, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=1}">

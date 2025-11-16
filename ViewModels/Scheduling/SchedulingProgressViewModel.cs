@@ -13,6 +13,8 @@ using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.Helpers;
 using AutoScheduling3.History;
 using AutoScheduling3.Models;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml;
 
 namespace AutoScheduling3.ViewModels.Scheduling;
 
@@ -549,7 +551,7 @@ public partial class SchedulingProgressViewModel : ObservableObject
         errorMessage += "• 点击下方查看冲突详情\n";
         errorMessage += "• 调整约束条件后重新排班\n";
         errorMessage += "• 增加可用人员或减少排班需求\n";
-        errorMessage += "• 点击"返回修改"按钮返回配置页面";
+        errorMessage += "• 点击\"返回修改\"按钮返回配置页面";
 
         await _dialogService.ShowErrorAsync("排班失败", errorMessage);
 
@@ -1242,13 +1244,47 @@ public partial class SchedulingProgressViewModel : ObservableObject
                 return;
             }
 
-            // 当前版本显示"功能开发中"对话框
-            var supportedFormats = _gridExporter.GetSupportedFormats();
-            var formatsText = string.Join("、", supportedFormats);
+            // 获取支持的导出格式
+            var exportFormats = _gridExporter.GetSupportedFormats();
+            var exportFormatsText = string.Join("、", exportFormats.Select(f => f.ToUpper()));
 
-            await _dialogService.ShowMessageAsync(
-                "功能开发中",
-                $"表格导出功能正在开发中。\n\n计划支持的格式：{formatsText}\n\n此功能将在后续版本中提供。");
+            // 显示格式选择对话框
+            var dialog = new ContentDialog
+            {
+                Title = "导出排班表格",
+                CloseButtonText = "关闭",
+                PrimaryButtonText = "确定",
+                SecondaryButtonText = "取消",
+                DefaultButton = ContentDialogButton.Primary
+            };
+
+            var formatComboBox = new ComboBox
+            {
+                ItemsSource = exportFormats,
+                SelectedIndex = 0,
+                Margin = new Thickness(0, 12, 0, 0)
+            };
+            dialog.Content = new StackPanel
+            {
+                Children =
+                {
+                    new TextBlock { Text = $"请选择导出格式 ({exportFormatsText}):" },
+                    formatComboBox
+                }
+            };
+            dialog.XamlRoot = App.MainWindow.Content.XamlRoot;
+
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary)
+            {
+                var selectedFormat = formatComboBox.SelectedItem as string;
+                if (!string.IsNullOrEmpty(selectedFormat))
+                {
+                    // 执行导出
+                    await PerformExportAsync(selectedFormat);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -1266,6 +1302,85 @@ public partial class SchedulingProgressViewModel : ObservableObject
     private bool CanExportGrid(string? format)
     {
         return GridData != null;
+    }
+
+    /// <summary>
+    /// 执行导出操作
+    /// </summary>
+    /// <param name="format">导出格式</param>
+    private async Task PerformExportAsync(string format)
+    {
+        if (GridData == null)
+        {
+            await _dialogService.ShowWarningAsync("没有可导出的排班表格数据");
+            return;
+        }
+
+        try
+        {
+            // 显示加载对话框
+            var loadingDialog = _dialogService.ShowLoadingDialog($"正在导出为 {format.ToUpper()} 格式...");
+
+            try
+            {
+                // 调用导出服务
+                var exportData = await _gridExporter.ExportAsync(GridData, format);
+
+                // 关闭加载对话框
+                loadingDialog.Hide();
+
+                // 保存文件
+                var savePicker = new Windows.Storage.Pickers.FileSavePicker();
+                var hwnd = App.MainWindowHandle;
+                WinRT.Interop.InitializeWithWindow.Initialize(savePicker, hwnd);
+
+                // 设置文件类型
+                savePicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+                savePicker.SuggestedFileName = $"排班表_{DateTime.Now:yyyyMMdd_HHmmss}";
+
+                switch (format.ToLower())
+                {
+                    case "excel":
+                        savePicker.FileTypeChoices.Add("Excel 文件", new List<string> { ".xlsx" });
+                        break;
+                    case "csv":
+                        savePicker.FileTypeChoices.Add("CSV 文件", new List<string> { ".csv" });
+                        break;
+                    case "pdf":
+                        savePicker.FileTypeChoices.Add("PDF 文件", new List<string> { ".pdf" });
+                        break;
+                    default:
+                        savePicker.FileTypeChoices.Add("文件", new List<string> { $".{format}" });
+                        break;
+                }
+
+                var file = await savePicker.PickSaveFileAsync();
+                if (file != null)
+                {
+                    await Windows.Storage.FileIO.WriteBytesAsync(file, exportData);
+                    await _dialogService.ShowSuccessAsync($"排班表已成功导出到：\n{file.Path}");
+                }
+            }
+            catch
+            {
+                // 确保关闭加载对话框
+                loadingDialog.Hide();
+                throw;
+            }
+        }
+        catch (NotImplementedException)
+        {
+            await _dialogService.ShowWarningAsync(
+                $"功能开发中\n\n{format.ToUpper()} 格式导出功能正在开发中，敬请期待。");
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync(
+                "导出失败",
+                $"导出排班表时发生错误：\n\n{ex.Message}");
+
+            System.Diagnostics.Debug.WriteLine($"Failed to perform export: {ex}");
+        }
     }
 
     #endregion

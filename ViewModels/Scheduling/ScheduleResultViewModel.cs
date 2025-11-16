@@ -18,7 +18,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
     public enum ScheduleViewMode { Grid, List, ByPersonnel }
 
     /// <summary>
-    /// ÅÅ°à½á¹ûÒ³Ãæ ViewModel£º¼ÓÔØÅÅ°àÏêÇé¡¢È·ÈÏ¡¢µ¼³ö¡¢·µ»ØµÈ
+    /// ï¿½Å°ï¿½ï¿½ï¿½Ò³ï¿½ï¿½ ViewModelï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å°ï¿½ï¿½ï¿½ï¿½é¡¢È·ï¿½Ï¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½
     /// </summary>
     public partial class ScheduleResultViewModel : ViewModelBase
     {
@@ -30,7 +30,25 @@ namespace AutoScheduling3.ViewModels.Scheduling
         public ScheduleDto Schedule
         {
             get => _schedule;
-            set => SetProperty(ref _schedule, value);
+            set
+            {
+                if (SetProperty(ref _schedule, value))
+                {
+                    OnPropertyChanged(nameof(GridData));
+                }
+            }
+        }
+
+        /// <summary>
+        /// è¡¨æ ¼æ•°æ®ï¼Œä» Schedule è½¬æ¢è€Œæ¥
+        /// </summary>
+        public ScheduleGridData? GridData
+        {
+            get
+            {
+                if (Schedule == null) return null;
+                return ConvertScheduleToGridData(Schedule);
+            }
         }
 
         private bool _isLoading;
@@ -123,7 +141,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 var dto = await _schedulingService.GetScheduleByIdAsync(id);
                 if (dto == null)
                 {
-                    await _dialogService.ShowWarningAsync("Î´ÕÒµ½ÅÅ°àÏêÇé");
+                    await _dialogService.ShowWarningAsync("Î´ï¿½Òµï¿½ï¿½Å°ï¿½ï¿½ï¿½ï¿½ï¿½");
                     _navigationService.GoBack();
                     return;
                 }
@@ -131,7 +149,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("¼ÓÔØÅÅ°àÏêÇéÊ§°Ü", ex);
+                await _dialogService.ShowErrorAsync("ï¿½ï¿½ï¿½ï¿½ï¿½Å°ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½", ex);
             }
             finally
             {
@@ -142,7 +160,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private async Task ConfirmAsync()
         {
             if (!CanConfirm()) return;
-            var ok = await _dialogService.ShowConfirmAsync("È·ÈÏÅÅ°à", "È·ÈÏºó½«ÎŞ·¨ĞŞ¸Ä£¬ÊÇ·ñ¼ÌĞø?", "È·ÈÏ", "È¡Ïû");
+            var ok = await _dialogService.ShowConfirmAsync("È·ï¿½ï¿½ï¿½Å°ï¿½", "È·ï¿½Ïºï¿½ï¿½Ş·ï¿½ï¿½Ş¸Ä£ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½?", "È·ï¿½ï¿½", "È¡ï¿½ï¿½");
             if (!ok) return;
             IsConfirming = true;
             try
@@ -150,11 +168,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 await _schedulingService.ConfirmScheduleAsync(Schedule.Id);
                 var dto = await _schedulingService.GetScheduleByIdAsync(Schedule.Id);
                 Schedule = dto;
-                await _dialogService.ShowSuccessAsync("ÅÅ°àÒÑÈ·ÈÏ");
+                await _dialogService.ShowSuccessAsync("ï¿½Å°ï¿½ï¿½ï¿½È·ï¿½ï¿½");
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("È·ÈÏÅÅ°àÊ§°Ü", ex);
+                await _dialogService.ShowErrorAsync("È·ï¿½ï¿½ï¿½Å°ï¿½Ê§ï¿½ï¿½", ex);
             }
             finally
             {
@@ -181,16 +199,16 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 if (file != null)
                 {
                     await FileIO.WriteBytesAsync(file, bytes);
-                    await _dialogService.ShowSuccessAsync($"µ¼³ö³É¹¦£¡ÎÄ¼şÒÑ±£´æµ½: {file.Path}");
+                    await _dialogService.ShowSuccessAsync($"ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½Ñ±ï¿½ï¿½æµ½: {file.Path}");
                 }
             }
             catch (NotImplementedException)
             {
-                await _dialogService.ShowWarningAsync("µ¼³ö¹¦ÄÜÉĞÎ´ÊµÏÖ");
+                await _dialogService.ShowWarningAsync("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î´Êµï¿½ï¿½");
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("µ¼³öÊ§°Ü", ex);
+                await _dialogService.ShowErrorAsync("ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½", ex);
             }
         }
 
@@ -200,7 +218,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
             var request = new SchedulingRequestDto
             {
-                Title = $"{Schedule.Title} (¸±±¾)",
+                Title = $"{Schedule.Title} (ï¿½ï¿½ï¿½ï¿½)",
                 StartDate = Schedule.StartDate,
                 EndDate = Schedule.EndDate,
                 PersonnelIds = Schedule.PersonnelIds.ToList(),
@@ -210,6 +228,89 @@ namespace AutoScheduling3.ViewModels.Scheduling
             };
 
             _navigationService.NavigateTo("CreateScheduling", request);
+        }
+
+        /// <summary>
+        /// å°† ScheduleDto è½¬æ¢ä¸º ScheduleGridData
+        /// </summary>
+        private ScheduleGridData ConvertScheduleToGridData(ScheduleDto schedule)
+        {
+            var gridData = new ScheduleGridData
+            {
+                StartDate = schedule.StartDate,
+                EndDate = schedule.EndDate,
+                PositionIds = schedule.PositionIds,
+                TotalDays = (schedule.EndDate - schedule.StartDate).Days + 1,
+                TotalPeriods = 12 // æ¯å¤©12ä¸ªæ—¶æ®µ
+            };
+
+            // åˆ›å»ºåˆ—ï¼ˆå“¨ä½ï¼‰
+            var positionGroups = schedule.Shifts
+                .GroupBy(s => s.PositionId)
+                .OrderBy(g => g.Key)
+                .ToList();
+
+            int colIndex = 0;
+            foreach (var posGroup in positionGroups)
+            {
+                var firstShift = posGroup.First();
+                gridData.Columns.Add(new ScheduleGridColumn
+                {
+                    ColumnIndex = colIndex,
+                    PositionId = firstShift.PositionId,
+                    PositionName = firstShift.PositionName
+                });
+                colIndex++;
+            }
+
+            // åˆ›å»ºè¡Œï¼ˆæ—¥æœŸ+æ—¶æ®µï¼‰
+            int rowIndex = 0;
+            for (var date = schedule.StartDate.Date; date <= schedule.EndDate.Date; date = date.AddDays(1))
+            {
+                for (int period = 0; period < 12; period++)
+                {
+                    var periodStart = date.AddHours(period * 2);
+                    var periodEnd = periodStart.AddHours(2);
+                    
+                    gridData.Rows.Add(new ScheduleGridRow
+                    {
+                        RowIndex = rowIndex,
+                        Date = date,
+                        PeriodIndex = period,
+                        DisplayText = $"{date:MM-dd} {periodStart:HH:mm}-{periodEnd:HH:mm}"
+                    });
+                    rowIndex++;
+                }
+            }
+
+            // åˆ›å»ºå•å…ƒæ ¼ï¼ˆç­æ¬¡ï¼‰
+            foreach (var shift in schedule.Shifts)
+            {
+                var shiftDate = shift.StartTime.Date;
+                var periodIndex = shift.PeriodIndex;
+                
+                // æ‰¾åˆ°å¯¹åº”çš„è¡Œç´¢å¼•
+                var row = gridData.Rows.FirstOrDefault(r => 
+                    r.Date.Date == shiftDate && r.PeriodIndex == periodIndex);
+                
+                // æ‰¾åˆ°å¯¹åº”çš„åˆ—ç´¢å¼•
+                var col = gridData.Columns.FirstOrDefault(c => c.PositionId == shift.PositionId);
+                
+                if (row != null && col != null)
+                {
+                    var cellKey = $"{row.RowIndex}_{col.ColumnIndex}";
+                    gridData.Cells[cellKey] = new ScheduleGridCell
+                    {
+                        RowIndex = row.RowIndex,
+                        ColumnIndex = col.ColumnIndex,
+                        PersonnelId = shift.PersonnelId,
+                        PersonnelName = shift.PersonnelName,
+                        IsAssigned = true
+                    };
+                }
+            }
+
+            return gridData;
         }
     }
 }

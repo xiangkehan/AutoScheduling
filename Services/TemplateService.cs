@@ -6,6 +6,9 @@ using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
+using OfficeOpenXml;
+using System.IO;
+using AutoScheduling3.Models;
 
 namespace AutoScheduling3.Services;
 
@@ -241,12 +244,66 @@ public class TemplateService : ITemplateService
         };
 
         // 执行排班
-        var schedule = await _schedulingService.ExecuteSchedulingAsync(schedulingRequest);
+        var result = await _schedulingService.ExecuteSchedulingAsync(schedulingRequest, null, System.Threading.CancellationToken.None);
+        if (!result.IsSuccess || result.Schedule == null)
+        {
+            throw new InvalidOperationException($"使用模板排班失败: {result.ErrorMessage}");
+        }
 
         // 更新模板使用记录
         await _templateRepository.UpdateUsageAsync(dto.TemplateId);
 
-        return schedule;
+        return result.Schedule;
+    }
+
+    /// <summary>
+    /// 导出排班
+    /// </summary>
+    public async Task<byte[]> ExportScheduleAsync(int id, string format)
+    {
+        // This method should now delegate to the SchedulingService
+        return await _schedulingService.ExportScheduleAsync(id, format);
+    }
+
+    private async Task<byte[]> GenerateCsvAsync(ScheduleDto schedule)
+    {
+        // This method is likely obsolete as the logic is now in SchedulingService/GridExporter
+        // But to fix compilation, I'll adapt it to the new DTO.
+        using (var package = new ExcelPackage())
+        {
+            var worksheet = package.Workbook.Worksheets.Add("Schedule");
+
+            // Add header row
+            worksheet.Cells[1, 1].Value = "Date";
+            worksheet.Cells[1, 2].Value = "Time";
+            worksheet.Cells[1, 3].Value = "Position";
+            worksheet.Cells[1, 4].Value = "Personnel";
+            worksheet.Cells[1, 5].Value = "Is Manual";
+            worksheet.Cells[1, 6].Value = "Has Conflict";
+
+
+            // Add data rows
+            var row = 2;
+            foreach (var shift in schedule.Shifts.OrderBy(s => s.StartTime).ThenBy(s => s.PositionName))
+            {
+                worksheet.Cells[row, 1].Value = shift.StartTime.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 2].Value = shift.StartTime.ToString("HH:mm") + "-" + shift.EndTime.ToString("HH:mm");
+                worksheet.Cells[row, 3].Value = shift.PositionName;
+                worksheet.Cells[row, 4].Value = shift.PersonnelName;
+                
+                // These properties are not directly on the ShiftDto, they are on the GridCell.
+                // This method is ill-suited for the new model. The call to ExportScheduleAsync is the correct path.
+                // I will leave these blank to fix compilation.
+                worksheet.Cells[row, 5].Value = ""; 
+                worksheet.Cells[row, 6].Value = "";
+                row++;
+            }
+
+            // Auto-fit columns
+            worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+            return await package.GetAsByteArrayAsync();
+        }
     }
 
     /// <summary>

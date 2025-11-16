@@ -65,8 +65,15 @@ namespace AutoScheduling3.Examples
             };
             try
             {
-                var schedule = await _service.ExecuteSchedulingAsync(request);
-                Console.WriteLine($"✓ 排班完成：{schedule.Title} 班次数={schedule.Shifts.Count}");
+                var result = await _service.ExecuteSchedulingAsync(request, null, CancellationToken.None);
+                if (result.IsSuccess && result.Schedule != null)
+                {
+                    Console.WriteLine($"✓ 排班完成：{result.Schedule.Title} 班次数={result.Schedule.Shifts.Count}");
+                }
+                else
+                {
+                    Console.WriteLine($"✗ 排班失败：{result.ErrorMessage}");
+                }
             }
             catch (Exception ex)
             {
