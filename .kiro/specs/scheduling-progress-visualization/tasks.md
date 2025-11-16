@@ -26,7 +26,7 @@
   - 将接口和实现放置在 `Services/Interfaces/` 和 `Services/` 目录下
   - _需求: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [x] 3. 扩展 GreedyScheduler 支持进度报告
+- [-] 3. 扩展 GreedyScheduler 支持进度报告
 
 
 
@@ -40,6 +40,11 @@
   - _需求: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5_
 
 - [-] 4. 扩展 SchedulingService 支持进度报告和取消
+
+- [x] 4.1 修改 ExecuteSchedulingAsync 方法签名
+
+
+
 
 - [x] 4.1 修改 ExecuteSchedulingAsync 方法签名
 
@@ -66,6 +71,8 @@
 
 - [x] 4.3 实现取消令牌支持
 
+- [x] 4.3 实现取消令牌支持
+
 
 
 
@@ -75,11 +82,7 @@
   - 捕获 `OperationCanceledException`，返回取消状态的 `SchedulingResult`
   - _需求: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [x] 4.4 实现 BuildSchedulingResult 方法
-
-
-
-
+- [ ] 4.4 实现 BuildSchedulingResult 方法
 
   - 创建 `BuildSchedulingResult` 方法，接收 `Schedule` 和执行时长
   - 计算统计信息：总分配数、人员工作量、哨位覆盖率、软约束评分
@@ -129,6 +132,9 @@
 
 
 
+
+
+
   - 创建 `SchedulingProgressViewModel` 类，继承 `ObservableObject`
   - 注入依赖：`ISchedulingService`、`NavigationService`、`IScheduleGridExporter`
   - 添加进度状态属性：`ProgressPercentage`、`CurrentStage`、`StageDescription`、`IsExecuting`、`IsCompleted`、`IsFailed`、`IsCancelled`
@@ -137,14 +143,7 @@
   - 将 ViewModel 放置在 `ViewModels/Scheduling/` 目录下
   - _需求: 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [x] 5.2 实现排班执行和进度更新逻辑
-
-
-
-
-
-
-
+- [ ] 5.2 实现排班执行和进度更新逻辑
   - 实现 `StartSchedulingCommand`，接收 `SchedulingRequestDto` 参数
   - 在命令中创建 `IProgress<SchedulingProgressReport>` 实例
   - 调用 `SchedulingService.ExecuteSchedulingAsync`，传递进度报告和取消令牌
@@ -162,6 +161,7 @@
 
 
 
+- [ ] 5.3 实现结果数据处理
   - 添加结果数据属性：`Result`、`PersonnelWorkloads`、`PositionCoverages`、`Conflicts`、`GridData`
 
 
@@ -169,8 +169,6 @@
   - 调用 `SchedulingService.BuildScheduleGridData` 构建表格数据
   - 填充 `PersonnelWorkloads`、`PositionCoverages`、`Conflicts` 集合
   - _需求: 3.1, 3.2, 3.3, 3.4, 3.5, 5.1, 5.2_
-
-
 
 - [ ] 5.4 实现取消和操作命令
 
@@ -182,9 +180,6 @@
   - _需求: 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
 
 - [ ] 5.5 实现表格相关命令
-
-
-
   - 添加属性：`IsGridFullScreen`
   - 实现 `ToggleGridFullScreenCommand`，切换全屏状态
   - 实现 `ExportGridCommand`，显示"功能开发中"对话框（预留接口）
