@@ -326,7 +326,6 @@
                        PrimaryButtonText="提交"
                        CloseButtonText="取消"
                        DefaultButton="Primary"
-                       x:Load="{x:Bind ViewModel.IsCreatingManualAssignment, Mode=OneWay}"
                        PrimaryButtonCommand="{x:Bind ViewModel.SubmitCreateManualAssignmentCommand}"
                        CloseButtonCommand="{x:Bind ViewModel.CancelCreateManualAssignmentCommand}">
             <ScrollViewer MaxHeight="500">
@@ -411,7 +410,6 @@
                        PrimaryButtonText="提交"
                        CloseButtonText="取消"
                        DefaultButton="Primary"
-                       x:Load="{x:Bind ViewModel.IsEditingManualAssignment, Mode=OneWay}"
                        PrimaryButtonCommand="{x:Bind ViewModel.SubmitEditManualAssignmentCommand}"
                        CloseButtonCommand="{x:Bind ViewModel.CancelEditManualAssignmentCommand}">
             <ScrollViewer MaxHeight="500">
