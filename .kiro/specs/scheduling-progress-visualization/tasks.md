@@ -26,7 +26,10 @@
   - 将接口和实现放置在 `Services/Interfaces/` 和 `Services/` 目录下
   - _需求: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [-] 3. 扩展 GreedyScheduler 支持进度报告
+- [x] 3. 扩展 GreedyScheduler 支持进度报告
+
+
+
 
 
   - 在 `GreedyScheduler.ExecuteAsync` 方法中添加 `IProgress<SchedulingProgressReport>` 参数
@@ -36,8 +39,12 @@
   - 计算并报告进度百分比、已完成分配数、剩余时段数等
   - _需求: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 4. 扩展 SchedulingService 支持进度报告和取消
-- [ ] 4.1 修改 ExecuteSchedulingAsync 方法签名
+- [-] 4. 扩展 SchedulingService 支持进度报告和取消
+
+- [x] 4.1 修改 ExecuteSchedulingAsync 方法签名
+
+
+
 
   - 在 `ISchedulingService` 接口中添加新的方法重载
   - 方法签名：`Task<SchedulingResult> ExecuteSchedulingAsync(SchedulingRequestDto request, IProgress<SchedulingProgressReport>? progress = null, CancellationToken cancellationToken = default)`
@@ -46,7 +53,10 @@
   - _需求: 1.1, 1.2, 1.3, 7.1, 7.2, 7.3_
 
 
-- [ ] 4.2 实现进度报告转发逻辑
+- [x] 4.2 实现进度报告转发逻辑
+
+
+
   - 在 `ExecuteSchedulingAsync` 中创建内部进度报告处理器
   - 将 `IProgress<SchedulingProgressReport>` 传递给 `GreedyScheduler.ExecuteAsync`
   - 在关键步骤（验证、加载数据、构建上下文等）报告进度
@@ -54,14 +64,22 @@
   - _需求: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3_
 
 
-- [ ] 4.3 实现取消令牌支持
+- [x] 4.3 实现取消令牌支持
+
+
+
+
   - 在 `ExecuteSchedulingAsync` 的各个阶段检查 `cancellationToken.IsCancellationRequested`
   - 在验证阶段、数据加载阶段、算法执行阶段添加取消检查点
   - 将 `cancellationToken` 传递给 `GreedyScheduler.ExecuteAsync`
   - 捕获 `OperationCanceledException`，返回取消状态的 `SchedulingResult`
   - _需求: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 4.4 实现 BuildSchedulingResult 方法
+- [x] 4.4 实现 BuildSchedulingResult 方法
+
+
+
+
 
   - 创建 `BuildSchedulingResult` 方法，接收 `Schedule` 和执行时长
   - 计算统计信息：总分配数、人员工作量、哨位覆盖率、软约束评分
@@ -72,6 +90,8 @@
   - 返回包含完整统计信息的 `SchedulingResult`
   - _需求: 3.1, 3.2, 3.3, 3.4, 3.5_
 
+
+
 - [ ] 4.5 实现 BuildScheduleGridData 方法
 
   - 创建 `BuildScheduleGridData` 方法，接收 `ScheduleDto`
@@ -81,6 +101,9 @@
   - 标记手动指定的单元格（通过查询 `ManualAssignments`）
   - 标记有冲突的单元格（通过 `Conflicts` 列表）
   - 返回完整的 `ScheduleGridData` 对象
+
+
+
   - _需求: 5.1, 5.2, 5.3, 5.4, 5.5_
 
 
@@ -88,13 +111,23 @@
   - 在 `ExecuteSchedulingAsync` 中添加 try-catch 块
   - 捕获 `ArgumentException`，返回参数错误的 `SchedulingResult`
   - 捕获 `InvalidOperationException`，返回业务逻辑错误的 `SchedulingResult`
+
+
   - 捕获 `OperationCanceledException`，返回取消状态的 `SchedulingResult`
   - 捕获通用 `Exception`，返回系统错误的 `SchedulingResult`
   - 在失败结果中包含错误消息、部分完成的分配数、冲突详情
   - _需求: 4.1, 4.2, 4.3, 4.4, 4.5_
 
 - [ ] 5. 创建 SchedulingProgressViewModel 基础结构
-- [ ] 5.1 创建 ViewModel 类和基础属性
+- [x] 5.1 创建 ViewModel 类和基础属性
+
+
+
+
+
+
+
+
 
   - 创建 `SchedulingProgressViewModel` 类，继承 `ObservableObject`
   - 注入依赖：`ISchedulingService`、`NavigationService`、`IScheduleGridExporter`
@@ -104,23 +137,43 @@
   - 将 ViewModel 放置在 `ViewModels/Scheduling/` 目录下
   - _需求: 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 5.2 实现排班执行和进度更新逻辑
+- [x] 5.2 实现排班执行和进度更新逻辑
+
+
+
+
+
+
+
   - 实现 `StartSchedulingCommand`，接收 `SchedulingRequestDto` 参数
   - 在命令中创建 `IProgress<SchedulingProgressReport>` 实例
   - 调用 `SchedulingService.ExecuteSchedulingAsync`，传递进度报告和取消令牌
   - 实现进度回调方法 `OnProgressReported`，更新UI绑定属性
   - 计算并更新 `ElapsedTime`（使用 `DispatcherTimer` 或 `Stopwatch`）
+
+
   - 处理执行完成后的逻辑，设置 `IsCompleted` 或 `IsFailed`
   - _需求: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5_
+-
 
-- [ ] 5.3 实现结果数据处理
+- [x] 5.3 实现结果数据处理
+
+
+
+
+
   - 添加结果数据属性：`Result`、`PersonnelWorkloads`、`PositionCoverages`、`Conflicts`、`GridData`
+
+
   - 实现 `ProcessSchedulingResult` 方法，将 `SchedulingResult` 转换为UI可绑定的集合
   - 调用 `SchedulingService.BuildScheduleGridData` 构建表格数据
   - 填充 `PersonnelWorkloads`、`PositionCoverages`、`Conflicts` 集合
   - _需求: 3.1, 3.2, 3.3, 3.4, 3.5, 5.1, 5.2_
 
+
+
 - [ ] 5.4 实现取消和操作命令
+
   - 实现 `CancelSchedulingCommand`，调用 `_cancellationTokenSource.Cancel()`
   - 实现 `SaveScheduleCommand`，调用 `SchedulingService` 保存排班结果
   - 实现 `DiscardScheduleCommand`，显示确认对话框后清除结果
@@ -129,6 +182,9 @@
   - _需求: 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
 
 - [ ] 5.5 实现表格相关命令
+
+
+
   - 添加属性：`IsGridFullScreen`
   - 实现 `ToggleGridFullScreenCommand`，切换全屏状态
   - 实现 `ExportGridCommand`，显示"功能开发中"对话框（预留接口）
@@ -137,6 +193,8 @@
 
 - [ ] 6. 创建 ScheduleGridControl 自定义控件
 - [ ] 6.1 创建控件基础结构
+
+
   - 创建 `ScheduleGridControl` 类，继承 `Control`
   - 定义 `GridData` 依赖属性，类型为 `ScheduleGridData`
   - 定义 `OnGridDataChanged` 回调方法
@@ -146,6 +204,8 @@
   - _需求: 5.1, 5.2_
 
 - [ ] 6.2 实现表格结构构建
+
+
   - 实现 `BuildGridStructure` 方法，根据 `GridData` 构建表格
   - 实现 `CreateColumnHeaders` 方法，创建哨位列头
   - 实现 `CreateRowHeaders` 方法，创建日期+时段行头
@@ -153,7 +213,9 @@
   - 使用 `Grid` 或自定义 `Panel` 布局单元格
   - _需求: 5.1, 5.2_
 
+
 - [ ] 6.3 实现虚拟化渲染
+
   - 创建 `VirtualizedGridPanel` 类，继承 `Panel`
   - 重写 `MeasureOverride` 和 `ArrangeOverride` 方法
   - 实现 `CalculateVisibleRect` 方法，计算可见区域
@@ -162,7 +224,9 @@
   - 实现单元格回收机制，重用不可见的单元格控件
   - _需求: 5.1, 5.2_
 
+
 - [ ] 6.4 实现单元格样式和交互
+
   - 创建单元格控件 `ScheduleGridCell`，继承 `Border`
   - 实现单元格数据绑定：`PersonnelName`、`IsManualAssignment`、`HasConflict`
   - 应用样式：普通单元格、手动指定单元格（蓝色边框）、冲突单元格（红色边框）
@@ -171,6 +235,8 @@
   - _需求: 5.1, 5.2, 5.3, 5.4, 5.5_
 
 - [ ] 6.5 添加工具栏按钮
+
+
   - 在控件模板中添加工具栏 `StackPanel`
   - 添加导出按钮，设置 `IsEnabled="False"`，ToolTip 显示"功能开发中"
   - 添加全屏按钮，使用 Segoe MDL2 Assets 图标（&#xE740;）

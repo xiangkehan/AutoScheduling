@@ -57,12 +57,36 @@ public class SchedulingService : ISchedulingService
 
     public async Task<ScheduleDto> ExecuteSchedulingAsync(SchedulingRequestDto request, CancellationToken cancellationToken = default)
     {
+        // 调用新的重载方法，不传递进度报告
+        var result = await ExecuteSchedulingAsync(request, progress: null, cancellationToken);
+        
+        // 如果失败，抛出异常以保持向后兼容
+        if (!result.IsSuccess)
+        {
+            throw new InvalidOperationException(result.ErrorMessage ?? "排班执行失败");
+        }
+        
+        return result.Schedule!;
+    }
+
+    public async Task<SchedulingResult> ExecuteSchedulingAsync(SchedulingRequestDto request, IProgress<SchedulingProgressReport>? progress = null, CancellationToken cancellationToken = default)
+    {
+        var startTime = DateTime.UtcNow;
+        var executionTimer = System.Diagnostics.Stopwatch.StartNew();
+        Schedule? partialSchedule = null;
+        int partialCompletedAssignments = 0;
+        
         System.Diagnostics.Debug.WriteLine("=== 开始执行排班 ===");
         
         if (request == null) 
         {
             System.Diagnostics.Debug.WriteLine("错误: request 为 null");
-            throw new ArgumentNullException(nameof(request));
+            return new SchedulingResult
+            {
+                IsSuccess = false,
+                ErrorMessage = "排班请求不能为空",
+                TotalDuration = DateTime.UtcNow - startTime
+            };
         }
         
         System.Diagnostics.Debug.WriteLine($"排班标题: {request.Title}");
@@ -76,6 +100,9 @@ public class SchedulingService : ISchedulingService
 
         try
         {
+            // 报告初始化阶段 - 对应需求1.1, 1.2, 1.3
+            ReportProgress(progress, SchedulingStage.Initializing, "正在初始化排班环境...", 0, executionTimer.Elapsed);
+            
             System.Diagnostics.Debug.WriteLine("步骤1: 基本参数验证");
             ValidateRequest(request);
             
@@ -84,6 +111,9 @@ public class SchedulingService : ISchedulingService
             
             cancellationToken.ThrowIfCancellationRequested();
 
+            // 报告加载数据阶段 - 对应需求1.2, 2.1
+            ReportProgress(progress, SchedulingStage.LoadingData, "正在加载排班数据...", 5, executionTimer.Elapsed);
+            
             System.Diagnostics.Debug.WriteLine("步骤3: 加载基础数据");
             // 并行加载基础数据
             personalsTask = (_personalRepo as PersonalRepository)?.GetByIdsAsync(request.PersonnelIds) ?? _personalRepo.GetPersonnelByIdsAsync(request.PersonnelIds);
@@ -93,15 +123,43 @@ public class SchedulingService : ISchedulingService
             
             System.Diagnostics.Debug.WriteLine($"加载完成 - 人员: {personalsTask.Result.Count}, 哨位: {positionsTask.Result.Count}, 技能: {skillsTask.Result.Count}");
         }
+        catch (OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine("排班已取消");
+            return new SchedulingResult
+            {
+                IsSuccess = false,
+                ErrorMessage = "排班已取消",
+                TotalDuration = DateTime.UtcNow - startTime
+            };
+        }
+        catch (ArgumentException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"参数验证失败: {ex.Message}");
+            return new SchedulingResult
+            {
+                IsSuccess = false,
+                ErrorMessage = ex.Message,
+                TotalDuration = DateTime.UtcNow - startTime
+            };
+        }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"排班前期验证失败: {ex.GetType().Name} - {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"堆栈: {ex.StackTrace}");
-            throw;
+            return new SchedulingResult
+            {
+                IsSuccess = false,
+                ErrorMessage = $"排班初始化失败: {ex.Message}",
+                TotalDuration = DateTime.UtcNow - startTime
+            };
         }
 
         try
         {
+            // 报告构建上下文阶段 - 对应需求1.2, 1.3
+            ReportProgress(progress, SchedulingStage.BuildingContext, "正在构建排班上下文...", 10, executionTimer.Elapsed);
+            
             System.Diagnostics.Debug.WriteLine("步骤4: 构建排班上下文");
             // 构建上下文
             var context = new SchedulingContext
@@ -127,6 +185,8 @@ public class SchedulingService : ISchedulingService
                 context.HolidayConfig = allConfigs.FirstOrDefault(c => c.Id == request.HolidayConfigId.Value);
                 System.Diagnostics.Debug.WriteLine($"使用指定休息日配置: {request.HolidayConfigId}");
             }
+            
+            // 取消检查点 - 对应需求7.1, 7.2, 7.3
             cancellationToken.ThrowIfCancellationRequested();
 
             System.Diagnostics.Debug.WriteLine("步骤6: 加载定岗规则");
@@ -141,6 +201,8 @@ public class SchedulingService : ISchedulingService
                 context.FixedPositionRules = await _constraintRepo.GetAllFixedPositionRulesAsync(enabledOnly: true);
             }
             System.Diagnostics.Debug.WriteLine($"定岗规则数量: {context.FixedPositionRules?.Count ?? 0}");
+            
+            // 取消检查点 - 对应需求7.1, 7.2, 7.3
             cancellationToken.ThrowIfCancellationRequested();
 
             System.Diagnostics.Debug.WriteLine("步骤7: 加载手动指定");
@@ -155,20 +217,37 @@ public class SchedulingService : ISchedulingService
                 context.ManualAssignments = await _constraintRepo.GetManualAssignmentsByDateRangeAsync(request.StartDate, request.EndDate, enabledOnly: true);
             }
             System.Diagnostics.Debug.WriteLine($"手动指定数量: {context.ManualAssignments?.Count ?? 0}");
+            
+            // 取消检查点 - 对应需求7.1, 7.2, 7.3
             cancellationToken.ThrowIfCancellationRequested();
 
             System.Diagnostics.Debug.WriteLine("步骤8: 加载历史排班");
             // 最近历史排班（用于间隔评分等）
             context.LastConfirmedSchedule = await _historyMgmt.GetLastConfirmedScheduleAsync();
             System.Diagnostics.Debug.WriteLine($"最近确认排班: {context.LastConfirmedSchedule?.Id ?? 0}");
+            
+            // 取消检查点 - 对应需求7.1, 7.2, 7.3
             cancellationToken.ThrowIfCancellationRequested();
 
-            System.Diagnostics.Debug.WriteLine("步骤9: 执行排班算法");
-            // 执行算法
-            var scheduler = new GreedyScheduler(context);
-            var modelSchedule = await scheduler.ExecuteAsync(cancellationToken);
+            // 报告即将开始算法执行 - 对应需求1.2, 1.4
+            ReportProgress(progress, SchedulingStage.InitializingTensor, "正在准备执行排班算法...", 15, executionTimer.Elapsed);
             
-            System.Diagnostics.Debug.WriteLine($"算法执行完成，生成 {modelSchedule.Results?.Count ?? 0} 个班次");
+            // 取消检查点 - 对应需求7.1, 7.2, 7.3
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            System.Diagnostics.Debug.WriteLine("步骤9: 执行排班算法");
+            // 执行算法，传递进度报告和取消令牌 - 对应需求1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 7.1, 7.2, 7.3
+            var scheduler = new GreedyScheduler(context);
+            var modelSchedule = await scheduler.ExecuteAsync(progress, cancellationToken);
+            
+            // 保存部分进度信息，用于错误处理 - 对应需求4.1, 4.2, 4.3, 4.4, 4.5
+            partialSchedule = modelSchedule;
+            partialCompletedAssignments = modelSchedule.Results?.Count ?? 0;
+            
+            System.Diagnostics.Debug.WriteLine($"算法执行完成，生成 {partialCompletedAssignments} 个班次");
+            
+            // 取消检查点 - 对应需求7.1, 7.2, 7.3
+            cancellationToken.ThrowIfCancellationRequested();
             
             modelSchedule.Header = request.Title;
             modelSchedule.StartDate = request.StartDate.Date;
@@ -176,21 +255,68 @@ public class SchedulingService : ISchedulingService
             modelSchedule.CreatedAt = DateTime.UtcNow;
             modelSchedule.PersonnelIds = request.PersonnelIds;
             modelSchedule.PositionIds = request.PositionIds;
+            
+            // 取消检查点 - 对应需求7.1, 7.2, 7.3
             cancellationToken.ThrowIfCancellationRequested();
 
+            // 报告完成阶段 - 对应需求1.2, 1.5
+            ReportProgress(progress, SchedulingStage.Finalizing, "正在保存排班结果...", 95, executionTimer.Elapsed);
+            
             System.Diagnostics.Debug.WriteLine("步骤10: 保存到缓冲区");
             // 保存至缓冲区（草稿）
             _ = await _historyMgmt.AddToBufferAsync(modelSchedule);
 
             System.Diagnostics.Debug.WriteLine("步骤11: 映射DTO");
             // 映射 DTO（草稿未确认）
-            var result = await MapToScheduleDtoAsync(modelSchedule, confirmedAt: null);
+            var scheduleDto = await MapToScheduleDtoAsync(modelSchedule, confirmedAt: null);
+            
+            // 报告完成 - 对应需求1.2, 1.5
+            ReportProgress(progress, SchedulingStage.Completed, "排班完成", 100, executionTimer.Elapsed);
             
             System.Diagnostics.Debug.WriteLine("=== 排班执行成功 ===");
-            return result;
+            
+            executionTimer.Stop();
+            
+            // 构建完整的排班结果，包含统计信息 - 对应需求3.1, 3.2, 3.3, 3.4, 3.5
+            return await BuildSchedulingResult(modelSchedule, scheduleDto, DateTime.UtcNow - startTime);
+        }
+        catch (OperationCanceledException)
+        {
+            // 捕获取消异常，返回取消状态 - 对应需求4.5, 7.1, 7.2, 7.3, 7.4, 7.5
+            System.Diagnostics.Debug.WriteLine("排班已取消");
+            executionTimer.Stop();
+            
+            // 报告取消状态
+            ReportProgress(progress, SchedulingStage.Failed, "排班已取消", 0, executionTimer.Elapsed);
+            
+            // 构建失败结果，包含部分完成的分配数和冲突详情 - 对应需求4.5
+            return await BuildFailureResult(
+                "排班已取消",
+                partialSchedule,
+                partialCompletedAssignments,
+                DateTime.UtcNow - startTime,
+                request);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // 捕获业务逻辑错误，返回业务逻辑错误的 SchedulingResult - 对应需求4.2, 4.3
+            System.Diagnostics.Debug.WriteLine($"业务逻辑错误: {ex.Message}");
+            executionTimer.Stop();
+            
+            // 报告失败状态
+            ReportProgress(progress, SchedulingStage.Failed, $"业务逻辑错误: {ex.Message}", 0, executionTimer.Elapsed);
+            
+            // 构建失败结果，包含部分完成的分配数和冲突详情 - 对应需求4.2, 4.3
+            return await BuildFailureResult(
+                $"业务逻辑错误: {ex.Message}",
+                partialSchedule,
+                partialCompletedAssignments,
+                DateTime.UtcNow - startTime,
+                request);
         }
         catch (Exception ex)
         {
+            // 捕获通用异常，返回系统错误的 SchedulingResult - 对应需求4.4, 4.5
             System.Diagnostics.Debug.WriteLine($"排班执行失败: {ex.GetType().Name}");
             System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
@@ -198,8 +324,54 @@ public class SchedulingService : ISchedulingService
             {
                 System.Diagnostics.Debug.WriteLine($"内部异常: {ex.InnerException.Message}");
             }
-            throw;
+            executionTimer.Stop();
+            
+            // 报告失败状态
+            ReportProgress(progress, SchedulingStage.Failed, $"系统错误: {ex.Message}", 0, executionTimer.Elapsed);
+            
+            // 构建失败结果，包含部分完成的分配数和冲突详情 - 对应需求4.4, 4.5
+            return await BuildFailureResult(
+                $"系统错误: {ex.Message}",
+                partialSchedule,
+                partialCompletedAssignments,
+                DateTime.UtcNow - startTime,
+                request);
         }
+    }
+
+    /// <summary>
+    /// 报告进度 - 对应需求1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3
+    /// </summary>
+    private void ReportProgress(
+        IProgress<SchedulingProgressReport>? progress,
+        SchedulingStage stage,
+        string description,
+        double progressPercentage,
+        TimeSpan elapsedTime,
+        string? currentPositionName = null,
+        int? currentPeriodIndex = null,
+        DateTime? currentDate = null)
+    {
+        if (progress == null) return;
+
+        var report = new SchedulingProgressReport
+        {
+            ProgressPercentage = Math.Min(100, Math.Max(0, progressPercentage)),
+            CurrentStage = stage,
+            StageDescription = description,
+            CompletedAssignments = 0, // 将由GreedyScheduler更新
+            TotalSlotsToAssign = 0, // 将由GreedyScheduler更新
+            RemainingSlots = 0,
+            CurrentPositionName = currentPositionName,
+            CurrentPeriodIndex = currentPeriodIndex ?? -1,
+            CurrentDate = currentDate ?? DateTime.Today,
+            ElapsedTime = elapsedTime,
+            Warnings = new List<string>(),
+            HasErrors = false,
+            ErrorMessage = null
+        };
+
+        progress.Report(report);
     }
 
     public async Task<List<ScheduleSummaryDto>> GetDraftsAsync()
@@ -926,6 +1098,544 @@ public class SchedulingService : ISchedulingService
         {
             System.Diagnostics.Debug.WriteLine($"已清理 {expiredBuffers.Count} 个过期草稿排班");
         }
+    }
+
+    #endregion
+
+    #region 排班结果构建 - 对应需求3.1, 3.2, 3.3, 3.4, 3.5
+
+    /// <summary>
+    /// 构建排班结果，包含完整的统计信息 - 对应需求3.1, 3.2, 3.3, 3.4, 3.5
+    /// </summary>
+    /// <param name="schedule">排班模型</param>
+    /// <param name="scheduleDto">排班DTO</param>
+    /// <param name="totalDuration">总执行时长</param>
+    /// <returns>包含统计信息的排班结果</returns>
+    private async Task<SchedulingResult> BuildSchedulingResult(Schedule schedule, ScheduleDto scheduleDto, TimeSpan totalDuration)
+    {
+        // 计算总分配数 - 对应需求3.1, 3.2
+        var totalAssignments = schedule.Results.Count;
+
+        // 计算人员工作量 - 对应需求3.3
+        var personnelWorkloads = await CalculatePersonnelWorkloads(schedule);
+
+        // 计算哨位覆盖率 - 对应需求3.3
+        var positionCoverages = await CalculatePositionCoverages(schedule);
+
+        // 计算软约束评分 - 对应需求3.3
+        var softScores = await CalculateSoftConstraintScores(schedule);
+
+        // 构建统计信息对象
+        var statistics = new SchedulingStatistics
+        {
+            TotalAssignments = totalAssignments,
+            PersonnelWorkloads = personnelWorkloads,
+            PositionCoverages = positionCoverages,
+            SoftScores = softScores
+        };
+
+        // 识别并收集冲突信息 - 对应需求3.4, 3.5
+        var conflicts = scheduleDto.Conflicts.Select(c => new ConflictInfo
+        {
+            ConflictType = c.Type,
+            Description = c.Message,
+            PositionId = c.PositionId,
+            PositionName = null, // 将在UI层填充
+            PeriodIndex = c.PeriodIndex,
+            Date = c.StartTime?.Date
+        }).ToList();
+
+        // 返回完整的排班结果
+        return new SchedulingResult
+        {
+            IsSuccess = true,
+            Schedule = scheduleDto,
+            Statistics = statistics,
+            Conflicts = conflicts,
+            TotalDuration = totalDuration
+        };
+    }
+
+    /// <summary>
+    /// 计算人员工作量统计 - 对应需求3.3
+    /// </summary>
+    /// <param name="schedule">排班模型</param>
+    /// <returns>人员工作量字典（键为人员ID）</returns>
+    private async Task<Dictionary<int, PersonnelWorkload>> CalculatePersonnelWorkloads(Schedule schedule)
+    {
+        var workloads = new Dictionary<int, PersonnelWorkload>();
+
+        // 获取人员名称映射
+        var personnel = await _personalRepo.GetPersonnelByIdsAsync(schedule.PersonnelIds);
+        var personnelNames = personnel.ToDictionary(p => p.Id, p => p.Name);
+
+        // 按人员分组统计班次
+        var shiftsByPersonnel = schedule.Results.GroupBy(s => s.PersonnelId);
+
+        foreach (var group in shiftsByPersonnel)
+        {
+            var personnelId = group.Key;
+            var shifts = group.ToList();
+
+            // 统计总班次数
+            var totalShifts = shifts.Count;
+
+            // 统计日哨数和夜哨数
+            // 日哨：06:00-18:00 (时段索引 3-8)
+            // 夜哨：18:00-06:00 (时段索引 9-11, 0-2)
+            var dayShifts = shifts.Count(s => 
+            {
+                var periodIndex = CalcPeriodIndex(s.StartTime);
+                return periodIndex >= 3 && periodIndex <= 8;
+            });
+
+            var nightShifts = shifts.Count(s => 
+            {
+                var periodIndex = CalcPeriodIndex(s.StartTime);
+                return periodIndex >= 9 || periodIndex <= 2;
+            });
+
+            // 获取人员姓名
+            var personnelName = personnelNames.TryGetValue(personnelId, out var name) 
+                ? name 
+                : $"未知人员 (ID: {personnelId})";
+
+            workloads[personnelId] = new PersonnelWorkload
+            {
+                PersonnelId = personnelId,
+                PersonnelName = personnelName,
+                TotalShifts = totalShifts,
+                DayShifts = dayShifts,
+                NightShifts = nightShifts
+            };
+        }
+
+        // 为没有分配班次的人员添加零记录
+        foreach (var personnelId in schedule.PersonnelIds)
+        {
+            if (!workloads.ContainsKey(personnelId))
+            {
+                var personnelName = personnelNames.TryGetValue(personnelId, out var name) 
+                    ? name 
+                    : $"未知人员 (ID: {personnelId})";
+
+                workloads[personnelId] = new PersonnelWorkload
+                {
+                    PersonnelId = personnelId,
+                    PersonnelName = personnelName,
+                    TotalShifts = 0,
+                    DayShifts = 0,
+                    NightShifts = 0
+                };
+            }
+        }
+
+        return workloads;
+    }
+
+    /// <summary>
+    /// 计算哨位覆盖率统计 - 对应需求3.3
+    /// </summary>
+    /// <param name="schedule">排班模型</param>
+    /// <returns>哨位覆盖率字典（键为哨位ID）</returns>
+    private async Task<Dictionary<int, PositionCoverage>> CalculatePositionCoverages(Schedule schedule)
+    {
+        var coverages = new Dictionary<int, PositionCoverage>();
+
+        // 获取哨位名称映射
+        var positions = await _positionRepo.GetPositionsByIdsAsync(schedule.PositionIds);
+        var positionNames = positions.ToDictionary(p => p.Id, p => p.Name);
+
+        // 计算总时段数：天数 × 12个时段/天
+        var totalDays = (schedule.EndDate.Date - schedule.StartDate.Date).Days + 1;
+        var totalSlotsPerPosition = totalDays * 12;
+
+        // 按哨位分组统计已分配时段数
+        var shiftsByPosition = schedule.Results.GroupBy(s => s.PositionId);
+
+        foreach (var positionId in schedule.PositionIds)
+        {
+            var positionName = positionNames.TryGetValue(positionId, out var name) 
+                ? name 
+                : $"未知哨位 (ID: {positionId})";
+
+            // 获取该哨位的已分配时段数
+            var assignedSlots = shiftsByPosition
+                .FirstOrDefault(g => g.Key == positionId)
+                ?.Count() ?? 0;
+
+            // 计算覆盖率
+            var coverageRate = totalSlotsPerPosition > 0 
+                ? (double)assignedSlots / totalSlotsPerPosition 
+                : 0.0;
+
+            coverages[positionId] = new PositionCoverage
+            {
+                PositionId = positionId,
+                PositionName = positionName,
+                AssignedSlots = assignedSlots,
+                TotalSlots = totalSlotsPerPosition,
+                CoverageRate = Math.Round(coverageRate, 4) // 保留4位小数
+            };
+        }
+
+        return coverages;
+    }
+
+    /// <summary>
+    /// 计算软约束评分 - 对应需求3.3
+    /// </summary>
+    /// <param name="schedule">排班模型</param>
+    /// <returns>软约束评分</returns>
+    private async Task<SoftConstraintScores> CalculateSoftConstraintScores(Schedule schedule)
+    {
+        // 构建排班上下文用于评分计算
+        var context = new SchedulingContext
+        {
+            Personals = await _personalRepo.GetPersonnelByIdsAsync(schedule.PersonnelIds),
+            Positions = await _positionRepo.GetPositionsByIdsAsync(schedule.PositionIds),
+            Skills = await _skillRepo.GetAllAsync(),
+            StartDate = schedule.StartDate.Date,
+            EndDate = schedule.EndDate.Date,
+            HolidayConfig = await _constraintRepo.GetActiveHolidayConfigAsync(),
+            LastConfirmedSchedule = await _historyMgmt.GetLastConfirmedScheduleAsync()
+        };
+
+        // 创建软约束计算器
+        var softConstraintCalculator = new SchedulingEngine.Core.SoftConstraintCalculator(context);
+
+        // 计算各项软约束评分
+        double restScore = 0.0;
+        double timeSlotBalanceScore = 0.0;
+        double holidayBalanceScore = 0.0;
+
+        try
+        {
+            // 遍历所有班次，累计评分
+            foreach (var shift in schedule.Results)
+            {
+                var personnelId = shift.PersonnelId;
+                var positionId = shift.PositionId;
+                var date = shift.StartTime.Date;
+                var periodIndex = CalcPeriodIndex(shift.StartTime);
+
+                // 计算休息时间评分
+                var dayIndex = (date - schedule.StartDate.Date).Days;
+                restScore += softConstraintCalculator.CalculateRestScore(personnelId, dayIndex, periodIndex);
+
+                // 计算时段平衡评分
+                timeSlotBalanceScore += softConstraintCalculator.CalculateTimeSlotBalanceScore(personnelId, periodIndex);
+
+                // 计算节假日平衡评分
+                holidayBalanceScore += softConstraintCalculator.CalculateHolidayBalanceScore(personnelId, date);
+            }
+
+            // 归一化评分（可选，根据实际需求调整）
+            var totalShifts = schedule.Results.Count;
+            if (totalShifts > 0)
+            {
+                restScore /= totalShifts;
+                timeSlotBalanceScore /= totalShifts;
+                holidayBalanceScore /= totalShifts;
+            }
+        }
+        catch (Exception ex)
+        {
+            // 如果评分计算失败，记录日志但不影响整体流程
+            System.Diagnostics.Debug.WriteLine($"软约束评分计算失败: {ex.Message}");
+        }
+
+        // 计算总分
+        var totalScore = restScore + timeSlotBalanceScore + holidayBalanceScore;
+
+        return new SoftConstraintScores
+        {
+            TotalScore = Math.Round(totalScore, 2),
+            RestScore = Math.Round(restScore, 2),
+            TimeSlotBalanceScore = Math.Round(timeSlotBalanceScore, 2),
+            HolidayBalanceScore = Math.Round(holidayBalanceScore, 2)
+        };
+    }
+
+    /// <summary>
+    /// 构建失败结果，包含错误消息、部分完成的分配数、冲突详情 - 对应需求4.1, 4.2, 4.3, 4.4, 4.5
+    /// </summary>
+    /// <param name="errorMessage">错误消息</param>
+    /// <param name="partialSchedule">部分完成的排班（如果有）</param>
+    /// <param name="partialCompletedAssignments">部分完成的分配数</param>
+    /// <param name="totalDuration">总执行时长</param>
+    /// <param name="request">原始排班请求</param>
+    /// <returns>包含失败信息的排班结果</returns>
+    private async Task<SchedulingResult> BuildFailureResult(
+        string errorMessage,
+        Schedule? partialSchedule,
+        int partialCompletedAssignments,
+        TimeSpan totalDuration,
+        SchedulingRequestDto request)
+    {
+        var conflicts = new List<ConflictInfo>();
+        SchedulingStatistics? statistics = null;
+
+        try
+        {
+            // 如果有部分完成的排班，尝试构建统计信息和冲突详情
+            if (partialSchedule != null && partialSchedule.Results?.Any() == true)
+            {
+                // 设置排班的基本信息
+                partialSchedule.Header = request.Title;
+                partialSchedule.StartDate = request.StartDate.Date;
+                partialSchedule.EndDate = request.EndDate.Date;
+                partialSchedule.PersonnelIds = request.PersonnelIds;
+                partialSchedule.PositionIds = request.PositionIds;
+
+                // 计算部分统计信息
+                var personnelWorkloads = await CalculatePersonnelWorkloads(partialSchedule);
+                var positionCoverages = await CalculatePositionCoverages(partialSchedule);
+                var softScores = await CalculateSoftConstraintScores(partialSchedule);
+
+                statistics = new SchedulingStatistics
+                {
+                    TotalAssignments = partialCompletedAssignments,
+                    PersonnelWorkloads = personnelWorkloads,
+                    PositionCoverages = positionCoverages,
+                    SoftScores = softScores
+                };
+
+                // 生成冲突信息
+                var scheduleDto = await MapToScheduleDtoAsync(partialSchedule, confirmedAt: null);
+                conflicts = scheduleDto.Conflicts.Select(c => new ConflictInfo
+                {
+                    ConflictType = c.Type,
+                    Description = c.Message,
+                    PositionId = c.PositionId,
+                    PositionName = null,
+                    PeriodIndex = c.PeriodIndex,
+                    Date = c.StartTime?.Date
+                }).ToList();
+
+                // 添加失败原因作为冲突信息
+                conflicts.Insert(0, new ConflictInfo
+                {
+                    ConflictType = "error",
+                    Description = errorMessage,
+                    PositionId = null,
+                    PositionName = null,
+                    PeriodIndex = null,
+                    Date = null
+                });
+            }
+            else
+            {
+                // 没有部分结果，只添加错误信息
+                conflicts.Add(new ConflictInfo
+                {
+                    ConflictType = "error",
+                    Description = errorMessage,
+                    PositionId = null,
+                    PositionName = null,
+                    PeriodIndex = null,
+                    Date = null
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            // 如果构建失败信息时出错，记录日志但不影响返回
+            System.Diagnostics.Debug.WriteLine($"构建失败结果时出错: {ex.Message}");
+            
+            // 确保至少有基本的错误信息
+            if (!conflicts.Any())
+            {
+                conflicts.Add(new ConflictInfo
+                {
+                    ConflictType = "error",
+                    Description = errorMessage,
+                    PositionId = null,
+                    PositionName = null,
+                    PeriodIndex = null,
+                    Date = null
+                });
+            }
+        }
+
+        return new SchedulingResult
+        {
+            IsSuccess = false,
+            ErrorMessage = errorMessage,
+            Schedule = null,
+            Statistics = statistics,
+            Conflicts = conflicts,
+            TotalDuration = totalDuration
+        };
+    }
+
+    #endregion
+
+    #region 排班表格数据构建 - 对应需求5.1, 5.2, 5.3, 5.4, 5.5
+
+    /// <summary>
+    /// 构建排班表格数据 - 对应需求5.1, 5.2, 5.3, 5.4, 5.5
+    /// </summary>
+    /// <param name="scheduleDto">排班DTO</param>
+    /// <returns>排班表格数据</returns>
+    public async Task<ScheduleGridData> BuildScheduleGridData(ScheduleDto scheduleDto)
+    {
+        if (scheduleDto == null)
+            throw new ArgumentNullException(nameof(scheduleDto));
+
+        var gridData = new ScheduleGridData
+        {
+            StartDate = scheduleDto.StartDate.Date,
+            EndDate = scheduleDto.EndDate.Date,
+            PositionIds = scheduleDto.PositionIds.ToList(),
+            TotalPeriods = 12 // 每天12个时段
+        };
+
+        // 计算总天数
+        gridData.TotalDays = (scheduleDto.EndDate.Date - scheduleDto.StartDate.Date).Days + 1;
+
+        // 构建列数据：遍历 PositionIds，创建 ScheduleGridColumn 列表 - 对应需求5.1, 5.2
+        var positions = await _positionRepo.GetPositionsByIdsAsync(scheduleDto.PositionIds);
+        var positionNames = positions.ToDictionary(p => p.Id, p => p.Name);
+
+        for (int colIndex = 0; colIndex < scheduleDto.PositionIds.Count; colIndex++)
+        {
+            var positionId = scheduleDto.PositionIds[colIndex];
+            var positionName = positionNames.TryGetValue(positionId, out var name) 
+                ? name 
+                : $"未知哨位 (ID: {positionId})";
+
+            gridData.Columns.Add(new ScheduleGridColumn
+            {
+                PositionId = positionId,
+                PositionName = positionName,
+                ColumnIndex = colIndex
+            });
+        }
+
+        // 构建行数据：遍历日期范围和时段，创建 ScheduleGridRow 列表 - 对应需求5.1, 5.2
+        int rowIndex = 0;
+        for (var date = scheduleDto.StartDate.Date; date <= scheduleDto.EndDate.Date; date = date.AddDays(1))
+        {
+            for (int periodIndex = 0; periodIndex < 12; periodIndex++)
+            {
+                var startHour = periodIndex * 2;
+                var endHour = (periodIndex + 1) * 2;
+                var timeRange = $"{startHour:D2}:00-{endHour:D2}:00";
+                var displayText = $"{date:yyyy-MM-dd} {timeRange}";
+
+                gridData.Rows.Add(new ScheduleGridRow
+                {
+                    Date = date,
+                    PeriodIndex = periodIndex,
+                    TimeRange = timeRange,
+                    DisplayText = displayText,
+                    RowIndex = rowIndex
+                });
+
+                rowIndex++;
+            }
+        }
+
+        // 构建单元格数据：遍历 Shifts，创建 ScheduleGridCell 字典，键为 "row_col" - 对应需求5.1, 5.2
+        var shiftsByKey = new Dictionary<string, ShiftDto>();
+        foreach (var shift in scheduleDto.Shifts)
+        {
+            var shiftDate = shift.StartTime.Date;
+            var shiftPeriodIndex = shift.PeriodIndex;
+            var shiftPositionId = shift.PositionId;
+
+            // 查找对应的行索引和列索引
+            var row = gridData.Rows.FirstOrDefault(r => 
+                r.Date == shiftDate && r.PeriodIndex == shiftPeriodIndex);
+            var col = gridData.Columns.FirstOrDefault(c => 
+                c.PositionId == shiftPositionId);
+
+            if (row != null && col != null)
+            {
+                var key = $"{row.RowIndex}_{col.ColumnIndex}";
+                
+                // 如果同一个单元格有多个班次（不应该发生，但做防御性处理）
+                if (!shiftsByKey.ContainsKey(key))
+                {
+                    shiftsByKey[key] = shift;
+                }
+            }
+        }
+
+        // 标记手动指定的单元格（通过查询 ManualAssignments） - 对应需求5.3, 5.4
+        var manualAssignments = await _constraintRepo.GetManualAssignmentsByDateRangeAsync(
+            scheduleDto.StartDate, 
+            scheduleDto.EndDate, 
+            enabledOnly: true);
+
+        var manualAssignmentKeys = new HashSet<string>();
+        foreach (var manual in manualAssignments)
+        {
+            var row = gridData.Rows.FirstOrDefault(r => 
+                r.Date == manual.Date.Date && r.PeriodIndex == manual.PeriodIndex);
+            var col = gridData.Columns.FirstOrDefault(c => 
+                c.PositionId == manual.PositionId);
+
+            if (row != null && col != null)
+            {
+                var key = $"{row.RowIndex}_{col.ColumnIndex}";
+                manualAssignmentKeys.Add(key);
+            }
+        }
+
+        // 标记有冲突的单元格（通过 Conflicts 列表） - 对应需求5.4, 5.5
+        var conflictKeys = new Dictionary<string, string>();
+        foreach (var conflict in scheduleDto.Conflicts)
+        {
+            if (conflict.StartTime.HasValue && conflict.PositionId.HasValue && conflict.PeriodIndex.HasValue)
+            {
+                var conflictDate = conflict.StartTime.Value.Date;
+                var conflictPeriodIndex = conflict.PeriodIndex.Value;
+                var conflictPositionId = conflict.PositionId.Value;
+
+                var row = gridData.Rows.FirstOrDefault(r => 
+                    r.Date == conflictDate && r.PeriodIndex == conflictPeriodIndex);
+                var col = gridData.Columns.FirstOrDefault(c => 
+                    c.PositionId == conflictPositionId);
+
+                if (row != null && col != null)
+                {
+                    var key = $"{row.RowIndex}_{col.ColumnIndex}";
+                    conflictKeys[key] = conflict.Message;
+                }
+            }
+        }
+
+        // 创建所有单元格
+        foreach (var row in gridData.Rows)
+        {
+            foreach (var col in gridData.Columns)
+            {
+                var key = $"{row.RowIndex}_{col.ColumnIndex}";
+                
+                var cell = new ScheduleGridCell
+                {
+                    RowIndex = row.RowIndex,
+                    ColumnIndex = col.ColumnIndex,
+                    IsAssigned = shiftsByKey.ContainsKey(key),
+                    IsManualAssignment = manualAssignmentKeys.Contains(key),
+                    HasConflict = conflictKeys.ContainsKey(key),
+                    ConflictMessage = conflictKeys.TryGetValue(key, out var conflictMsg) ? conflictMsg : null
+                };
+
+                // 如果已分配，填充人员信息
+                if (cell.IsAssigned && shiftsByKey.TryGetValue(key, out var shift))
+                {
+                    cell.PersonnelId = shift.PersonnelId;
+                    cell.PersonnelName = shift.PersonnelName;
+                }
+
+                gridData.Cells[key] = cell;
+            }
+        }
+
+        return gridData;
     }
 
     #endregion

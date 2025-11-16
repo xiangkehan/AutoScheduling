@@ -18,6 +18,15 @@ public interface ISchedulingService
  Task<ScheduleDto> ExecuteSchedulingAsync(SchedulingRequestDto request, CancellationToken cancellationToken = default);
 
  /// <summary>
+ /// 执行排班算法（支持进度报告和取消）
+ /// </summary>
+ /// <param name="request">排班请求</param>
+ /// <param name="progress">进度报告回调</param>
+ /// <param name="cancellationToken">取消令牌</param>
+ /// <returns>排班结果</returns>
+ Task<SchedulingResult> ExecuteSchedulingAsync(SchedulingRequestDto request, IProgress<SchedulingProgressReport>? progress = null, CancellationToken cancellationToken = default);
+
+ /// <summary>
  /// 获取草稿列表
  /// </summary>
  Task<List<ScheduleSummaryDto>> GetDraftsAsync();
@@ -90,4 +99,11 @@ public interface ISchedulingService
  /// 创建手动指定
  /// </summary>
  Task<ManualAssignmentDto> CreateManualAssignmentAsync(CreateManualAssignmentDto dto);
+
+ /// <summary>
+ /// 构建排班表格数据
+ /// </summary>
+ /// <param name="scheduleDto">排班DTO</param>
+ /// <returns>排班表格数据</returns>
+ Task<ScheduleGridData> BuildScheduleGridData(ScheduleDto scheduleDto);
 }
