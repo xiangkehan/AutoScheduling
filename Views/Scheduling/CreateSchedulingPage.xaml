@@ -348,7 +348,7 @@
                     <StackPanel Spacing="4">
                         <ComboBox Header="人员*"
                                   ItemsSource="{x:Bind ViewModel.SelectedPersonnels, Mode=OneWay}"
-                                  SelectedValue="{x:Bind ViewModel.NewManualAssignmentPersonnelId, Mode=TwoWay}"
+                                  SelectedValue="{x:Bind ViewModel.NewManualAssignmentPersonnelId, Mode=TwoWay, FallbackValue=-1}"
                                   SelectedValuePath="Id"
                                   DisplayMemberPath="Name"
                                   PlaceholderText="选择人员"
@@ -363,7 +363,7 @@
                     <StackPanel Spacing="4">
                         <ComboBox Header="哨位*"
                                   ItemsSource="{x:Bind ViewModel.SelectedPositions, Mode=OneWay}"
-                                  SelectedValue="{x:Bind ViewModel.NewManualAssignmentPositionId, Mode=TwoWay}"
+                                  SelectedValue="{x:Bind ViewModel.NewManualAssignmentPositionId, Mode=TwoWay, FallbackValue=-1}"
                                   SelectedValuePath="Id"
                                   DisplayMemberPath="Name"
                                   PlaceholderText="选择哨位"
@@ -378,7 +378,7 @@
                     <StackPanel Spacing="4">
                         <ComboBox Header="时段*"
                                   ItemsSource="{x:Bind ViewModel.TimeSlotOptions, Mode=OneWay}"
-                                  SelectedValue="{x:Bind ViewModel.NewManualAssignmentTimeSlot, Mode=TwoWay}"
+                                  SelectedValue="{x:Bind ViewModel.NewManualAssignmentTimeSlot, Mode=TwoWay, FallbackValue=-1}"
                                   SelectedValuePath="Index"
                                   DisplayMemberPath="DisplayText"
                                   PlaceholderText="选择时段"
@@ -433,7 +433,7 @@
                     <StackPanel Spacing="4">
                         <ComboBox Header="人员*"
                                   ItemsSource="{x:Bind ViewModel.SelectedPersonnels, Mode=OneWay}"
-                                  SelectedValue="{x:Bind ViewModel.EditingManualAssignmentPersonnelId, Mode=TwoWay}"
+                                  SelectedValue="{x:Bind ViewModel.EditingManualAssignmentPersonnelId, Mode=TwoWay, FallbackValue=-1}"
                                   SelectedValuePath="Id"
                                   DisplayMemberPath="Name"
                                   PlaceholderText="选择人员"
@@ -448,7 +448,7 @@
                     <StackPanel Spacing="4">
                         <ComboBox Header="哨位*"
                                   ItemsSource="{x:Bind ViewModel.SelectedPositions, Mode=OneWay}"
-                                  SelectedValue="{x:Bind ViewModel.EditingManualAssignmentPositionId, Mode=TwoWay}"
+                                  SelectedValue="{x:Bind ViewModel.EditingManualAssignmentPositionId, Mode=TwoWay, FallbackValue=-1}"
                                   SelectedValuePath="Id"
                                   DisplayMemberPath="Name"
                                   PlaceholderText="选择哨位"
@@ -463,7 +463,7 @@
                     <StackPanel Spacing="4">
                         <ComboBox Header="时段*"
                                   ItemsSource="{x:Bind ViewModel.TimeSlotOptions, Mode=OneWay}"
-                                  SelectedValue="{x:Bind ViewModel.EditingManualAssignmentTimeSlot, Mode=TwoWay}"
+                                  SelectedValue="{x:Bind ViewModel.EditingManualAssignmentTimeSlot, Mode=TwoWay, FallbackValue=-1}"
                                   SelectedValuePath="Index"
                                   DisplayMemberPath="DisplayText"
                                   PlaceholderText="选择时段"

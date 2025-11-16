@@ -85,7 +85,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             get => NewManualAssignment != null ? new DateTimeOffset(NewManualAssignment.Date) : null;
             set
             {
-                if (NewManualAssignment != null && value.HasValue)
+                if (NewManualAssignment != null && value.HasValue && NewManualAssignment.Date != value.Value.DateTime)
                 {
                     NewManualAssignment.Date = value.Value.DateTime;
                     OnPropertyChanged();
@@ -93,40 +93,40 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
         }
 
-        public int NewManualAssignmentPersonnelId
+        public int? NewManualAssignmentPersonnelId
         {
-            get => NewManualAssignment?.PersonnelId ?? 0;
+            get => NewManualAssignment?.PersonnelId;
             set
             {
-                if (NewManualAssignment != null)
+                if (NewManualAssignment != null && value.HasValue && NewManualAssignment.PersonnelId != value.Value)
                 {
-                    NewManualAssignment.PersonnelId = value;
+                    NewManualAssignment.PersonnelId = value.Value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public int NewManualAssignmentPositionId
+        public int? NewManualAssignmentPositionId
         {
-            get => NewManualAssignment?.PositionId ?? 0;
+            get => NewManualAssignment?.PositionId;
             set
             {
-                if (NewManualAssignment != null)
+                if (NewManualAssignment != null && value.HasValue && NewManualAssignment.PositionId != value.Value)
                 {
-                    NewManualAssignment.PositionId = value;
+                    NewManualAssignment.PositionId = value.Value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public int NewManualAssignmentTimeSlot
+        public int? NewManualAssignmentTimeSlot
         {
-            get => NewManualAssignment?.TimeSlot ?? 0;
+            get => NewManualAssignment?.TimeSlot;
             set
             {
-                if (NewManualAssignment != null)
+                if (NewManualAssignment != null && value.HasValue && NewManualAssignment.TimeSlot != value.Value)
                 {
-                    NewManualAssignment.TimeSlot = value;
+                    NewManualAssignment.TimeSlot = value.Value;
                     OnPropertyChanged();
                 }
             }
@@ -137,7 +137,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             get => NewManualAssignment?.Remarks ?? string.Empty;
             set
             {
-                if (NewManualAssignment != null)
+                if (NewManualAssignment != null && NewManualAssignment.Remarks != value)
                 {
                     NewManualAssignment.Remarks = value;
                     OnPropertyChanged();
@@ -150,7 +150,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             get => EditingManualAssignmentDto != null ? new DateTimeOffset(EditingManualAssignmentDto.Date) : null;
             set
             {
-                if (EditingManualAssignmentDto != null && value.HasValue)
+                if (EditingManualAssignmentDto != null && value.HasValue && EditingManualAssignmentDto.Date != value.Value.DateTime)
                 {
                     EditingManualAssignmentDto.Date = value.Value.DateTime;
                     OnPropertyChanged();
@@ -163,7 +163,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             get => EditingManualAssignmentDto?.PersonnelId ?? 0;
             set
             {
-                if (EditingManualAssignmentDto != null)
+                if (EditingManualAssignmentDto != null && EditingManualAssignmentDto.PersonnelId != value)
                 {
                     EditingManualAssignmentDto.PersonnelId = value;
                     OnPropertyChanged();
@@ -176,7 +176,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             get => EditingManualAssignmentDto?.PositionId ?? 0;
             set
             {
-                if (EditingManualAssignmentDto != null)
+                if (EditingManualAssignmentDto != null && EditingManualAssignmentDto.PositionId != value)
                 {
                     EditingManualAssignmentDto.PositionId = value;
                     OnPropertyChanged();
@@ -189,7 +189,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             get => EditingManualAssignmentDto?.TimeSlot ?? 0;
             set
             {
-                if (EditingManualAssignmentDto != null)
+                if (EditingManualAssignmentDto != null && EditingManualAssignmentDto.TimeSlot != value)
                 {
                     EditingManualAssignmentDto.TimeSlot = value;
                     OnPropertyChanged();
@@ -202,7 +202,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             get => EditingManualAssignmentDto?.Remarks ?? string.Empty;
             set
             {
-                if (EditingManualAssignmentDto != null)
+                if (EditingManualAssignmentDto != null && EditingManualAssignmentDto.Remarks != value)
                 {
                     EditingManualAssignmentDto.Remarks = value;
                     OnPropertyChanged();
