@@ -218,4 +218,27 @@
         <Setter Property="Margin" Value="4"/>
     </Style>
 
+    <!-- 排班表格单元格样式 -->
+    <Style x:Key="ScheduleGridCellStyle" TargetType="Border">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="MinWidth" Value="120"/>
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+    </Style>
+
+    <!-- 手动指定单元格样式（蓝色边框） -->
+    <Style x:Key="ManualAssignmentCellStyle" TargetType="Border" BasedOn="{StaticResource ScheduleGridCellStyle}">
+        <Setter Property="BorderBrush" Value="{ThemeResource SystemAccentColor}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Background" Value="{ThemeResource AccentFillColorTertiaryBrush}"/>
+    </Style>
+
+    <!-- 冲突单元格样式（红色边框） -->
+    <Style x:Key="ConflictCellStyle" TargetType="Border" BasedOn="{StaticResource ScheduleGridCellStyle}">
+        <Setter Property="BorderBrush" Value="{ThemeResource SystemErrorTextColor}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
 </ResourceDictionary>

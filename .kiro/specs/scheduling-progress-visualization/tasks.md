@@ -214,6 +214,7 @@
 
 
 
+
   - 实现 `BuildGridStructure` 方法，根据 `GridData` 构建表格
   - 实现 `CreateColumnHeaders` 方法，创建哨位列头
   - 实现 `CreateRowHeaders` 方法，创建日期+时段行头
@@ -221,7 +222,11 @@
   - 使用 `Grid` 或自定义 `Panel` 布局单元格
   - _需求: 5.1, 5.2_
 
-- [ ] 6.3 实现虚拟化渲染
+- [x] 6.3 实现虚拟化渲染
+
+
+
+
 
 
   - 创建 `VirtualizedGridPanel` 类，继承 `Panel`
@@ -233,7 +238,11 @@
   - _需求: 5.1, 5.2_
 
 
-- [ ] 6.4 实现单元格样式和交互
+
+- [x] 6.4 实现单元格样式和交互
+
+
+
 
 
 
@@ -245,7 +254,11 @@
   - 实现 `CellClicked` 事件
   - _需求: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 6.5 添加工具栏按钮
+
+
+
+- [-] 6.5 添加工具栏按钮
+
 
 
 
@@ -253,11 +266,16 @@
   - 添加导出按钮，设置 `IsEnabled="False"`，ToolTip 显示"功能开发中"
   - 添加全屏按钮，使用 Segoe MDL2 Assets 图标（&#xE740;）
   - 定义 `FullScreenRequested` 和 `ExportRequested` 事件
+
+
+
   - 绑定按钮点击事件到控件事件
   - _需求: 5.1, 5.2, 5.3_
 
 - [ ] 7. 创建 SchedulingProgressPage 视图
 - [ ] 7.1 创建页面基础结构和布局
+
+
 
   - 创建 `SchedulingProgressPage.xaml` 和 `SchedulingProgressPage.xaml.cs`
   - 在 Code-behind 中注入 `SchedulingProgressViewModel`
@@ -266,6 +284,9 @@
   - 将页面放置在 `Views/Scheduling/` 目录下
   - _需求: 1.1_
 
+
+
+
 - [ ] 7.2 实现顶部标题栏和进度指示区
 
   - 添加顶部标题栏，显示排班标题和状态图标
@@ -273,6 +294,7 @@
   - 绑定 `ProgressBar.Value` 到 `ViewModel.ProgressPercentage`
   - 绑定阶段信息到 `ViewModel.CurrentStage` 和 `ViewModel.StageDescription`
   - 显示已完成/总数统计，绑定到 `ViewModel.CompletedAssignments` 和 `ViewModel.TotalSlotsToAssign`
+
   - _需求: 1.1, 1.2, 1.3, 1.4, 1.5_
 
 - [ ] 7.3 实现左侧实时信息区

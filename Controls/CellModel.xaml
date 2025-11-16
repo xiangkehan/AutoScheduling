@@ -1,0 +1,51 @@
+<UserControl
+    x:Class="AutoScheduling3.Controls.CellModel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Border x:Name="CellBorder"
+            BorderThickness="1"
+            Padding="8,4"
+            MinWidth="120"
+            MinHeight="40"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            PointerEntered="CellBorder_PointerEntered"
+            PointerExited="CellBorder_PointerExited"
+            Tapped="CellBorder_Tapped">
+        
+        <TextBlock x:Name="PersonnelNameText"
+                   Text="-"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center"
+                   TextTrimming="CharacterEllipsis"
+                   AutomationProperties.Name="单元格"/>
+        
+        <ToolTipService.ToolTip>
+            <ToolTip x:Name="CellToolTip" Visibility="Collapsed">
+                <StackPanel Spacing="4">
+                    <TextBlock x:Name="ToolTipPersonnelName" 
+                               FontWeight="SemiBold"
+                               Text="人员姓名"/>
+                    <TextBlock x:Name="ToolTipSkills" 
+                               Text="技能：无"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock x:Name="ToolTipWorkload" 
+                               Text="工作量：0 班次"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock x:Name="ToolTipManualAssignment" 
+                               Text="手动指定"
+                               Foreground="{ThemeResource SystemAccentColor}"
+                               Visibility="Collapsed"/>
+                    <TextBlock x:Name="ToolTipConflict" 
+                               Text="冲突：无"
+                               Foreground="{ThemeResource SystemErrorTextColor}"
+                               Visibility="Collapsed"/>
+                </StackPanel>
+            </ToolTip>
+        </ToolTipService.ToolTip>
+    </Border>
+</UserControl>

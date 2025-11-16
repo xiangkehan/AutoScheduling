@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.UI.Dispatching;
@@ -116,6 +117,18 @@ public partial class SchedulingProgressViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _elapsedTime = "00:00:00";
+
+    /// <summary>
+    /// 阶段历史列表
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<StageHistoryItem> _stageHistory = new();
+
+    /// <summary>
+    /// 警告信息列表
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<string> _warnings = new();
 
     #endregion
 
@@ -348,7 +361,79 @@ public partial class SchedulingProgressViewModel : ObservableObject
             {
                 CurrentTimeSlot = string.Empty;
             }
+
+            // 更新阶段历史
+            UpdateStageHistory(report.CurrentStage);
+
+            // 更新警告信息
+            if (report.Warnings != null && report.Warnings.Count > 0)
+            {
+                foreach (var warning in report.Warnings)
+                {
+                    if (!Warnings.Contains(warning))
+                    {
+                        Warnings.Add(warning);
+                    }
+                }
+            }
         });
+    }
+
+    /// <summary>
+    /// 更新阶段历史
+    /// </summary>
+    /// <param name="currentStage">当前阶段</param>
+    private void UpdateStageHistory(SchedulingStage currentStage)
+    {
+        var stageName = GetStageDisplayName(currentStage);
+        
+        // 查找是否已存在该阶段
+        var existingStage = StageHistory.FirstOrDefault(s => s.StageName == stageName);
+        
+        if (existingStage != null)
+        {
+            // 更新现有阶段状态
+            if (currentStage == SchedulingStage.Failed)
+            {
+                existingStage.Status = "Failed";
+            }
+            else if (currentStage == SchedulingStage.Completed)
+            {
+                existingStage.Status = "Completed";
+                existingStage.CompletedTime = DateTime.Now;
+            }
+            else
+            {
+                existingStage.Status = "InProgress";
+            }
+        }
+        else
+        {
+            // 将之前的阶段标记为已完成
+            foreach (var stage in StageHistory)
+            {
+                if (stage.Status == "InProgress")
+                {
+                    stage.Status = "Completed";
+                    stage.CompletedTime = DateTime.Now;
+                }
+            }
+
+            // 添加新阶段
+            var newStage = new StageHistoryItem
+            {
+                StageName = stageName,
+                Status = currentStage == SchedulingStage.Failed ? "Failed" : 
+                         currentStage == SchedulingStage.Completed ? "Completed" : "InProgress"
+            };
+
+            if (newStage.Status == "Completed")
+            {
+                newStage.CompletedTime = DateTime.Now;
+            }
+
+            StageHistory.Add(newStage);
+        }
     }
 
     /// <summary>
@@ -475,6 +560,8 @@ public partial class SchedulingProgressViewModel : ObservableObject
         PersonnelWorkloads.Clear();
         PositionCoverages.Clear();
         Conflicts.Clear();
+        StageHistory.Clear();
+        Warnings.Clear();
     }
 
     /// <summary>
@@ -821,4 +908,57 @@ public partial class SchedulingProgressViewModel : ObservableObject
     }
 
     #endregion
+}
+
+
+/// <summary>
+/// 阶段历史项
+/// </summary>
+public partial class StageHistoryItem : ObservableObject
+{
+    /// <summary>
+    /// 阶段名称
+    /// </summary>
+    [ObservableProperty]
+    private string _stageName = string.Empty;
+
+    /// <summary>
+    /// 阶段状态（Completed, InProgress, Pending, Failed）
+    /// </summary>
+    [ObservableProperty]
+    private string _status = "Pending";
+
+    /// <summary>
+    /// 完成时间
+    /// </summary>
+    [ObservableProperty]
+    private DateTime? _completedTime;
+
+    /// <summary>
+    /// 状态图标（使用 Segoe MDL2 Assets 字体）
+    /// </summary>
+    public string StatusIcon => Status switch
+    {
+        "Completed" => "\uE73E", // CheckMark
+        "InProgress" => "\uE768", // Sync
+        "Failed" => "\uE711", // ErrorBadge
+        _ => "\uE91F" // CircleRing
+    };
+
+    /// <summary>
+    /// 状态颜色
+    /// </summary>
+    public string StatusColor => Status switch
+    {
+        "Completed" => "#107C10", // Green
+        "InProgress" => "#0078D4", // Blue
+        "Failed" => "#D13438", // Red
+        _ => "#8A8A8A" // Gray
+    };
+
+    partial void OnStatusChanged(string value)
+    {
+        OnPropertyChanged(nameof(StatusIcon));
+        OnPropertyChanged(nameof(StatusColor));
+    }
 }

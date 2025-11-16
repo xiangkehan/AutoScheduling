@@ -1,0 +1,533 @@
+<Page
+    x:Class="AutoScheduling3.Views.Scheduling.SchedulingProgressPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="using:AutoScheduling3.ViewModels.Scheduling"
+    xmlns:converters="using:AutoScheduling3.Converters"
+    xmlns:dto="using:AutoScheduling3.DTOs"
+    xmlns:controls="using:AutoScheduling3.Controls"
+    mc:Ignorable="d"
+    x:Name="Root"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- 顶部标题栏 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 进度指示区 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 主内容区 -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 顶部标题栏 -->
+        <Grid Grid.Row="0" 
+              Padding="24,24,24,12"
+              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+              BorderThickness="0,0,0,1"
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+            <StackPanel Spacing="8">
+                <TextBlock Text="排班执行进度" 
+                           Style="{ThemeResource TitleTextBlockStyle}"/>
+                <TextBlock Text="实时监控排班算法执行状态和结果" 
+                           Style="{ThemeResource BodyTextBlockStyle}" 
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 进度指示区 -->
+        <Grid Grid.Row="1" 
+              Padding="24,16"
+              Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+              BorderThickness="0,0,0,1"
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+            <StackPanel Spacing="12">
+                <!-- 进度条 -->
+                <ProgressBar Value="{x:Bind ViewModel.ProgressPercentage, Mode=OneWay}"
+                             Minimum="0"
+                             Maximum="100"
+                             Height="8"
+                             CornerRadius="4"/>
+                
+                <!-- 阶段信息 -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0" Spacing="4">
+                        <TextBlock Text="{x:Bind ViewModel.CurrentStage, Mode=OneWay}"
+                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="{x:Bind ViewModel.StageDescription, Mode=OneWay}"
+                                   Style="{ThemeResource BodyTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Column="1" 
+                                Spacing="4"
+                                HorizontalAlignment="Right">
+                        <TextBlock HorizontalAlignment="Right">
+                            <Run Text="{x:Bind ViewModel.CompletedAssignments, Mode=OneWay}"/>
+                            <Run Text="/"/>
+                            <Run Text="{x:Bind ViewModel.TotalSlotsToAssign, Mode=OneWay}"/>
+                            <Run Text=" 个时段已分配"/>
+                        </TextBlock>
+                        <TextBlock Style="{ThemeResource TitleTextBlockStyle}"
+                                   HorizontalAlignment="Right"
+                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}">
+                            <Run Text="{x:Bind ViewModel.ProgressPercentage, Mode=OneWay}"/>
+                            <Run Text="%"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Grid>
+
+        <!-- 主内容区 -->
+        <Grid Grid.Row="2" Padding="24">
+            <Grid.ColumnDefinitions>
+                <!-- 左侧实时信息区 -->
+                <ColumnDefinition Width="300" MinWidth="250"/>
+                <ColumnDefinition Width="16"/>
+                <!-- 右侧结果展示区 -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧实时信息区 -->
+            <ScrollViewer Grid.Column="0"
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="16">
+                    <!-- 当前处理信息卡片 -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource ControlCornerRadius}"
+                            Padding="16">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="当前处理信息" 
+                                       Style="{ThemeResource BaseTextBlockStyle}"
+                                       FontWeight="SemiBold"/>
+                            
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="哨位" 
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           FontSize="12"/>
+                                <TextBlock Text="{x:Bind ViewModel.CurrentPositionName, Mode=OneWay, FallbackValue='--'}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}"/>
+                            </StackPanel>
+                            
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="时段" 
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           FontSize="12"/>
+                                <TextBlock Text="{x:Bind ViewModel.CurrentTimeSlot, Mode=OneWay, FallbackValue='--'}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 累计执行时间 -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource ControlCornerRadius}"
+                            Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="累计执行时间" 
+                                       Style="{ThemeResource BaseTextBlockStyle}"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="{x:Bind ViewModel.ElapsedTime, Mode=OneWay}"
+                                       Style="{ThemeResource TitleTextBlockStyle}"
+                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 阶段历史列表 -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource ControlCornerRadius}"
+                            Padding="16">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="阶段历史" 
+                                       Style="{ThemeResource BaseTextBlockStyle}"
+                                       FontWeight="SemiBold"/>
+                            
+                            <ListView ItemsSource="{x:Bind ViewModel.StageHistory, Mode=OneWay}"
+                                      SelectionMode="None"
+                                      MaxHeight="300">
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="MinHeight" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="viewmodels:StageHistoryItem">
+                                        <Grid ColumnSpacing="12" Padding="8,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <!-- 状态图标 -->
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{x:Bind StatusIcon}"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="16"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Foreground>
+                                                    <SolidColorBrush Color="{x:Bind StatusColor}"/>
+                                                </TextBlock.Foreground>
+                                            </TextBlock>
+                                            
+                                            <!-- 阶段名称 -->
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{x:Bind StageName}"
+                                                       VerticalAlignment="Center"
+                                                       TextWrapping="NoWrap"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 警告信息列表 -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource ControlCornerRadius}"
+                            Padding="16"
+                            Visibility="{x:Bind ViewModel.Warnings.Count, Converter={StaticResource CountToVisibilityConverter}, Mode=OneWay}">
+                        <StackPanel Spacing="12">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="&#xE7BA;" 
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="16"
+                                           Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="警告信息" 
+                                           Style="{ThemeResource BaseTextBlockStyle}"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <ListView ItemsSource="{x:Bind ViewModel.Warnings, Mode=OneWay}"
+                                      SelectionMode="None"
+                                      MaxHeight="200">
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="MinHeight" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                                BorderBrush="{ThemeResource SystemFillColorCautionBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="4"
+                                                Padding="8"
+                                                Margin="0,2">
+                                            <TextBlock Text="{x:Bind}"
+                                                       TextWrapping="Wrap"
+                                                       FontSize="12"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- 右侧结果展示区 -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <!-- 上部：结果展示 -->
+                    <RowDefinition Height="*"/>
+                    <!-- 下部：操作按钮 -->
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 上部：结果展示区（可滚动） -->
+                <ScrollViewer Grid.Row="0"
+                              VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="16">
+                        <!-- 执行中状态 -->
+                        <InfoBar Title="正在执行排班"
+                                 Message="排班算法正在运行，请稍候..."
+                                 Severity="Informational"
+                                 IsOpen="{x:Bind ViewModel.IsExecuting, Mode=OneWay}"/>
+
+                        <!-- 成功状态 -->
+                        <InfoBar Title="排班成功"
+                                 Message="排班任务已成功完成"
+                                 Severity="Success"
+                                 IsOpen="{x:Bind ViewModel.IsCompleted, Mode=OneWay}"/>
+
+                        <!-- 失败状态 -->
+                        <InfoBar Title="排班失败"
+                                 Message="{x:Bind ViewModel.Result.ErrorMessage, Mode=OneWay, FallbackValue='排班执行失败，请查看错误详情'}"
+                                 Severity="Error"
+                                 IsOpen="{x:Bind ViewModel.IsFailed, Mode=OneWay}"/>
+
+                        <!-- 取消状态 -->
+                        <InfoBar Title="排班已取消"
+                                 Message="排班任务已被用户取消"
+                                 Severity="Warning"
+                                 IsOpen="{x:Bind ViewModel.IsCancelled, Mode=OneWay}"/>
+
+                        <!-- 排班结果表格（成功时显示） -->
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource ControlCornerRadius}"
+                                Padding="16"
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="排班结果表格" 
+                                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                                           FontWeight="SemiBold"/>
+                                
+                                <controls:ScheduleGridControl x:Name="ScheduleGrid"
+                                                              GridData="{x:Bind ViewModel.GridData, Mode=OneWay}"
+                                                              MaxHeight="400"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 统计信息卡片（成功时显示） -->
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource ControlCornerRadius}"
+                                Padding="16"
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="统计信息" 
+                                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                                           FontWeight="SemiBold"/>
+                                
+                                <Grid ColumnSpacing="24" RowSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" Spacing="4">
+                                        <TextBlock Text="总分配数" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   FontSize="12"/>
+                                        <TextBlock Text="{x:Bind ViewModel.Result.Statistics.TotalAssignments, Mode=OneWay, FallbackValue='0'}"
+                                                   Style="{ThemeResource TitleTextBlockStyle}"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Text="参与人员" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   FontSize="12"/>
+                                        <TextBlock Text="{x:Bind ViewModel.PersonnelWorkloads.Count, Mode=OneWay, FallbackValue='0'}"
+                                                   Style="{ThemeResource TitleTextBlockStyle}"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Column="2" Spacing="4">
+                                        <TextBlock Text="参与哨位" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   FontSize="12"/>
+                                        <TextBlock Text="{x:Bind ViewModel.PositionCoverages.Count, Mode=OneWay, FallbackValue='0'}"
+                                                   Style="{ThemeResource TitleTextBlockStyle}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 人员工作量表格（成功时显示） -->
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource ControlCornerRadius}"
+                                Padding="16"
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="人员工作量" 
+                                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                                           FontWeight="SemiBold"/>
+                                
+                                <ListView ItemsSource="{x:Bind ViewModel.PersonnelWorkloads, Mode=OneWay}"
+                                          SelectionMode="None"
+                                          MaxHeight="300">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="dto:PersonnelWorkload">
+                                            <Grid ColumnSpacing="12" Padding="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <TextBlock Grid.Column="0" 
+                                                           Text="{x:Bind PersonnelName}"
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Column="1">
+                                                    <Run Text="总计: "/>
+                                                    <Run Text="{x:Bind TotalShifts}" FontWeight="SemiBold"/>
+                                                </TextBlock>
+                                                <TextBlock Grid.Column="2">
+                                                    <Run Text="日哨: "/>
+                                                    <Run Text="{x:Bind DayShifts}"/>
+                                                </TextBlock>
+                                                <TextBlock Grid.Column="3">
+                                                    <Run Text="夜哨: "/>
+                                                    <Run Text="{x:Bind NightShifts}"/>
+                                                </TextBlock>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 哨位覆盖率表格（成功时显示） -->
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource ControlCornerRadius}"
+                                Padding="16"
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="哨位覆盖率" 
+                                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                                           FontWeight="SemiBold"/>
+                                
+                                <ListView ItemsSource="{x:Bind ViewModel.PositionCoverages, Mode=OneWay}"
+                                          SelectionMode="None"
+                                          MaxHeight="300">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="dto:PositionCoverage">
+                                            <Grid ColumnSpacing="12" Padding="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <TextBlock Grid.Column="0" 
+                                                           Text="{x:Bind PositionName}"
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Column="1">
+                                                    <Run Text="{x:Bind AssignedSlots}"/>
+                                                    <Run Text="/"/>
+                                                    <Run Text="{x:Bind TotalSlots}"/>
+                                                </TextBlock>
+                                                <TextBlock Grid.Column="2"
+                                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                           FontWeight="SemiBold">
+                                                    <Run Text="{x:Bind CoverageRate, Mode=OneWay}"/>
+                                                    <Run Text="%"/>
+                                                </TextBlock>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 冲突列表（失败时显示） -->
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource ControlCornerRadius}"
+                                Padding="16"
+                                Visibility="{x:Bind ViewModel.IsFailed, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="冲突详情" 
+                                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                                           FontWeight="SemiBold"/>
+                                
+                                <ListView ItemsSource="{x:Bind ViewModel.Conflicts, Mode=OneWay}"
+                                          SelectionMode="None"
+                                          MaxHeight="300">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="dto:ConflictInfo">
+                                            <Border Background="{ThemeResource SystemErrorBackgroundColor}"
+                                                    BorderBrush="{ThemeResource SystemErrorTextColor}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="12"
+                                                    Margin="0,4">
+                                                <StackPanel Spacing="4">
+                                                    <TextBlock Text="{x:Bind ConflictType}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{ThemeResource SystemErrorTextColor}"/>
+                                                    <TextBlock Text="{x:Bind Description}"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- 下部：操作按钮区 -->
+                <Grid Grid.Row="1"
+                      Padding="0,16,0,0"
+                      BorderThickness="0,1,0,0"
+                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                    <StackPanel Orientation="Horizontal" 
+                                Spacing="12"
+                                HorizontalAlignment="Right">
+                        
+                        <!-- 执行中：取消按钮 -->
+                        <Button Content="取消排班"
+                                Command="{x:Bind ViewModel.CancelSchedulingCommand}"
+                                Visibility="{x:Bind ViewModel.IsExecuting, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+
+                        <!-- 成功后：保存、放弃、查看详细结果按钮 -->
+                        <Button Content="保存排班"
+                                Command="{x:Bind ViewModel.SaveScheduleCommand}"
+                                Style="{ThemeResource AccentButtonStyle}"
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+                        
+                        <Button Content="放弃排班"
+                                Command="{x:Bind ViewModel.DiscardScheduleCommand}"
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+                        
+                        <Button Content="查看详细结果"
+                                Command="{x:Bind ViewModel.ViewDetailedResultCommand}"
+                                Visibility="{x:Bind ViewModel.IsCompleted, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+
+                        <!-- 失败后：返回修改按钮 -->
+                        <Button Content="返回修改"
+                                Command="{x:Bind ViewModel.ReturnToConfigCommand}"
+                                Style="{ThemeResource AccentButtonStyle}"
+                                Visibility="{x:Bind ViewModel.IsFailed, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+
+                        <!-- 取消后：返回按钮 -->
+                        <Button Content="返回"
+                                Command="{x:Bind ViewModel.ReturnToConfigCommand}"
+                                Visibility="{x:Bind ViewModel.IsCancelled, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

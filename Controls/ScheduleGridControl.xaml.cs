@@ -240,101 +240,29 @@ namespace AutoScheduling3.Controls
                 var cellKey = $"{row.RowIndex}_{column.ColumnIndex}";
                 var cellData = data.Cells.ContainsKey(cellKey) ? data.Cells[cellKey] : null;
 
-                // 创建单元格
-                var cellBorder = CreateCellBorder(cellData);
-
-                // 设置位置
-                Grid.SetColumn(cellBorder, column.ColumnIndex + 1); // +1 因为第一列是行头
-                Grid.SetRow(cellBorder, row.RowIndex);
+                // 使用 CellModel 控件创建单元格
+                var cellControl = new CellModel
+                {
+                    CellData = cellData ?? new ScheduleGridCell
+                    {
+                        RowIndex = row.RowIndex,
+                        ColumnIndex = column.ColumnIndex,
+                        IsAssigned = false
+                    }
+                };
 
                 // 添加点击事件
-                cellBorder.Tapped += (s, e) =>
+                cellControl.CellClicked += (s, cell) =>
                 {
-                    CellClicked?.Invoke(this, new CellClickedEventArgs(row.RowIndex, column.ColumnIndex, cellData));
+                    CellClicked?.Invoke(this, new CellClickedEventArgs(row.RowIndex, column.ColumnIndex, cell));
                 };
 
-                GridBody.Children.Add(cellBorder);
+                // 设置位置
+                Grid.SetColumn(cellControl, column.ColumnIndex + 1); // +1 因为第一列是行头
+                Grid.SetRow(cellControl, row.RowIndex);
+
+                GridBody.Children.Add(cellControl);
             }
-        }
-
-        /// <summary>
-        /// 创建单元格边框
-        /// </summary>
-        private Border CreateCellBorder(ScheduleGridCell? cellData)
-        {
-            var border = new Border
-            {
-                BorderThickness = new Thickness(1),
-                Padding = new Thickness(8, 4),
-                MinWidth = 120,
-                MinHeight = 40
-            };
-
-            // 根据单元格状态设置样式
-            if (cellData == null || !cellData.IsAssigned)
-            {
-                // 未分配单元格
-                border.BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
-                border.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
-
-                var emptyText = new TextBlock
-                {
-                    Text = "-",
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
-                };
-                border.Child = emptyText;
-            }
-            else
-            {
-                // 已分配单元格
-                if (cellData.HasConflict)
-                {
-                    // 冲突单元格
-                    border.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Red);
-                    border.BorderThickness = new Thickness(2);
-                    border.Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(30, 255, 0, 0));
-                }
-                else if (cellData.IsManualAssignment)
-                {
-                    // 手动指定单元格
-                    border.BorderBrush = (Brush)Application.Current.Resources["SystemAccentColor"];
-                    border.BorderThickness = new Thickness(2);
-                    border.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
-                }
-                else
-                {
-                    // 普通分配单元格
-                    border.BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
-                    border.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
-                }
-
-                var personnelText = new TextBlock
-                {
-                    Text = cellData.PersonnelName ?? "未知",
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    TextWrapping = TextWrapping.Wrap
-                };
-                border.Child = personnelText;
-
-                // 添加工具提示
-                if (cellData.HasConflict && !string.IsNullOrEmpty(cellData.ConflictMessage))
-                {
-                    ToolTipService.SetToolTip(border, cellData.ConflictMessage);
-                }
-                else if (cellData.IsManualAssignment)
-                {
-                    ToolTipService.SetToolTip(border, $"{cellData.PersonnelName} (手动指定)");
-                }
-                else
-                {
-                    ToolTipService.SetToolTip(border, cellData.PersonnelName);
-                }
-            }
-
-            return border;
         }
 
         /// <summary>
