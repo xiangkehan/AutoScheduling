@@ -602,6 +602,22 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 System.Diagnostics.Debug.WriteLine($"排班执行成功，生成 {schedule.Shifts.Count} 个班次");
                 
                 ResultSchedule = schedule;
+                
+                // 删除草稿（成功创建后）
+                if (_draftService != null)
+                {
+                    try
+                    {
+                        await _draftService.DeleteDraftAsync();
+                        System.Diagnostics.Debug.WriteLine("[SchedulingViewModel] Draft deleted after successful schedule creation");
+                    }
+                    catch (Exception draftEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel] Failed to delete draft: {draftEx.Message}");
+                        // 不影响主流程，仅记录日志
+                    }
+                }
+                
                 await _dialogService.ShowSuccessAsync("排班生成成功");
                 
                 try 
