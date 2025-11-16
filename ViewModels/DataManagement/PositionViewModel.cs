@@ -73,25 +73,48 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
     public ObservableCollection<PersonnelDto> AvailablePersonnel { get; } = new();
 
     /// <summary>
-    /// 选中的人员（用于添加/移除操作）
+    /// 选中的人员（用于移除操作，来自当前可用人员列表）
     /// </summary>
-    private PersonnelDto? _selectedPersonnel;
-    public PersonnelDto? SelectedPersonnel
+    private PersonnelDto? _selectedAvailablePersonnel;
+    public PersonnelDto? SelectedAvailablePersonnel
     {
-        get => _selectedPersonnel;
+        get => _selectedAvailablePersonnel;
         set
         {
-            if (SetProperty(ref _selectedPersonnel, value))
+            if (SetProperty(ref _selectedAvailablePersonnel, value))
             {
-                System.Diagnostics.Debug.WriteLine($"SelectedPersonnel changed to: {value?.Name ?? "null"}");
-                System.Diagnostics.Debug.WriteLine($"SelectedItem is: {SelectedItem?.Name ?? "null"}");
-                System.Diagnostics.Debug.WriteLine($"CanExecute: {SelectedItem != null && value != null}");
-                
-                // 通知命令状态更新
-                AddPersonnelCommand.NotifyCanExecuteChanged();
+                System.Diagnostics.Debug.WriteLine($"SelectedAvailablePersonnel changed to: {value?.Name ?? "null"}");
+                // 移除操作使用这个属性
                 RemovePersonnelCommand.NotifyCanExecuteChanged();
             }
         }
+    }
+
+    /// <summary>
+    /// 选中的人员（用于添加操作，来自所有人员下拉框）
+    /// </summary>
+    private PersonnelDto? _selectedPersonnelToAdd;
+    public PersonnelDto? SelectedPersonnelToAdd
+    {
+        get => _selectedPersonnelToAdd;
+        set
+        {
+            if (SetProperty(ref _selectedPersonnelToAdd, value))
+            {
+                System.Diagnostics.Debug.WriteLine($"SelectedPersonnelToAdd changed to: {value?.Name ?? "null"}");
+                // 添加操作使用这个属性
+                AddPersonnelCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 保持向后兼容的别名（内部使用 SelectedAvailablePersonnel）
+    /// </summary>
+    public PersonnelDto? SelectedPersonnel
+    {
+        get => SelectedAvailablePersonnel;
+        set => SelectedAvailablePersonnel = value;
     }
 
     public PositionViewModel(
@@ -385,15 +408,15 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
     /// </summary>
     private bool CanAddPersonnel()
     {
-        if (SelectedItem == null || SelectedPersonnel == null)
+        if (SelectedItem == null || SelectedPersonnelToAdd == null)
         {
-            System.Diagnostics.Debug.WriteLine($"CanAddPersonnel: false - SelectedItem={SelectedItem?.Name ?? "null"}, SelectedPersonnel={SelectedPersonnel?.Name ?? "null"}");
+            System.Diagnostics.Debug.WriteLine($"CanAddPersonnel: false - SelectedItem={SelectedItem?.Name ?? "null"}, SelectedPersonnelToAdd={SelectedPersonnelToAdd?.Name ?? "null"}");
             return false;
         }
 
         // 检查人员是否已经在哨位中
-        var isAlreadyAdded = SelectedItem.AvailablePersonnelIds.Contains(SelectedPersonnel.Id);
-        System.Diagnostics.Debug.WriteLine($"CanAddPersonnel: {!isAlreadyAdded} - Personnel {SelectedPersonnel.Name} already in position: {isAlreadyAdded}");
+        var isAlreadyAdded = SelectedItem.AvailablePersonnelIds.Contains(SelectedPersonnelToAdd.Id);
+        System.Diagnostics.Debug.WriteLine($"CanAddPersonnel: {!isAlreadyAdded} - Personnel {SelectedPersonnelToAdd.Name} already in position: {isAlreadyAdded}");
         return !isAlreadyAdded;
     }
 
@@ -414,24 +437,27 @@ public partial class PositionViewModel : ListViewModelBase<PositionDto>
     /// </summary>
     private async Task AddPersonnelAsync()
     {
-        if (SelectedItem == null || SelectedPersonnel == null)
+        if (SelectedItem == null || SelectedPersonnelToAdd == null)
             return;
 
-        var personnelToAdd = SelectedPersonnel;
+        var personnelToAdd = SelectedPersonnelToAdd;
         var positionName = SelectedItem.Name;
 
         await ExecuteAsync(async () =>
         {
             // 调用服务API
             await _positionService.AddAvailablePersonnelAsync(SelectedItem.Id, personnelToAdd.Id);
-            
+
             // 增量更新UI
             AddPersonnelToAvailableList(personnelToAdd);
             UpdateSelectedItemPersonnelIds(personnelToAdd.Id, isAdding: true);
-            
+
             // 触发哨位列表项更新（更新可用人员数量显示）
             NotifyPositionListItemChanged(SelectedItem);
-            
+
+            // 清空下拉框选择（方便连续添加多个人员）
+            SelectedPersonnelToAdd = null;
+
             // 更新命令状态
             AddPersonnelCommand.NotifyCanExecuteChanged();
             RemovePersonnelCommand.NotifyCanExecuteChanged();

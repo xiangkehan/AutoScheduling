@@ -217,13 +217,13 @@
                         <!-- 添加人员 -->
                         <Expander Header="添加人员" IsExpanded="False">
                             <StackPanel Spacing="8" Margin="0,12,0,0">
-                                <ComboBox Header="选择人员" 
+                                <ComboBox Header="选择人员"
                                           ItemsSource="{x:Bind ViewModel.AllPersonnel, Mode=OneWay}"
-                                          SelectedItem="{x:Bind ViewModel.SelectedPersonnel, Mode=TwoWay}"
+                                          SelectedItem="{x:Bind ViewModel.SelectedPersonnelToAdd, Mode=TwoWay}"
                                           DisplayMemberPath="Name"
                                           PlaceholderText="请选择要添加的人员"/>
-                                
-                                <Button Content="添加到当前哨位" 
+
+                                <Button Content="添加到当前哨位"
                                         Command="{x:Bind ViewModel.AddPersonnelCommand}"
                                         Style="{StaticResource AccentButtonStyle}"
                                         HorizontalAlignment="Left"/>
