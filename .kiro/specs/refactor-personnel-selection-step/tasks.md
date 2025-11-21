@@ -605,11 +605,13 @@ nt属性
   - _Requirements: 所有需求_
 
 
-- [ ] 16.1 更新README.md
+- [x] 16.1 更新README.md
+
   - 添加步骤顺序调整说明
   - 添加新功能说明（基于哨位的人员管理、临时更改、手动添加人员）
   - 更新使用说明
   - _Requirements: 所有需求_
+
 
 - [ ] 16.2 更新CLAUDE.md
   - 添加PositionPersonnelManager的设计说明

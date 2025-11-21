@@ -139,36 +139,100 @@ AutoScheduling3/
 #### PositionPersonnelManager
 **位置**：`ViewModels/Scheduling/PositionPersonnelManager.cs`
 
+**设计目的**：
+管理哨位与人员的临时关联关系，支持在不修改数据库的情况下进行人员调整，并提供将临时更改保存为永久的功能。
+
 **核心功能**：
 - 管理哨位与人员的临时关联关系
 - 跟踪临时性更改（添加/移除人员）
 - 提供撤销功能
 - 区分原始数据和当前数据
+- 支持查询所有有更改的哨位
+
+**数据结构**：
+```csharp
+// 原始数据（从数据库加载）
+private Dictionary<int, List<int>> _originalAvailablePersonnel;
+
+// 当前数据（包含临时更改）
+private Dictionary<int, List<int>> _currentAvailablePersonnel;
+
+// 临时更改记录
+private Dictionary<int, PositionPersonnelChanges> _changes;
+```
 
 **关键方法**：
 ```csharp
+// 初始化管理器，从PositionDto列表加载数据
 void Initialize(IEnumerable<PositionDto> positions)
+
+// 获取哨位的当前可用人员列表（包含临时更改）
 List<int> GetAvailablePersonnel(int positionId)
+
+// 临时添加人员到哨位
 void AddPersonnelTemporarily(int positionId, int personnelId)
+
+// 临时移除人员从哨位
 void RemovePersonnelTemporarily(int positionId, int personnelId)
+
+// 获取哨位的临时更改记录
 PositionPersonnelChanges GetChanges(int positionId)
+
+// 撤销指定哨位的所有临时更改
 void RevertChanges(int positionId)
+
+// 撤销所有哨位的临时更改
 void RevertAllChanges()
+
+// 获取所有有临时更改的哨位ID列表
+List<int> GetPositionsWithChanges()
+
+// 清空所有数据
+void Clear()
 ```
+
+**使用场景**：
+1. **初始化**：在步骤3开始时，从 `SelectedPositions` 初始化
+2. **临时调整**：用户在UI中添加/移除人员时，调用相应方法
+3. **查询状态**：UI需要显示当前状态时，调用 `GetAvailablePersonnel` 和 `GetChanges`
+4. **撤销操作**：用户点击撤销按钮时，调用 `RevertChanges`
+5. **保存为永久**：用户确认保存时，获取更改并调用 `IPositionService.UpdateAsync`
+
+**注意事项**：
+- 所有临时更改仅存在于内存中，不影响数据库
+- 调用 `Initialize` 会清空所有临时更改
+- 保存为永久后需要重新调用 `Initialize` 以同步状态
 
 #### 两种添加人员方式
 
+系统提供两种不同的人员添加方式，适用于不同的场景：
+
 **方式1：为指定哨位临时添加人员**
-- **操作位置**：在哨位卡片中点击"为此哨位添加人员"
+- **操作位置**：在哨位卡片中点击"为此哨位添加人员"按钮
+- **选择范围**：从所有可用人员（`AvailablePersonnels`）中选择
 - **数据变化**：`PositionPersonnelManager` 跟踪该哨位的临时更改
+- **UI显示**：在该哨位的人员列表中显示，带 ➕ 图标
 - **可保存为永久**：✅ 可以通过 `IPositionService.UpdateAsync` 保存到数据库
 - **排班算法中的可见性**：只对该哨位可用
+- **适用场景**：为特定哨位增加临时人员，如临时调配、应急支援
 
 **方式2：手动添加参与人员（不属于任何哨位）**
-- **操作位置**：在"手动添加的人员"区域点击"添加参与人员"
+- **操作位置**：在"手动添加的人员"区域点击"添加参与人员（对所有哨位可用）"按钮
+- **选择范围**：从不在任何已选哨位可用人员列表中的人员中选择
 - **数据变化**：添加到 `ManuallyAddedPersonnelIds` 列表
+- **UI显示**：在"手动添加的人员"区域单独显示
 - **可保存为永久**：❌ 不可以（因为没有关联到具体哨位）
 - **排班算法中的可见性**：对所有哨位可用
+- **适用场景**：机动人员、管理人员、临时支援人员、特殊角色人员
+
+**关键区别**：
+| 特性 | 为哨位临时添加 | 手动添加参与人员 |
+|------|--------------|----------------|
+| 关联哨位 | 特定哨位 | 无（全局） |
+| 数据管理 | PositionPersonnelManager | ManuallyAddedPersonnelIds |
+| 可保存为永久 | ✅ 是 | ❌ 否 |
+| 算法可见性 | 仅该哨位 | 所有哨位 |
+| 撤销方式 | 单个哨位撤销 | 单个人员移除 |
 
 #### 人员来源类型（PersonnelSourceType）
 ```csharp
@@ -209,24 +273,82 @@ var availableForManualAdd = AvailablePersonnels
 ```
 
 #### 保存为永久
+
+将临时更改保存到数据库的完整流程：
+
 ```csharp
-// 获取哨位的临时更改
-var changes = _positionPersonnelManager.GetChanges(positionId);
-
-// 更新哨位的可用人员列表
-var updatedPersonnelIds = _positionPersonnelManager.GetAvailablePersonnel(positionId);
-var updateDto = new UpdatePositionDto
+private async Task SavePositionChangesAsync(int positionId)
 {
-    // ... 其他字段
-    AvailablePersonnelIds = updatedPersonnelIds
-};
-
-await _positionService.UpdateAsync(positionId, updateDto);
-
-// 更新本地数据并重新初始化
-position.AvailablePersonnelIds = updatedPersonnelIds;
-_positionPersonnelManager.Initialize(SelectedPositions);
+    try
+    {
+        // 1. 获取哨位的临时更改
+        var changes = _positionPersonnelManager.GetChanges(positionId);
+        if (!changes.HasChanges)
+        {
+            await _dialogService.ShowWarningAsync("没有需要保存的更改");
+            return;
+        }
+        
+        // 2. 显示确认对话框
+        var confirmed = await ShowSaveConfirmationDialog(changes);
+        if (!confirmed)
+            return;
+        
+        // 3. 获取哨位
+        var position = SelectedPositions.FirstOrDefault(p => p.Id == positionId);
+        if (position == null)
+        {
+            await _dialogService.ShowErrorAsync("哨位不存在");
+            return;
+        }
+        
+        // 4. 更新哨位的可用人员列表
+        var updatedPersonnelIds = _positionPersonnelManager.GetAvailablePersonnel(positionId);
+        var updateDto = new UpdatePositionDto
+        {
+            Name = position.Name,
+            Location = position.Location,
+            Description = position.Description,
+            Requirements = position.Requirements,
+            RequiredSkillIds = position.RequiredSkillIds,
+            AvailablePersonnelIds = updatedPersonnelIds
+        };
+        
+        // 5. 调用服务更新数据库
+        await _positionService.UpdateAsync(positionId, updateDto);
+        
+        // 6. 更新本地数据
+        position.AvailablePersonnelIds = updatedPersonnelIds;
+        
+        // 7. 重新初始化管理器（清除临时更改标记）
+        _positionPersonnelManager.Initialize(SelectedPositions);
+        
+        // 8. 显示成功提示
+        await _dialogService.ShowSuccessAsync("更改已保存");
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"保存哨位更改失败: {ex.Message}");
+        await _dialogService.ShowErrorAsync("保存失败", ex);
+    }
+}
 ```
+
+**关键步骤说明**：
+1. **验证更改**：检查是否有实际的更改需要保存
+2. **用户确认**：显示详细的更改列表，让用户确认
+3. **数据验证**：确保哨位存在且数据有效
+4. **构建DTO**：创建包含所有字段的更新DTO
+5. **数据库更新**：通过服务层更新数据库
+6. **本地同步**：更新本地PositionDto对象
+7. **状态重置**：重新初始化管理器，清除临时更改标记
+8. **用户反馈**：显示成功或失败提示
+
+**注意事项**：
+- 保存失败时保留临时更改状态，用户可以重试
+- 重新初始化后，之前的临时更改标记会被清除
+- 只有为哨位临时添加的人员可以保存为永久
+- 手动添加的参与人员不能保存为永久（因为没有关联到具体哨位）
 
 ## 数据模型
 
