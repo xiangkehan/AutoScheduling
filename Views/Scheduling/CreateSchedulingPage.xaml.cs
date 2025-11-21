@@ -23,9 +23,6 @@ namespace AutoScheduling3.Views.Scheduling
             ViewModel = (App.Current as App).ServiceProvider.GetRequiredService<SchedulingViewModel>();
             _draftService = (App.Current as App).ServiceProvider.GetRequiredService<ISchedulingDraftService>();
             
-            // Inject draft service into ViewModel
-            ViewModel.InjectDraftService(_draftService);
-            
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
@@ -118,7 +115,7 @@ namespace AutoScheduling3.Views.Scheduling
                         try
                         {
                             System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] User chose to restore draft");
-                            await ViewModel.RestoreFromDraftAsync(draft);
+                            await ViewModel.RestoreFromDraftAsync();
                             _isDraftRestored = true;
                             
                             // 显示恢复成功的临时通知
@@ -193,8 +190,7 @@ namespace AutoScheduling3.Views.Scheduling
                 try
                 {
                     System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] Saving draft on navigation away...");
-                    var draft = await ViewModel.CreateDraftAsync();
-                    await _draftService.SaveDraftAsync(draft);
+                    await ViewModel.CreateDraftAsync();
                     System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] Draft saved successfully");
                     
                     // 可选：显示简短通知（非阻塞）
@@ -354,32 +350,7 @@ namespace AutoScheduling3.Views.Scheduling
             }
         }
 
-        private void AddPersonnel_Click(object sender, RoutedEventArgs e)
-        {
-            var selectedItems = AvailablePersonnelList?.SelectedItems.Cast<PersonnelDto>().ToList();
-            if (selectedItems != null && selectedItems.Any())
-            {
-                foreach (var item in selectedItems)
-                {
-                    if (!ViewModel.SelectedPersonnels.Any(p => p.Id == item.Id))
-                    {
-                        ViewModel.SelectedPersonnels.Add(item);
-                    }
-                }
-            }
-        }
 
-        private void RemovePersonnel_Click(object sender, RoutedEventArgs e)
-        {
-            var selectedItems = SelectedPersonnelList?.SelectedItems.Cast<PersonnelDto>().ToList();
-            if (selectedItems != null && selectedItems.Any())
-            {
-                foreach (var item in selectedItems)
-                {
-                    ViewModel.SelectedPersonnels.Remove(item);
-                }
-            }
-        }
 
         private void AddPosition_Click(object sender, RoutedEventArgs e)
         {
@@ -488,7 +459,7 @@ namespace AutoScheduling3.Views.Scheduling
                     };
 
                     // 创建自动关闭任务
-                    var autoCloseTask = Task.Run(async () =>
+                    Task autoCloseTask = Task.Run(async () =>
                     {
                         await Task.Delay(3000); // 3秒后自动关闭
 

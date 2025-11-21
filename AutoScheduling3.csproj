@@ -14,7 +14,6 @@
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Controls\CellModel.cs~RF18ea0bd.TMP" />
-    <None Remove="Controls\PersonnelCard.xaml" />
     <None Remove="Controls\ScheduleGridControl.xaml" />
     <None Remove="Converters\BoolToBrushConverter.cs" />
     <None Remove="Converters\BoolToTextConverter.cs" />

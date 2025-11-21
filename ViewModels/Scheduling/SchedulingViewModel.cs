@@ -1329,8 +1329,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     var personnel = GetPersonnelFromCache(personnelId);
                     if (personnel != null)
                     {
-                        var skillsDisplay = personnel.Skills != null && personnel.Skills.Any() 
-                            ? $" (技能: {string.Join(", ", personnel.Skills.Select(s => s.Name))})" 
+                        var skillsDisplay = personnel.SkillNames != null && personnel.SkillNames.Any() 
+                            ? $" (技能: {string.Join(", ", personnel.SkillNames)})" 
                             : "";
                         manuallyAddedPersonnelSection.Lines.Add($"{personnel.Name}{skillsDisplay}");
                     }
@@ -2042,7 +2042,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             contentPanel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
             {
                 Text = "这些更改将影响后续所有排班。",
-                FontStyle = Microsoft.UI.Text.FontStyle.Italic,
+                FontStyle = Windows.UI.Text.FontStyle.Italic,
                 Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
                 Margin = new Microsoft.UI.Xaml.Thickness(0, 12, 0, 0)
             });
@@ -2402,7 +2402,18 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     SelectedHolidayConfigId = SelectedHolidayConfigId,
                     EnabledFixedRuleIds = FixedPositionRules.Where(r => r.IsEnabled).Select(r => r.Id).ToList(),
                     EnabledManualAssignmentIds = enabledManualAssignmentIds,
-                    TemporaryManualAssignments = temporaryManualAssignments,
+                    TemporaryManualAssignments = temporaryManualAssignments
+                         .Select(vm => new ManualAssignmentDraftDto
+                         {
+                             Date = vm.Date,
+                             PersonnelId = vm.PersonnelId,
+                             PositionId = vm.PositionId,
+                             TimeSlot = vm.TimeSlot,
+                             Remarks = vm.Remarks,
+                             IsEnabled = vm.IsEnabled,
+                             TempId = vm.TempId
+                         })
+                         .ToList(),
                     PositionPersonnelChanges = positionPersonnelChanges,
                     ManuallyAddedPersonnelIds = new List<int>(ManuallyAddedPersonnelIds),
                     SavedAt = DateTime.Now,
@@ -2517,7 +2528,20 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     // 恢复临时手动指定
                     foreach (var tempAssignment in draft.TemporaryManualAssignments)
                     {
-                        _manualAssignmentManager.AddTemporary(tempAssignment);
+                        var personnel = GetPersonnelFromCache(tempAssignment.PersonnelId);
+                        var position = GetPositionFromCache(tempAssignment.PositionId);
+                        
+                        var dto = new CreateManualAssignmentDto
+                        {
+                            Date = tempAssignment.Date,
+                            PersonnelId = tempAssignment.PersonnelId,
+                            PositionId = tempAssignment.PositionId,
+                            TimeSlot = tempAssignment.TimeSlot,
+                            Remarks = tempAssignment.Remarks,
+                            IsEnabled = tempAssignment.IsEnabled
+                        };
+                        
+                        _manualAssignmentManager.AddTemporary(dto, personnel?.Name ?? "未知人员", position?.Name ?? "未知哨位");
                     }
 
                     System.Diagnostics.Debug.WriteLine($"恢复手动指定: 已保存 {savedManualAssignments.Count}, 临时 {draft.TemporaryManualAssignments.Count}");

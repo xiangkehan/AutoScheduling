@@ -43,7 +43,7 @@ namespace AutoScheduling3.Controls
 
         public PersonnelCard()
         {
-            InitializeComponent();
+            this.InitializeComponent();
             Loaded += OnLoaded;
             PointerEntered += OnPointerEntered;
             PointerExited += OnPointerExited;

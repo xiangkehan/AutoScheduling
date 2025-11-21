@@ -275,7 +275,7 @@
                                                                 CommandParameter="{x:Bind PositionDto}">
                                                             <Button.Content>
                                                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                    <SymbolIcon Symbol="Add" FontSize="14"/>
+                                                                    <SymbolIcon Symbol="Add" Width="14" Height="14"/>
                                                                     <TextBlock Text="为此哨位添加人员"/>
                                                                 </StackPanel>
                                                             </Button.Content>
@@ -286,7 +286,7 @@
                                                                 Visibility="{x:Bind HasChanges, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
                                                             <Button.Content>
                                                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                    <SymbolIcon Symbol="Save" FontSize="14"/>
+                                                                    <SymbolIcon Symbol="Save" Width="14" Height="14"/>
                                                                     <TextBlock Text="保存为永久"/>
                                                                 </StackPanel>
                                                             </Button.Content>
@@ -296,7 +296,7 @@
                                                                 Visibility="{x:Bind HasChanges, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
                                                             <Button.Content>
                                                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                    <SymbolIcon Symbol="Undo" FontSize="14"/>
+                                                                    <SymbolIcon Symbol="Undo" Width="14" Height="14"/>
                                                                     <TextBlock Text="撤销更改"/>
                                                                 </StackPanel>
                                                             </Button.Content>
