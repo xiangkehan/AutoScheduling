@@ -59,9 +59,40 @@ namespace AutoScheduling3.ViewModels.Scheduling
         // 手动指定管理器
         private readonly ManualAssignmentManager _manualAssignmentManager;
 
+        // 哨位人员管理器
+        private readonly PositionPersonnelManager _positionPersonnelManager;
+
         // 所有手动指定（绑定到UI）
         public ObservableCollection<ManualAssignmentViewModel> AllManualAssignments 
             => _manualAssignmentManager.AllAssignments;
+
+        // 手动添加的人员ID列表（不在任何哨位的可用人员列表中）
+        [ObservableProperty]
+        private ObservableCollection<int> _manuallyAddedPersonnelIds = new();
+
+        // 自动提取的人员数量
+        [ObservableProperty]
+        private int _autoExtractedPersonnelCount;
+
+        // 手动添加的人员数量
+        [ObservableProperty]
+        private int _manuallyAddedPersonnelCount;
+
+        // 是否正在添加人员到哨位
+        [ObservableProperty]
+        private bool _isAddingPersonnelToPosition;
+
+        // 当前正在编辑的哨位
+        [ObservableProperty]
+        private PositionDto? _currentEditingPosition;
+
+        // 可添加到当前哨位的人员列表
+        [ObservableProperty]
+        private ObservableCollection<PersonnelDto> _availablePersonnelForPosition = new();
+
+        // 选中的要添加到哨位的人员ID列表
+        [ObservableProperty]
+        private ObservableCollection<int> _selectedPersonnelIdsForPosition = new();
 
         // 表单相关属性
         [ObservableProperty]
@@ -262,6 +293,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
         public IRelayCommand CancelEditManualAssignmentCommand { get; }
         public IAsyncRelayCommand<ManualAssignmentViewModel> DeleteManualAssignmentCommand { get; }
 
+        // 为哨位添加人员命令
+        public IRelayCommand<PositionDto> StartAddPersonnelToPositionCommand { get; }
+        public IAsyncRelayCommand SubmitAddPersonnelToPositionCommand { get; }
+        public IRelayCommand CancelAddPersonnelToPositionCommand { get; }
+
         public SchedulingViewModel(
         ISchedulingService schedulingService,
         IPersonnelService personnelService,
@@ -279,6 +315,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
             
             // 初始化手动指定管理器
             _manualAssignmentManager = new ManualAssignmentManager();
+            
+            // 初始化哨位人员管理器
+            _positionPersonnelManager = new PositionPersonnelManager();
 
             LoadDataCommand = new AsyncRelayCommand(LoadInitialDataAsync);
             NextStepCommand = new RelayCommand(NextStep, CanGoNext);
@@ -297,6 +336,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
             SubmitEditManualAssignmentCommand = new AsyncRelayCommand(SubmitEditManualAssignmentAsync);
             CancelEditManualAssignmentCommand = new RelayCommand(CancelEditManualAssignment);
             DeleteManualAssignmentCommand = new AsyncRelayCommand<ManualAssignmentViewModel>(DeleteManualAssignmentAsync);
+
+            // 初始化为哨位添加人员命令
+            StartAddPersonnelToPositionCommand = new RelayCommand<PositionDto>(StartAddPersonnelToPosition);
+            SubmitAddPersonnelToPositionCommand = new AsyncRelayCommand(SubmitAddPersonnelToPositionAsync);
+            CancelAddPersonnelToPositionCommand = new RelayCommand(CancelAddPersonnelToPosition);
 
             // Listen to property changes to refresh command states
             PropertyChanged += (s, e) =>
@@ -697,6 +741,14 @@ namespace AutoScheduling3.ViewModels.Scheduling
             
             // 清空手动指定管理器
             _manualAssignmentManager.Clear();
+            
+            // 清空哨位人员管理器
+            _positionPersonnelManager.Clear();
+            
+            // 清空手动添加的人员列表
+            ManuallyAddedPersonnelIds.Clear();
+            AutoExtractedPersonnelCount = 0;
+            ManuallyAddedPersonnelCount = 0;
             
             RefreshCommandStates();
         }
@@ -1488,11 +1540,119 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
         #endregion
 
+        #region 为哨位添加人员方法
+
+        /// <summary>
+        /// 开始为哨位添加人员
+        /// </summary>
+        /// <param name="position">要添加人员的哨位</param>
+        private void StartAddPersonnelToPosition(PositionDto? position)
+        {
+            if (position == null)
+            {
+                System.Diagnostics.Debug.WriteLine("StartAddPersonnelToPosition: position is null");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"=== 开始为哨位添加人员 ===");
+            System.Diagnostics.Debug.WriteLine($"哨位: {position.Name} (ID: {position.Id})");
+
+            // 设置当前正在编辑的哨位
+            CurrentEditingPosition = position;
+
+            // 从AvailablePersonnels中筛选可添加的人员
+            // 可以添加所有可用人员
+            var availableToAdd = AvailablePersonnels.ToList();
+
+            System.Diagnostics.Debug.WriteLine($"可添加的人员数量: {availableToAdd.Count}");
+
+            // 设置可添加到当前哨位的人员列表
+            AvailablePersonnelForPosition = new ObservableCollection<PersonnelDto>(availableToAdd);
+
+            // 设置标志为true，显示添加人员对话框
+            IsAddingPersonnelToPosition = true;
+
+            System.Diagnostics.Debug.WriteLine("添加人员对话框已打开");
+        }
+
+        /// <summary>
+        /// 提交添加人员到哨位
+        /// </summary>
+        private async Task SubmitAddPersonnelToPositionAsync()
+        {
+            if (CurrentEditingPosition == null)
+            {
+                System.Diagnostics.Debug.WriteLine("SubmitAddPersonnelToPositionAsync: CurrentEditingPosition is null");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"=== 提交添加人员到哨位 ===");
+            System.Diagnostics.Debug.WriteLine($"哨位: {CurrentEditingPosition.Name} (ID: {CurrentEditingPosition.Id})");
+
+            // 验证选择的人员
+            if (SelectedPersonnelIdsForPosition.Count == 0)
+            {
+                await _dialogService.ShowWarningAsync("请至少选择一名人员");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"选择的人员数量: {SelectedPersonnelIdsForPosition.Count}");
+
+            // 调用_positionPersonnelManager.AddPersonnelTemporarily添加人员
+            foreach (var personnelId in SelectedPersonnelIdsForPosition)
+            {
+                var personnel = AvailablePersonnelForPosition.FirstOrDefault(p => p.Id == personnelId);
+                if (personnel != null)
+                {
+                    _positionPersonnelManager.AddPersonnelTemporarily(CurrentEditingPosition.Id, personnelId);
+                    System.Diagnostics.Debug.WriteLine($"临时添加人员: {personnel.Name} (ID: {personnelId}) 到哨位 {CurrentEditingPosition.Name}");
+                }
+            }
+
+            // 更新UI显示
+            // 这里可以触发UI刷新，显示临时添加的人员
+            OnPropertyChanged(nameof(SelectedPositions));
+
+            // 清空当前编辑的哨位和选择
+            CurrentEditingPosition = null;
+            AvailablePersonnelForPosition.Clear();
+            SelectedPersonnelIdsForPosition.Clear();
+
+            // 设置标志为false，关闭对话框
+            IsAddingPersonnelToPosition = false;
+
+            System.Diagnostics.Debug.WriteLine("人员添加完成，对话框已关闭");
+        }
+
+        /// <summary>
+        /// 取消添加人员到哨位
+        /// </summary>
+        private void CancelAddPersonnelToPosition()
+        {
+            System.Diagnostics.Debug.WriteLine("取消添加人员到哨位");
+
+            // 清空当前编辑的哨位和选择
+            CurrentEditingPosition = null;
+            AvailablePersonnelForPosition.Clear();
+            SelectedPersonnelIdsForPosition.Clear();
+
+            // 设置标志为false，关闭对话框
+            IsAddingPersonnelToPosition = false;
+        }
+
+        #endregion
+
         // 属性变化回调
         partial void OnCurrentStepChanged(int value)
         {
             RefreshCommandStates();
-            if (value == 4 && !IsLoadingConstraints && FixedPositionRules.Count == 0)
+            
+            // 步骤3：自动提取人员
+            if (value == 3)
+            {
+                ExtractPersonnelFromPositions();
+            }
+            else if (value == 4 && !IsLoadingConstraints && FixedPositionRules.Count == 0)
             {
                 _ = LoadConstraintsAsync();
             }
@@ -1500,6 +1660,36 @@ namespace AutoScheduling3.ViewModels.Scheduling
             {
                 BuildSummarySections();
             }
+        }
+
+        /// <summary>
+        /// 从已选哨位自动提取可用人员
+        /// </summary>
+        private void ExtractPersonnelFromPositions()
+        {
+            System.Diagnostics.Debug.WriteLine("=== 开始自动提取人员 ===");
+            System.Diagnostics.Debug.WriteLine($"已选哨位数量: {SelectedPositions.Count}");
+
+            // 初始化PositionPersonnelManager
+            _positionPersonnelManager.Initialize(SelectedPositions);
+
+            // 从所有已选哨位的AvailablePersonnelIds中提取唯一的人员ID
+            var autoExtractedPersonnelIds = SelectedPositions
+                .SelectMany(p => p.AvailablePersonnelIds)
+                .Distinct()
+                .ToHashSet();
+
+            System.Diagnostics.Debug.WriteLine($"自动提取的人员ID数量: {autoExtractedPersonnelIds.Count}");
+
+            // 更新自动提取的人员数量
+            AutoExtractedPersonnelCount = autoExtractedPersonnelIds.Count;
+
+            // 更新手动添加的人员数量
+            ManuallyAddedPersonnelCount = ManuallyAddedPersonnelIds.Count;
+
+            System.Diagnostics.Debug.WriteLine($"自动提取人员数量: {AutoExtractedPersonnelCount}");
+            System.Diagnostics.Debug.WriteLine($"手动添加人员数量: {ManuallyAddedPersonnelCount}");
+            System.Diagnostics.Debug.WriteLine("=== 人员提取完成 ===");
         }
         partial void OnScheduleTitleChanged(string value) => RefreshCommandStates();
         partial void OnStartDateChanged(DateTimeOffset value)
@@ -1531,9 +1721,25 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             if (value != null)
             {
-                value.CollectionChanged += (s, e) => RefreshCommandStates();
+                value.CollectionChanged += (s, e) =>
+                {
+                    RefreshCommandStates();
+                    
+                    // 如果在步骤3，重新提取人员
+                    if (CurrentStep == 3)
+                    {
+                        ExtractPersonnelFromPositions();
+                    }
+                };
             }
             RefreshCommandStates();
+            
+            // 如果在步骤3，重新提取人员
+            if (CurrentStep == 3)
+            {
+                ExtractPersonnelFromPositions();
+            }
+            
             if (CurrentStep == 5) BuildSummarySections();
         }
         partial void OnUseActiveHolidayConfigChanged(bool value)

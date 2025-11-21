@@ -125,6 +125,109 @@ AutoScheduling3/
 - **支持格式**：JSON
 - **文档**：[Services/ImportExport/README.md](Services/ImportExport/README.md)、[QUICK_REFERENCE.md](Services/ImportExport/QUICK_REFERENCE.md)
 
+## 排班创建流程（重构后）
+
+### 步骤顺序
+1. **步骤1：基本信息** - 设置排班标题和日期范围
+2. **步骤2：选择哨位** - 选择参与排班的哨位（原步骤3）
+3. **步骤3：选择人员** - 基于哨位的智能人员管理（重构后）
+4. **步骤4：配置约束** - 设置休息日、定岗规则、手动指定
+5. **步骤5：确认执行** - 查看摘要并开始排班
+
+### 步骤3：智能人员管理（新功能）
+
+#### PositionPersonnelManager
+**位置**：`ViewModels/Scheduling/PositionPersonnelManager.cs`
+
+**核心功能**：
+- 管理哨位与人员的临时关联关系
+- 跟踪临时性更改（添加/移除人员）
+- 提供撤销功能
+- 区分原始数据和当前数据
+
+**关键方法**：
+```csharp
+void Initialize(IEnumerable<PositionDto> positions)
+List<int> GetAvailablePersonnel(int positionId)
+void AddPersonnelTemporarily(int positionId, int personnelId)
+void RemovePersonnelTemporarily(int positionId, int personnelId)
+PositionPersonnelChanges GetChanges(int positionId)
+void RevertChanges(int positionId)
+void RevertAllChanges()
+```
+
+#### 两种添加人员方式
+
+**方式1：为指定哨位临时添加人员**
+- **操作位置**：在哨位卡片中点击"为此哨位添加人员"
+- **数据变化**：`PositionPersonnelManager` 跟踪该哨位的临时更改
+- **可保存为永久**：✅ 可以通过 `IPositionService.UpdateAsync` 保存到数据库
+- **排班算法中的可见性**：只对该哨位可用
+
+**方式2：手动添加参与人员（不属于任何哨位）**
+- **操作位置**：在"手动添加的人员"区域点击"添加参与人员"
+- **数据变化**：添加到 `ManuallyAddedPersonnelIds` 列表
+- **可保存为永久**：❌ 不可以（因为没有关联到具体哨位）
+- **排班算法中的可见性**：对所有哨位可用
+
+#### 人员来源类型（PersonnelSourceType）
+```csharp
+public enum PersonnelSourceType
+{
+    AutoExtracted,      // 自动提取（从哨位的原始可用人员列表）
+    TemporarilyAdded,   // 临时添加（在本次排班中添加到哨位）
+    TemporarilyRemoved, // 临时移除（在本次排班中从哨位移除）
+    ManuallyAdded       // 手动添加（不属于任何哨位，手动添加到参与人员）
+}
+```
+
+#### 自动提取人员逻辑
+```csharp
+// 从所有已选哨位的AvailablePersonnelIds中提取唯一的人员ID
+var autoExtractedPersonnelIds = SelectedPositions
+    .SelectMany(p => p.AvailablePersonnelIds)
+    .Distinct()
+    .ToList();
+
+// 从AvailablePersonnels中获取对应的人员详细信息
+var autoExtractedPersonnels = AvailablePersonnels
+    .Where(p => autoExtractedPersonnelIds.Contains(p.Id))
+    .ToList();
+```
+
+#### 手动添加人员逻辑
+```csharp
+// 筛选不在任何哨位可用人员列表中的人员
+var autoExtractedPersonnelIds = SelectedPositions
+    .SelectMany(p => _positionPersonnelManager.GetAvailablePersonnel(p.Id))
+    .Distinct()
+    .ToHashSet();
+
+var availableForManualAdd = AvailablePersonnels
+    .Where(p => !autoExtractedPersonnelIds.Contains(p.Id))
+    .ToList();
+```
+
+#### 保存为永久
+```csharp
+// 获取哨位的临时更改
+var changes = _positionPersonnelManager.GetChanges(positionId);
+
+// 更新哨位的可用人员列表
+var updatedPersonnelIds = _positionPersonnelManager.GetAvailablePersonnel(positionId);
+var updateDto = new UpdatePositionDto
+{
+    // ... 其他字段
+    AvailablePersonnelIds = updatedPersonnelIds
+};
+
+await _positionService.UpdateAsync(positionId, updateDto);
+
+// 更新本地数据并重新初始化
+position.AvailablePersonnelIds = updatedPersonnelIds;
+_positionPersonnelManager.Initialize(SelectedPositions);
+```
+
 ## 数据模型
 
 ### 核心实体
@@ -309,3 +412,7 @@ AutoScheduling3/
 4. **草稿清理**：应用启动时自动清理过期草稿（>7天）
 5. **异常处理**：应用级别异常处理在 `App_UnhandledException` 中
 6. **WinUI 3 兼容**：需要 Windows 10 1809+ (Build 17763)
+7. **步骤顺序**：步骤2和步骤3已互换，步骤2现在是选择哨位，步骤3是选择人员
+8. **临时更改**：哨位的临时人员更改仅在本次排班中生效，完成或取消后自动丢弃
+9. **手动添加人员**：手动添加的人员不属于任何哨位，可以被分配到任何哨位
+10. **保存为永久**：只有为哨位临时添加的人员可以保存为永久，手动添加的人员不可以
