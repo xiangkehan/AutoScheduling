@@ -17,6 +17,7 @@
         <converters:InvertedBooleanConverter x:Key="InvertedBooleanConverter"/>
         <converters:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <converters:EnumEqualsToVisibilityConverter x:Key="EnumEqualsToVisibilityConverter"/>
 
         <DataTemplate x:Key="PersonnelListViewTemplate" x:DataType="dto:PersonnelDto">
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -65,39 +66,10 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Step 2: Select Personnel -->
+                <!-- Step 2: Select Positions -->
                 <Grid Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=2, Mode=OneWay}">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="步骤 2: 选择参与人员" Style="{ThemeResource SubtitleTextBlockStyle}"/>
-                        <Grid ColumnSpacing="12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <!-- Available -->
-                            <ListView Grid.Column="0" Header="可用人员" ItemsSource="{x:Bind ViewModel.AvailablePersonnels, Mode=OneWay}"
-                                      SelectionMode="Multiple" ItemTemplate="{StaticResource PersonnelListViewTemplate}" MinHeight="300"
-                                      x:Name="AvailablePersonnelList" x:FieldModifier="public"/>
-                            <!-- Buttons -->
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
-                                <Button Content="&gt;&gt;" ToolTipService.ToolTip="添加选中"
-                                        Click="AddPersonnel_Click"/>
-                                <Button Content="&lt;&lt;" ToolTipService.ToolTip="移除选中"
-                                        Click="RemovePersonnel_Click"/>
-                            </StackPanel>
-                            <!-- Selected -->
-                            <ListView Grid.Column="2" Header="已选人员" ItemsSource="{x:Bind ViewModel.SelectedPersonnels, Mode=OneWay}"
-                                      SelectionMode="Multiple" ItemTemplate="{StaticResource PersonnelListViewTemplate}" MinHeight="300"
-                                      x:Name="SelectedPersonnelList" x:FieldModifier="public"/>
-                        </Grid>
-                    </StackPanel>
-                </Grid>
-
-                <!-- Step 3: Select Positions -->
-                <Grid Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=3, Mode=OneWay}">
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="步骤 3: 选择参与哨位" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                        <TextBlock Text="步骤 2: 选择参与哨位" Style="{ThemeResource SubtitleTextBlockStyle}"/>
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -120,6 +92,269 @@
                                       SelectionMode="Multiple" ItemTemplate="{StaticResource PositionListViewTemplate}" MinHeight="300"
                                       x:Name="SelectedPositionsList" x:FieldModifier="public"/>
                         </Grid>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Step 3: Select Personnel (New Design) -->
+                <Grid Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=3, Mode=OneWay}">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="步骤 3: 选择参与人员" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                        
+                        <!-- Info Bar -->
+                        <InfoBar Severity="Informational" IsOpen="True" 
+                                 Title="提示" 
+                                 Message="已自动从已选哨位中提取可用人员。你可以进行临时调整或手动添加。"/>
+                        
+                        <!-- Personnel Statistics -->
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                BorderThickness="1" 
+                                Padding="16" 
+                                CornerRadius="{StaticResource ControlCornerRadius}"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="📊 参与人员统计" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
+                                <Grid ColumnSpacing="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Spacing="4">
+                                        <TextBlock Text="自动提取" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                        <TextBlock FontSize="24" FontWeight="SemiBold">
+                                            <Run Text="{x:Bind ViewModel.AutoExtractedPersonnelCount, Mode=OneWay}"/>
+                                            <Run Text="人" FontSize="14"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Text="手动添加" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                        <TextBlock FontSize="24" FontWeight="SemiBold">
+                                            <Run Text="{x:Bind ViewModel.ManuallyAddedPersonnelCount, Mode=OneWay}"/>
+                                            <Run Text="人" FontSize="14"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="4">
+                                        <TextBlock Text="总计" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                        <TextBlock FontSize="24" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}">
+                                            <Run Text="{x:Bind ViewModel.SelectedPersonnels.Count, Mode=OneWay}"/>
+                                            <Run Text="人" FontSize="14"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Position Personnel List -->
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="🔍 按哨位查看可用人员" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
+                            
+                            <!-- Empty State -->
+                            <TextBlock Text="请先在步骤2中选择哨位" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       Visibility="{x:Bind ViewModel.PositionPersonnelViewModels.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0, Mode=OneWay}"/>
+                            
+                            <!-- Position List -->
+                            <ItemsRepeater ItemsSource="{x:Bind ViewModel.PositionPersonnelViewModels, Mode=OneWay}">
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate x:DataType="viewmodels:PositionPersonnelViewModel">
+                                        <Expander HorizontalAlignment="Stretch" 
+                                                  HorizontalContentAlignment="Stretch"
+                                                  IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}"
+                                                  Margin="0,0,0,8">
+                                            <Expander.Header>
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <SymbolIcon Grid.Column="0" Symbol="MapPin"/>
+                                                    <StackPanel Grid.Column="1" Spacing="4">
+                                                        <TextBlock Text="{x:Bind PositionName}" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{x:Bind Location}" 
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                                                   FontSize="12"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2" Spacing="4" HorizontalAlignment="Right">
+                                                        <TextBlock Text="{x:Bind AvailablePersonnel.Count, Mode=OneWay}" 
+                                                                   FontWeight="SemiBold" 
+                                                                   HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="可用人员" 
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                                                   FontSize="12"
+                                                                   HorizontalAlignment="Right"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Expander.Header>
+                                            <Expander.Content>
+                                                <StackPanel Spacing="12" Padding="0,8,0,0">
+                                                    <!-- Personnel List -->
+                                                    <ItemsRepeater ItemsSource="{x:Bind AvailablePersonnel, Mode=OneWay}">
+                                                        <ItemsRepeater.ItemTemplate>
+                                                            <DataTemplate x:DataType="viewmodels:PersonnelItemViewModel">
+                                                                <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                                        BorderThickness="0,0,0,1"
+                                                                        Padding="8,8,8,8">
+                                                                    <Grid ColumnSpacing="12">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="Auto"/>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="Auto"/>
+                                                                        </Grid.ColumnDefinitions>
+                                                                        
+                                                                        <CheckBox Grid.Column="0" 
+                                                                                  IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
+                                                                                  VerticalAlignment="Center"/>
+                                                                        
+                                                                        <StackPanel Grid.Column="1" Spacing="4">
+                                                                            <TextBlock FontWeight="SemiBold">
+                                                                                <Run Text="{x:Bind PersonnelName}"/>
+                                                                            </TextBlock>
+                                                                            <TextBlock Text="{x:Bind SkillsDisplay}" 
+                                                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                                                                       FontSize="12"/>
+                                                                        </StackPanel>
+                                                                        
+                                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                                            <!-- Source Type Badge -->
+                                                                            <Border Padding="6,2" 
+                                                                                    CornerRadius="4"
+                                                                                    Background="{ThemeResource SystemFillColorSuccessBrush}"
+                                                                                    Visibility="{x:Bind SourceType, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=AutoExtracted, Mode=OneWay}">
+                                                                                <TextBlock Text="自动提取" FontSize="10" Foreground="White"/>
+                                                                            </Border>
+                                                                            <Border Padding="6,2" 
+                                                                                    CornerRadius="4"
+                                                                                    Background="{ThemeResource SystemFillColorCautionBrush}"
+                                                                                    Visibility="{x:Bind SourceType, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=TemporarilyAdded, Mode=OneWay}">
+                                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                                    <TextBlock Text="➕" FontSize="10"/>
+                                                                                    <TextBlock Text="临时添加" FontSize="10" Foreground="White"/>
+                                                                                </StackPanel>
+                                                                            </Border>
+                                                                            <Border Padding="6,2" 
+                                                                                    CornerRadius="4"
+                                                                                    Background="{ThemeResource SystemFillColorCriticalBrush}"
+                                                                                    Visibility="{x:Bind SourceType, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=TemporarilyRemoved, Mode=OneWay}">
+                                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                                    <TextBlock Text="➖" FontSize="10"/>
+                                                                                    <TextBlock Text="临时移除" FontSize="10" Foreground="White"/>
+                                                                                </StackPanel>
+                                                                            </Border>
+                                                                            
+                                                                            <!-- Shared Badge -->
+                                                                            <Border Padding="6,2" 
+                                                                                    CornerRadius="4"
+                                                                                    Background="{ThemeResource SystemFillColorAttentionBrush}"
+                                                                                    Visibility="{x:Bind IsShared, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                                    <TextBlock Text="🔗" FontSize="10"/>
+                                                                                    <TextBlock FontSize="10" Foreground="White">
+                                                                                        <Run Text="共享于"/>
+                                                                                        <Run Text="{x:Bind SharedPositionCount, Mode=OneWay}"/>
+                                                                                        <Run Text="个哨位"/>
+                                                                                    </TextBlock>
+                                                                                </StackPanel>
+                                                                            </Border>
+                                                                        </StackPanel>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsRepeater.ItemTemplate>
+                                                    </ItemsRepeater>
+                                                    
+                                                    <!-- Action Buttons -->
+                                                    <StackPanel Orientation="Horizontal" Spacing="8" Padding="8,8,8,0">
+                                                        <Button Command="{Binding ElementName=Root, Path=ViewModel.StartAddPersonnelToPositionCommand}"
+                                                                CommandParameter="{x:Bind PositionDto}">
+                                                            <Button.Content>
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                    <SymbolIcon Symbol="Add" FontSize="14"/>
+                                                                    <TextBlock Text="为此哨位添加人员"/>
+                                                                </StackPanel>
+                                                            </Button.Content>
+                                                        </Button>
+                                                        <Button Style="{ThemeResource AccentButtonStyle}"
+                                                                Command="{Binding ElementName=Root, Path=ViewModel.SavePositionChangesCommand}"
+                                                                CommandParameter="{x:Bind PositionId}"
+                                                                Visibility="{x:Bind HasChanges, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                                            <Button.Content>
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                    <SymbolIcon Symbol="Save" FontSize="14"/>
+                                                                    <TextBlock Text="保存为永久"/>
+                                                                </StackPanel>
+                                                            </Button.Content>
+                                                        </Button>
+                                                        <Button Command="{Binding ElementName=Root, Path=ViewModel.RevertPositionChangesCommand}"
+                                                                CommandParameter="{x:Bind PositionId}"
+                                                                Visibility="{x:Bind HasChanges, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                                            <Button.Content>
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                    <SymbolIcon Symbol="Undo" FontSize="14"/>
+                                                                    <TextBlock Text="撤销更改"/>
+                                                                </StackPanel>
+                                                            </Button.Content>
+                                                        </Button>
+                                                    </StackPanel>
+                                                    
+                                                    <!-- Explanation -->
+                                                    <TextBlock Text="说明: 添加的人员只对此哨位可用" 
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                                               FontSize="12"
+                                                               Padding="8,0,8,8"/>
+                                                </StackPanel>
+                                            </Expander.Content>
+                                        </Expander>
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                        </StackPanel>
+                        
+                        <!-- Manually Added Personnel Section -->
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                BorderThickness="1" 
+                                Padding="16" 
+                                CornerRadius="{StaticResource ControlCornerRadius}"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="👥 手动添加的人员（不属于任何哨位）" Style="{ThemeResource BaseTextBlockStyle}" FontWeight="SemiBold"/>
+                                
+                                <!-- Empty State -->
+                                <TextBlock Text="暂无手动添加的人员" 
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           Visibility="{x:Bind ViewModel.ManuallyAddedPersonnelIds.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=0, Mode=OneWay}"/>
+                                
+                                <!-- Manually Added Personnel List -->
+                                <StackPanel Spacing="8"
+                                            Visibility="{x:Bind ViewModel.ManuallyAddedPersonnelIds.Count, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='>0', Mode=OneWay}">
+                                    <TextBlock FontWeight="SemiBold">
+                                        <Run Text="已添加"/>
+                                        <Run Text="{x:Bind ViewModel.ManuallyAddedPersonnelIds.Count, Mode=OneWay}"/>
+                                        <Run Text="名人员"/>
+                                    </TextBlock>
+                                    <TextBlock Text="这些人员可以被分配到任何哨位" 
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                               FontSize="12"/>
+                                </StackPanel>
+                                
+                                <!-- Add Button -->
+                                <Button Command="{x:Bind ViewModel.StartManualAddPersonnelCommand}"
+                                        HorizontalAlignment="Stretch">
+                                    <Button.Content>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                            <SymbolIcon Symbol="Add"/>
+                                            <TextBlock Text="添加参与人员（对所有哨位可用）"/>
+                                        </StackPanel>
+                                    </Button.Content>
+                                </Button>
+                                
+                                <!-- Explanation -->
+                                <TextBlock Text="说明: 这些人员可以被分配到任何哨位，不受哨位可用人员列表限制" 
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                           FontSize="12"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Grid>
 
@@ -484,6 +719,137 @@
                     <!-- Enabled Toggle -->
                     <ToggleSwitch Header="启用"
                                   IsOn="{x:Bind ViewModel.EditingManualAssignmentDto.IsEnabled, Mode=TwoWay}"/>
+                </StackPanel>
+            </ScrollViewer>
+        </ContentDialog>
+
+        <!-- Add Personnel to Position Dialog -->
+        <ContentDialog x:Name="AddPersonnelToPositionDialog"
+                       Title="为哨位添加人员"
+                       PrimaryButtonText="添加（临时）"
+                       CloseButtonText="取消"
+                       DefaultButton="Primary"
+                       PrimaryButtonCommand="{x:Bind ViewModel.SubmitAddPersonnelToPositionCommand}"
+                       CloseButtonCommand="{x:Bind ViewModel.CancelAddPersonnelToPositionCommand}">
+            <ScrollViewer MaxHeight="500">
+                <StackPanel Spacing="12">
+                    <!-- Position Info -->
+                    <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            Padding="12"
+                            CornerRadius="{StaticResource ControlCornerRadius}"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="哨位信息" FontWeight="SemiBold"/>
+                            <TextBlock>
+                                <Run Text="哨位: " Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <Run Text="{x:Bind ViewModel.CurrentEditingPosition.Name, Mode=OneWay}" FontWeight="SemiBold"/>
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="地点: " Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <Run Text="{x:Bind ViewModel.CurrentEditingPosition.Location, Mode=OneWay}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Search Box -->
+                    <AutoSuggestBox PlaceholderText="🔍 搜索人员..."
+                                    QueryIcon="Find"
+                                    x:Name="PersonnelSearchBox"/>
+
+                    <!-- Filter Option -->
+                    <CheckBox Content="仅显示具备所需技能的人员"
+                              x:Name="FilterBySkillsCheckBox"/>
+
+                    <!-- Personnel List -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="可用人员列表 (从所有人员中选择):" FontWeight="SemiBold"/>
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource ControlCornerRadius}"
+                                MaxHeight="300">
+                            <ListView ItemsSource="{x:Bind ViewModel.AvailablePersonnelForPosition, Mode=OneWay}"
+                                      SelectionMode="Multiple"
+                                      x:Name="AddPersonnelListView"
+                                      SelectionChanged="AddPersonnelListView_SelectionChanged">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="dto:PersonnelDto">
+                                        <StackPanel Orientation="Horizontal" Spacing="12" Padding="8">
+                                            <SymbolIcon Symbol="Contact"/>
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
+                                                <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                                    <Run Text="技能: "/>
+                                                    <Run Text="{x:Bind SkillIds.Count}"/>
+                                                    <Run Text="项"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </ContentDialog>
+
+        <!-- Manual Add Personnel Dialog -->
+        <ContentDialog x:Name="ManualAddPersonnelDialog"
+                       Title="手动添加参与人员"
+                       PrimaryButtonText="添加"
+                       CloseButtonText="取消"
+                       DefaultButton="Primary"
+                       PrimaryButtonCommand="{x:Bind ViewModel.SubmitManualAddPersonnelCommand}"
+                       CloseButtonCommand="{x:Bind ViewModel.CancelManualAddPersonnelCommand}">
+            <ScrollViewer MaxHeight="500">
+                <StackPanel Spacing="12">
+                    <!-- Info Message -->
+                    <InfoBar Severity="Informational"
+                             IsOpen="True"
+                             Message="从所有人员中选择不在任何已选哨位可用人员列表中的人员"/>
+
+                    <!-- Search Box -->
+                    <AutoSuggestBox PlaceholderText="🔍 搜索人员..."
+                                    QueryIcon="Find"
+                                    x:Name="ManualPersonnelSearchBox"/>
+
+                    <!-- Personnel List -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="可用人员列表 (从所有人员中选择):" FontWeight="SemiBold"/>
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource ControlCornerRadius}"
+                                MaxHeight="300">
+                            <ListView ItemsSource="{x:Bind ViewModel.AvailablePersonnelForManualAdd, Mode=OneWay}"
+                                      SelectionMode="Multiple"
+                                      x:Name="ManualAddPersonnelListView"
+                                      SelectionChanged="ManualAddPersonnelListView_SelectionChanged">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="dto:PersonnelDto">
+                                        <StackPanel Orientation="Horizontal" Spacing="12" Padding="8">
+                                            <SymbolIcon Symbol="Contact"/>
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
+                                                <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                                    <Run Text="技能: "/>
+                                                    <Run Text="{x:Bind SkillIds.Count}"/>
+                                                    <Run Text="项"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Explanation -->
+                    <TextBlock TextWrapping="Wrap"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               FontSize="12">
+                        <Run Text="说明: 这些人员将被添加到参与人员列表，但不会被添加到任何哨位的可用人员列表中"/>
+                    </TextBlock>
                 </StackPanel>
             </ScrollViewer>
         </ContentDialog>

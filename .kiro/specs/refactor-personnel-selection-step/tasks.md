@@ -348,24 +348,34 @@ nt属性
   - 更新ManuallyAddedPersonnelCount
   - _Requirements: 3.1.4_
 
-- [-] 8. 调整步骤顺序
+- [x] 8. 调整步骤顺序
+
+
 
 
   - 交换步骤2和步骤3的XAML内容
   - 更新步骤标题和说明
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 8.1 在CreateSchedulingPage.xaml中交换步骤2和步骤3的内容
+- [x] 8.1 在CreateSchedulingPage.xaml中交换步骤2和步骤3的内容
+
+
   - 将原步骤2（选择人员）的XAML移到步骤3的位置
   - 将原步骤3（选择哨位）的XAML移到步骤2的位置
   - 更新步骤标题文本
   - _Requirements: 5.1, 5.2_
 
-- [ ] 8.2 更新步骤验证逻辑
+- [x] 8.2 更新步骤验证逻辑
+
+
   - 在ValidateStep2中验证哨位选择
   - 在ValidateStep3中验证人员选择
   - 更新CanGoNext方法
   - _Requirements: 5.3_
+- [x] 9. 创建步骤3的新UI界面
+
+
+
 
 - [ ] 9. 创建步骤3的新UI界面
 
@@ -374,20 +384,24 @@ nt属性
   - 实现临时更改的视觉标识
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 3.3, 3.4, 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 9.1 创建参与人员统计区域
+- [x] 9.1 创建参与人员统计区域
+
+
   - 显示自动提取人员数量
   - 显示手动添加人员数量
   - 显示总计人员数量
   - 使用InfoBar或卡片样式
   - _Requirements: 1.6_
 
-- [ ] 9.2 创建按哨位查看可用人员区域
+- [x] 9.2 创建按哨位查看可用人员区域
+
   - 使用ItemsRepeater或ListView显示哨位列表
   - 为每个哨位创建Expander控件
   - 显示哨位名称、地点和可用人员数量
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 9.3 实现哨位人员列表
+- [x] 9.3 实现哨位人员列表
+
   - 在Expander内部显示人员列表
   - 使用CheckBox显示人员选择状态
   - 显示人员名称和技能
@@ -395,28 +409,35 @@ nt属性
   - 使用特殊标识显示被多个哨位共享的人员
   - _Requirements: 2.2, 2.5, 3.3, 3.4_
 
-- [ ] 9.4 添加哨位操作按钮
+- [x] 9.4 添加哨位操作按钮
+
   - 添加"为此哨位添加人员"按钮
   - 添加"保存为永久"按钮
   - 添加"撤销更改"按钮
   - 根据是否有更改控制按钮的可见性和启用状态
   - _Requirements: 3.1, 4.1, 3.7_
 
-- [ ] 9.5 创建手动添加的人员区域
+- [x] 9.5 创建手动添加的人员区域
+
   - 显示手动添加的人员列表
   - 为每个人员提供移除按钮
   - 添加"添加参与人员（对所有哨位可用）"按钮
   - 添加说明文本
   - _Requirements: 3.1.4, 3.1.5_
 
-- [ ] 10. 创建对话框UI
+- [x] 10. 创建对话框UI
+
+
+
 
   - 创建为哨位添加人员对话框
   - 创建手动添加参与人员对话框
   - 创建保存为永久确认对话框
   - _Requirements: 3.1, 3.1.1, 4.3_
 
-- [ ] 10.1 在CreateSchedulingPage.xaml中添加为哨位添加人员对话框
+- [x] 10.1 在CreateSchedulingPage.xaml中添加为哨位添加人员对话框
+
+
   - 使用ContentDialog控件
   - 添加哨位信息显示
   - 添加搜索框
@@ -424,31 +445,42 @@ nt属性
   - 添加"仅显示具备所需技能的人员"筛选选项
   - _Requirements: 3.1_
 
-- [ ] 10.2 在CreateSchedulingPage.xaml中添加手动添加参与人员对话框
+- [x] 10.2 在CreateSchedulingPage.xaml中添加手动添加参与人员对话框
+
   - 使用ContentDialog控件
   - 添加说明信息
   - 添加搜索框
   - 添加人员列表（使用ListView）
   - _Requirements: 3.1.1, 3.1.2_
 
-- [ ] 10.3 在SchedulingViewModel中实现保存确认对话框逻辑
+- [x] 10.3 在SchedulingViewModel中实现保存确认对话框逻辑
+
+
   - 在ShowSaveConfirmationDialog方法中创建ContentDialog
   - 显示将要保存的更改详情
   - 返回用户确认结果
   - _Requirements: 4.3_
+-
 
-- [ ] 11. 更新BuildSummarySections方法
+- [x] 11. 更新BuildSummarySections方法
+
+
+
 
   - 添加临时更改摘要
   - 添加手动添加人员摘要
   - _Requirements: 3.7, 3.1.5_
 
-- [ ] 11.1 在BuildSummarySections中添加哨位临时更改摘要
+- [x] 11.1 在BuildSummarySections中添加哨位临时更改摘要
+
+
   - 遍历所有有更改的哨位
   - 显示每个哨位的添加和移除人员信息
   - _Requirements: 3.7_
 
-- [ ] 11.2 在BuildSummarySections中添加手动添加人员摘要
+- [x] 11.2 在BuildSummarySections中添加手动添加人员摘要
+
+
   - 显示手动添加的人员列表
   - 标注这些人员对所有哨位可用
   - _Requirements: 3.1.5_

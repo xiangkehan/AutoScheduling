@@ -106,6 +106,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
         [ObservableProperty]
         private ObservableCollection<int> _selectedPersonnelIdsForManualAdd = new();
 
+        // 哨位人员视图模型集合（用于步骤3的UI展示）
+        [ObservableProperty]
+        private ObservableCollection<PositionPersonnelViewModel> _positionPersonnelViewModels = new();
+
         // 表单相关属性
         [ObservableProperty]
         private bool _isCreatingManualAssignment;
@@ -488,13 +492,15 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
         private bool ValidateStep2(out string error)
         {
-            if (SelectedPersonnels == null || SelectedPersonnels.Count == 0) { error = "请至少选择一名人员"; return false; }
-            if (SelectedPersonnels.Any(p => !p.IsAvailable || p.IsRetired)) { error = "选择的人员有不可用人员，请移除"; return false; }
+            // Step 2 now validates positions (swapped with step 3)
+            if (SelectedPositions == null || SelectedPositions.Count == 0) { error = "请至少选择一个岗位"; return false; }
             error = string.Empty; return true;
         }
         private bool ValidateStep3(out string error)
         {
-            if (SelectedPositions == null || SelectedPositions.Count == 0) { error = "请至少选择一个岗位"; return false; }
+            // Step 3 now validates personnel (swapped with step 2)
+            if (SelectedPersonnels == null || SelectedPersonnels.Count == 0) { error = "请至少选择一名人员"; return false; }
+            if (SelectedPersonnels.Any(p => !p.IsAvailable || p.IsRetired)) { error = "选择的人员有不可用人员，请移除"; return false; }
             error = string.Empty; return true;
         }
 
@@ -1224,6 +1230,70 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
             
             sections.Add(manualAssignmentSection);
+            
+            // 哨位临时更改摘要
+            var positionChangesSection = new SummarySection { Header = "哨位临时更改" };
+            var positionsWithChanges = _positionPersonnelManager.GetPositionsWithChanges();
+            
+            if (positionsWithChanges.Count > 0)
+            {
+                foreach (var positionId in positionsWithChanges)
+                {
+                    var changes = _positionPersonnelManager.GetChanges(positionId);
+                    if (changes.HasChanges)
+                    {
+                        positionChangesSection.Lines.Add($"哨位: {changes.PositionName}");
+                        
+                        // 显示添加的人员
+                        if (changes.AddedPersonnelIds.Count > 0)
+                        {
+                            positionChangesSection.Lines.Add($"  ➕ 添加人员: {string.Join(", ", changes.AddedPersonnelNames)}");
+                        }
+                        
+                        // 显示移除的人员
+                        if (changes.RemovedPersonnelIds.Count > 0)
+                        {
+                            positionChangesSection.Lines.Add($"  ➖ 移除人员: {string.Join(", ", changes.RemovedPersonnelNames)}");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                positionChangesSection.Lines.Add("无临时更改");
+            }
+            
+            sections.Add(positionChangesSection);
+            
+            // 手动添加人员摘要
+            var manuallyAddedPersonnelSection = new SummarySection { Header = "手动添加的人员（对所有哨位可用）" };
+            
+            if (ManuallyAddedPersonnelIds.Count > 0)
+            {
+                foreach (var personnelId in ManuallyAddedPersonnelIds)
+                {
+                    var personnel = AvailablePersonnels.FirstOrDefault(p => p.Id == personnelId);
+                    if (personnel != null)
+                    {
+                        var skillsDisplay = personnel.Skills != null && personnel.Skills.Any() 
+                            ? $" (技能: {string.Join(", ", personnel.Skills.Select(s => s.Name))})" 
+                            : "";
+                        manuallyAddedPersonnelSection.Lines.Add($"{personnel.Name}{skillsDisplay}");
+                    }
+                    else
+                    {
+                        manuallyAddedPersonnelSection.Lines.Add($"人员ID: {personnelId} (未找到详细信息)");
+                    }
+                }
+                manuallyAddedPersonnelSection.Lines.Add("");
+                manuallyAddedPersonnelSection.Lines.Add("说明: 这些人员可以被分配到任何哨位，不受哨位可用人员列表限制");
+            }
+            else
+            {
+                manuallyAddedPersonnelSection.Lines.Add("无手动添加的人员");
+            }
+            
+            sections.Add(manuallyAddedPersonnelSection);
             
             // 模板信息
             if (TemplateApplied && LoadedTemplateId.HasValue)

@@ -282,6 +282,76 @@ namespace AutoScheduling3.Views.Scheduling
                     ManualAssignmentEditDialog.Hide();
                 }
             }
+            else if (e.PropertyName == nameof(ViewModel.IsAddingPersonnelToPosition))
+            {
+                if (AddPersonnelToPositionDialog == null)
+                    return;
+
+                if (ViewModel.IsAddingPersonnelToPosition)
+                {
+                    // 使用安全方法显示对话框
+                    if (AddPersonnelToPositionDialog.XamlRoot == null && this.XamlRoot != null)
+                    {
+                        AddPersonnelToPositionDialog.XamlRoot = this.XamlRoot;
+                    }
+
+                    // 如果XamlRoot仍不可用，使用ShowDialogWithXamlRoot
+                    if (AddPersonnelToPositionDialog.XamlRoot == null)
+                    {
+                        await ShowDialogWithXamlRoot(async () =>
+                        {
+                            if (AddPersonnelToPositionDialog.XamlRoot == null && this.XamlRoot != null)
+                            {
+                                AddPersonnelToPositionDialog.XamlRoot = this.XamlRoot;
+                            }
+                            return await AddPersonnelToPositionDialog.ShowAsync();
+                        });
+                    }
+                    else
+                    {
+                        await AddPersonnelToPositionDialog.ShowAsync();
+                    }
+                }
+                else
+                {
+                    AddPersonnelToPositionDialog.Hide();
+                }
+            }
+            else if (e.PropertyName == nameof(ViewModel.IsManualAddingPersonnel))
+            {
+                if (ManualAddPersonnelDialog == null)
+                    return;
+
+                if (ViewModel.IsManualAddingPersonnel)
+                {
+                    // 使用安全方法显示对话框
+                    if (ManualAddPersonnelDialog.XamlRoot == null && this.XamlRoot != null)
+                    {
+                        ManualAddPersonnelDialog.XamlRoot = this.XamlRoot;
+                    }
+
+                    // 如果XamlRoot仍不可用，使用ShowDialogWithXamlRoot
+                    if (ManualAddPersonnelDialog.XamlRoot == null)
+                    {
+                        await ShowDialogWithXamlRoot(async () =>
+                        {
+                            if (ManualAddPersonnelDialog.XamlRoot == null && this.XamlRoot != null)
+                            {
+                                ManualAddPersonnelDialog.XamlRoot = this.XamlRoot;
+                            }
+                            return await ManualAddPersonnelDialog.ShowAsync();
+                        });
+                    }
+                    else
+                    {
+                        await ManualAddPersonnelDialog.ShowAsync();
+                    }
+                }
+                else
+                {
+                    ManualAddPersonnelDialog.Hide();
+                }
+            }
         }
 
         private void AddPersonnel_Click(object sender, RoutedEventArgs e)
@@ -334,6 +404,30 @@ namespace AutoScheduling3.Views.Scheduling
                 foreach (var item in selectedItems)
                 {
                     ViewModel.SelectedPositions.Remove(item);
+                }
+            }
+        }
+
+        private void AddPersonnelListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is ListView listView)
+            {
+                ViewModel.SelectedPersonnelIdsForPosition.Clear();
+                foreach (var item in listView.SelectedItems.Cast<PersonnelDto>())
+                {
+                    ViewModel.SelectedPersonnelIdsForPosition.Add(item.Id);
+                }
+            }
+        }
+
+        private void ManualAddPersonnelListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is ListView listView)
+            {
+                ViewModel.SelectedPersonnelIdsForManualAdd.Clear();
+                foreach (var item in listView.SelectedItems.Cast<PersonnelDto>())
+                {
+                    ViewModel.SelectedPersonnelIdsForManualAdd.Add(item.Id);
                 }
             }
         }

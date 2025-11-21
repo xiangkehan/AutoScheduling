@@ -25,6 +25,11 @@ public partial class PositionPersonnelViewModel : ObservableObject
     public string Location { get; set; } = string.Empty;
 
     /// <summary>
+    /// 哨位DTO引用（用于命令参数）
+    /// </summary>
+    public DTOs.PositionDto? PositionDto { get; set; }
+
+    /// <summary>
     /// 可用人员列表（包含临时更改）
     /// </summary>
     public ObservableCollection<PersonnelItemViewModel> AvailablePersonnel { get; set; } = new();
