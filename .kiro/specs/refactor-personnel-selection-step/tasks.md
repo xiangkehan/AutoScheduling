@@ -240,14 +240,23 @@ nt属性
 
   - _Requirements: 3.1_
 
-- [ ] 5. 实现移除和撤销人员的命令和逻辑
+- [x] 5. 实现移除和撤销人员的命令和逻辑
+
+
+
+
 
 
   - 实现RemovePersonnelFromPositionCommand
   - 实现RevertPositionChangesCommand
   - _Requirements: 3.2, 3.7_
 
-- [ ] 5.1 实现RemovePersonnelFromPosition方法
+- [x] 5.1 实现RemovePersonnelFromPosition方法
+
+
+
+
+
 
 
   - 调用_positionPersonnelManager.RemovePersonnelTemporarily
@@ -255,27 +264,50 @@ nt属性
   - _Requirements: 3.2_
 
 
-- [ ] 5.2 实现RevertPositionChanges方法
+- [x] 5.2 实现RevertPositionChanges方法
+
+
+
+
+
+
 
   - 调用_positionPersonnelManager.RevertChanges
   - 更新UI显示
 
   - _Requirements: 3.7_
 
-- [ ] 6. 实现保存为永久的命令和逻辑
+
+- [x] 6. 实现保存为永久的命令和逻辑
+
+
+
+
 
   - 实现SavePositionChangesCommand
   - 实现确认对话框
   - 调用IPositionService.UpdateAsync
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
+- [x] 6.1 实现ShowSaveConfirmationDialog方法
 
-- [ ] 6.1 实现ShowSaveConfirmationDialog方法
+
+
+
+- [x] 6.1 实现ShowSaveConfirmationDialog方法
+
+
+
   - 创建ContentDialog显示将要保存的更改
   - 列出添加和移除的人员
   - 返回用户确认结果
   - _Requirements: 4.3_
 
-- [ ] 6.2 实现SavePositionChangesAsync方法
+- [x] 6.2 实现SavePositionChangesAsync方法
+
+
+
+
+
   - 获取哨位的临时更改
   - 显示确认对话框
   - 调用IPositionService.UpdateAsync更新数据库
@@ -284,31 +316,41 @@ nt属性
   - 显示成功或错误提示
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 7. 实现手动添加参与人员的命令和逻辑
+- [x] 7. 实现手动添加参与人员的命令和逻辑
+
+
+
+
   - 实现StartManualAddPersonnelCommand
   - 实现SubmitManualAddPersonnelCommand
   - 实现RemoveManualPersonnelCommand
   - _Requirements: 3.1.1, 3.1.2, 3.1.3, 3.1.4, 3.1.5_
 
-- [ ] 7.1 实现StartManualAddPersonnel方法
+- [x] 7.1 实现StartManualAddPersonnel方法
+
+
   - 从AvailablePersonnels中筛选不在任何哨位可用人员列表中的人员
   - 设置可选人员列表
   - 显示手动添加人员对话框
   - _Requirements: 3.1.1, 3.1.2_
 
-- [ ] 7.2 实现SubmitManualAddPersonnelAsync方法
+- [x] 7.2 实现SubmitManualAddPersonnelAsync方法
+
   - 验证选择的人员
   - 添加到ManuallyAddedPersonnelIds列表
   - 更新ManuallyAddedPersonnelCount
   - 关闭对话框
   - _Requirements: 3.1.3, 3.1.4_
 
-- [ ] 7.3 实现RemoveManualPersonnel方法
+- [x] 7.3 实现RemoveManualPersonnel方法
+
   - 从ManuallyAddedPersonnelIds列表中移除
   - 更新ManuallyAddedPersonnelCount
   - _Requirements: 3.1.4_
 
-- [ ] 8. 调整步骤顺序
+- [-] 8. 调整步骤顺序
+
+
   - 交换步骤2和步骤3的XAML内容
   - 更新步骤标题和说明
   - _Requirements: 5.1, 5.2, 5.3_
@@ -326,6 +368,7 @@ nt属性
   - _Requirements: 5.3_
 
 - [ ] 9. 创建步骤3的新UI界面
+
   - 创建基于哨位的人员展示界面
   - 实现展开/折叠功能
   - 实现临时更改的视觉标识
@@ -367,6 +410,7 @@ nt属性
   - _Requirements: 3.1.4, 3.1.5_
 
 - [ ] 10. 创建对话框UI
+
   - 创建为哨位添加人员对话框
   - 创建手动添加参与人员对话框
   - 创建保存为永久确认对话框
@@ -394,6 +438,7 @@ nt属性
   - _Requirements: 4.3_
 
 - [ ] 11. 更新BuildSummarySections方法
+
   - 添加临时更改摘要
   - 添加手动添加人员摘要
   - _Requirements: 3.7, 3.1.5_

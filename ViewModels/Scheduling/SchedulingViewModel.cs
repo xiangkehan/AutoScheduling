@@ -94,6 +94,18 @@ namespace AutoScheduling3.ViewModels.Scheduling
         [ObservableProperty]
         private ObservableCollection<int> _selectedPersonnelIdsForPosition = new();
 
+        // 手动添加参与人员相关属性
+        [ObservableProperty]
+        private bool _isManualAddingPersonnel;
+
+        // 可手动添加的人员列表（不在任何哨位可用人员列表中的人员）
+        [ObservableProperty]
+        private ObservableCollection<PersonnelDto> _availablePersonnelForManualAdd = new();
+
+        // 选中的要手动添加的人员ID列表
+        [ObservableProperty]
+        private ObservableCollection<int> _selectedPersonnelIdsForManualAdd = new();
+
         // 表单相关属性
         [ObservableProperty]
         private bool _isCreatingManualAssignment;
@@ -298,6 +310,19 @@ namespace AutoScheduling3.ViewModels.Scheduling
         public IAsyncRelayCommand SubmitAddPersonnelToPositionCommand { get; }
         public IRelayCommand CancelAddPersonnelToPositionCommand { get; }
 
+        // 移除和撤销人员命令
+        public IRelayCommand<(int positionId, int personnelId)> RemovePersonnelFromPositionCommand { get; }
+        public IRelayCommand<int> RevertPositionChangesCommand { get; }
+
+        // 保存为永久命令
+        public IAsyncRelayCommand<int> SavePositionChangesCommand { get; }
+
+        // 手动添加参与人员命令（不属于任何哨位）
+        public IRelayCommand StartManualAddPersonnelCommand { get; }
+        public IAsyncRelayCommand SubmitManualAddPersonnelCommand { get; }
+        public IRelayCommand CancelManualAddPersonnelCommand { get; }
+        public IRelayCommand<int> RemoveManualPersonnelCommand { get; }
+
         public SchedulingViewModel(
         ISchedulingService schedulingService,
         IPersonnelService personnelService,
@@ -341,6 +366,19 @@ namespace AutoScheduling3.ViewModels.Scheduling
             StartAddPersonnelToPositionCommand = new RelayCommand<PositionDto>(StartAddPersonnelToPosition);
             SubmitAddPersonnelToPositionCommand = new AsyncRelayCommand(SubmitAddPersonnelToPositionAsync);
             CancelAddPersonnelToPositionCommand = new RelayCommand(CancelAddPersonnelToPosition);
+
+            // 初始化移除和撤销人员命令
+            RemovePersonnelFromPositionCommand = new RelayCommand<(int positionId, int personnelId)>(RemovePersonnelFromPosition);
+            RevertPositionChangesCommand = new RelayCommand<int>(RevertPositionChanges);
+
+            // 初始化保存为永久命令
+            SavePositionChangesCommand = new AsyncRelayCommand<int>(SavePositionChangesAsync);
+
+            // 初始化手动添加参与人员命令
+            StartManualAddPersonnelCommand = new RelayCommand(StartManualAddPersonnel);
+            SubmitManualAddPersonnelCommand = new AsyncRelayCommand(SubmitManualAddPersonnelAsync);
+            CancelManualAddPersonnelCommand = new RelayCommand(CancelManualAddPersonnel);
+            RemoveManualPersonnelCommand = new RelayCommand<int>(RemoveManualPersonnel);
 
             // Listen to property changes to refresh command states
             PropertyChanged += (s, e) =>
@@ -1638,6 +1676,431 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
             // 设置标志为false，关闭对话框
             IsAddingPersonnelToPosition = false;
+        }
+
+        /// <summary>
+        /// 临时移除人员从哨位
+        /// </summary>
+        /// <param name="parameters">哨位ID和人员ID的元组</param>
+        private void RemovePersonnelFromPosition((int positionId, int personnelId) parameters)
+        {
+            var (positionId, personnelId) = parameters;
+
+            System.Diagnostics.Debug.WriteLine($"=== 临时移除人员从哨位 ===");
+            System.Diagnostics.Debug.WriteLine($"哨位ID: {positionId}, 人员ID: {personnelId}");
+
+            // 调用_positionPersonnelManager.RemovePersonnelTemporarily
+            _positionPersonnelManager.RemovePersonnelTemporarily(positionId, personnelId);
+
+            // 获取哨位和人员名称用于日志
+            var position = SelectedPositions.FirstOrDefault(p => p.Id == positionId);
+            var personnel = AvailablePersonnels.FirstOrDefault(p => p.Id == personnelId);
+
+            if (position != null && personnel != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"已临时移除人员: {personnel.Name} 从哨位 {position.Name}");
+            }
+
+            // 更新UI显示
+            // 触发UI刷新，显示临时移除的人员
+            OnPropertyChanged(nameof(SelectedPositions));
+
+            System.Diagnostics.Debug.WriteLine("人员移除完成");
+        }
+
+        /// <summary>
+        /// 撤销哨位的临时更改
+        /// </summary>
+        /// <param name="positionId">哨位ID</param>
+        private void RevertPositionChanges(int positionId)
+        {
+            System.Diagnostics.Debug.WriteLine($"=== 撤销哨位的临时更改 ===");
+            System.Diagnostics.Debug.WriteLine($"哨位ID: {positionId}");
+
+            // 获取哨位名称用于日志
+            var position = SelectedPositions.FirstOrDefault(p => p.Id == positionId);
+            if (position != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"哨位: {position.Name}");
+            }
+
+            // 调用_positionPersonnelManager.RevertChanges
+            _positionPersonnelManager.RevertChanges(positionId);
+
+            // 更新UI显示
+            // 触发UI刷新，恢复到原始状态
+            OnPropertyChanged(nameof(SelectedPositions));
+
+            System.Diagnostics.Debug.WriteLine("临时更改已撤销");
+        }
+
+        /// <summary>
+        /// 显示保存确认对话框
+        /// </summary>
+        /// <param name="changes">哨位人员更改记录</param>
+        /// <returns>用户是否确认保存</returns>
+        private async Task<bool> ShowSaveConfirmationDialog(PositionPersonnelChanges changes)
+        {
+            System.Diagnostics.Debug.WriteLine($"=== 显示保存确认对话框 ===");
+            System.Diagnostics.Debug.WriteLine($"哨位ID: {changes.PositionId}, 哨位名称: {changes.PositionName}");
+
+            // 构建对话框内容
+            var contentPanel = new Microsoft.UI.Xaml.Controls.StackPanel
+            {
+                Spacing = 12
+            };
+
+            // 警告图标和文本
+            var warningPanel = new Microsoft.UI.Xaml.Controls.StackPanel
+            {
+                Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal,
+                Spacing = 8
+            };
+            warningPanel.Children.Add(new Microsoft.UI.Xaml.Controls.SymbolIcon
+            {
+                Symbol = Microsoft.UI.Xaml.Controls.Symbol.Important,
+                Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Orange)
+            });
+            warningPanel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+            {
+                Text = "以下更改将永久保存到数据库:",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            });
+            contentPanel.Children.Add(warningPanel);
+
+            // 哨位信息
+            contentPanel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+            {
+                Text = $"哨位: {changes.PositionName}",
+                FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 0)
+            });
+
+            // 添加的人员
+            if (changes.AddedPersonnelIds.Any())
+            {
+                contentPanel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+                {
+                    Text = "添加人员:",
+                    FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                    Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 4)
+                });
+
+                foreach (var personnelId in changes.AddedPersonnelIds)
+                {
+                    var personnel = AvailablePersonnels.FirstOrDefault(p => p.Id == personnelId);
+                    var personnelName = personnel?.Name ?? $"人员ID:{personnelId}";
+                    
+                    var personnelPanel = new Microsoft.UI.Xaml.Controls.StackPanel
+                    {
+                        Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal,
+                        Spacing = 8,
+                        Margin = new Microsoft.UI.Xaml.Thickness(16, 0, 0, 4)
+                    };
+                    personnelPanel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+                    {
+                        Text = "➕",
+                        Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Green)
+                    });
+                    personnelPanel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+                    {
+                        Text = personnelName
+                    });
+                    contentPanel.Children.Add(personnelPanel);
+                }
+            }
+
+            // 移除的人员
+            if (changes.RemovedPersonnelIds.Any())
+            {
+                contentPanel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+                {
+                    Text = "移除人员:",
+                    FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                    Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 4)
+                });
+
+                foreach (var personnelId in changes.RemovedPersonnelIds)
+                {
+                    var personnel = AvailablePersonnels.FirstOrDefault(p => p.Id == personnelId);
+                    var personnelName = personnel?.Name ?? $"人员ID:{personnelId}";
+                    
+                    var personnelPanel = new Microsoft.UI.Xaml.Controls.StackPanel
+                    {
+                        Orientation = Microsoft.UI.Xaml.Controls.Orientation.Horizontal,
+                        Spacing = 8,
+                        Margin = new Microsoft.UI.Xaml.Thickness(16, 0, 0, 4)
+                    };
+                    personnelPanel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+                    {
+                        Text = "➖",
+                        Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Red)
+                    });
+                    personnelPanel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+                    {
+                        Text = personnelName
+                    });
+                    contentPanel.Children.Add(personnelPanel);
+                }
+            }
+
+            // 说明文本
+            contentPanel.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+            {
+                Text = "这些更改将影响后续所有排班。",
+                FontStyle = Microsoft.UI.Text.FontStyle.Italic,
+                Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                Margin = new Microsoft.UI.Xaml.Thickness(0, 12, 0, 0)
+            });
+
+            // 创建确认对话框
+            var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+            {
+                Title = "确认保存为永久",
+                Content = contentPanel,
+                PrimaryButtonText = "确认保存",
+                SecondaryButtonText = "取消",
+                DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Secondary,
+                XamlRoot = App.MainWindow?.Content?.XamlRoot
+            };
+
+            try
+            {
+                var result = await dialog.ShowAsync();
+                var confirmed = result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary;
+                
+                System.Diagnostics.Debug.WriteLine($"用户选择: {(confirmed ? "确认保存" : "取消")}");
+                
+                return confirmed;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"显示确认对话框失败: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 保存哨位的临时更改为永久
+        /// </summary>
+        /// <param name="positionId">哨位ID</param>
+        private async Task SavePositionChangesAsync(int positionId)
+        {
+            System.Diagnostics.Debug.WriteLine($"=== 开始保存哨位更改为永久 ===");
+            System.Diagnostics.Debug.WriteLine($"哨位ID: {positionId}");
+
+            try
+            {
+                // 获取哨位的临时更改
+                var changes = _positionPersonnelManager.GetChanges(positionId);
+                
+                if (!changes.HasChanges)
+                {
+                    System.Diagnostics.Debug.WriteLine("没有需要保存的更改");
+                    await _dialogService.ShowWarningAsync("没有需要保存的更改");
+                    return;
+                }
+
+                // 获取哨位
+                var position = SelectedPositions.FirstOrDefault(p => p.Id == positionId);
+                if (position == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"哨位不存在: ID={positionId}");
+                    await _dialogService.ShowErrorAsync("哨位不存在");
+                    return;
+                }
+
+                // 设置哨位名称到changes对象中（用于对话框显示）
+                changes.PositionName = position.Name;
+
+                System.Diagnostics.Debug.WriteLine($"哨位: {position.Name}");
+                System.Diagnostics.Debug.WriteLine($"添加人员数: {changes.AddedPersonnelIds.Count}");
+                System.Diagnostics.Debug.WriteLine($"移除人员数: {changes.RemovedPersonnelIds.Count}");
+
+                // 显示确认对话框
+                var confirmed = await ShowSaveConfirmationDialog(changes);
+                if (!confirmed)
+                {
+                    System.Diagnostics.Debug.WriteLine("用户取消保存");
+                    return;
+                }
+
+                // 获取更新后的可用人员列表
+                var updatedPersonnelIds = _positionPersonnelManager.GetAvailablePersonnel(positionId);
+                
+                System.Diagnostics.Debug.WriteLine($"更新后的可用人员数: {updatedPersonnelIds.Count}");
+
+                // 创建更新DTO
+                var updateDto = new UpdatePositionDto
+                {
+                    Name = position.Name,
+                    Location = position.Location,
+                    Description = position.Description,
+                    Requirements = position.Requirements,
+                    RequiredSkillIds = position.RequiredSkillIds,
+                    AvailablePersonnelIds = updatedPersonnelIds
+                };
+
+                // 调用IPositionService.UpdateAsync更新数据库
+                System.Diagnostics.Debug.WriteLine("开始调用IPositionService.UpdateAsync");
+                await _positionService.UpdateAsync(positionId, updateDto);
+                System.Diagnostics.Debug.WriteLine("数据库更新成功");
+
+                // 更新本地PositionDto数据
+                position.AvailablePersonnelIds = updatedPersonnelIds;
+                System.Diagnostics.Debug.WriteLine("本地数据已更新");
+
+                // 重新初始化PositionPersonnelManager（清除临时更改标记）
+                _positionPersonnelManager.Initialize(SelectedPositions);
+                System.Diagnostics.Debug.WriteLine("PositionPersonnelManager已重新初始化");
+
+                // 更新UI显示
+                OnPropertyChanged(nameof(SelectedPositions));
+
+                // 显示成功提示
+                await _dialogService.ShowSuccessAsync($"哨位 '{position.Name}' 的更改已保存");
+                
+                System.Diagnostics.Debug.WriteLine("=== 保存哨位更改完成 ===");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"=== 保存哨位更改失败 ===");
+                System.Diagnostics.Debug.WriteLine($"异常类型: {ex.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
+                
+                await _dialogService.ShowErrorAsync("保存失败", ex);
+            }
+        }
+
+        #endregion
+
+        #region 手动添加参与人员方法
+
+        /// <summary>
+        /// 开始手动添加参与人员（不属于任何哨位）
+        /// </summary>
+        private void StartManualAddPersonnel()
+        {
+            System.Diagnostics.Debug.WriteLine("=== 开始手动添加参与人员 ===");
+
+            // 从AvailablePersonnels中筛选不在任何哨位可用人员列表中的人员
+            var autoExtractedPersonnelIds = SelectedPositions
+                .SelectMany(p => _positionPersonnelManager.GetAvailablePersonnel(p.Id))
+                .Distinct()
+                .ToHashSet();
+
+            System.Diagnostics.Debug.WriteLine($"自动提取的人员ID数量: {autoExtractedPersonnelIds.Count}");
+
+            // 可以手动添加的人员：不在任何哨位可用人员列表中的人员
+            var availableForManualAdd = AvailablePersonnels
+                .Where(p => !autoExtractedPersonnelIds.Contains(p.Id))
+                .ToList();
+
+            System.Diagnostics.Debug.WriteLine($"可手动添加的人员数量: {availableForManualAdd.Count}");
+
+            // 设置可选人员列表
+            AvailablePersonnelForManualAdd = new ObservableCollection<PersonnelDto>(availableForManualAdd);
+
+            // 清空之前的选择
+            SelectedPersonnelIdsForManualAdd.Clear();
+
+            // 显示手动添加人员对话框
+            IsManualAddingPersonnel = true;
+
+            System.Diagnostics.Debug.WriteLine("手动添加人员对话框已打开");
+        }
+
+        /// <summary>
+        /// 提交手动添加参与人员
+        /// </summary>
+        private async Task SubmitManualAddPersonnelAsync()
+        {
+            System.Diagnostics.Debug.WriteLine("=== 提交手动添加参与人员 ===");
+
+            // 验证选择的人员
+            if (SelectedPersonnelIdsForManualAdd.Count == 0)
+            {
+                await _dialogService.ShowWarningAsync("请至少选择一名人员");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"选择的人员数量: {SelectedPersonnelIdsForManualAdd.Count}");
+
+            // 添加到ManuallyAddedPersonnelIds列表
+            foreach (var personnelId in SelectedPersonnelIdsForManualAdd)
+            {
+                // 避免重复添加
+                if (!ManuallyAddedPersonnelIds.Contains(personnelId))
+                {
+                    ManuallyAddedPersonnelIds.Add(personnelId);
+                    
+                    var personnel = AvailablePersonnelForManualAdd.FirstOrDefault(p => p.Id == personnelId);
+                    if (personnel != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"手动添加人员: {personnel.Name} (ID: {personnelId})");
+                    }
+                }
+            }
+
+            // 更新ManuallyAddedPersonnelCount
+            ManuallyAddedPersonnelCount = ManuallyAddedPersonnelIds.Count;
+
+            System.Diagnostics.Debug.WriteLine($"手动添加人员总数: {ManuallyAddedPersonnelCount}");
+
+            // 清空选择和可选列表
+            SelectedPersonnelIdsForManualAdd.Clear();
+            AvailablePersonnelForManualAdd.Clear();
+
+            // 关闭对话框
+            IsManualAddingPersonnel = false;
+
+            System.Diagnostics.Debug.WriteLine("手动添加人员完成，对话框已关闭");
+        }
+
+        /// <summary>
+        /// 取消手动添加参与人员
+        /// </summary>
+        private void CancelManualAddPersonnel()
+        {
+            System.Diagnostics.Debug.WriteLine("取消手动添加参与人员");
+
+            // 清空选择和可选列表
+            SelectedPersonnelIdsForManualAdd.Clear();
+            AvailablePersonnelForManualAdd.Clear();
+
+            // 关闭对话框
+            IsManualAddingPersonnel = false;
+        }
+
+        /// <summary>
+        /// 移除手动添加的人员
+        /// </summary>
+        /// <param name="personnelId">人员ID</param>
+        private void RemoveManualPersonnel(int personnelId)
+        {
+            System.Diagnostics.Debug.WriteLine($"=== 移除手动添加的人员 ===");
+            System.Diagnostics.Debug.WriteLine($"人员ID: {personnelId}");
+
+            // 获取人员名称用于日志
+            var personnel = AvailablePersonnels.FirstOrDefault(p => p.Id == personnelId);
+            if (personnel != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"人员: {personnel.Name}");
+            }
+
+            // 从ManuallyAddedPersonnelIds列表中移除
+            if (ManuallyAddedPersonnelIds.Contains(personnelId))
+            {
+                ManuallyAddedPersonnelIds.Remove(personnelId);
+                System.Diagnostics.Debug.WriteLine("人员已从手动添加列表中移除");
+            }
+
+            // 更新ManuallyAddedPersonnelCount
+            ManuallyAddedPersonnelCount = ManuallyAddedPersonnelIds.Count;
+
+            System.Diagnostics.Debug.WriteLine($"手动添加人员总数: {ManuallyAddedPersonnelCount}");
+            System.Diagnostics.Debug.WriteLine("=== 移除完成 ===");
         }
 
         #endregion
