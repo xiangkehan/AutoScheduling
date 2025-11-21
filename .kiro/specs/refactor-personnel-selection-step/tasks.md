@@ -485,85 +485,125 @@ nt属性
   - 标注这些人员对所有哨位可用
   - _Requirements: 3.1.5_
 
-- [ ] 12. 实现草稿保存和恢复功能
+- [x] 12. 实现草稿保存和恢复功能
+
+
+
+
   - 在CreateDraftAsync中保存PositionPersonnelManager状态
   - 在RestoreFromDraftAsync中恢复PositionPersonnelManager状态
   - _Requirements: 6.4_
 
-- [ ] 12.1 扩展SchedulingDraftDto
+- [x] 12.1 扩展SchedulingDraftDto
+
+
   - 添加PositionPersonnelChanges字段保存临时更改
   - 添加ManuallyAddedPersonnelIds字段
   - _Requirements: 6.4_
 
-- [ ] 12.2 在CreateDraftAsync中保存状态
+- [x] 12.2 在CreateDraftAsync中保存状态
+
+
   - 保存所有哨位的临时更改
   - 保存手动添加的人员ID列表
   - _Requirements: 6.4_
 
-- [ ] 12.3 在RestoreFromDraftAsync中恢复状态
+- [x] 12.3 在RestoreFromDraftAsync中恢复状态
+
   - 恢复PositionPersonnelManager的更改记录
   - 恢复ManuallyAddedPersonnelIds列表
   - _Requirements: 6.4_
 
-- [ ] 13. 实现模板加载兼容性
+- [x] 13. 实现模板加载兼容性
+
+
+
+
   - 确保LoadTemplateAsync正常工作
   - 确保ApplyTemplateConstraints正常工作
   - _Requirements: 6.3_
 
-- [ ] 13.1 测试模板加载功能
+- [x] 13.1 测试模板加载功能
+
+
   - 验证加载模板后步骤2和步骤3的数据正确
   - 验证TemplateApplied标志正常工作
   - _Requirements: 6.3_
 
-- [ ] 13.2 测试模板保存功能
+- [x] 13.2 测试模板保存功能
+
+
   - 验证SaveAsTemplateAsync保存步骤2和步骤3的数据
   - 验证临时更改不会被保存到模板
   - _Requirements: 6.3_
 
-- [ ] 14. 实现性能优化
+- [x] 14. 实现性能优化
+
+
+
+
+
   - 实现虚拟化渲染
   - 优化人员提取性能
   - 添加缓存机制
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 14.1 在UI中使用ItemsRepeater实现虚拟化
+- [x] 14.1 在UI中使用ItemsRepeater实现虚拟化
+
+
   - 将哨位列表和人员列表改用ItemsRepeater
   - 配置虚拟化参数
   - _Requirements: 7.4_
 
-- [ ] 14.2 优化自动提取人员逻辑
+- [x] 14.2 优化自动提取人员逻辑
+
+
   - 使用HashSet提高查找性能
   - 避免重复计算
   - 添加性能日志
   - _Requirements: 7.1, 7.2, 7.5_
 
-- [ ] 14.3 添加人员和哨位查找缓存
+- [x] 14.3 添加人员和哨位查找缓存
+
+
   - 缓存人员ID到PersonnelDto的映射
   - 缓存哨位ID到PositionDto的映射
   - _Requirements: 7.3_
 
-- [ ] 15. 添加错误处理和日志
+- [x] 15. 添加错误处理和日志
+
+
+
+
   - 添加try-catch块
   - 添加调试日志
   - 实现友好的错误提示
   - _Requirements: 4.5, 6.1, 6.2_
 
-- [ ] 15.1 在关键方法中添加错误处理
+- [x] 15.1 在关键方法中添加错误处理
+
+
   - 在SavePositionChangesAsync中添加错误处理
   - 在自动提取人员逻辑中添加错误处理
   - 使用DialogService显示错误信息
   - _Requirements: 4.5_
 
-- [ ] 15.2 添加调试日志
+- [x] 15.2 添加调试日志
+
+
   - 在PositionPersonnelManager的关键方法中添加日志
   - 在ViewModel的关键方法中添加日志
   - 记录性能指标
   - _Requirements: 7.1, 7.2_
 
-- [ ] 16. 更新相关文档
+- [-] 16. 更新相关文档
+
+
+
   - 更新README.md
   - 更新CLAUDE.md
   - _Requirements: 所有需求_
+
 
 - [ ] 16.1 更新README.md
   - 添加步骤顺序调整说明

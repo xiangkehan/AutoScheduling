@@ -99,4 +99,40 @@ public class SchedulingDraftDto
     /// </summary>
     [JsonPropertyName("version")]
     public string Version { get; set; } = "1.0";
+
+    /// <summary>
+    /// 哨位人员临时更改记录（字典：哨位ID -> 更改记录）
+    /// </summary>
+    [JsonPropertyName("positionPersonnelChanges")]
+    public Dictionary<int, PositionPersonnelChangeDto> PositionPersonnelChanges { get; set; } = new();
+
+    /// <summary>
+    /// 手动添加的人员ID列表（不属于任何哨位）
+    /// </summary>
+    [JsonPropertyName("manuallyAddedPersonnelIds")]
+    public List<int> ManuallyAddedPersonnelIds { get; set; } = new();
+}
+
+/// <summary>
+/// 哨位人员更改记录DTO（用于草稿保存）
+/// </summary>
+public class PositionPersonnelChangeDto
+{
+    /// <summary>
+    /// 哨位ID
+    /// </summary>
+    [JsonPropertyName("positionId")]
+    public int PositionId { get; set; }
+
+    /// <summary>
+    /// 添加的人员ID列表
+    /// </summary>
+    [JsonPropertyName("addedPersonnelIds")]
+    public List<int> AddedPersonnelIds { get; set; } = new();
+
+    /// <summary>
+    /// 移除的人员ID列表
+    /// </summary>
+    [JsonPropertyName("removedPersonnelIds")]
+    public List<int> RemovedPersonnelIds { get; set; } = new();
 }

@@ -155,6 +155,9 @@
                             
                             <!-- Position List -->
                             <ItemsRepeater ItemsSource="{x:Bind ViewModel.PositionPersonnelViewModels, Mode=OneWay}">
+                                <ItemsRepeater.Layout>
+                                    <StackLayout Spacing="8"/>
+                                </ItemsRepeater.Layout>
                                 <ItemsRepeater.ItemTemplate>
                                     <DataTemplate x:DataType="viewmodels:PositionPersonnelViewModel">
                                         <Expander HorizontalAlignment="Stretch" 
@@ -190,6 +193,9 @@
                                                 <StackPanel Spacing="12" Padding="0,8,0,0">
                                                     <!-- Personnel List -->
                                                     <ItemsRepeater ItemsSource="{x:Bind AvailablePersonnel, Mode=OneWay}">
+                                                        <ItemsRepeater.Layout>
+                                                            <StackLayout Spacing="0"/>
+                                                        </ItemsRepeater.Layout>
                                                         <ItemsRepeater.ItemTemplate>
                                                             <DataTemplate x:DataType="viewmodels:PersonnelItemViewModel">
                                                                 <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
