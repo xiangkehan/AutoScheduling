@@ -37,6 +37,8 @@ public partial class TestDataGeneratorViewModel : ObservableObject
         "小规模 (快速测试)",
         "中等规模 (默认)",
         "大规模 (压力测试)",
+        "演练场景 (高可用率)",
+        "实战场景 (低可用率)",
         "自定义"
     };
 
@@ -97,6 +99,59 @@ public partial class TestDataGeneratorViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int holidayConfigCount = 2;
+
+    /// <summary>
+    /// 每个哨位的最小可用人员数量
+    /// </summary>
+    [ObservableProperty]
+    private int minPersonnelPerPosition = 3;
+
+    /// <summary>
+    /// 人员可用率（0.0-1.0）
+    /// </summary>
+    [ObservableProperty]
+    private double personnelAvailabilityRate = 0.85;
+
+    /// <summary>
+    /// 人员可用率百分比（用于显示）
+    /// </summary>
+    public int PersonnelAvailabilityRatePercent => (int)(PersonnelAvailabilityRate * 100);
+
+    /// <summary>
+    /// 人员退役率（0.0-1.0）
+    /// </summary>
+    [ObservableProperty]
+    private double personnelRetirementRate = 0.10;
+
+    /// <summary>
+    /// 人员退役率百分比（用于显示）
+    /// </summary>
+    public int PersonnelRetirementRatePercent => (int)(PersonnelRetirementRate * 100);
+
+    /// <summary>
+    /// 当可用率改变时，通知百分比属性更新
+    /// </summary>
+    partial void OnPersonnelAvailabilityRateChanged(double value)
+    {
+        OnPropertyChanged(nameof(PersonnelAvailabilityRatePercent));
+    }
+
+    /// <summary>
+    /// 当退役率改变时，通知百分比属性更新
+    /// </summary>
+    partial void OnPersonnelRetirementRateChanged(double value)
+    {
+        OnPropertyChanged(nameof(PersonnelRetirementRatePercent));
+        ValidateConfiguration();
+    }
+
+    /// <summary>
+    /// 当关键参数改变时，触发验证
+    /// </summary>
+    partial void OnSkillCountChanged(int value) => ValidateConfiguration();
+    partial void OnPersonnelCountChanged(int value) => ValidateConfiguration();
+    partial void OnPositionCountChanged(int value) => ValidateConfiguration();
+    partial void OnMinPersonnelPerPositionChanged(int value) => ValidateConfiguration();
 
     /// <summary>
     /// 随机种子
@@ -169,6 +224,58 @@ public partial class TestDataGeneratorViewModel : ObservableObject
 
     #endregion
 
+    #region 配置预览和验证
+
+    /// <summary>
+    /// 配置验证消息
+    /// </summary>
+    [ObservableProperty]
+    private string validationMessage = string.Empty;
+
+    /// <summary>
+    /// 配置是否有效
+    /// </summary>
+    [ObservableProperty]
+    private bool isConfigurationValid = true;
+
+    /// <summary>
+    /// 是否有验证警告
+    /// </summary>
+    [ObservableProperty]
+    private bool hasValidationWarnings;
+
+    /// <summary>
+    /// 预估总记录数
+    /// </summary>
+    public int EstimatedTotalRecords => 
+        SkillCount + PersonnelCount + PositionCount + TemplateCount + 
+        FixedAssignmentCount + ManualAssignmentCount + HolidayConfigCount;
+
+    /// <summary>
+    /// 推荐的人员数量
+    /// </summary>
+    public int RecommendedPersonnelCount
+    {
+        get
+        {
+            if (PositionCount <= 0 || MinPersonnelPerPosition <= 0) return PersonnelCount;
+            
+            var availableRate = PersonnelAvailabilityRate * (1 - PersonnelRetirementRate);
+            if (availableRate <= 0) return PersonnelCount;
+            
+            var recommended = (int)Math.Ceiling(PositionCount * MinPersonnelPerPosition / availableRate);
+            return Math.Max(recommended, PersonnelCount);
+        }
+    }
+
+    /// <summary>
+    /// 是否显示人员数量建议
+    /// </summary>
+    public bool ShowPersonnelRecommendation => 
+        IsCustomScale && PersonnelCount < RecommendedPersonnelCount;
+
+    #endregion
+
     /// <summary>
     /// 构造函数
     /// </summary>
@@ -216,6 +323,8 @@ public partial class TestDataGeneratorViewModel : ObservableObject
         {
             "小规模 (快速测试)" => TestDataConfiguration.CreateSmall(),
             "大规模 (压力测试)" => TestDataConfiguration.CreateLarge(),
+            "演练场景 (高可用率)" => TestDataConfiguration.CreateDrillScenario(),
+            "实战场景 (低可用率)" => TestDataConfiguration.CreateCombatScenario(),
             "自定义" => null, // 保持当前自定义值
             _ => TestDataConfiguration.CreateDefault()
         };
@@ -229,6 +338,9 @@ public partial class TestDataGeneratorViewModel : ObservableObject
             FixedAssignmentCount = config.FixedAssignmentCount;
             ManualAssignmentCount = config.ManualAssignmentCount;
             HolidayConfigCount = config.HolidayConfigCount;
+            MinPersonnelPerPosition = config.MinPersonnelPerPosition;
+            PersonnelAvailabilityRate = config.PersonnelAvailabilityRate;
+            PersonnelRetirementRate = config.PersonnelRetirementRate;
             RandomSeed = config.RandomSeed;
         }
     }
@@ -270,6 +382,9 @@ public partial class TestDataGeneratorViewModel : ObservableObject
             FixedAssignmentCount = FixedAssignmentCount,
             ManualAssignmentCount = ManualAssignmentCount,
             HolidayConfigCount = HolidayConfigCount,
+            MinPersonnelPerPosition = MinPersonnelPerPosition,
+            PersonnelAvailabilityRate = PersonnelAvailabilityRate,
+            PersonnelRetirementRate = PersonnelRetirementRate,
             RandomSeed = RandomSeed
         };
     }
@@ -601,6 +716,55 @@ public partial class TestDataGeneratorViewModel : ObservableObject
     private async Task RefreshRecentFilesAsync()
     {
         await LoadRecentFilesAsync();
+    }
+
+    /// <summary>
+    /// 应用推荐的人员数量命令
+    /// </summary>
+    [RelayCommand]
+    private void ApplyRecommendedPersonnelCount()
+    {
+        PersonnelCount = RecommendedPersonnelCount;
+        ValidateConfiguration();
+    }
+
+    /// <summary>
+    /// 验证当前配置命令
+    /// </summary>
+    [RelayCommand]
+    private void ValidateConfiguration()
+    {
+        try
+        {
+            var config = CreateConfiguration();
+            var result = config.ValidateWithResult();
+
+            IsConfigurationValid = result.IsValid;
+            HasValidationWarnings = result.HasWarnings;
+
+            if (!result.IsValid)
+            {
+                ValidationMessage = "❌ 配置错误：\n" + string.Join("\n", result.Errors.Select(e => $"  • {e}"));
+            }
+            else if (result.HasWarnings)
+            {
+                ValidationMessage = "⚠️ 配置警告：\n" + string.Join("\n", result.Warnings.Select(w => $"  • {w}"));
+            }
+            else
+            {
+                ValidationMessage = "✅ 配置有效";
+            }
+        }
+        catch (Exception ex)
+        {
+            IsConfigurationValid = false;
+            ValidationMessage = $"❌ 验证失败：{ex.Message}";
+        }
+
+        // 通知相关属性更新
+        OnPropertyChanged(nameof(EstimatedTotalRecords));
+        OnPropertyChanged(nameof(RecommendedPersonnelCount));
+        OnPropertyChanged(nameof(ShowPersonnelRecommendation));
     }
 
     #endregion
