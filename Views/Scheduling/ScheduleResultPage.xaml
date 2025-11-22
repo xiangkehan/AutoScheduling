@@ -16,6 +16,7 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <converters:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
+        <converters:EnumToBoolConverter x:Key="EnumToBoolConverter"/>
     </Page.Resources>
 
     <Grid>
@@ -45,9 +46,9 @@
                     <AppBarSeparator/>
                     <AppBarElementContainer>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <RadioButton Content="Grid" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Grid}"/>
-                            <RadioButton Content="List" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=List}"/>
-                            <RadioButton Content="By Personnel" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=ByPersonnel}"/>
+                            <RadioButton x:Name="GridRadioButton" Content="Grid" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Grid}"/>
+                            <RadioButton x:Name="ListRadioButton" Content="List" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=List}"/>
+                            <RadioButton x:Name="ByPersonnelRadioButton" Content="By Personnel" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=ByPersonnel}"/>
                         </StackPanel>
                     </AppBarElementContainer>
                 </CommandBar>
@@ -78,15 +79,15 @@
                         <!-- Grid View -->
                         <controls:ScheduleGridControl
                             GridData="{x:Bind ViewModel.GridData, Mode=OneWay}"
-                            Visibility="{x:Bind ViewModel.CurrentViewMode, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=1}"/>
+                            Visibility="{x:Bind GridRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
 
                         <!-- List View (Placeholder) -->
-                        <Grid Visibility="{x:Bind ViewModel.CurrentViewMode, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=1}">
+                        <Grid Visibility="{x:Bind ListRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                             <TextBlock Text="List View - To be implemented" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
 
                         <!-- By Personnel View (Placeholder) -->
-                        <Grid Visibility="{x:Bind ViewModel.CurrentViewMode, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=2}">
+                        <Grid Visibility="{x:Bind ByPersonnelRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                             <TextBlock Text="View By Personnel - To be implemented" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                     </Grid>
