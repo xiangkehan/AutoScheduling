@@ -412,16 +412,5 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         #endregion
-
-        #region 辅助属性
-
-        // 时段选项（静态列表）
-        public List<TimeSlotOption> TimeSlotOptions { get; } = TimeSlotOption.GetAll();
-
-        // 所有手动指定（绑定到UI）
-        public ObservableCollection<ManualAssignmentViewModel> AllManualAssignments 
-            => _manualAssignmentManager.AllAssignments;
-
-        #endregion
     }
 }

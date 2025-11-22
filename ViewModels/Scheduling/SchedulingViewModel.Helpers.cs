@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using AutoScheduling3.DTOs;
 
 namespace AutoScheduling3.ViewModels.Scheduling
@@ -9,9 +10,19 @@ namespace AutoScheduling3.ViewModels.Scheduling
     /// </summary>
     public partial class SchedulingViewModel
     {
-        // 此文件将包含：
-        // - 时段选项 (TimeSlotOptions)
-        // - 手动指定集合访问 (AllManualAssignments)
-        // - 其他辅助属性和方法
+        #region 辅助属性
+
+        /// <summary>
+        /// 时段选项（静态列表）
+        /// </summary>
+        public List<TimeSlotOption> TimeSlotOptions { get; } = TimeSlotOption.GetAll();
+
+        /// <summary>
+        /// 所有手动指定（绑定到UI）
+        /// </summary>
+        public ObservableCollection<ManualAssignmentViewModel> AllManualAssignments 
+            => _manualAssignmentManager.AllAssignments;
+
+        #endregion
     }
 }
