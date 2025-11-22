@@ -2,7 +2,7 @@
 
 ## 任务列表
 
-- [ ] 1. 创建新增的数据模型
+- [x] 1. 创建新增的数据模型
   - 创建 `PositionScheduleData` 类，包含哨位ID、名称、周数据列表
   - 创建 `WeekData` 类，包含周次、开始结束日期、单元格数据
   - 创建 `PositionScheduleCell` 类，包含时段、星期、人员信息
@@ -12,14 +12,14 @@
   - 将模型文件放置在 `DTOs/` 目录下
   - _需求: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8_
 
-- [ ] 2. 扩展 ViewMode 枚举
+- [x] 2. 扩展 ViewMode 枚举
   - 将 `ScheduleViewMode` 枚举重命名为 `ViewMode` 并移动到 DTOs 目录
   - 在 `ViewMode` 枚举中添加 `ByPosition` 选项
   - 更新 ScheduleResultViewModel 和 ScheduleResultPage 中的引用
   - _需求: 2.1_
 
-- [ ] 3. 扩展 ScheduleResultViewModel
-- [ ] 3.1 添加新的属性
+- [x] 3. 扩展 ScheduleResultViewModel
+- [x] 3.1 添加新的属性
   - 添加 `PositionSchedules` 集合属性（Position View 数据）
   - 添加 `SelectedPositionSchedule` 属性（当前选中的哨位）
   - 添加 `CurrentWeekIndex` 属性（当前周次索引）
@@ -32,7 +32,7 @@
   - 添加统计数据属性：`PersonnelWorkloads`、`PositionCoverages`、`Statistics`
   - _需求: 2.1, 2.2, 2.3, 2.4, 2.5, 5.1, 5.2, 5.3, 5.4, 5.5, 6.1, 6.2, 6.3, 6.4, 6.5, 9.5_
 
-- [ ] 3.2 添加新的命令
+- [x] 3.2 添加新的命令
   - 添加 `ApplyFiltersCommand`（应用筛选）
   - 添加 `ResetFiltersCommand`（重置筛选）
   - 添加 `SelectPositionCommand`（选择哨位）
@@ -49,7 +49,7 @@
   - 添加 `CompareSchedulesCommand`（比较排班）
   - _需求: 3.1, 3.2, 3.3, 3.4, 3.5, 5.1, 5.2, 5.3, 5.4, 5.5, 7.1, 7.2, 7.3, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 9.5, 10.1, 10.2, 10.3, 10.4, 10.5, 11.1, 11.2, 11.3, 11.4, 11.5_
 
-- [ ] 3.3 实现数据构建方法
+- [x] 3.3 实现数据构建方法
   - 实现 `BuildPositionScheduleDataAsync` 方法，将 ScheduleDto 转换为 Position View 数据
   - 实现 `BuildPersonnelScheduleDataAsync` 方法，将 ScheduleDto 转换为 Personnel View 数据
   - 实现 `BuildShiftListDataAsync` 方法，将 ScheduleDto 转换为 List View 数据
@@ -57,7 +57,7 @@
   - 实现人员和哨位名称缓存机制
   - _需求: 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 3.4 实现视图模式切换逻辑
+- [x] 3.4 实现视图模式切换逻辑
   - 实现 `OnViewModeChangedAsync` 方法，根据新模式加载对应数据
   - 在 Grid View 模式下，确保 GridData 已构建
   - 在 Position View 模式下，构建 PositionSchedules 并选择第一个哨位
@@ -66,14 +66,14 @@
   - 处理视图切换错误，恢复到之前的模式
   - _需求: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8_
 
-- [ ] 3.5 实现筛选功能
+- [x] 3.5 实现筛选功能
   - 实现 `ApplyFiltersAsync` 方法，根据筛选条件重新构建数据
   - 实现 `ResetFiltersAsync` 方法，清除筛选条件并重新加载数据
   - 筛选逻辑应用于所有视图模式
   - 筛选条件包括：日期范围、哨位、人员搜索
   - _需求: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 3.6 实现编辑功能
+- [x] 3.6 实现编辑功能
   - 实现 `EditShiftAssignmentAsync` 方法，打开修改分配对话框
   - 实现 `UpdateShiftAssignmentAsync` 方法，更新班次分配
   - 实现 `SaveChangesAsync` 方法，将更改保存到数据库
@@ -82,7 +82,7 @@
   - 修改后标记 `HasUnsavedChanges` 为 true
   - _需求: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-- [ ] 3.7 实现冲突处理功能
+- [x] 3.7 实现冲突处理功能
   - 实现 `DetectConflictsAsync` 方法，检测所有冲突
   - 实现 `LocateConflictAsync` 方法，定位并高亮冲突单元格
   - 实现 `IgnoreConflictAsync` 方法，标记冲突为已忽略
@@ -90,13 +90,13 @@
   - 冲突检测应在后台异步执行
   - _需求: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 3.8 实现统计数据构建方法
+- [x] 3.8 实现统计数据构建方法
   - 实现 `BuildPersonnelWorkloadsAsync` 方法，计算人员工作量统计
   - 实现 `BuildPositionCoveragesAsync` 方法，计算哨位覆盖率统计
   - 实现 `BuildStatisticsAsync` 方法，构建整体统计信息
   - _需求: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 3.9 实现其他命令
+- [x] 3.9 实现其他命令
   - 实现 `SelectPositionCommand`，切换选中的哨位
   - 实现 `SelectPersonnelCommand`，切换选中的人员
   - 实现 `ChangeWeekCommand`，切换周次
@@ -105,7 +105,7 @@
   - 实现 `CompareSchedulesCommand`，打开排班比较视图
   - _需求: 3.1, 3.2, 3.3, 3.4, 3.5, 10.1, 10.2, 10.3, 10.4, 10.5, 11.1, 11.2, 11.3, 11.4, 11.5_
 
-- [ ] 4. 创建 PositionScheduleControl 自定义控件
+- [x] 4. 创建 PositionScheduleControl 自定义控件
 - [ ] 4.1 创建控件基础结构
   - 创建 `PositionScheduleControl.xaml` 和 `PositionScheduleControl.xaml.cs`
   - 定义 `ScheduleData` 依赖属性，类型为 `PositionScheduleData`

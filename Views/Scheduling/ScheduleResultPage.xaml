@@ -49,6 +49,7 @@
                             <RadioButton x:Name="GridRadioButton" Content="Grid" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Grid}"/>
                             <RadioButton x:Name="ListRadioButton" Content="List" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=List}"/>
                             <RadioButton x:Name="ByPersonnelRadioButton" Content="By Personnel" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=ByPersonnel}"/>
+                            <RadioButton x:Name="ByPositionRadioButton" Content="By Position" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=ByPosition}"/>
                         </StackPanel>
                     </AppBarElementContainer>
                 </CommandBar>
@@ -89,6 +90,11 @@
                         <!-- By Personnel View (Placeholder) -->
                         <Grid Visibility="{x:Bind ByPersonnelRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                             <TextBlock Text="View By Personnel - To be implemented" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- By Position View (Placeholder) -->
+                        <Grid Visibility="{x:Bind ByPositionRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBlock Text="View By Position - To be implemented" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                     </Grid>
                 </SplitView.Content>

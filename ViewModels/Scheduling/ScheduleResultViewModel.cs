@@ -15,7 +15,6 @@ using AutoScheduling3.ViewModels.Base;
 
 namespace AutoScheduling3.ViewModels.Scheduling
 {
-    public enum ScheduleViewMode { Grid, List, ByPersonnel }
 
     /// <summary>
     /// �Ű���ҳ�� ViewModel�������Ű����顢ȷ�ϡ����������ص�
@@ -65,8 +64,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
             set => SetProperty(ref _isConfirming, value);
         }
 
-        private ScheduleViewMode _currentViewMode = ScheduleViewMode.Grid;
-        public ScheduleViewMode CurrentViewMode
+        private ViewMode _currentViewMode = ViewMode.Grid;
+        public ViewMode CurrentViewMode
         {
             get => _currentViewMode;
             set => SetProperty(ref _currentViewMode, value);
@@ -91,7 +90,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         public IRelayCommand BackCommand { get; }
         public IAsyncRelayCommand ExportExcelCommand { get; }
         public IRelayCommand RescheduleCommand { get; }
-        public IRelayCommand<ScheduleViewMode> ChangeViewModeCommand { get; }
+        public IRelayCommand<ViewMode> ChangeViewModeCommand { get; }
 
 
         public ScheduleResultViewModel(ISchedulingService schedulingService,
@@ -107,7 +106,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             BackCommand = new RelayCommand(() => _navigationService.GoBack());
             ExportExcelCommand = new AsyncRelayCommand(ExportExcelAsync, CanExport);
             RescheduleCommand = new RelayCommand(Reschedule, CanReschedule);
-            ChangeViewModeCommand = new RelayCommand<ScheduleViewMode>(viewMode => CurrentViewMode = viewMode);
+            ChangeViewModeCommand = new RelayCommand<ViewMode>(viewMode => CurrentViewMode = viewMode);
 
             PropertyChanged += (s, e) =>
             {
