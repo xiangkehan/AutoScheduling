@@ -382,12 +382,18 @@ namespace AutoScheduling3.Data
                     // Set database version
                     await SetDatabaseVersionAsync(conn, CurrentVersion);
                     _logger.Log($"Database version set to {CurrentVersion}");
+                    
+                    // Enable WAL mode for better concurrency
+                    await EnableWalModeAsync(conn);
                 }
                 else
                 {
                     // For existing databases, check version and migrate if needed
                     using var conn = new SqliteConnection(_connectionString);
                     await conn.OpenAsync();
+                    
+                    // Enable WAL mode for existing databases
+                    await EnableWalModeAsync(conn);
                     
                     var currentVersion = await GetDatabaseVersionAsync(conn);
                     
@@ -572,6 +578,41 @@ VALUES (1, @version, @updatedAt)";
             cmd.Parameters.AddWithValue("@version", version);
             cmd.Parameters.AddWithValue("@updatedAt", DateTime.UtcNow.ToString("o"));
             await cmd.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
+        /// 启用 WAL 模式和性能优化
+        /// WAL (Write-Ahead Logging) 模式允许读写并发，显著提高并发性能
+        /// </summary>
+        private async Task EnableWalModeAsync(SqliteConnection conn)
+        {
+            try
+            {
+                _logger.Log("Enabling WAL mode for better concurrency");
+                
+                // 启用 WAL 模式
+                var walCmd = conn.CreateCommand();
+                walCmd.CommandText = "PRAGMA journal_mode=WAL;";
+                var result = await walCmd.ExecuteScalarAsync();
+                _logger.Log($"Journal mode set to: {result}");
+                
+                // 设置同步模式为 NORMAL（平衡性能和安全性）
+                var syncCmd = conn.CreateCommand();
+                syncCmd.CommandText = "PRAGMA synchronous=NORMAL;";
+                await syncCmd.ExecuteNonQueryAsync();
+                _logger.Log("Synchronous mode set to NORMAL");
+                
+                // 设置缓存大小（提高性能）
+                var cacheCmd = conn.CreateCommand();
+                cacheCmd.CommandText = "PRAGMA cache_size=-2000;"; // 2MB 缓存
+                await cacheCmd.ExecuteNonQueryAsync();
+                _logger.Log("Cache size set to 2MB");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Failed to enable WAL mode: {ex.Message}");
+                // 不抛出异常，因为这不是致命错误
+            }
         }
 
         /// <summary>

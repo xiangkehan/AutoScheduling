@@ -206,7 +206,7 @@ public sealed partial class CellModel : UserControl
     /// </summary>
     private void ApplyManualAssignmentStyle()
     {
-        CellBorder.BorderBrush = (Brush)Application.Current.Resources["SystemAccentColor"];
+        CellBorder.BorderBrush = new SolidColorBrush((Color)Application.Current.Resources["SystemAccentColor"]);
         CellBorder.BorderThickness = new Thickness(2);
         CellBorder.Background = (Brush)Application.Current.Resources["AccentFillColorTertiaryBrush"];
         PersonnelNameText.Foreground = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
@@ -217,7 +217,7 @@ public sealed partial class CellModel : UserControl
     /// </summary>
     private void ApplyConflictStyle()
     {
-        CellBorder.BorderBrush = (Brush)Application.Current.Resources["SystemErrorTextColor"];
+        CellBorder.BorderBrush = new SolidColorBrush((Color)Application.Current.Resources["SystemErrorTextColor"]);
         CellBorder.BorderThickness = new Thickness(2);
         
         // 尝试使用系统错误背景色，如果不存在则使用浅红色
@@ -230,7 +230,7 @@ public sealed partial class CellModel : UserControl
             CellBorder.Background = new SolidColorBrush(global::Windows.UI.Color.FromArgb(30, 255, 0, 0));
         }
         
-        PersonnelNameText.Foreground = (Brush)Application.Current.Resources["SystemErrorTextColor"];
+        PersonnelNameText.Foreground = new SolidColorBrush((Color)Application.Current.Resources["SystemErrorTextColor"]);
     }
 
     /// <summary>
