@@ -408,11 +408,28 @@ public sealed partial class PositionPage : Page
         var container = AvailablePersonnelListView.ContainerFromItem(item) as ListViewItem;
         if (container != null)
         {
-            var storyboard = Resources["FadeInStoryboard"] as Storyboard;
-            if (storyboard != null)
+            try
             {
-                Storyboard.SetTarget(storyboard, container);
+                // 为每个动画创建独立的 Storyboard 实例，避免冲突
+                var storyboard = new Storyboard();
+                var fadeIn = new DoubleAnimation
+                {
+                    From = 0.0,
+                    To = 1.0,
+                    Duration = new Duration(TimeSpan.FromMilliseconds(150)),
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                
+                Storyboard.SetTarget(fadeIn, container);
+                Storyboard.SetTargetProperty(fadeIn, "Opacity");
+                storyboard.Children.Add(fadeIn);
+                
                 storyboard.Begin();
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                // 如果动画冲突，忽略错误
+                System.Diagnostics.Debug.WriteLine("Animation conflict ignored for item");
             }
         }
     }

@@ -8,8 +8,9 @@ using AutoScheduling3.DTOs;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.Helpers;
 using System.Collections.Generic;
-using AutoScheduling3.Models.Constraints; // ����Լ��ģ������
+using AutoScheduling3.Models.Constraints; // Լģ
 using CommunityToolkit.Mvvm.Input.Internals;
+using System.Diagnostics.CodeAnalysis;
 
 namespace AutoScheduling3.ViewModels.Scheduling
 {
@@ -18,11 +19,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private readonly ISchedulingService _schedulingService;
         private readonly IPersonnelService _personnelService;
         private readonly IPositionService _positionService;
-        private readonly ITemplateService _templateService; // ����ģ�����
+        private readonly ITemplateService _templateService; // ģ
         private readonly ISchedulingDraftService? _draftService; // 草稿服务（可选）
         private readonly DialogService _dialogService;
-        private readonly NavigationService _navigation_service; // ����ԭ���������ֶ���
-        private Microsoft.UI.Xaml.Controls.ContentDialog? _progressDialog; //���ȶԻ�������
+        private readonly NavigationService _navigation_service; // ԭֶ
+        private Microsoft.UI.Xaml.Controls.ContentDialog? _progressDialog; //ȶԻ
 
         [ObservableProperty]
         private int _currentStep = 1;
@@ -52,7 +53,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         [ObservableProperty] private bool _useActiveHolidayConfig = true;
         [ObservableProperty] private int? _selectedHolidayConfigId;
 
-        //Լ������Դ��ʹ�������Ա� UI��)
+        //ԼԴʹԱ UI)
         [ObservableProperty] private ObservableCollection<HolidayConfig> _holidayConfigs = new();
         [ObservableProperty] private ObservableCollection<FixedPositionRule> _fixedPositionRules = new();
         [ObservableProperty] private ObservableCollection<ManualAssignment> _manualAssignments = new();
@@ -64,10 +65,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private readonly PositionPersonnelManager _positionPersonnelManager;
 
         // 缓存：人员ID到PersonnelDto的映射
-        private Dictionary<int, PersonnelDto> _personnelCache = new();
+        private readonly Dictionary<int, PersonnelDto> _personnelCache = new();
         
         // 缓存：哨位ID到PositionDto的映射
-        private Dictionary<int, PositionDto> _positionCache = new();
+        private readonly Dictionary<int, PositionDto> _positionCache = new();
 
         // 所有手动指定（绑定到UI）
         public ObservableCollection<ManualAssignmentViewModel> AllManualAssignments 
@@ -285,23 +286,23 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private string _timeSlotValidationError = string.Empty;
 
         [ObservableProperty]
-        private ScheduleDto _resultSchedule;
+        private ScheduleDto? _resultSchedule;
 
         [ObservableProperty]
         private bool _isExecuting;
         [ObservableProperty]
         private bool _isLoadingInitial;
         [ObservableProperty]
-        private bool _isLoadingConstraints; // ʹ�����Թ� UI ��ʾ����״̬
+        private bool _isLoadingConstraints; // ʹԹ UI ʾ״̬
 
-        // ģ����أ�ʹ�����Զ����ֶΣ����ڰ����߼�ͳһ��
+        // ģأʹԶֶΣڰ߼ͳһ
         [ObservableProperty] private int? _loadedTemplateId;
         [ObservableProperty] private bool _templateApplied;
 
-        // ��5������չʾ����
+        // 5չʾ
         [ObservableProperty] private ObservableCollection<SummarySection> _summarySections = new();
 
-        // ����
+        // 
         public IAsyncRelayCommand LoadDataCommand { get; }
         public IRelayCommand NextStepCommand { get; }
         public IRelayCommand PreviousStepCommand { get; }
@@ -343,7 +344,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         IPersonnelService personnelService,
         IPositionService positionService,
         ITemplateService templateService,
-        ISchedulingDraftService draftService,
+        ISchedulingDraftService? draftService,
         DialogService dialogService,
         NavigationService navigationService)
         {
@@ -374,10 +375,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
             StartCreateManualAssignmentCommand = new RelayCommand(StartCreateManualAssignment);
             SubmitCreateManualAssignmentCommand = new AsyncRelayCommand(SubmitCreateManualAssignmentAsync);
             CancelCreateManualAssignmentCommand = new RelayCommand(CancelCreateManualAssignment);
-            StartEditManualAssignmentCommand = new RelayCommand<ManualAssignmentViewModel>(StartEditManualAssignment);
+            StartEditManualAssignmentCommand = new RelayCommand<ManualAssignmentViewModel?>(StartEditManualAssignment);
             SubmitEditManualAssignmentCommand = new AsyncRelayCommand(SubmitEditManualAssignmentAsync);
             CancelEditManualAssignmentCommand = new RelayCommand(CancelEditManualAssignment);
-            DeleteManualAssignmentCommand = new AsyncRelayCommand<ManualAssignmentViewModel>(DeleteManualAssignmentAsync);
+            DeleteManualAssignmentCommand = new AsyncRelayCommand<ManualAssignmentViewModel?>(DeleteManualAssignmentAsync);
 
             // 初始化为哨位添加人员命令
             StartAddPersonnelToPositionCommand = new RelayCommand<PositionDto>(StartAddPersonnelToPosition);
@@ -400,13 +401,13 @@ namespace AutoScheduling3.ViewModels.Scheduling
             // Listen to property changes to refresh command states
             PropertyChanged += (s, e) =>
             {
-                if (e.PropertyName is nameof(CurrentStep) or nameof(ScheduleTitle) or nameof(StartDate) or nameof(EndDate) or nameof(IsExecuting))
+                if (e?.PropertyName is nameof(CurrentStep) or nameof(ScheduleTitle) or nameof(StartDate) or nameof(EndDate) or nameof(IsExecuting))
                 {
                     RefreshCommandStates();
                 }
                 
                 // 当进入步骤3时，更新哨位人员视图模型
-                if (e.PropertyName == nameof(CurrentStep) && CurrentStep == 3)
+                if (e?.PropertyName == nameof(CurrentStep) && CurrentStep == 3)
                 {
                     UpdatePositionPersonnelViewModels();
                 }
@@ -508,27 +509,27 @@ namespace AutoScheduling3.ViewModels.Scheduling
             SaveAsTemplateCommand.NotifyCanExecuteChanged();
         }
 
-        private bool ValidateStep1(out string error)
+        private bool ValidateStep1([NotNullWhen(false)] out string? error)
         {
             if (string.IsNullOrWhiteSpace(ScheduleTitle)) { error = "排班标题不能为空"; return false; }
             if (ScheduleTitle.Length > 100) { error = "排班标题长度不能超过100字符"; return false; }
             if (StartDate.Date < DateTimeOffset.Now.Date) { error = "开始日期不能早于今天"; return false; }
             if (EndDate.Date < StartDate.Date) { error = "结束日期不能早于开始日期"; return false; }
             if ((EndDate.Date - StartDate.Date).TotalDays + 1 > 365) { error = "排班周期不能超过365天"; return false; }
-            error = string.Empty; return true;
+            error = null; return true;
         }
-        private bool ValidateStep2(out string error)
+        private bool ValidateStep2([NotNullWhen(false)] out string? error)
         {
             // Step 2 now validates positions (swapped with step 3)
             if (SelectedPositions == null || SelectedPositions.Count == 0) { error = "请至少选择一个岗位"; return false; }
-            error = string.Empty; return true;
+            error = null; return true;
         }
-        private bool ValidateStep3(out string error)
+        private bool ValidateStep3([NotNullWhen(false)] out string? error)
         {
             // Step 3 now validates personnel (swapped with step 2)
             if (SelectedPersonnels == null || SelectedPersonnels.Count == 0) { error = "请至少选择一名人员"; return false; }
             if (SelectedPersonnels.Any(p => !p.IsAvailable || p.IsRetired)) { error = "选择的人员有不可用人员，请移除"; return false; }
-            error = string.Empty; return true;
+            error = null; return true;
         }
 
         private async Task LoadInitialDataAsync()
@@ -783,7 +784,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             // 分离已保存的和临时的手动指定
             var enabledManualAssignmentIds = allEnabledAssignments
                 .Where(a => a.Id.HasValue)
-                .Select(a => a.Id.Value)
+                .Select(a => a.Id!.Value)
                 .ToList();
             
             var temporaryManualAssignments = allEnabledAssignments
@@ -822,37 +823,45 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     XamlRoot = App.MainWindow?.Content?.XamlRoot
                 };
 
-                try
+                if (dialog.XamlRoot != null)
                 {
-                    var result = await dialog.ShowAsync();
-
-                    if (result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Secondary)
+                    try
                     {
-                        // 用户选择放弃，删除草稿
-                        if (_draftService != null)
+                        var result = await dialog.ShowAsync();
+
+                        if (result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Secondary)
                         {
-                            try
+                            // 用户选择放弃，删除草稿
+                            if (_draftService != null)
                             {
-                                await _draftService.DeleteDraftAsync();
-                                System.Diagnostics.Debug.WriteLine("[SchedulingViewModel] Draft deleted after user chose to discard");
-                            }
-                            catch (Exception draftEx)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel] Failed to delete draft: {draftEx.Message}");
-                                // 不影响主流程，仅记录日志
+                                try
+                                {
+                                    await _draftService.DeleteDraftAsync();
+                                    System.Diagnostics.Debug.WriteLine("[SchedulingViewModel] Draft deleted after user chose to discard");
+                                }
+                                catch (Exception draftEx)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel] Failed to delete draft: {draftEx.Message}");
+                                    // 不影响主流程，仅记录日志
+                                }
                             }
                         }
+                        // 如果选择保留，草稿会在OnNavigatedFrom时自动保存
                     }
-                    // 如果选择保留，草稿会在OnNavigatedFrom时自动保存
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel] Failed to show cancel dialog: {ex.Message}");
-                    // 如果对话框显示失败，继续执行重置逻辑
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SchedulingViewModel] Failed to show cancel dialog: {ex.Message}");
+                        // 如果对话框显示失败，继续执行重置逻辑
+                    }
                 }
             }
 
             // 重置状态
+            ResetViewModelState();
+        }
+
+        private void ResetViewModelState()
+        {
             CurrentStep = 1;
             ScheduleTitle = string.Empty;
             SelectedPersonnels.Clear();
@@ -868,19 +877,19 @@ namespace AutoScheduling3.ViewModels.Scheduling
             LoadedTemplateId = null;
             TemplateApplied = false;
             SummarySections.Clear();
-            
+
             // 清空手动指定管理器
             _manualAssignmentManager.Clear();
-            
+
             // 清空哨位人员管理器
             _positionPersonnelManager.Clear();
-            
+
             // 清空手动添加的人员列表
             ManuallyAddedPersonnelIds.Clear();
             ManuallyAddedPersonnelDetails.Clear();
             AutoExtractedPersonnelCount = 0;
             ManuallyAddedPersonnelCount = 0;
-            
+
             RefreshCommandStates();
         }
 
@@ -1155,6 +1164,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
                 XamlRoot = App.MainWindow?.Content?.XamlRoot
             };
+
+            if (dialog.XamlRoot == null) return;
+
             var result = await dialog.ShowAsync();
             if (result != Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary) return;
             var name = nameBox.Text?.Trim();
@@ -1423,7 +1435,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 return;
 
             // 验证表单
-            if (!ValidateManualAssignment(NewManualAssignment, out var error))
+            if (!ValidateManualAssignment(NewManualAssignment, out _))
             {
                 // 验证错误已经设置到各个字段的错误属性中，不需要显示对话框
                 return;
@@ -1523,7 +1535,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 return;
 
             // 验证表单
-            if (!ValidateManualAssignment(EditingManualAssignmentDto, out var error))
+            if (!ValidateManualAssignment(EditingManualAssignmentDto, out _))
             {
                 // 验证错误已经设置到各个字段的错误属性中，不需要显示对话框
                 return;
@@ -1607,6 +1619,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 XamlRoot = App.MainWindow?.Content?.XamlRoot
             };
 
+            if (dialog.XamlRoot == null) return;
+
             var result = await dialog.ShowAsync();
             if (result != Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
                 return;
@@ -1621,7 +1635,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// <summary>
         /// 验证手动指定表单
         /// </summary>
-        private bool ValidateManualAssignment(CreateManualAssignmentDto dto, out string error)
+        private bool ValidateManualAssignment(CreateManualAssignmentDto dto, [NotNullWhen(false)] out string? error)
         {
             // 清空之前的错误
             ClearValidationErrors();
@@ -1666,7 +1680,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 isValid = false;
             }
 
-            error = isValid ? string.Empty : "请修正表单中的错误";
+            error = isValid ? null : "请修正表单中的错误";
             return isValid;
         }
 
@@ -1684,7 +1698,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// <summary>
         /// 验证手动指定表单（UpdateDto版本）
         /// </summary>
-        private bool ValidateManualAssignment(UpdateManualAssignmentDto dto, out string error)
+        private bool ValidateManualAssignment(UpdateManualAssignmentDto dto, [NotNullWhen(false)] out string? error)
         {
             // 清空之前的错误
             ClearValidationErrors();
@@ -1729,7 +1743,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 isValid = false;
             }
 
-            error = isValid ? string.Empty : "请修正表单中的错误";
+            error = isValid ? null : "请修正表单中的错误";
             return isValid;
         }
 
@@ -2091,6 +2105,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 XamlRoot = App.MainWindow?.Content?.XamlRoot
             };
 
+            if (dialog.XamlRoot == null) return false;
+
             try
             {
                 var result = await dialog.ShowAsync();
@@ -2165,7 +2181,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     Description = position.Description,
                     Requirements = position.Requirements,
                     RequiredSkillIds = position.RequiredSkillIds,
-                    AvailablePersonnelIds = updatedPersonnelIds
+                    AvailablePersonnelIds = updatedPersonnelIds.ToList()
                 };
 
                 // 调用IPositionService.UpdateAsync更新数据库
@@ -2174,7 +2190,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 System.Diagnostics.Debug.WriteLine("数据库更新成功");
 
                 // 更新本地PositionDto数据
-                position.AvailablePersonnelIds = updatedPersonnelIds;
+                position.AvailablePersonnelIds = updatedPersonnelIds.ToList();
                 System.Diagnostics.Debug.WriteLine("本地数据已更新");
 
                 // 重新初始化PositionPersonnelManager（清除临时更改标记）
@@ -2605,7 +2621,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                             IsEnabled = tempAssignment.IsEnabled
                         };
                         
-                        _manualAssignmentManager.AddTemporary(dto, personnel?.Name ?? "未知人员", position?.Name ?? "未知哨位");
+                        _manualAssignmentManager.AddTemporary(dto, personnel?.Name ?? "未知人员", position?.Name ?? "未知哨位", tempAssignment.TempId);
                     }
 
                     System.Diagnostics.Debug.WriteLine($"恢复手动指定: 已保存 {savedManualAssignments.Count}, 临时 {draft.TemporaryManualAssignments.Count}");
@@ -2687,247 +2703,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
             else if (value == 5)
             {
                 BuildSummarySections();
-            }
-        }
-
-        /// <summary>
-        /// 从已选哨位自动提取可用人员
-        /// </summary>
-        private void ExtractPersonnelFromPositions()
-        {
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            System.Diagnostics.Debug.WriteLine("=== 开始自动提取人员 ===");
-            System.Diagnostics.Debug.WriteLine($"已选哨位数量: {SelectedPositions.Count}");
-
-            try
-            {
-                // 验证输入
-                if (SelectedPositions == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("错误: SelectedPositions为null");
-                    AutoExtractedPersonnelCount = 0;
-                    ManuallyAddedPersonnelCount = ManuallyAddedPersonnelIds.Count;
-                    return;
-                }
-
-                // 初始化PositionPersonnelManager
-                _positionPersonnelManager.Initialize(SelectedPositions);
-                var initTime = stopwatch.ElapsedMilliseconds;
-                System.Diagnostics.Debug.WriteLine($"PositionPersonnelManager初始化耗时: {initTime}ms");
-
-                // 使用HashSet提高查找性能，避免重复计算
-                var autoExtractedPersonnelIds = new HashSet<int>();
-                foreach (var position in SelectedPositions)
-                {
-                    if (position.AvailablePersonnelIds == null)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"警告: 哨位 {position.Name} (ID: {position.Id}) 的AvailablePersonnelIds为null");
-                        continue;
-                    }
-
-                    foreach (var personnelId in position.AvailablePersonnelIds)
-                    {
-                        autoExtractedPersonnelIds.Add(personnelId);
-                    }
-                }
-                var extractTime = stopwatch.ElapsedMilliseconds - initTime;
-                System.Diagnostics.Debug.WriteLine($"人员ID提取耗时: {extractTime}ms");
-                System.Diagnostics.Debug.WriteLine($"自动提取的人员ID数量: {autoExtractedPersonnelIds.Count}");
-
-                // 更新自动提取的人员数量
-                AutoExtractedPersonnelCount = autoExtractedPersonnelIds.Count;
-
-                // 更新手动添加的人员数量
-                ManuallyAddedPersonnelCount = ManuallyAddedPersonnelIds.Count;
-
-                // 更新哨位人员视图模型
-                UpdatePositionPersonnelViewModels();
-
-                stopwatch.Stop();
-                System.Diagnostics.Debug.WriteLine($"自动提取人员数量: {AutoExtractedPersonnelCount}");
-                System.Diagnostics.Debug.WriteLine($"手动添加人员数量: {ManuallyAddedPersonnelCount}");
-                System.Diagnostics.Debug.WriteLine($"总耗时: {stopwatch.ElapsedMilliseconds}ms");
-                
-                // 性能警告
-                if (stopwatch.ElapsedMilliseconds > 500 && SelectedPositions.Count <= 50)
-                {
-                    System.Diagnostics.Debug.WriteLine($"⚠️ 性能警告: 50个以下哨位的人员提取超过500ms");
-                }
-                else if (stopwatch.ElapsedMilliseconds > 2000 && SelectedPositions.Count > 50)
-                {
-                    System.Diagnostics.Debug.WriteLine($"⚠️ 性能警告: 50个以上哨位的人员提取超过2秒");
-                }
-                
-                System.Diagnostics.Debug.WriteLine("=== 人员提取完成 ===");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("=== 自动提取人员失败 ===");
-                System.Diagnostics.Debug.WriteLine($"异常类型: {ex.GetType().Name}");
-                System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
-                
-                // 设置默认值，避免UI显示异常
-                AutoExtractedPersonnelCount = 0;
-                ManuallyAddedPersonnelCount = ManuallyAddedPersonnelIds.Count;
-                
-                // 显示错误提示给用户
-                _ = _dialogService.ShowErrorAsync("自动提取人员失败", ex);
-            }
-        }
-
-        /// <summary>
-        /// 更新哨位人员视图模型（用于步骤3的UI展示）
-        /// </summary>
-        private void UpdatePositionPersonnelViewModels()
-        {
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            System.Diagnostics.Debug.WriteLine("=== 开始更新哨位人员视图模型 ===");
-
-            try
-            {
-                // 清空现有的视图模型
-                PositionPersonnelViewModels.Clear();
-
-                // 为每个选中的哨位创建视图模型
-                foreach (var position in SelectedPositions)
-                {
-                    // 获取该哨位的可用人员ID（包含临时更改）
-                    var availablePersonnelIds = _positionPersonnelManager.GetAvailablePersonnel(position.Id);
-                    
-                    // 创建人员项视图模型列表
-                    var personnelItems = new ObservableCollection<PersonnelItemViewModel>();
-                    
-                    // 获取哨位的临时更改状态（在循环外获取一次）
-                    var positionChanges = _positionPersonnelManager.GetChanges(position.Id);
-                    
-                    foreach (var personnelId in availablePersonnelIds)
-                    {
-                        var personnel = GetPersonnelFromCache(personnelId);
-                        if (personnel == null)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"警告: 未找到人员 ID: {personnelId}");
-                            continue;
-                        }
-
-                        // 判断人员来源类型
-                        var sourceType = PersonnelSourceType.AutoExtracted;
-                        
-                        if (positionChanges.AddedPersonnelIds.Contains(personnelId))
-                        {
-                            sourceType = PersonnelSourceType.TemporarilyAdded;
-                        }
-                        else if (positionChanges.RemovedPersonnelIds.Contains(personnelId))
-                        {
-                            // 注意：如果人员被临时移除，它不应该出现在availablePersonnelIds中
-                            // 这里只是为了完整性而保留此逻辑
-                            sourceType = PersonnelSourceType.TemporarilyRemoved;
-                        }
-
-                        // 判断是否为共享人员（在多个哨位中可用）
-                        var sharedPositionCount = SelectedPositions.Count(p => 
-                            _positionPersonnelManager.GetAvailablePersonnel(p.Id).Contains(personnelId));
-                        var isShared = sharedPositionCount > 1;
-
-                        // 格式化技能显示
-                        var skillsDisplay = personnel.SkillIds != null && personnel.SkillIds.Count > 0
-                            ? $"技能: {personnel.SkillIds.Count} 项"
-                            : "无技能";
-
-                        // 创建人员项视图模型
-                        var personnelItem = new PersonnelItemViewModel
-                        {
-                            PersonnelId = personnelId,
-                            PersonnelName = personnel.Name,
-                            SkillsDisplay = skillsDisplay,
-                            SourceType = sourceType,
-                            IsShared = isShared,
-                            SharedPositionCount = sharedPositionCount,
-                            // 自动提取的人员默认选中，其他类型根据SelectedPersonnels判断
-                            IsSelected = sourceType == PersonnelSourceType.AutoExtracted || SelectedPersonnels.Any(p => p.Id == personnelId)
-                        };
-
-                        // 如果人员被选中但不在SelectedPersonnels中，添加它
-                        if (personnelItem.IsSelected && !SelectedPersonnels.Any(p => p.Id == personnelId))
-                        {
-                            SelectedPersonnels.Add(personnel);
-                            System.Diagnostics.Debug.WriteLine($"自动添加选中人员到列表: {personnel.Name}");
-                        }
-
-                        // 监听IsSelected属性变化，更新SelectedPersonnels集合
-                        personnelItem.PropertyChanged += (s, e) =>
-                        {
-                            if (e.PropertyName == nameof(PersonnelItemViewModel.IsSelected))
-                            {
-                                var item = s as PersonnelItemViewModel;
-                                if (item == null) return;
-
-                                var personnelDto = GetPersonnelFromCache(item.PersonnelId);
-                                if (personnelDto == null) return;
-
-                                if (item.IsSelected)
-                                {
-                                    // 添加到SelectedPersonnels（如果不存在）
-                                    if (!SelectedPersonnels.Any(p => p.Id == item.PersonnelId))
-                                    {
-                                        SelectedPersonnels.Add(personnelDto);
-                                        System.Diagnostics.Debug.WriteLine($"添加人员到选中列表: {personnelDto.Name}");
-                                    }
-                                }
-                                else
-                                {
-                                    // 从SelectedPersonnels移除
-                                    var toRemove = SelectedPersonnels.FirstOrDefault(p => p.Id == item.PersonnelId);
-                                    if (toRemove != null)
-                                    {
-                                        SelectedPersonnels.Remove(toRemove);
-                                        System.Diagnostics.Debug.WriteLine($"从选中列表移除人员: {personnelDto.Name}");
-                                    }
-                                }
-                            }
-                        };
-
-                        personnelItems.Add(personnelItem);
-                    }
-
-                    // 获取哨位的临时更改状态
-                    var changes = _positionPersonnelManager.GetChanges(position.Id);
-
-                    // 创建哨位人员视图模型
-                    var positionViewModel = new PositionPersonnelViewModel
-                    {
-                        PositionId = position.Id,
-                        PositionName = position.Name,
-                        Location = position.Location ?? string.Empty,
-                        PositionDto = position,
-                        AvailablePersonnel = personnelItems,
-                        IsExpanded = true,
-                        HasChanges = changes.HasChanges,
-                        ChangesSummary = changes.HasChanges 
-                            ? $"添加 {changes.AddedPersonnelIds.Count} 人，移除 {changes.RemovedPersonnelIds.Count} 人"
-                            : string.Empty
-                    };
-
-                    PositionPersonnelViewModels.Add(positionViewModel);
-                }
-
-                stopwatch.Stop();
-                System.Diagnostics.Debug.WriteLine($"哨位人员视图模型更新完成: {PositionPersonnelViewModels.Count} 个哨位");
-                System.Diagnostics.Debug.WriteLine($"总耗时: {stopwatch.ElapsedMilliseconds}ms");
-                System.Diagnostics.Debug.WriteLine("=== 哨位人员视图模型更新完成 ===");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("=== 更新哨位人员视图模型失败 ===");
-                System.Diagnostics.Debug.WriteLine($"异常类型: {ex.GetType().Name}");
-                System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
-                
-                // 清空视图模型，避免显示错误数据
-                PositionPersonnelViewModels.Clear();
-                
-                // 显示错误提示给用户
-                _ = _dialogService.ShowErrorAsync("更新哨位人员列表失败", ex);
             }
         }
         partial void OnScheduleTitleChanged(string value) => RefreshCommandStates();
