@@ -26,18 +26,22 @@ namespace AutoScheduling3.Views.Scheduling
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
-        protected override async void OnNavigatedTo(NavigationEventArgs e)
+        protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-            
+            DispatcherQueue.TryEnqueue(async () => await OnNavigatedToAsync(e));
+        }
+
+        private async Task OnNavigatedToAsync(NavigationEventArgs e)
+        {
             // 检查是否有草稿需要恢复
             if (await _draftService.HasDraftAsync() && !_isDraftRestored)
             {
                 System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] Draft detected, asking user to restore...");
-                
+
                 SchedulingDraftDto draft = null;
                 string savedTimeText = "未知";
-                
+
                 try
                 {
                     // 尝试加载草稿以获取保存时间
@@ -48,7 +52,7 @@ namespace AutoScheduling3.Views.Scheduling
                 {
                     // 草稿数据损坏，显示错误并删除草稿
                     System.Diagnostics.Debug.WriteLine($"[CreateSchedulingPage] Draft is corrupted: {ex.Message}");
-                    
+
                     var errorDialog = new ContentDialog
                     {
                         Title = "草稿加载失败",
@@ -56,9 +60,9 @@ namespace AutoScheduling3.Views.Scheduling
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    
+
                     await errorDialog.ShowAsync();
-                    
+
                     // 草稿已在LoadDraftAsync中删除，继续正常初始化
                     draft = null;
                 }
@@ -66,7 +70,7 @@ namespace AutoScheduling3.Views.Scheduling
                 {
                     // 其他未预期的错误
                     System.Diagnostics.Debug.WriteLine($"[CreateSchedulingPage] Unexpected error loading draft: {ex.Message}");
-                    
+
                     var errorDialog = new ContentDialog
                     {
                         Title = "草稿加载失败",
@@ -74,9 +78,9 @@ namespace AutoScheduling3.Views.Scheduling
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    
+
                     await errorDialog.ShowAsync();
-                    
+
                     // 尝试删除可能损坏的草稿
                     try
                     {
@@ -86,10 +90,10 @@ namespace AutoScheduling3.Views.Scheduling
                     {
                         // 静默失败
                     }
-                    
+
                     draft = null;
                 }
-                
+
                 // 如果成功加载草稿，询问用户是否恢复
                 if (draft != null)
                 {
@@ -108,7 +112,7 @@ namespace AutoScheduling3.Views.Scheduling
 
                         return await dialog.ShowAsync();
                     });
-                    
+
                     if (result == ContentDialogResult.Primary)
                     {
                         // 用户选择恢复草稿
@@ -117,17 +121,17 @@ namespace AutoScheduling3.Views.Scheduling
                             System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] User chose to restore draft");
                             await ViewModel.RestoreFromDraftAsync();
                             _isDraftRestored = true;
-                            
+
                             // 显示恢复成功的临时通知
                             ShowDraftRestoredNotification(savedTimeText);
-                            
+
                             System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] Draft restored successfully");
                             return;
                         }
                         catch (Exception ex)
                         {
                             System.Diagnostics.Debug.WriteLine($"[CreateSchedulingPage] Failed to restore draft: {ex.Message}");
-                            
+
                             // 显示恢复失败的错误消息
                             var restoreErrorDialog = new ContentDialog
                             {
@@ -136,9 +140,9 @@ namespace AutoScheduling3.Views.Scheduling
                                 CloseButtonText = "确定",
                                 XamlRoot = this.XamlRoot
                             };
-                            
+
                             await restoreErrorDialog.ShowAsync();
-                            
+
                             // 删除无法恢复的草稿
                             try
                             {
@@ -158,7 +162,7 @@ namespace AutoScheduling3.Views.Scheduling
                     }
                 }
             }
-            
+
             // 原有的初始化逻辑（如果没有恢复草稿）
             if (!_isDraftRestored)
             {

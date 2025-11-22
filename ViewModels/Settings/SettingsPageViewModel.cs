@@ -227,16 +227,24 @@ public partial class SettingsPageViewModel : ObservableObject
             // 异步显示对话框（不等待）
             _ = progressDialog.ShowAsync();
 
-            // 创建进度报告
+            // 创建进度报告（在 UI 线程上更新）
             var progress = new Progress<ExportProgress>(p =>
             {
-                progressDialog?.UpdateExportProgress(p);
+                // 确保在 UI 线程上更新进度
+                App.MainWindow?.DispatcherQueue.TryEnqueue(() =>
+                {
+                    progressDialog?.UpdateExportProgress(p);
+                });
             });
 
-            // 执行导出
-            var result = await _importExportService.ExportDataAsync(file.Path, progress);
+            // 在后台线程执行导出操作，避免阻塞 UI
+            ExportResult result = null;
+            await Task.Run(async () =>
+            {
+                result = await _importExportService.ExportDataAsync(file.Path, progress);
+            });
 
-            // 关闭进度对话框
+            // 关闭进度对话框（在 UI 线程上）
             progressDialog?.Hide();
 
             if (result.Success)
@@ -335,16 +343,24 @@ public partial class SettingsPageViewModel : ObservableObject
                 ContinueOnError = false
             };
 
-            // 创建进度报告
+            // 创建进度报告（在 UI 线程上更新）
             var progress = new Progress<ImportProgress>(p =>
             {
-                progressDialog?.UpdateImportProgress(p);
+                // 确保在 UI 线程上更新进度
+                App.MainWindow?.DispatcherQueue.TryEnqueue(() =>
+                {
+                    progressDialog?.UpdateImportProgress(p);
+                });
             });
 
-            // 执行导入
-            var result = await _importExportService.ImportDataAsync(file.Path, options, progress);
+            // 在后台线程执行导入操作，避免阻塞 UI
+            ImportResult result = null;
+            await Task.Run(async () =>
+            {
+                result = await _importExportService.ImportDataAsync(file.Path, options, progress);
+            });
 
-            // 关闭进度对话框
+            // 关闭进度对话框（在 UI 线程上）
             progressDialog?.Hide();
 
             if (result.Success)

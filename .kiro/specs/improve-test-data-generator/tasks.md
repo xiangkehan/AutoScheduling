@@ -103,13 +103,23 @@
 -
 
 - [x] 9. 更新文档和示例
-
-
-
-
-
   - 更新 TestData/README.md，说明新的生成流程和配置参数
   - 添加配置场景的使用示例
   - 添加技能共现策略的说明
   - 更新代码注释
   - _需求: 所有需求_
+
+- [x] 10. 更新测试数据生成器 UI
+  - 在 TestDataGeneratorPage.xaml 中添加质量控制参数配置
+  - 添加 MinPersonnelPerPosition 配置（NumberBox，范围 1-20）
+  - 添加 PersonnelAvailabilityRate 配置（Slider，范围 50%-100%）
+  - 添加 PersonnelRetirementRate 配置（Slider，范围 0%-30%）
+  - 优化 UI 布局，分为三个区域（基础数据量、质量控制、其他配置）
+  - 在 TestDataGeneratorViewModel 中添加对应的属性和绑定
+  - 添加实时百分比显示功能
+  - 添加属性变化通知机制
+  - 新增两个预设场景（演练场景、实战场景）
+  - 更新 CreateConfiguration() 方法，包含新参数
+  - 创建 UI-UPDATE.md 文档，详细说明 UI 更新内容
+  - 更新 README.md，添加 UI 使用说明
+  - _需求: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_

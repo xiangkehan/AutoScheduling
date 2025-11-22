@@ -67,8 +67,9 @@ namespace AutoScheduling3.Services.ImportExport.Importers
         }
 
         /// <summary>
-        /// 从数据库获取现有记录
+        /// 从数据库获取现有记录（单个）
         /// </summary>
+        [Obsolete("此方法已过时，请使用 GetExistingRecordsBatchAsync", true)]
         protected override async Task<ManualAssignment?> GetExistingRecordAsync(int id, ImportContext context)
         {
             // 获取一个较大的日期范围内的所有手动分配并查找匹配的 ID
@@ -78,6 +79,37 @@ namespace AutoScheduling3.Services.ImportExport.Importers
             var allAssignments = await _constraintRepository.GetManualAssignmentsByDateRangeAsync(
                 startDate, endDate, enabledOnly: false);
             return allAssignments.Find(a => a.Id == id);
+        }
+
+        /// <summary>
+        /// 批量从数据库获取现有记录
+        /// 使用一次性查询获取所有记录，避免逐个查询导致锁定
+        /// </summary>
+        protected override async Task<Dictionary<int, ManualAssignment>> GetExistingRecordsBatchAsync(List<int> ids, ImportContext context)
+        {
+            var result = new Dictionary<int, ManualAssignment>();
+
+            if (ids == null || ids.Count == 0)
+            {
+                return result;
+            }
+
+            // 获取一个较大的日期范围内的所有手动分配
+            var startDate = DateTime.MinValue;
+            var endDate = DateTime.MaxValue;
+            var allAssignments = await _constraintRepository.GetManualAssignmentsByDateRangeAsync(
+                startDate, endDate, enabledOnly: false);
+            
+            // 过滤出需要的记录
+            foreach (var assignment in allAssignments)
+            {
+                if (ids.Contains(assignment.Id))
+                {
+                    result[assignment.Id] = assignment;
+                }
+            }
+
+            return result;
         }
     }
 }
