@@ -741,20 +741,34 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 return;
             }
             
-            var request = BuildSchedulingRequest();
-            
-            System.Diagnostics.Debug.WriteLine($"准备导航到排班进度页面: {request.Title}");
-            System.Diagnostics.Debug.WriteLine($"人员数: {request.PersonnelIds.Count}, 哨位数: {request.PositionIds.Count}");
-            
-            // 导航到排班进度可视化页面，传递 SchedulingRequestDto 参数
-            try 
-            { 
-                _navigation_service.NavigateTo("SchedulingProgress", request); 
-            } 
-            catch (Exception navEx)
+            try
             {
-                System.Diagnostics.Debug.WriteLine($"导航失败: {navEx.Message}");
-                await _dialogService.ShowErrorAsync($"无法打开排班进度页面：{navEx.Message}");
+                // 在后台线程构建请求，避免UI冻结
+                var request = await Task.Run(() => BuildSchedulingRequest());
+                
+                System.Diagnostics.Debug.WriteLine($"准备导航到排班进度页面: {request.Title}");
+                System.Diagnostics.Debug.WriteLine($"人员数: {request.PersonnelIds.Count}, 哨位数: {request.PositionIds.Count}");
+                
+                // 验证请求数据的有效性
+                if (request.PersonnelIds == null || !request.PersonnelIds.Any())
+                {
+                    await _dialogService.ShowWarningAsync("没有选择任何人员，无法开始排班");
+                    return;
+                }
+                
+                if (request.PositionIds == null || !request.PositionIds.Any())
+                {
+                    await _dialogService.ShowWarningAsync("没有选择任何哨位，无法开始排班");
+                    return;
+                }
+                
+                // 导航到排班进度可视化页面，传递 SchedulingRequestDto 参数
+                _navigation_service.NavigateTo("SchedulingProgress", request);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"执行排班失败: {ex.Message}");
+                await _dialogService.ShowErrorAsync("执行失败", $"启动排班时发生错误：{ex.Message}");
             }
         }
         private SchedulingRequestDto BuildSchedulingRequest()

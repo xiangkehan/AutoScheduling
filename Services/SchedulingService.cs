@@ -1321,8 +1321,12 @@ public class SchedulingService : ISchedulingService
             // 遍历所有班次，累计评分
             foreach (var shift in schedule.Results)
             {
+                // 检查人员ID是否在映射中
                 if (!personIdToIndex.TryGetValue(shift.PersonnelId, out var personIdx))
+                {
+                    System.Diagnostics.Debug.WriteLine($"警告: 人员ID {shift.PersonnelId} 不在上下文中，跳过评分计算");
                     continue;
+                }
 
                 var date = shift.StartTime.Date;
                 var periodIndex = CalcPeriodIndex(shift.StartTime);

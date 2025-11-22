@@ -20,6 +20,7 @@
             <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
             <SolidColorBrush x:Key="ErrorBrush" Color="#D13438"/>
             <SolidColorBrush x:Key="InfoBrush" Color="#0078D4"/>
+            <SolidColorBrush x:Key="SystemErrorBackgroundColor" Color="#FDE7E9"/>
         </ResourceDictionary>
 
         <!-- 深色主题 -->
@@ -37,6 +38,7 @@
             <SolidColorBrush x:Key="WarningBrush" Color="#FF9800"/>
             <SolidColorBrush x:Key="ErrorBrush" Color="#F44336"/>
             <SolidColorBrush x:Key="InfoBrush" Color="#2196F3"/>
+            <SolidColorBrush x:Key="SystemErrorBackgroundColor" Color="#442726"/>
         </ResourceDictionary>
 
         <!-- 高对比度主题 -->
@@ -54,6 +56,7 @@
             <SolidColorBrush x:Key="WarningBrush" Color="#FFFF00"/>
             <SolidColorBrush x:Key="ErrorBrush" Color="#FF0000"/>
             <SolidColorBrush x:Key="InfoBrush" Color="#00FFFF"/>
+            <SolidColorBrush x:Key="SystemErrorBackgroundColor" Color="#800000"/>
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 

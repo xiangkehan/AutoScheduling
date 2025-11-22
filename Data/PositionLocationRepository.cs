@@ -16,8 +16,8 @@ namespace AutoScheduling3.Data
 
         public PositionLocationRepository(string dbPath)
         {
-            // dbPath can be a file path like "positions.db" or ":memory:" for testing
-            _connectionString = new SqliteConnectionStringBuilder { DataSource = dbPath }.ToString();
+            // 使用优化的连接字符串，启用 WAL 模式以支持并发访问
+            _connectionString = DatabaseConfiguration.GetOptimizedConnectionString(dbPath);
         }
 
         public async Task InitAsync()

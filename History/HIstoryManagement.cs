@@ -21,7 +21,8 @@ namespace AutoScheduling3.History
         /// <param name="dbPath">数据库文件路径</param>
         public HistoryManagement(string dbPath)
         {
-            _connectionString = new SqliteConnectionStringBuilder { DataSource = dbPath }.ToString();
+            // 使用优化的连接字符串，启用 WAL 模式以支持并发访问
+            _connectionString = Data.DatabaseConfiguration.GetOptimizedConnectionString(dbPath);
             _schedulingRepo = new Data.SchedulingRepository(dbPath);
         }
 
@@ -62,32 +63,21 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
         /// <returns>缓冲区ID</returns>
         public async Task<int> AddToBufferAsync(Schedule schedule)
         {
+            // 先保存排班表（使用 SchedulingRepository 的内部事务）
+            int scheduleId = await _schedulingRepo.CreateAsync(schedule);
+
+            // 然后在单独的连接中添加到缓冲区
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
-            using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
 
-            try
-            {
-                // 保存排班表
-                int scheduleId = await _schedulingRepo.CreateAsync(schedule);
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "INSERT INTO BufferSchedules (ScheduleId, CreateTime) VALUES (@scheduleId, @createTime); SELECT last_insert_rowid();";
+            cmd.Parameters.AddWithValue("@scheduleId", scheduleId);
+            cmd.Parameters.AddWithValue("@createTime", DateTime.UtcNow.ToString("o"));
+            var bufferIdObj = await cmd.ExecuteScalarAsync();
+            int bufferId = Convert.ToInt32(bufferIdObj);
 
-                // 添加到缓冲区
-                var cmd = conn.CreateCommand();
-                cmd.Transaction = tx;
-                cmd.CommandText = "INSERT INTO BufferSchedules (ScheduleId, CreateTime) VALUES (@scheduleId, @createTime); SELECT last_insert_rowid();";
-                cmd.Parameters.AddWithValue("@scheduleId", scheduleId);
-                cmd.Parameters.AddWithValue("@createTime", DateTime.UtcNow.ToString("o"));
-                var bufferIdObj = await cmd.ExecuteScalarAsync();
-                int bufferId = Convert.ToInt32(bufferIdObj);
-
-                await tx.CommitAsync();
-                return bufferId;
-            }
-            catch
-            {
-                await tx.RollbackAsync();
-                throw;
-            }
+            return bufferId;
         }
 
         /// <summary>
