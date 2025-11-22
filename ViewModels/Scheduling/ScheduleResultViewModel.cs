@@ -28,6 +28,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private readonly NavigationService _navigationService;
         private readonly IPersonnelService _personnelService;
         private readonly IPositionService _positionService;
+        private readonly IScheduleGridExporter _gridExporter;
 
         #endregion
 
@@ -284,13 +285,15 @@ namespace AutoScheduling3.ViewModels.Scheduling
             DialogService dialogService,
             NavigationService navigationService,
             IPersonnelService personnelService,
-            IPositionService positionService)
+            IPositionService positionService,
+            IScheduleGridExporter gridExporter)
         {
             _schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _personnelService = personnelService ?? throw new ArgumentNullException(nameof(personnelService));
             _positionService = positionService ?? throw new ArgumentNullException(nameof(positionService));
+            _gridExporter = gridExporter ?? throw new ArgumentNullException(nameof(gridExporter));
 
             // 初始化命令
             LoadScheduleCommand = new AsyncRelayCommand<int>(LoadScheduleAsync);
@@ -398,29 +401,109 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
             try
             {
-                var bytes = await _schedulingService.ExportScheduleAsync(Schedule.Id, "csv");
+                // 显示导出格式选择对话框
+                var dialog = new Views.Scheduling.ExportFormatDialog();
+                dialog.XamlRoot = App.MainWindow.Content.XamlRoot;
+                
+                var result = await dialog.ShowAsync();
+                if (result != Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+                    return;
 
+                var format = dialog.SelectedFormat.ToString().ToLower(); // "excel", "csv", "pdf"
+                var options = new DTOs.ExportOptions
+                {
+                    IncludeHeader = true,
+                    IncludeEmptyCells = dialog.Options.IncludeEmptyCells,
+                    HighlightConflicts = dialog.Options.HighlightConflicts,
+                    HighlightManualAssignments = true,
+                    Title = Schedule.Title
+                };
+
+                byte[] bytes;
+                string fileExtension;
+                string fileTypeDescription;
+
+                // 根据当前视图模式选择导出方法
+                switch (CurrentViewMode)
+                {
+                    case ViewMode.Grid:
+                        bytes = await _gridExporter.ExportAsync(GridData, format, options);
+                        break;
+
+                    case ViewMode.ByPosition:
+                        if (SelectedPositionSchedule == null)
+                        {
+                            await _dialogService.ShowWarningAsync("请先选择一个哨位");
+                            return;
+                        }
+                        bytes = await _gridExporter.ExportPositionScheduleAsync(SelectedPositionSchedule, format, options);
+                        break;
+
+                    case ViewMode.ByPersonnel:
+                        if (SelectedPersonnelSchedule == null)
+                        {
+                            await _dialogService.ShowWarningAsync("请先选择一个人员");
+                            return;
+                        }
+                        bytes = await _gridExporter.ExportPersonnelScheduleAsync(SelectedPersonnelSchedule, format, options);
+                        break;
+
+                    case ViewMode.List:
+                        bytes = await _gridExporter.ExportShiftListAsync(ShiftList, format, options);
+                        break;
+
+                    default:
+                        await _dialogService.ShowWarningAsync("当前视图模式不支持导出");
+                        return;
+                }
+
+                // 设置文件扩展名和类型描述
+                switch (format.ToLower())
+                {
+                    case "excel":
+                        fileExtension = ".xlsx";
+                        fileTypeDescription = "Excel 工作簿";
+                        break;
+                    case "csv":
+                        fileExtension = ".csv";
+                        fileTypeDescription = "CSV 文件";
+                        break;
+                    case "pdf":
+                        fileExtension = ".pdf";
+                        fileTypeDescription = "PDF 文档";
+                        break;
+                    default:
+                        fileExtension = ".dat";
+                        fileTypeDescription = "数据文件";
+                        break;
+                }
+
+                // 保存文件
                 var savePicker = new FileSavePicker();
                 InitializeWithWindow.Initialize(savePicker, App.MainWindowHandle);
 
                 savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-                savePicker.FileTypeChoices.Add("CSV (Comma-separated values)", new List<string>() { ".csv" });
+                savePicker.FileTypeChoices.Add(fileTypeDescription, new List<string>() { fileExtension });
                 savePicker.SuggestedFileName = $"{Schedule.Title}_{DateTime.Now:yyyyMMdd}";
 
                 StorageFile file = await savePicker.PickSaveFileAsync();
                 if (file != null)
                 {
                     await FileIO.WriteBytesAsync(file, bytes);
-                    await _dialogService.ShowSuccessAsync($"�����ɹ����ļ��ѱ��浽: {file.Path}");
+                    await _dialogService.ShowSuccessAsync($"导出成功，文件已保存到: {file.Path}");
                 }
             }
-            catch (NotImplementedException)
+            catch (NotImplementedException ex)
             {
-                await _dialogService.ShowWarningAsync("����������δʵ��");
+                await _dialogService.ShowWarningAsync("功能开发中", ex.Message);
+            }
+            catch (NotSupportedException ex)
+            {
+                await _dialogService.ShowWarningAsync("不支持的操作", ex.Message);
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("����ʧ��", ex);
+                await _dialogService.ShowErrorAsync("导出失败", ex);
             }
         }
 
@@ -1036,8 +1119,49 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private async Task ToggleFullScreenAsync()
         {
-            // TODO: 切换全屏模式
-            await Task.CompletedTask;
+            try
+            {
+                // 准备全屏视图参数
+                FullScreenViewParameter parameter;
+
+                // 根据当前视图模式设置数据
+                switch (CurrentViewMode)
+                {
+                    case ViewMode.Grid:
+                        parameter = new FullScreenViewParameter
+                        {
+                            ViewMode = ViewMode.Grid,
+                            GridData = GridData,
+                            Title = $"{Schedule?.Title ?? "排班结果"} - 网格视图（全屏）"
+                        };
+                        break;
+
+                    case ViewMode.ByPosition:
+                        if (SelectedPositionSchedule == null)
+                        {
+                            await _dialogService.ShowWarningAsync("请先选择一个哨位");
+                            return;
+                        }
+                        parameter = new FullScreenViewParameter
+                        {
+                            ViewMode = ViewMode.ByPosition,
+                            PositionScheduleData = SelectedPositionSchedule,
+                            Title = $"{SelectedPositionSchedule.PositionName} - 哨位视图（全屏）"
+                        };
+                        break;
+
+                    default:
+                        await _dialogService.ShowWarningAsync("当前视图模式不支持全屏");
+                        return;
+                }
+
+                // 导航到全屏视图
+                _navigationService.NavigateTo("ScheduleGridFullScreen", parameter);
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowErrorAsync("打开全屏视图失败", ex);
+            }
         }
 
         /// <summary>

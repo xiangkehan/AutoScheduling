@@ -1,50 +1,80 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using AutoScheduling3.DTOs;
-using AutoScheduling3.Controls;
 
 namespace AutoScheduling3.Views.Scheduling
 {
     /// <summary>
-    /// 排班表格全屏视图
+    /// 排班表格全屏视图页面
     /// </summary>
-    public sealed partial class ScheduleGridFullScreenView : UserControl
+    public sealed partial class ScheduleGridFullScreenView : Page
     {
         /// <summary>
-        /// 表格数据
+        /// Grid View 数据
         /// </summary>
         public ScheduleGridData? GridData { get; set; }
 
         /// <summary>
-        /// 关闭请求事件
+        /// Position View 数据
         /// </summary>
-        public event EventHandler? CloseRequested;
+        public PositionScheduleData? PositionScheduleData { get; set; }
 
         /// <summary>
-        /// 初始化全屏视图
+        /// 视图模式
         /// </summary>
+        public ViewMode ViewMode { get; set; }
+
+        /// <summary>
+        /// 标题
+        /// </summary>
+        public string Title { get; set; } = "全屏视图";
+
         public ScheduleGridFullScreenView()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
 
         /// <summary>
-        /// 初始化全屏视图（带数据）
+        /// 页面导航到此页面时触发
         /// </summary>
-        /// <param name="gridData">表格数据</param>
-        public ScheduleGridFullScreenView(ScheduleGridData gridData)
+        protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            InitializeComponent();
-            GridData = gridData;
+            base.OnNavigatedTo(e);
 
-            // 更新副标题显示数据信息
-            if (gridData != null)
+            // 从导航参数中获取数据
+            if (e.Parameter is FullScreenViewParameter parameter)
             {
-                SubtitleText.Text = $"日期范围: {gridData.StartDate:yyyy-MM-dd} 至 {gridData.EndDate:yyyy-MM-dd} | " +
-                                   $"总天数: {gridData.TotalDays} | " +
-                                   $"总时段数: {gridData.TotalPeriods} | " +
-                                   $"哨位数: {gridData.Columns?.Count ?? 0}";
+                ViewMode = parameter.ViewMode;
+                GridData = parameter.GridData;
+                PositionScheduleData = parameter.PositionScheduleData;
+                Title = parameter.Title;
+
+                // 根据视图模式显示对应的控件
+                switch (ViewMode)
+                {
+                    case ViewMode.Grid:
+                        GridViewControl.Visibility = Visibility.Visible;
+                        PositionViewControl.Visibility = Visibility.Collapsed;
+                        break;
+
+                    case ViewMode.ByPosition:
+                        GridViewControl.Visibility = Visibility.Collapsed;
+                        PositionViewControl.Visibility = Visibility.Visible;
+                        break;
+
+                    default:
+                        GridViewControl.Visibility = Visibility.Visible;
+                        PositionViewControl.Visibility = Visibility.Collapsed;
+                        break;
+                }
+
+                // 更新标题
+                TitleTextBlock.Text = Title;
             }
+
+            // 设置焦点到关闭按钮，以便 Esc 键可以工作
+            CloseButton.Focus(FocusState.Programmatic);
         }
 
         /// <summary>
@@ -52,51 +82,11 @@ namespace AutoScheduling3.Views.Scheduling
         /// </summary>
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            // 触发关闭请求事件
-            CloseRequested?.Invoke(this, EventArgs.Empty);
-
-            // 尝试查找父级 ContentDialog 并关闭
-            var dialog = FindParentContentDialog(this);
-            dialog?.Hide();
-        }
-
-        /// <summary>
-        /// 表格控件全屏请求事件（在全屏模式下禁用）
-        /// </summary>
-        private void GridControl_FullScreenRequested(object? sender, EventArgs e)
-        {
-            // 已经在全屏模式，不做任何操作
-            // 可以选择显示提示消息
-        }
-
-        /// <summary>
-        /// 表格控件导出请求事件
-        /// </summary>
-        private void GridControl_ExportRequested(object? sender, ExportRequestedEventArgs e)
-        {
-            // 转发导出请求到父级处理
-            // 在实际实现中，可以通过事件或回调处理导出逻辑
-        }
-
-        /// <summary>
-        /// 查找父级 ContentDialog
-        /// </summary>
-        /// <param name="element">起始元素</param>
-        /// <returns>找到的 ContentDialog，如果没有则返回 null</returns>
-        private ContentDialog? FindParentContentDialog(DependencyObject element)
-        {
-            var parent = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(element);
-            
-            while (parent != null)
+            // 导航回上一页
+            if (Frame.CanGoBack)
             {
-                if (parent is ContentDialog dialog)
-                {
-                    return dialog;
-                }
-                parent = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(parent);
+                Frame.GoBack();
             }
-            
-            return null;
         }
     }
 }

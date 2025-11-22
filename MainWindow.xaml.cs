@@ -84,6 +84,7 @@ namespace AutoScheduling3
             _navigationService.RegisterPage("SchedulingProgress", typeof(SchedulingProgressPage));
             _navigationService.RegisterPage("TemplateManage", typeof(TemplatePage));
             _navigationService.RegisterPage("ScheduleResult", typeof(ScheduleResultPage));
+            _navigationService.RegisterPage("ScheduleGridFullScreen", typeof(ScheduleGridFullScreenView));
             _navigationService.RegisterPage("Drafts", typeof(DraftsPage));
 
             // 历史页面注册
