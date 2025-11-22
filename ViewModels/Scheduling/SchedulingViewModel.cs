@@ -53,7 +53,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         [ObservableProperty] private bool _useActiveHolidayConfig = true;
         [ObservableProperty] private int? _selectedHolidayConfigId;
 
-        //ԼԴʹԱ UI)
+        //ԼДʹԱ UI)
         [ObservableProperty] private ObservableCollection<HolidayConfig> _holidayConfigs = new();
         [ObservableProperty] private ObservableCollection<FixedPositionRule> _fixedPositionRules = new();
         [ObservableProperty] private ObservableCollection<ManualAssignment> _manualAssignments = new();
@@ -2686,6 +2686,246 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
         #endregion
 
+        /// <summary>
+        /// 从已选哨位自动提取可用人员
+        /// </summary>
+        private void ExtractPersonnelFromPositions()
+        {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            System.Diagnostics.Debug.WriteLine("=== 开始自动提取人员 ===");
+            System.Diagnostics.Debug.WriteLine($"已选哨位数量: {SelectedPositions.Count}");
+
+            try
+            {
+                // 验证输入
+                if (SelectedPositions == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("错误: SelectedPositions为null");
+                    AutoExtractedPersonnelCount = 0;
+                    ManuallyAddedPersonnelCount = ManuallyAddedPersonnelIds.Count;
+                    return;
+                }
+
+                // 初始化PositionPersonnelManager
+                _positionPersonnelManager.Initialize(SelectedPositions);
+                var initTime = stopwatch.ElapsedMilliseconds;
+                System.Diagnostics.Debug.WriteLine($"PositionPersonnelManager初始化耗时: {initTime}ms");
+
+                // 使用HashSet提高查找性能，避免重复计算
+                var autoExtractedPersonnelIds = new HashSet<int>();
+                foreach (var position in SelectedPositions)
+                {
+                    if (position.AvailablePersonnelIds == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"警告: 哨位 {position.Name} (ID: {position.Id}) 的AvailablePersonnelIds为null");
+                        continue;
+                    }
+
+                    foreach (var personnelId in position.AvailablePersonnelIds)
+                    {
+                        autoExtractedPersonnelIds.Add(personnelId);
+                    }
+                }
+                var extractTime = stopwatch.ElapsedMilliseconds - initTime;
+                System.Diagnostics.Debug.WriteLine($"人员ID提取耗时: {extractTime}ms");
+                System.Diagnostics.Debug.WriteLine($"自动提取的人员ID数量: {autoExtractedPersonnelIds.Count}");
+
+                // 更新自动提取的人员数量
+                AutoExtractedPersonnelCount = autoExtractedPersonnelIds.Count;
+
+                // 更新手动添加的人员数量
+                ManuallyAddedPersonnelCount = ManuallyAddedPersonnelIds.Count;
+
+                // 更新哨位人员视图模型
+                UpdatePositionPersonnelViewModels();
+
+                stopwatch.Stop();
+                System.Diagnostics.Debug.WriteLine($"自动提取人员数量: {AutoExtractedPersonnelCount}");
+                System.Diagnostics.Debug.WriteLine($"手动添加人员数量: {ManuallyAddedPersonnelCount}");
+                System.Diagnostics.Debug.WriteLine($"总耗时: {stopwatch.ElapsedMilliseconds}ms");
+                
+                // 性能警告
+                if (stopwatch.ElapsedMilliseconds > 500 && SelectedPositions.Count <= 50)
+                {
+                    System.Diagnostics.Debug.WriteLine($"⚠️ 性能警告: 50个以下哨位的人员提取超过500ms");
+                }
+                else if (stopwatch.ElapsedMilliseconds > 2000 && SelectedPositions.Count > 50)
+                {
+                    System.Diagnostics.Debug.WriteLine($"⚠️ 性能警告: 50个以上哨位的人员提取超过2秒");
+                }
+                
+                System.Diagnostics.Debug.WriteLine("=== 人员提取完成 ===");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("=== 自动提取人员失败 ===");
+                System.Diagnostics.Debug.WriteLine($"异常类型: {ex.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
+                
+                // 设置默认值，避免UI显示异常
+                AutoExtractedPersonnelCount = 0;
+                ManuallyAddedPersonnelCount = ManuallyAddedPersonnelIds.Count;
+                
+                // 显示错误提示给用户
+                _ = _dialogService.ShowErrorAsync("自动提取人员失败", ex);
+            }
+        }
+
+        /// <summary>
+        /// 更新哨位人员视图模型（用于步骤3的UI展示）
+        /// </summary>
+        private void UpdatePositionPersonnelViewModels()
+        {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            System.Diagnostics.Debug.WriteLine("=== 开始更新哨位人员视图模型 ===");
+
+            try
+            {
+                // 清空现有的视图模型
+                PositionPersonnelViewModels.Clear();
+
+                // 为每个选中的哨位创建视图模型
+                foreach (var position in SelectedPositions)
+                {
+                    // 获取该哨位的可用人员ID（包含临时更改）
+                    var availablePersonnelIds = _positionPersonnelManager.GetAvailablePersonnel(position.Id);
+                    
+                    // 创建人员项视图模型列表
+                    var personnelItems = new ObservableCollection<PersonnelItemViewModel>();
+                    
+                    // 获取哨位的临时更改状态（在循环外获取一次）
+                    var positionChanges = _positionPersonnelManager.GetChanges(position.Id);
+                    
+                    foreach (var personnelId in availablePersonnelIds)
+                    {
+                        var personnel = GetPersonnelFromCache(personnelId);
+                        if (personnel == null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"警告: 未找到人员 ID: {personnelId}");
+                            continue;
+                        }
+
+                        // 判断人员来源类型
+                        var sourceType = PersonnelSourceType.AutoExtracted;
+                        
+                        if (positionChanges.AddedPersonnelIds.Contains(personnelId))
+                        {
+                            sourceType = PersonnelSourceType.TemporarilyAdded;
+                        }
+                        else if (positionChanges.RemovedPersonnelIds.Contains(personnelId))
+                        {
+                            // 注意：如果人员被临时移除，它不应该出现在availablePersonnelIds中
+                            // 这里只是为了完整性而保留此逻辑
+                            sourceType = PersonnelSourceType.TemporarilyRemoved;
+                        }
+
+                        // 判断是否为共享人员（在多个哨位中可用）
+                        var sharedPositionCount = SelectedPositions.Count(p => 
+                            _positionPersonnelManager.GetAvailablePersonnel(p.Id).Contains(personnelId));
+                        var isShared = sharedPositionCount > 1;
+
+                        // 格式化技能显示
+                        var skillsDisplay = personnel.SkillIds != null && personnel.SkillIds.Count > 0
+                            ? $"技能: {personnel.SkillIds.Count} 项"
+                            : "无技能";
+
+                        // 创建人员项视图模型
+                        var personnelItem = new PersonnelItemViewModel
+                        {
+                            PersonnelId = personnelId,
+                            PersonnelName = personnel.Name,
+                            SkillsDisplay = skillsDisplay,
+                            SourceType = sourceType,
+                            IsShared = isShared,
+                            SharedPositionCount = sharedPositionCount,
+                            // 自动提取的人员默认选中，其他类型根据SelectedPersonnels判断
+                            IsSelected = sourceType == PersonnelSourceType.AutoExtracted || SelectedPersonnels.Any(p => p.Id == personnelId)
+                        };
+
+                        // 如果人员被选中但不在SelectedPersonnels中，添加它
+                        if (personnelItem.IsSelected && !SelectedPersonnels.Any(p => p.Id == personnelId))
+                        {
+                            SelectedPersonnels.Add(personnel);
+                            System.Diagnostics.Debug.WriteLine($"自动添加选中人员到列表: {personnel.Name}");
+                        }
+
+                        // 监听IsSelected属性变化，更新SelectedPersonnels集合
+                        personnelItem.PropertyChanged += (s, e) =>
+                        {
+                            if (e?.PropertyName == nameof(PersonnelItemViewModel.IsSelected))
+                            {
+                                if (s is not PersonnelItemViewModel item) return;
+
+                                var personnelDto = GetPersonnelFromCache(item.PersonnelId);
+                                if (personnelDto == null) return;
+
+                                if (item.IsSelected)
+                                {
+                                    // 添加到SelectedPersonnels（如果不存在）
+                                    if (!SelectedPersonnels.Any(p => p.Id == item.PersonnelId))
+                                    {
+                                        SelectedPersonnels.Add(personnelDto);
+                                        System.Diagnostics.Debug.WriteLine($"添加人员到选中列表: {personnelDto.Name}");
+                                    }
+                                }
+                                else
+                                {
+                                    // 从SelectedPersonnels移除
+                                    var toRemove = SelectedPersonnels.FirstOrDefault(p => p.Id == item.PersonnelId);
+                                    if (toRemove != null)
+                                    {
+                                        SelectedPersonnels.Remove(toRemove);
+                                        System.Diagnostics.Debug.WriteLine($"从选中列表移除人员: {personnelDto.Name}");
+                                    }
+                                }
+                            }
+                        };
+
+                        personnelItems.Add(personnelItem);
+                    }
+
+                    // 获取哨位的临时更改状态
+                    var changes = _positionPersonnelManager.GetChanges(position.Id);
+
+                    // 创建哨位人员视图模型
+                    var positionViewModel = new PositionPersonnelViewModel
+                    {
+                        PositionId = position.Id,
+                        PositionName = position.Name,
+                        Location = position.Location ?? string.Empty,
+                        PositionDto = position,
+                        AvailablePersonnel = personnelItems,
+                        IsExpanded = true,
+                        HasChanges = changes.HasChanges,
+                        ChangesSummary = changes.HasChanges 
+                            ? $"添加 {changes.AddedPersonnelIds.Count} 人，移除 {changes.RemovedPersonnelIds.Count} 人"
+                            : string.Empty
+                    };
+
+                    PositionPersonnelViewModels.Add(positionViewModel);
+                }
+
+                stopwatch.Stop();
+                System.Diagnostics.Debug.WriteLine($"哨位人员视图模型更新完成: {PositionPersonnelViewModels.Count} 个哨位");
+                System.Diagnostics.Debug.WriteLine($"总耗时: {stopwatch.ElapsedMilliseconds}ms");
+                System.Diagnostics.Debug.WriteLine("=== 哨位人员视图模型更新完成 ===");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("=== 更新哨位人员视图模型失败 ===");
+                System.Diagnostics.Debug.WriteLine($"异常类型: {ex.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
+                
+                // 清空视图模型，避免显示错误数据
+                PositionPersonnelViewModels.Clear();
+                
+                // 显示错误提示给用户
+                _ = _dialogService.ShowErrorAsync("更新哨位人员列表失败", ex);
+            }
+        }
+
         // 属性变化回调
         partial void OnCurrentStepChanged(int value)
         {
@@ -2705,6 +2945,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 BuildSummarySections();
             }
         }
+
         partial void OnScheduleTitleChanged(string value) => RefreshCommandStates();
         partial void OnStartDateChanged(DateTimeOffset value)
         {

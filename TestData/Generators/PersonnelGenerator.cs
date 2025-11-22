@@ -26,21 +26,12 @@ public class PersonnelGenerator : IEntityGenerator<PersonnelDto>
     }
 
     /// <summary>
-    /// 生成人员数据
+    /// 生成人员数据（不分配技能）
     /// </summary>
-    /// <param name="dependencies">生成数据所需的依赖项：[0]=技能列表(List&lt;SkillDto&gt;)</param>
-    /// <returns>生成的人员列表</returns>
-    /// <exception cref="ArgumentException">当依赖项不足或类型不正确时抛出</exception>
+    /// <param name="dependencies">无依赖项</param>
+    /// <returns>生成的人员列表（技能为空）</returns>
     public List<PersonnelDto> Generate(params object[] dependencies)
     {
-        if (dependencies == null || dependencies.Length < 1)
-            throw new ArgumentException("需要提供技能列表作为依赖项", nameof(dependencies));
-
-        var skills = dependencies[0] as List<SkillDto>;
-
-        if (skills == null || skills.Count == 0)
-            throw new ArgumentException("技能列表不能为空或类型不正确", nameof(dependencies));
-
         var personnel = new List<PersonnelDto>();
         var availableNames = _sampleData.GetAllNames();
         var usedNames = new HashSet<string>();
@@ -51,22 +42,14 @@ public class PersonnelGenerator : IEntityGenerator<PersonnelDto>
             string name = _nameGenerator.Generate(availableNames, usedNames, "人员", i);
             usedNames.Add(name);
 
-            // 随机分配1-3个技能（不超过可用技能总数）
-            var skillCount = _random.Next(1, Math.Min(4, skills.Count + 1));
-            // 使用随机排序后取前N个，确保技能分配的随机性
-            var assignedSkills = skills
-                .OrderBy(x => _random.Next())
-                .Take(skillCount)
-                .ToList();
-
             personnel.Add(new PersonnelDto
             {
                 Id = i,
                 Name = name,
-                SkillIds = assignedSkills.Select(s => s.Id).ToList(),
-                SkillNames = assignedSkills.Select(s => s.Name).ToList(),
-                IsAvailable = _random.Next(100) < 85, // 85%可用
-                IsRetired = _random.Next(100) < 10,   // 10%退役
+                SkillIds = new List<int>(),  // 空列表，由 SkillAssigner 填充
+                SkillNames = new List<string>(),  // 空列表，由 SkillAssigner 填充
+                IsAvailable = _random.NextDouble() < _config.PersonnelAvailabilityRate,  // 使用配置的可用率
+                IsRetired = _random.NextDouble() < _config.PersonnelRetirementRate,      // 使用配置的退役率
                 RecentShiftIntervalCount = _random.Next(0, 20),
                 RecentHolidayShiftIntervalCount = _random.Next(0, 10),
                 RecentPeriodShiftIntervals = Enumerable.Range(0, 12)

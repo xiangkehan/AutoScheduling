@@ -28,6 +28,7 @@ public class TestDataGenerator
     private readonly SkillGenerator _skillGenerator;
     private readonly PersonnelGenerator _personnelGenerator;
     private readonly PositionGenerator _positionGenerator;
+    private readonly SkillAssigner _skillAssigner;
     private readonly HolidayConfigGenerator _holidayConfigGenerator;
     private readonly TemplateGenerator _templateGenerator;
     private readonly FixedAssignmentGenerator _fixedAssignmentGenerator;
@@ -67,6 +68,7 @@ public class TestDataGenerator
         _skillGenerator = new SkillGenerator(_config, _sampleData, _nameGenerator, _random);
         _personnelGenerator = new PersonnelGenerator(_config, _sampleData, _nameGenerator, _random);
         _positionGenerator = new PositionGenerator(_config, _sampleData, _nameGenerator, _random);
+        _skillAssigner = new SkillAssigner(_config, _random);
         _holidayConfigGenerator = new HolidayConfigGenerator(_config, _random);
         _templateGenerator = new TemplateGenerator(_config, _sampleData, _random);
         _fixedAssignmentGenerator = new FixedAssignmentGenerator(_config, _random);
@@ -82,7 +84,9 @@ public class TestDataGenerator
     {
         System.Diagnostics.Debug.WriteLine("=== 开始生成测试数据 ===");
         System.Diagnostics.Debug.WriteLine($"配置：技能={_config.SkillCount}, 人员={_config.PersonnelCount}, " +
-            $"哨位={_config.PositionCount}, 节假日配置={_config.HolidayConfigCount}, " +
+            $"哨位={_config.PositionCount}, 每个哨位最小人员数={_config.MinPersonnelPerPosition}, " +
+            $"人员可用率={_config.PersonnelAvailabilityRate:P0}, 人员退役率={_config.PersonnelRetirementRate:P0}");
+        System.Diagnostics.Debug.WriteLine($"其他配置：节假日配置={_config.HolidayConfigCount}, " +
             $"模板={_config.TemplateCount}, 定岗规则={_config.FixedAssignmentCount}, " +
             $"手动指定={_config.ManualAssignmentCount}");
         
@@ -91,27 +95,36 @@ public class TestDataGenerator
         var skills = _skillGenerator.Generate();
         System.Diagnostics.Debug.WriteLine($"✓ 生成技能数据：{skills.Count} 条");
         
-        // 2. 人员（依赖技能）
-        var personnel = _personnelGenerator.Generate(skills);
-        System.Diagnostics.Debug.WriteLine($"✓ 生成人员数据：{personnel.Count} 条");
+        // 2. 人员（无技能）
+        var personnel = _personnelGenerator.Generate();
+        System.Diagnostics.Debug.WriteLine($"✓ 生成人员数据：{personnel.Count} 条（暂无技能）");
         
-        // 3. 哨位（依赖技能和人员）
-        var positions = _positionGenerator.Generate(skills, personnel);
-        System.Diagnostics.Debug.WriteLine($"✓ 生成哨位数据：{positions.Count} 条");
+        // 3. 哨位（含技能需求，但无可用人员）
+        var positions = _positionGenerator.Generate(skills);
+        System.Diagnostics.Debug.WriteLine($"✓ 生成哨位数据：{positions.Count} 条（含技能需求）");
         
-        // 4. 节假日配置（无依赖）
+        // 4. 根据哨位需求为人员分配技能
+        System.Diagnostics.Debug.WriteLine("开始智能技能分配...");
+        personnel = _skillAssigner.AssignSkills(personnel, positions, skills);
+        System.Diagnostics.Debug.WriteLine($"✓ 技能分配完成");
+        
+        // 5. 更新哨位的可用人员列表
+        UpdatePositionAvailablePersonnel(positions, personnel);
+        System.Diagnostics.Debug.WriteLine($"✓ 更新哨位可用人员列表完成");
+        
+        // 6. 节假日配置（无依赖）
         var holidayConfigs = _holidayConfigGenerator.Generate();
         System.Diagnostics.Debug.WriteLine($"✓ 生成节假日配置：{holidayConfigs.Count} 条");
         
-        // 5. 排班模板（依赖人员、哨位和节假日配置）
+        // 7. 排班模板（依赖人员、哨位和节假日配置）
         var templates = _templateGenerator.Generate(personnel, positions, holidayConfigs);
         System.Diagnostics.Debug.WriteLine($"✓ 生成排班模板：{templates.Count} 条");
         
-        // 6. 定岗规则（依赖人员和哨位）
+        // 8. 定岗规则（依赖人员和哨位）
         var fixedAssignments = _fixedAssignmentGenerator.Generate(personnel, positions);
         System.Diagnostics.Debug.WriteLine($"✓ 生成定岗规则：{fixedAssignments.Count} 条");
         
-        // 7. 手动指定（依赖人员和哨位）
+        // 9. 手动指定（依赖人员和哨位）
         var manualAssignments = _manualAssignmentGenerator.Generate(personnel, positions);
         System.Diagnostics.Debug.WriteLine($"✓ 生成手动指定：{manualAssignments.Count} 条");
 
@@ -138,6 +151,31 @@ public class TestDataGenerator
         System.Diagnostics.Debug.WriteLine("=== 测试数据生成完成 ===");
 
         return exportData;
+    }
+
+    /// <summary>
+    /// 更新哨位的可用人员列表
+    /// 根据人员的技能和状态，计算每个哨位的可用人员
+    /// </summary>
+    /// <param name="positions">哨位列表</param>
+    /// <param name="personnel">人员列表（含技能）</param>
+    private void UpdatePositionAvailablePersonnel(
+        List<PositionDto> positions,
+        List<PersonnelDto> personnel)
+    {
+        foreach (var position in positions)
+        {
+            // 筛选符合条件的人员：
+            // 1. 可用且未退役
+            // 2. 拥有该哨位所需的所有技能
+            var availablePersonnel = personnel
+                .Where(p => p.IsAvailable && !p.IsRetired)
+                .Where(p => position.RequiredSkillIds.All(skillId => p.SkillIds.Contains(skillId)))
+                .ToList();
+            
+            position.AvailablePersonnelIds = availablePersonnel.Select(p => p.Id).ToList();
+            position.AvailablePersonnelNames = availablePersonnel.Select(p => p.Name).ToList();
+        }
     }
 
     /// <summary>
