@@ -29,29 +29,85 @@
             </Grid.RowDefinitions>
 
             <!-- Header and Toolbar -->
-            <StackPanel Grid.Row="0" Margin="24,24,24,12" Spacing="8">
+            <StackPanel Grid.Row="0" Margin="24,24,24,12" Spacing="12">
+                <!-- Title Section -->
+                <StackPanel>
+                    <TextBlock Text="{x:Bind ViewModel.Schedule.Title, Mode=OneWay, FallbackValue='Schedule Result'}" Style="{ThemeResource TitleTextBlockStyle}"/>
+                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        <Run Text="{x:Bind ViewModel.Schedule.StartDate, Mode=OneWay, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
+                        <Run Text=" to "/>
+                        <Run Text="{x:Bind ViewModel.Schedule.EndDate, Mode=OneWay, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
+                    </TextBlock>
+                </StackPanel>
+
+                <!-- Filter Toolbar -->
+                <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Date Range Filter -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,0,16,0">
+                        <TextBlock Text="日期:" VerticalAlignment="Center"/>
+                        <CalendarDatePicker Date="{x:Bind ViewModel.FilterStartDate, Mode=TwoWay}" PlaceholderText="开始日期"/>
+                        <TextBlock Text="至" VerticalAlignment="Center"/>
+                        <CalendarDatePicker Date="{x:Bind ViewModel.FilterEndDate, Mode=TwoWay}" PlaceholderText="结束日期"/>
+                    </StackPanel>
+
+                    <!-- Position Filter -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,16,0">
+                        <TextBlock Text="哨位:" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="PositionFilterComboBox"
+                                  MinWidth="150"
+                                  ItemsSource="{x:Bind ViewModel.SelectedPositionIds}"
+                                  IsEditable="False"
+                                  PlaceholderText="选择哨位"
+                                  AutomationProperties.Name="哨位筛选下拉框"/>
+                    </StackPanel>
+
+                    <!-- Personnel Search -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" Margin="0,0,16,0">
+                        <TextBlock Text="人员:" VerticalAlignment="Center"/>
+                        <AutoSuggestBox x:Name="PersonnelSearchBox"
+                                        Text="{x:Bind ViewModel.PersonnelSearchText, Mode=TwoWay}"
+                                        PlaceholderText="搜索人员"
+                                        MinWidth="200"
+                                        QueryIcon="Find"
+                                        AutomationProperties.Name="人员搜索框"/>
+                    </StackPanel>
+
+                    <!-- Spacer -->
+                    <Grid Grid.Column="4"/>
+
+                    <!-- Filter Actions -->
+                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
+                        <Button Content="应用筛选" Command="{x:Bind ViewModel.ApplyFiltersCommand}" Style="{ThemeResource AccentButtonStyle}"/>
+                        <Button Content="重置" Command="{x:Bind ViewModel.ResetFiltersCommand}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- View Mode and Actions Toolbar -->
                 <CommandBar Background="Transparent" DefaultLabelPosition="Right" HorizontalAlignment="Stretch">
                     <CommandBar.Content>
-                        <StackPanel>
-                            <TextBlock Text="{x:Bind ViewModel.Schedule.Title, Mode=OneWay, FallbackValue='Schedule Result'}" Style="{ThemeResource TitleTextBlockStyle}"/>
-                            <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
-                                <Run Text="{x:Bind ViewModel.Schedule.StartDate, Mode=OneWay, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
-                                <Run Text=" to "/>
-                                <Run Text="{x:Bind ViewModel.Schedule.EndDate, Mode=OneWay, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
-                            </TextBlock>
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                            <!-- View Mode Selector -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" AutomationProperties.Name="视图模式选择">
+                                <RadioButton x:Name="GridRadioButton" Content="Grid" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Grid}"/>
+                                <RadioButton x:Name="ListRadioButton" Content="List" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=List}"/>
+                                <RadioButton x:Name="ByPersonnelRadioButton" Content="By Personnel" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=ByPersonnel}"/>
+                                <RadioButton x:Name="ByPositionRadioButton" Content="By Position" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=ByPosition}"/>
+                            </StackPanel>
                         </StackPanel>
                     </CommandBar.Content>
                     <AppBarButton Icon="Save" Label="Export" Command="{x:Bind ViewModel.ExportExcelCommand}"/>
+                    <AppBarButton x:Name="FullScreenButton" Icon="FullScreen" Label="Full Screen" Command="{x:Bind ViewModel.ToggleFullScreenCommand}"/>
+                    <AppBarButton x:Name="CompareButton" Icon="Columns" Label="Compare" Command="{x:Bind ViewModel.CompareSchedulesCommand}"/>
                     <AppBarToggleButton Icon="Flag" Label="Conflicts" IsChecked="{x:Bind ViewModel.IsConflictPaneOpen, Mode=TwoWay}"/>
-                    <AppBarSeparator/>
-                    <AppBarElementContainer>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <RadioButton x:Name="GridRadioButton" Content="Grid" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Grid}"/>
-                            <RadioButton x:Name="ListRadioButton" Content="List" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=List}"/>
-                            <RadioButton x:Name="ByPersonnelRadioButton" Content="By Personnel" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=ByPersonnel}"/>
-                            <RadioButton x:Name="ByPositionRadioButton" Content="By Position" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=ByPosition}"/>
-                        </StackPanel>
-                    </AppBarElementContainer>
                 </CommandBar>
             </StackPanel>
 
@@ -63,49 +119,230 @@
                        OpenPaneLength="360">
                 <SplitView.Pane>
                     <Grid BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1,0,0,0" Padding="12">
-                        <StackPanel Spacing="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Conflict and Warnings Header -->
+                        <StackPanel Grid.Row="0" Spacing="8">
                             <TextBlock Text="Conflicts and Warnings" Style="{ThemeResource SubtitleTextBlockStyle}"/>
-                            <ListView ItemsSource="{x:Bind ViewModel.Conflicts, Mode=OneWay}" SelectionMode="None">
+                            <TextBlock Text="{x:Bind ViewModel.Conflicts.Count, Mode=OneWay, FallbackValue=0}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <!-- Statistics Panel -->
+                        <Expander Grid.Row="1"
+                                  Header="Statistics"
+                                  IsExpanded="True"
+                                  Margin="0,12,0,0"
+                                  AutomationProperties.Name="统计信息面板">
+                            <StackPanel Spacing="12" Margin="0,8,0,0">
+                                <!-- Summary Stats -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                                        <StackPanel>
+                                            <TextBlock Text="Total Assignments" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{x:Bind ViewModel.Statistics.TotalAssignments, Mode=OneWay, FallbackValue=0}" FontSize="24" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                                        <StackPanel>
+                                            <TextBlock Text="Personnel Count" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{x:Bind ViewModel.PersonnelWorkloads.Count, Mode=OneWay, FallbackValue=0}" FontSize="24" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                                        <StackPanel>
+                                            <TextBlock Text="Position Count" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{x:Bind ViewModel.PositionCoverages.Count, Mode=OneWay, FallbackValue=0}" FontSize="24" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Personnel Workload Table -->
+                                <StackPanel>
+                                    <TextBlock Text="Personnel Workload" FontWeight="SemiBold" Margin="0,8,0,4"/>
+                                    <ListView ItemsSource="{x:Bind ViewModel.PersonnelWorkloads, Mode=OneWay}" MaxHeight="200" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding PersonnelName}" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding TotalShifts}" Margin="16,0" VerticalAlignment="Center"/>
+                                                    <ProgressBar Grid.Column="2" Width="100" Value="{Binding TotalShifts}" Maximum="20" Margin="8,0"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding DayShifts, StringFormat='{}{0}日/{1}夜', ConverterParameter=DayNight}" Margin="16,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                </StackPanel>
+
+                                <!-- Position Coverage Table -->
+                                <StackPanel>
+                                    <TextBlock Text="Position Coverage" FontWeight="SemiBold" Margin="0,8,0,4"/>
+                                    <ListView ItemsSource="{x:Bind ViewModel.PositionCoverages, Mode=OneWay}" MaxHeight="200" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding PositionName}" VerticalAlignment="Center"/>
+                                                    <ProgressBar Grid.Column="1" Width="100" Value="{Binding CoverageRate}" Maximum="1" Margin="8,0"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding CoverageRate, StringFormat='{}{0:P0}', ConverterParameter=Percentage}" Margin="16,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- Conflict List -->
+                        <ScrollViewer Grid.Row="2" Margin="0,12,0,0">
+                            <ListView ItemsSource="{x:Bind ViewModel.ConflictInfos, Mode=OneWay}" SelectionMode="None">
                                 <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="dto:ConflictDto">
-                                        <InfoBar Title="{x:Bind Type}" Message="{x:Bind Message}" Severity="Warning" IsOpen="True"/>
+                                    <DataTemplate>
+                                        <InfoBar Title="{Binding Type}"
+                                                 Message="{Binding Description}"
+                                                 Severity="Warning"
+                                                 IsOpen="True"
+                                                 Margin="0,0,0,8">
+                                            <InfoBar.ActionButton>
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Button Content="定位" Command="{x:Bind ViewModel.LocateConflictCommand}" CommandParameter="{Binding}" />
+                                                    <Button Content="忽略" Command="{x:Bind ViewModel.IgnoreConflictCommand}" CommandParameter="{Binding}"/>
+                                                    <Button Content="修复" Command="{x:Bind ViewModel.FixConflictCommand}" CommandParameter="{Binding}"/>
+                                                </StackPanel>
+                                            </InfoBar.ActionButton>
+                                        </InfoBar>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
                             </ListView>
-                        </StackPanel>
+                        </ScrollViewer>
                     </Grid>
                 </SplitView.Pane>
                 <SplitView.Content>
                     <Grid Padding="24,0,24,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
                         <!-- Grid View -->
                         <controls:ScheduleGridControl
+                            Grid.Row="0"
                             GridData="{x:Bind ViewModel.GridData, Mode=OneWay}"
                             Visibility="{x:Bind GridRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
 
-                        <!-- List View (Placeholder) -->
-                        <Grid Visibility="{x:Bind ListRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <TextBlock Text="List View - To be implemented" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Grid>
+                        <!-- List View -->
+                        <ListView Grid.Row="0"
+                                  ItemsSource="{x:Bind ViewModel.ShiftList, Mode=OneWay}"
+                                  Visibility="{x:Bind ListRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Padding="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
-                        <!-- By Personnel View (Placeholder) -->
-                        <Grid Visibility="{x:Bind ByPersonnelRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <TextBlock Text="View By Personnel - To be implemented" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Grid>
+                                        <!-- Date -->
+                                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                            <TextBlock Text="{Binding Date, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='MM-dd'}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding DateTimeDescription}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </StackPanel>
 
-                        <!-- By Position View (Placeholder) -->
-                        <Grid Visibility="{x:Bind ByPositionRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <TextBlock Text="View By Position - To be implemented" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Grid>
+                                        <!-- Personnel and Position -->
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding PersonnelName}" FontSize="16" FontWeight="SemiBold"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                                <TextBlock Text="{Binding TimeSlot}" FontSize="12"/>
+                                                <TextBlock Text="{Binding PositionName}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                <!-- Tags -->
+                                                <Border Background="{ThemeResource AccentBrush}" CornerRadius="4" Padding="4,2" Visibility="{Binding IsManualAssignment, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="手动" FontSize="10" Foreground="White"/>
+                                                </Border>
+                                                <Border Background="{ThemeResource WarningBrush}" CornerRadius="4" Padding="4,2" Visibility="{Binding HasConflict, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="冲突" FontSize="10" Foreground="White"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <!-- Actions -->
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                            <Button Content="详情" Command="{x:Bind ViewModel.ViewShiftDetailsCommand}" CommandParameter="{Binding}"/>
+                                            <Button Content="编辑" Command="{x:Bind ViewModel.EditShiftCommand}" CommandParameter="{Binding}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <!-- By Position View -->
+                        <controls:PositionScheduleControl
+                            Grid.Row="0"
+                            ScheduleData="{x:Bind ViewModel.SelectedPositionSchedule, Mode=OneWay}"
+                            Visibility="{x:Bind ByPositionRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                        <!-- By Personnel View -->
+                        <controls:PersonnelScheduleControl
+                            Grid.Row="0"
+                            ScheduleData="{x:Bind ViewModel.SelectedPersonnelSchedule, Mode=OneWay}"
+                            Visibility="{x:Bind ByPersonnelRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     </Grid>
                 </SplitView.Content>
             </SplitView>
 
             <!-- Bottom Action Bar -->
             <Grid Grid.Row="2" Padding="24" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Unsaved Changes Warning -->
+                <TextBlock Grid.Column="0"
+                           Text="You have unsaved changes"
+                           Foreground="{ThemeResource WarningBrush}"
+                           VerticalAlignment="Center"
+                           Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                           AutomationProperties.Name="未保存更改警告"/>
+
+                <!-- Action Buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <!-- Unsaved Changes Actions -->
+                    <Button Content="Discard Changes"
+                            Command="{x:Bind ViewModel.DiscardChangesCommand}"
+                            Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <Button Content="Save Changes"
+                            Command="{x:Bind ViewModel.SaveChangesCommand}"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                    <!-- Primary Actions -->
                     <Button Content="Back" Command="{x:Bind ViewModel.BackCommand}"/>
                     <Button Content="Reschedule" Command="{x:Bind ViewModel.RescheduleCommand}"/>
-                    <Button Content="Confirm Schedule" Style="{ThemeResource AccentButtonStyle}" Command="{x:Bind ViewModel.ConfirmCommand}" IsEnabled="{x:Bind ViewModel.Schedule.ConfirmedAt, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                    <Button Content="Confirm Schedule"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            Command="{x:Bind ViewModel.ConfirmCommand}"
+                            IsEnabled="{x:Bind ViewModel.Schedule.ConfirmedAt, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
                 </StackPanel>
             </Grid>
         </Grid>

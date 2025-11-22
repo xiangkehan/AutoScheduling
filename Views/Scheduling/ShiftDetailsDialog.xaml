@@ -1,0 +1,198 @@
+<ContentDialog
+    x:Class="AutoScheduling3.Views.Scheduling.ShiftDetailsDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="班次详情"
+    CloseButtonText="关闭"
+    DefaultButton="Close"
+    Opened="ContentDialog_Opened">
+
+    <ScrollViewer MaxHeight="600" MinWidth="500">
+        <StackPanel Spacing="16">
+            <!-- 基本信息 -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="基本信息"
+                           FontSize="16"
+                           FontWeight="SemiBold"/>
+                
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="12">
+                        <!-- 日期时间 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="日期时间:"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="DateTimeText"
+                                       Grid.Column="1"
+                                       Text="2025-01-01 08:00-10:00"
+                                       FontWeight="Medium"/>
+                        </Grid>
+
+                        <!-- 哨位 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="哨位:"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="PositionText"
+                                       Grid.Column="1"
+                                       Text="哨位1 (主门岗)"
+                                       FontWeight="Medium"/>
+                        </Grid>
+
+                        <!-- 人员 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="人员:"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="PersonnelText"
+                                       Grid.Column="1"
+                                       Text="张三"
+                                       FontWeight="Medium"/>
+                        </Grid>
+
+                        <!-- 分配方式 -->
+                        <Grid x:Name="AssignmentTypePanel"
+                              Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="分配方式:"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <StackPanel Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        Spacing="8">
+                                <FontIcon Glyph="&#xE8FB;"
+                                          FontSize="16"
+                                          Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                                <TextBlock Text="手动指定"
+                                           Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                           FontWeight="Medium"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- 人员信息 -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="人员信息"
+                           FontSize="16"
+                           FontWeight="SemiBold"/>
+                
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="12">
+                        <!-- 技能 -->
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="技能"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       FontSize="12"/>
+                            <TextBlock x:Name="SkillsText"
+                                       Text="基础哨位, 高级哨位, 夜间值守"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- 当前工作量 -->
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="当前工作量"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       FontSize="12"/>
+                            <TextBlock x:Name="WorkloadText"
+                                       Text="18 班次 (36小时)"/>
+                        </StackPanel>
+
+                        <!-- 本周工作量 -->
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="本周工作量"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       FontSize="12"/>
+                            <TextBlock x:Name="WeeklyWorkloadText"
+                                       Text="5 班次 (10小时)"/>
+                        </StackPanel>
+
+                        <!-- 上一班次 -->
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="上一班次"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       FontSize="12"/>
+                            <TextBlock x:Name="PreviousShiftText"
+                                       Text="2025-01-01 06:00-08:00 (哨位2)"/>
+                        </StackPanel>
+
+                        <!-- 下一班次 -->
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="下一班次"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       FontSize="12"/>
+                            <TextBlock x:Name="NextShiftText"
+                                       Text="2025-01-01 14:00-16:00 (哨位3)"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- 约束评估 -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="约束评估"
+                           FontSize="16"
+                           FontWeight="SemiBold"/>
+                
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel x:Name="ConstraintsPanel"
+                                Spacing="8">
+                        <!-- 约束评估项将动态添加 -->
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- 操作按钮 -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="操作"
+                           FontSize="16"
+                           FontWeight="SemiBold"/>
+                
+                <StackPanel Orientation="Horizontal"
+                            Spacing="8">
+                    <Button x:Name="EditButton"
+                            Content="修改分配"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Click="EditButton_Click"/>
+                    <Button x:Name="RemoveButton"
+                            Content="取消分配"
+                            Click="RemoveButton_Click"/>
+                    <Button x:Name="ViewPersonnelButton"
+                            Content="查看人员详情"
+                            Click="ViewPersonnelButton_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

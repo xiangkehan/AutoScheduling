@@ -1,0 +1,236 @@
+<ContentDialog
+    x:Class="AutoScheduling3.Views.Scheduling.ScheduleComparisonView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="排班比较"
+    CloseButtonText="关闭"
+    DefaultButton="Close"
+    Opened="ContentDialog_Opened">
+
+    <ContentDialog.Resources>
+        <!-- 差异单元格样式 -->
+        <Style x:Key="DifferenceCell" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorCautionBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource SystemFillColorCautionBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+        </Style>
+    </ContentDialog.Resources>
+
+    <Grid MinWidth="900" MinHeight="600">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题栏 -->
+        <Grid Grid.Row="0"
+              Padding="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 当前排班 -->
+            <StackPanel Grid.Column="0"
+                        Spacing="4">
+                <TextBlock Text="当前排班"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Name="CurrentScheduleNameText"
+                           Text="2025年1月排班"
+                           FontSize="16"
+                           FontWeight="SemiBold"/>
+                <TextBlock x:Name="CurrentScheduleDateText"
+                           Text="2025-01-01 至 2025-01-31"
+                           FontSize="12"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+
+            <!-- 比较排班 -->
+            <StackPanel Grid.Column="1"
+                        Spacing="4">
+                <TextBlock Text="比较排班"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Name="CompareScheduleNameText"
+                           Text="2024年12月排班"
+                           FontSize="16"
+                           FontWeight="SemiBold"/>
+                <TextBlock x:Name="CompareScheduleDateText"
+                           Text="2024-12-01 至 2024-12-31"
+                           FontSize="12"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 主内容区 -->
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 当前排班表格 -->
+                <Border Grid.Column="0"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="排班表格"
+                                   FontWeight="SemiBold"/>
+                        <ScrollViewer MaxHeight="400">
+                            <Grid x:Name="CurrentScheduleGrid">
+                                <!-- 表格内容将动态生成 -->
+                            </Grid>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+
+                <!-- 比较排班表格 -->
+                <Border Grid.Column="1"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="排班表格"
+                                   FontWeight="SemiBold"/>
+                        <ScrollViewer MaxHeight="400">
+                            <Grid x:Name="CompareScheduleGrid">
+                                <!-- 表格内容将动态生成 -->
+                            </Grid>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- 统计信息对比 -->
+        <Grid Grid.Row="2"
+              Padding="0,16,0,0"
+              ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 当前排班统计 -->
+            <Border Grid.Column="0"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="统计信息"
+                               FontWeight="SemiBold"
+                               FontSize="14"/>
+                    
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="总分配数"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="CurrentTotalAssignmentsText"
+                                       Text="450"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Text="参与人员"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="CurrentPersonnelCountText"
+                                       Text="25"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Spacing="2">
+                            <TextBlock Text="软约束评分"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="CurrentScoreText"
+                                       Text="85.5"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 比较排班统计 -->
+            <Border Grid.Column="1"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="统计信息"
+                               FontWeight="SemiBold"
+                               FontSize="14"/>
+                    
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="总分配数"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="CompareTotalAssignmentsText"
+                                       Text="430"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Text="参与人员"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="ComparePersonnelCountText"
+                                       Text="23"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Spacing="2">
+                            <TextBlock Text="软约束评分"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="CompareScoreText"
+                                       Text="82.3"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentDialog>

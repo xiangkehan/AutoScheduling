@@ -1,0 +1,97 @@
+<UserControl
+    x:Class="AutoScheduling3.Controls.PositionScheduleControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    AutomationProperties.Name="哨位排班表格控件">
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <!-- 工具栏区域 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 哨位和周次选择器 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 表格区域 -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 工具栏区域 -->
+        <StackPanel x:Name="ToolbarPanel" 
+                    Grid.Row="0" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,0,0,8"
+                    AutomationProperties.Name="表格工具栏">
+            
+            <Button x:Name="ExportButton"
+                    Content="导出"
+                    ToolTipService.ToolTip="导出当前哨位排班表"
+                    Click="ExportButton_Click"
+                    AutomationProperties.Name="导出哨位排班表"
+                    AutomationProperties.HelpText="导出当前哨位的排班表为Excel或CSV文件"/>
+            
+            <Button x:Name="PrintButton"
+                    Content="&#xE749;"
+                    FontFamily="Segoe MDL2 Assets"
+                    ToolTipService.ToolTip="打印"
+                    Click="PrintButton_Click"
+                    AutomationProperties.Name="打印哨位排班表"
+                    AutomationProperties.HelpText="打印当前哨位的排班表"/>
+            
+            <Button x:Name="FullScreenButton"
+                    Content="&#xE740;"
+                    FontFamily="Segoe MDL2 Assets"
+                    ToolTipService.ToolTip="全屏查看"
+                    Click="FullScreenButton_Click"
+                    AutomationProperties.Name="全屏查看表格"
+                    AutomationProperties.HelpText="在全屏模式下查看排班表格"/>
+        </StackPanel>
+
+        <!-- 哨位和周次选择器 -->
+        <Grid Grid.Row="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 哨位选择器 -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="选择哨位:" 
+                           VerticalAlignment="Center"
+                           AutomationProperties.Name="哨位选择标签"/>
+                <TextBlock x:Name="PositionNameText"
+                           Text="未选择"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           AutomationProperties.Name="当前选中哨位名称"/>
+            </StackPanel>
+
+            <!-- 周次选择器 -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="周次:" 
+                           VerticalAlignment="Center"
+                           AutomationProperties.Name="周次选择标签"/>
+                <ComboBox x:Name="WeekComboBox"
+                          MinWidth="200"
+                          SelectionChanged="WeekComboBox_SelectionChanged"
+                          AutomationProperties.Name="周次选择下拉框"
+                          AutomationProperties.HelpText="选择要查看的周次"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 表格区域 -->
+        <ScrollViewer x:Name="GridScrollViewer"
+                      Grid.Row="2"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto"
+                      AutomationProperties.Name="表格内容区域">
+            <Grid x:Name="WeeklyGrid">
+                <!-- 表格内容将在代码中动态生成 -->
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
