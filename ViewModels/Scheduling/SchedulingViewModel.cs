@@ -77,6 +77,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
         [ObservableProperty]
         private ObservableCollection<int> _manuallyAddedPersonnelIds = new();
 
+        // 手动添加的人员详细信息（用于UI显示）
+        [ObservableProperty]
+        private ObservableCollection<PersonnelDto> _manuallyAddedPersonnelDetails = new();
+
         // 自动提取的人员数量
         [ObservableProperty]
         private int _autoExtractedPersonnelCount;
@@ -873,6 +877,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             
             // 清空手动添加的人员列表
             ManuallyAddedPersonnelIds.Clear();
+            ManuallyAddedPersonnelDetails.Clear();
             AutoExtractedPersonnelCount = 0;
             ManuallyAddedPersonnelCount = 0;
             
@@ -2271,7 +2276,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
                 System.Diagnostics.Debug.WriteLine($"选择的人员数量: {SelectedPersonnelIdsForManualAdd.Count}");
 
-                // 添加到ManuallyAddedPersonnelIds列表
+                // 添加到ManuallyAddedPersonnelIds列表和详细信息列表
                 foreach (var personnelId in SelectedPersonnelIdsForManualAdd)
                 {
                     // 避免重复添加
@@ -2282,6 +2287,15 @@ namespace AutoScheduling3.ViewModels.Scheduling
                         var personnel = AvailablePersonnelForManualAdd.FirstOrDefault(p => p.Id == personnelId);
                         if (personnel != null)
                         {
+                            // 添加到详细信息列表
+                            ManuallyAddedPersonnelDetails.Add(personnel);
+                            
+                            // 添加到SelectedPersonnels（如果不存在）
+                            if (!SelectedPersonnels.Any(p => p.Id == personnelId))
+                            {
+                                SelectedPersonnels.Add(personnel);
+                            }
+                            
                             System.Diagnostics.Debug.WriteLine($"手动添加人员: {personnel.Name} (ID: {personnelId})");
                         }
                         else
@@ -2355,6 +2369,28 @@ namespace AutoScheduling3.ViewModels.Scheduling
             {
                 ManuallyAddedPersonnelIds.Remove(personnelId);
                 System.Diagnostics.Debug.WriteLine("人员已从手动添加列表中移除");
+            }
+
+            // 从详细信息列表中移除
+            var detailToRemove = ManuallyAddedPersonnelDetails.FirstOrDefault(p => p.Id == personnelId);
+            if (detailToRemove != null)
+            {
+                ManuallyAddedPersonnelDetails.Remove(detailToRemove);
+                System.Diagnostics.Debug.WriteLine("人员已从详细信息列表中移除");
+            }
+
+            // 从SelectedPersonnels中移除（如果该人员不在任何哨位的可用人员列表中）
+            var isInAnyPosition = SelectedPositions.Any(pos => 
+                _positionPersonnelManager.GetAvailablePersonnel(pos.Id).Contains(personnelId));
+            
+            if (!isInAnyPosition)
+            {
+                var selectedToRemove = SelectedPersonnels.FirstOrDefault(p => p.Id == personnelId);
+                if (selectedToRemove != null)
+                {
+                    SelectedPersonnels.Remove(selectedToRemove);
+                    System.Diagnostics.Debug.WriteLine("人员已从选中列表中移除");
+                }
             }
 
             // 更新ManuallyAddedPersonnelCount

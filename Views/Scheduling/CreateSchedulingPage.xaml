@@ -341,6 +341,51 @@
                                     <TextBlock Text="这些人员可以被分配到任何哨位" 
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
                                                FontSize="12"/>
+                                    
+                                    <!-- Personnel Details List -->
+                                    <ItemsRepeater ItemsSource="{x:Bind ViewModel.ManuallyAddedPersonnelDetails, Mode=OneWay}">
+                                        <ItemsRepeater.Layout>
+                                            <StackLayout Spacing="0"/>
+                                        </ItemsRepeater.Layout>
+                                        <ItemsRepeater.ItemTemplate>
+                                            <DataTemplate x:DataType="dto:PersonnelDto">
+                                                <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                        BorderThickness="0,0,0,1"
+                                                        Padding="8,8,8,8">
+                                                    <Grid ColumnSpacing="12">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        
+                                                        <SymbolIcon Grid.Column="0" Symbol="Contact" VerticalAlignment="Center"/>
+                                                        
+                                                        <StackPanel Grid.Column="1" Spacing="4">
+                                                            <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
+                                                            <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12">
+                                                                <Run Text="技能:"/>
+                                                                <Run Text="{x:Bind SkillIds.Count, Mode=OneWay}"/>
+                                                                <Run Text="项"/>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                        
+                                                        <Button Grid.Column="2" 
+                                                                Command="{Binding ElementName=Root, Path=ViewModel.RemoveManualPersonnelCommand}"
+                                                                CommandParameter="{x:Bind Id}"
+                                                                VerticalAlignment="Center">
+                                                            <Button.Content>
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                    <SymbolIcon Symbol="Delete" Width="14" Height="14"/>
+                                                                    <TextBlock Text="移除"/>
+                                                                </StackPanel>
+                                                            </Button.Content>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsRepeater.ItemTemplate>
+                                    </ItemsRepeater>
                                 </StackPanel>
                                 
                                 <!-- Add Button -->
