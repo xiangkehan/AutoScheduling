@@ -27,7 +27,8 @@
 
 
 
-- [ ] 2.2 迁移手动指定表单属性
+- [x] 2.2 迁移手动指定表单属性
+
   - 迁移表单状态属性 (IsCreatingManualAssignment, IsEditingManualAssignment)
   - 迁移表单数据属性 (NewManualAssignment, EditingManualAssignment, EditingManualAssignmentDto)
   - 迁移包装属性 (NewManualAssignmentDate, EditingManualAssignmentPersonnelId 等)
@@ -36,7 +37,8 @@
 
   - _Requirements: 2.1, 3.2_
 
-- [ ] 2.3 迁移哨位人员管理属性
+
+- [x] 2.3 迁移哨位人员管理属性
   - 迁移哨位人员相关属性 (IsAddingPersonnelToPosition, CurrentEditingPosition)
   - 迁移可用人员列表属性 (AvailablePersonnelForPosition, SelectedPersonnelIdsForPosition)
 
@@ -49,14 +51,16 @@
 
   - _Requirements: 2.1, 4.1_
 
-- [-] 2.4 迁移其他属性和属性变更回调
+
+- [x] 2.4 迁移其他属性和属性变更回调
+
 
   - 迁移模板属性 (LoadedTemplateId, TemplateApplied)
   - 迁移结果属性 (ResultSchedule, SummarySections)
   - 迁移所有属性变更回调方法 (OnCurrentStepChanged, OnStartDateChanged 等)
   - _Requirements: 2.1, 2.2_
 
-- [ ] 3. 迁移命令定义到 Commands.cs
+- [x] 3. 迁移命令定义到 Commands.cs
 
   - 迁移所有命令属性声明
   - 包括核心命令、模板命令、约束命令、手动指定命令、哨位人员命令
@@ -64,6 +68,7 @@
   - _Requirements: 2.3_
 
 - [x] 4. 迁移向导流程逻辑到 Wizard.cs
+
 
 
 - [x] 4.1 迁移步骤导航方法
@@ -103,59 +108,78 @@
   - 迁移 BuildSummarySections 方法
   - _Requirements: 6.5_
 
-- [ ] 5. 迁移手动指定管理到 ManualAssignment.cs
+- [x] 5. 迁移手动指定管理到 ManualAssignment.cs
 
+- [x] 5.1 迁移创建手动指定方法
 
-- [ ] 5.1 迁移创建手动指定方法
   - 迁移 StartCreateManualAssignment 方法
   - 迁移 SubmitCreateManualAssignmentAsync 方法
   - 迁移 CancelCreateManualAssignment 方法
   - _Requirements: 3.1, 3.2_
 
-- [ ] 5.2 迁移编辑手动指定方法
+
+- [x] 5.2 迁移编辑手动指定方法
+
   - 迁移 StartEditManualAssignment 方法
   - 迁移 SubmitEditManualAssignmentAsync 方法
   - 迁移 CancelEditManualAssignment 方法
   - _Requirements: 3.1, 3.2_
 
-- [ ] 5.3 迁移删除和验证方法
+- [x] 5.3 迁移删除和验证方法
+
+
   - 迁移 DeleteManualAssignmentAsync 方法
   - 迁移两个 ValidateManualAssignment 重载方法
   - 迁移 ClearValidationErrors 方法
   - _Requirements: 3.1, 3.3, 3.4_
 
 
-- [ ] 6. 迁移哨位人员管理到 PositionPersonnel.cs
 
-- [ ] 6.1 迁移为哨位添加人员方法
+- [x] 6. 迁移哨位人员管理到 PositionPersonnel.cs
+
+
+
+
+
+- [x] 6.1 迁移为哨位添加人员方法
+
   - 迁移 StartAddPersonnelToPosition 方法
   - 迁移 SubmitAddPersonnelToPositionAsync 方法
   - 迁移 CancelAddPersonnelToPosition 方法
   - _Requirements: 4.1_
 
-- [ ] 6.2 迁移移除和撤销方法
+- [x] 6.2 迁移移除和撤销方法
+
+
   - 迁移 RemovePersonnelFromPosition 方法
   - 迁移 RevertPositionChanges 方法
   - _Requirements: 4.2_
 
-- [ ] 6.3 迁移保存为永久方法
+- [x] 6.3 迁移保存为永久方法
+
+
   - 迁移 ShowSaveConfirmationDialog 方法
   - 迁移 SavePositionChangesAsync 方法
   - _Requirements: 4.3_
 
-- [ ] 6.4 迁移手动添加参与人员方法
+- [x] 6.4 迁移手动添加参与人员方法
+
+
   - 迁移 StartManualAddPersonnel 方法
   - 迁移 SubmitManualAddPersonnelAsync 方法
   - 迁移 CancelManualAddPersonnel 方法
   - 迁移 RemoveManualPersonnel 方法
   - _Requirements: 4.4_
 
-- [ ] 6.5 迁移人员提取和视图模型更新方法
+- [x] 6.5 迁移人员提取和视图模型更新方法
+
+
   - 迁移 ExtractPersonnelFromPositions 方法
   - 迁移 UpdatePositionPersonnelViewModels 方法
   - _Requirements: 4.1, 4.2_
 
 - [ ] 7. 迁移模板和约束管理到 TemplateConstraints.cs
+
 - [ ] 7.1 迁移约束加载方法
   - 迁移 LoadConstraintsAsync 方法
   - 保留所有错误处理和日志记录
@@ -169,6 +193,7 @@
   - _Requirements: 5.1, 5.2, 5.4_
 
 - [ ] 8. 迁移状态管理到 StateManagement.cs
+
 - [ ] 8.1 迁移草稿保存方法
   - 迁移 CreateDraftAsync 方法
   - 保留所有数据收集和序列化逻辑
