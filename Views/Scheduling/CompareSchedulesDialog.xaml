@@ -10,25 +10,39 @@
     SecondaryButtonText="取消"
     DefaultButton="Primary"
     PrimaryButtonClick="ContentDialog_PrimaryButtonClick"
-    Opened="ContentDialog_Opened">
+    Opened="ContentDialog_Opened"
+    AutomationProperties.Name="选择要比较的排班对话框"
+    AutomationProperties.HelpText="从历史排班列表中选择一个排班与当前排班进行比较">
+    
+    <!-- 键盘快捷键 -->
+    <ContentDialog.KeyboardAccelerators>
+        <!-- Esc: 取消对话框 -->
+        <KeyboardAccelerator Key="Escape" Invoked="EscapeAccelerator_Invoked"/>
+    </ContentDialog.KeyboardAccelerators>
 
     <StackPanel Spacing="16" MinWidth="500">
         <!-- 说明 -->
         <TextBlock Text="选择一个历史排班与当前排班进行比较"
                    TextWrapping="Wrap"
-                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                   AutomationProperties.Name="对话框说明"/>
 
         <!-- 搜索框 -->
         <AutoSuggestBox x:Name="SearchBox"
                         PlaceholderText="搜索排班名称..."
                         QueryIcon="Find"
-                        TextChanged="SearchBox_TextChanged"/>
+                        TextChanged="SearchBox_TextChanged"
+                        AutomationProperties.Name="搜索排班"
+                        AutomationProperties.HelpText="输入排班名称进行搜索筛选"
+                        ToolTipService.ToolTip="搜索排班"/>
 
         <!-- 历史排班列表 -->
         <StackPanel Spacing="8">
             <TextBlock Text="历史排班列表"
                        FontSize="14"
-                       FontWeight="SemiBold"/>
+                       FontWeight="SemiBold"
+                       AutomationProperties.Name="历史排班列表标题"
+                       AutomationProperties.HeadingLevel="Level2"/>
 
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -37,7 +51,10 @@
                     MaxHeight="400">
                 <ListView x:Name="ScheduleListView"
                           SelectionMode="Single"
-                          SelectionChanged="ScheduleListView_SelectionChanged">
+                          SelectionChanged="ScheduleListView_SelectionChanged"
+                          AutomationProperties.Name="历史排班列表"
+                          AutomationProperties.HelpText="选择要与当前排班进行比较的历史排班"
+                          AutomationProperties.LandmarkType="List">
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <Grid Padding="12"
@@ -125,7 +142,9 @@
                         Spacing="8"
                         Padding="32"
                         HorizontalAlignment="Center"
-                        Visibility="Collapsed">
+                        Visibility="Collapsed"
+                        AutomationProperties.Name="空状态提示"
+                        AutomationProperties.LiveSetting="Polite">
                 <FontIcon Glyph="&#xE7C3;"
                           FontSize="48"
                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -141,6 +160,8 @@
         <InfoBar x:Name="ValidationErrorBar"
                  Severity="Error"
                  IsOpen="False"
-                 IsClosable="True"/>
+                 IsClosable="True"
+                 AutomationProperties.Name="验证错误提示"
+                 AutomationProperties.LiveSetting="Assertive"/>
     </StackPanel>
 </ContentDialog>

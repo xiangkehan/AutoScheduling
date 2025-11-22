@@ -284,3 +284,326 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
     </Style>
+
+    <!-- 表头文本样式 -->
+    <Style x:Key="ResultHeaderTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- 统计数字样式 -->
+    <Style x:Key="ResultStatisticsNumberStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="32"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+    </Style>
+
+    <!-- 统计标签样式 -->
+    <Style x:Key="ResultStatisticsLabelStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+        <Setter Property="Margin" Value="0,4,0,0"/>
+    </Style>
+
+    <!-- 次要文本样式 -->
+    <Style x:Key="ResultSecondaryTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+    </Style>
+
+    <!-- 提示文本样式 -->
+    <Style x:Key="ResultHintTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontStyle" Value="Italic"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorTertiaryBrush}"/>
+    </Style>
+
+    <!-- ========================================
+         列表和表格样式
+         ======================================== -->
+
+    <!-- 列表项样式 -->
+    <Style x:Key="ResultListItemStyle" TargetType="ListViewItem">
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- 统计表格行样式 -->
+    <Style x:Key="ResultStatisticsRowStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource ResultStatisticsRowBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource ResultCellBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="MinHeight" Value="40"/>
+    </Style>
+
+    <!-- 统计表格表头样式 -->
+    <Style x:Key="ResultStatisticsHeaderStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource ResultStatisticsHeaderBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource ResultCellBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,2"/>
+        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="MinHeight" Value="44"/>
+    </Style>
+
+    <!-- ========================================
+         工具栏和面板样式
+         ======================================== -->
+
+    <!-- 工具栏容器样式 -->
+    <Style x:Key="ResultToolbarStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource ResultToolbarBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource ResultToolbarBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Padding" Value="16,12"/>
+        <Setter Property="MinHeight" Value="56"/>
+    </Style>
+
+    <!-- 筛选面板样式 -->
+    <Style x:Key="ResultFilterPanelStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource ResultCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource ResultCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Padding" Value="16,12"/>
+    </Style>
+
+    <!-- 冲突面板样式 -->
+    <Style x:Key="ResultConflictPanelStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource ResultCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource ResultCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1,0,0,0"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="MinWidth" Value="320"/>
+    </Style>
+
+    <!-- 统计面板样式 -->
+    <Style x:Key="ResultStatisticsPanelStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource ResultCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource ResultCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Margin" Value="0,0,0,16"/>
+    </Style>
+
+    <!-- ========================================
+         进度条和指示器样式
+         ======================================== -->
+
+    <!-- 工作量进度条样式 -->
+    <Style x:Key="ResultWorkloadProgressBarStyle" TargetType="ProgressBar">
+        <Setter Property="Height" Value="8"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
+        <Setter Property="Background" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+    </Style>
+
+    <!-- 覆盖率进度条样式 -->
+    <Style x:Key="ResultCoverageProgressBarStyle" TargetType="ProgressBar">
+        <Setter Property="Height" Value="6"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}"/>
+        <Setter Property="Background" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+    </Style>
+
+    <!-- 状态指示器样式 -->
+    <Style x:Key="ResultStatusIndicatorStyle" TargetType="Ellipse">
+        <Setter Property="Width" Value="12"/>
+        <Setter Property="Height" Value="12"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+    </Style>
+
+    <!-- ========================================
+         滚动查看器样式
+         ======================================== -->
+
+    <!-- 主内容滚动查看器样式 -->
+    <Style x:Key="ResultContentScrollViewerStyle" TargetType="ScrollViewer">
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <!-- 列表滚动查看器样式 -->
+    <Style x:Key="ResultListScrollViewerStyle" TargetType="ScrollViewer">
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="Padding" Value="0,0,8,0"/>
+    </Style>
+
+    <!-- ========================================
+         布局和容器样式
+         ======================================== -->
+
+    <!-- 页面容器样式 -->
+    <Style x:Key="ResultPageContainerStyle" TargetType="Grid">
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <!-- 主内容区容器样式 -->
+    <Style x:Key="ResultMainContentStyle" TargetType="Grid">
+        <Setter Property="Padding" Value="16"/>
+    </Style>
+
+    <!-- 侧边栏容器样式 -->
+    <Style x:Key="ResultSidebarStyle" TargetType="StackPanel">
+        <Setter Property="Spacing" Value="12"/>
+        <Setter Property="Padding" Value="16"/>
+    </Style>
+
+    <!-- 操作按钮区样式 -->
+    <Style x:Key="ResultActionButtonsPanelStyle" TargetType="StackPanel">
+        <Setter Property="Orientation" Value="Horizontal"/>
+        <Setter Property="Spacing" Value="12"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="Margin" Value="0,16,0,0"/>
+    </Style>
+
+    <!-- 统计网格样式 -->
+    <Style x:Key="ResultStatisticsGridStyle" TargetType="Grid">
+        <Setter Property="ColumnSpacing" Value="24"/>
+        <Setter Property="RowSpacing" Value="16"/>
+    </Style>
+
+    <!-- ========================================
+         工具提示样式
+         ======================================== -->
+
+    <!-- 单元格工具提示样式 -->
+    <Style x:Key="ResultCellToolTipStyle" TargetType="ToolTip">
+        <Setter Property="Background" Value="{ThemeResource ResultCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource ResultCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="MaxWidth" Value="300"/>
+    </Style>
+
+    <!-- ========================================
+         对话框样式
+         ======================================== -->
+
+    <!-- 标准对话框样式 -->
+    <Style x:Key="ResultDialogStyle" TargetType="ContentDialog">
+        <Setter Property="Padding" Value="24"/>
+        <Setter Property="MaxWidth" Value="600"/>
+        <Setter Property="MaxHeight" Value="800"/>
+    </Style>
+
+    <!-- 全屏对话框样式 -->
+    <Style x:Key="ResultFullScreenDialogStyle" TargetType="ContentDialog">
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Padding" Value="24"/>
+        <Setter Property="MaxWidth" Value="Infinity"/>
+        <Setter Property="MaxHeight" Value="Infinity"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+    </Style>
+
+    <!-- ========================================
+         可访问性样式
+         ======================================== -->
+
+    <!-- 高对比度文本样式 -->
+    <Style x:Key="ResultHighContrastTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        <Setter Property="AutomationProperties.LiveSetting" Value="Polite"/>
+    </Style>
+
+    <!-- 可访问性按钮样式 -->
+    <Style x:Key="ResultAccessibleButtonStyle" TargetType="Button">
+        <Setter Property="MinWidth" Value="120"/>
+        <Setter Property="MinHeight" Value="44"/>
+        <Setter Property="Padding" Value="20,12"/>
+        <Setter Property="FontSize" Value="14"/>
+    </Style>
+
+    <!-- 焦点可见边框样式 -->
+    <Style x:Key="ResultFocusVisibleBorderStyle" TargetType="Border">
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource SystemAccentColor}"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- ========================================
+         特殊状态样式
+         ======================================== -->
+
+    <!-- 未保存更改提示样式 -->
+    <Style x:Key="ResultUnsavedChangesBarStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource SystemFillColorCautionBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource SystemFillColorCautionBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,2"/>
+        <Setter Property="Padding" Value="16,8"/>
+    </Style>
+
+    <!-- 加载中遮罩样式 -->
+    <Style x:Key="ResultLoadingOverlayStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource LayerFillColorDefaultBrush}"/>
+        <Setter Property="Opacity" Value="0.8"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+    </Style>
+
+    <!-- 空状态容器样式 -->
+    <Style x:Key="ResultEmptyStateStyle" TargetType="StackPanel">
+        <Setter Property="Spacing" Value="16"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="32"/>
+    </Style>
+
+    <!-- ========================================
+         视图模式切换样式
+         ======================================== -->
+
+    <!-- 视图模式单选按钮样式 -->
+    <Style x:Key="ResultViewModeRadioButtonStyle" TargetType="RadioButton">
+        <Setter Property="MinWidth" Value="80"/>
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    </Style>
+
+    <!-- ========================================
+         动画资源
+         ======================================== -->
+
+    <!-- 淡入动画 -->
+    <Storyboard x:Key="ResultFadeInAnimation">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0" To="1"
+                         Duration="0:0:0.3">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+    <!-- 滑入动画 -->
+    <Storyboard x:Key="ResultSlideInAnimation">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                         From="20" To="0"
+                         Duration="0:0:0.3">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0" To="1"
+                         Duration="0:0:0.3">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+
+</ResourceDictionary>

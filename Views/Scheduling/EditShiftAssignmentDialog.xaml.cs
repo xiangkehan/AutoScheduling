@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
@@ -196,6 +197,40 @@ public sealed partial class EditShiftAssignmentDialog : ContentDialog
         ValidationErrorBar.Message = message;
         ValidationErrorBar.IsOpen = true;
     }
+
+    #region 键盘快捷键处理
+
+    /// <summary>
+    /// Esc键快捷键处理 - 取消对话框
+    /// </summary>
+    private void EscapeAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        SelectedPersonnelId = null;
+        Hide();
+        args.Handled = true;
+    }
+
+    /// <summary>
+    /// Enter键快捷键处理 - 确认选择
+    /// </summary>
+    private void EnterAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        // 只有在选中了人员时才处理
+        if (PersonnelListView.SelectedItem != null && IsPrimaryButtonEnabled)
+        {
+            // 触发主按钮点击
+            var clickArgs = new ContentDialogButtonClickEventArgs();
+            ContentDialog_PrimaryButtonClick(this, clickArgs);
+            
+            if (!clickArgs.Cancel)
+            {
+                Hide();
+            }
+            args.Handled = true;
+        }
+    }
+
+    #endregion
 }
 
 /// <summary>

@@ -8,7 +8,15 @@
     Title="班次详情"
     CloseButtonText="关闭"
     DefaultButton="Close"
-    Opened="ContentDialog_Opened">
+    Opened="ContentDialog_Opened"
+    AutomationProperties.Name="班次详情对话框"
+    AutomationProperties.HelpText="显示班次的详细信息，包括基本信息、人员信息和约束评估">
+    
+    <!-- 键盘快捷键 -->
+    <ContentDialog.KeyboardAccelerators>
+        <!-- Esc: 关闭对话框 -->
+        <KeyboardAccelerator Key="Escape" Invoked="EscapeAccelerator_Invoked"/>
+    </ContentDialog.KeyboardAccelerators>
 
     <ScrollViewer MaxHeight="600" MinWidth="500">
         <StackPanel Spacing="16">
@@ -16,7 +24,9 @@
             <StackPanel Spacing="8">
                 <TextBlock Text="基本信息"
                            FontSize="16"
-                           FontWeight="SemiBold"/>
+                           FontWeight="SemiBold"
+                           AutomationProperties.Name="基本信息标题"
+                           AutomationProperties.HeadingLevel="Level2"/>
                 
                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -32,11 +42,13 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0"
                                        Text="日期时间:"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       AutomationProperties.Name="日期时间标签"/>
                             <TextBlock x:Name="DateTimeText"
                                        Grid.Column="1"
                                        Text="2025-01-01 08:00-10:00"
-                                       FontWeight="Medium"/>
+                                       FontWeight="Medium"
+                                       AutomationProperties.Name="班次日期时间"/>
                         </Grid>
 
                         <!-- 哨位 -->
@@ -47,11 +59,13 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0"
                                        Text="哨位:"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       AutomationProperties.Name="哨位标签"/>
                             <TextBlock x:Name="PositionText"
                                        Grid.Column="1"
                                        Text="哨位1 (主门岗)"
-                                       FontWeight="Medium"/>
+                                       FontWeight="Medium"
+                                       AutomationProperties.Name="班次哨位"/>
                         </Grid>
 
                         <!-- 人员 -->
@@ -62,11 +76,13 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0"
                                        Text="人员:"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       AutomationProperties.Name="人员标签"/>
                             <TextBlock x:Name="PersonnelText"
                                        Grid.Column="1"
                                        Text="张三"
-                                       FontWeight="Medium"/>
+                                       FontWeight="Medium"
+                                       AutomationProperties.Name="班次人员"/>
                         </Grid>
 
                         <!-- 分配方式 -->
@@ -98,7 +114,9 @@
             <StackPanel Spacing="8">
                 <TextBlock Text="人员信息"
                            FontSize="16"
-                           FontWeight="SemiBold"/>
+                           FontWeight="SemiBold"
+                           AutomationProperties.Name="人员信息标题"
+                           AutomationProperties.HeadingLevel="Level2"/>
                 
                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -159,7 +177,9 @@
             <StackPanel Spacing="8">
                 <TextBlock Text="约束评估"
                            FontSize="16"
-                           FontWeight="SemiBold"/>
+                           FontWeight="SemiBold"
+                           AutomationProperties.Name="约束评估标题"
+                           AutomationProperties.HeadingLevel="Level2"/>
                 
                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -167,7 +187,9 @@
                         CornerRadius="8"
                         Padding="16">
                     <StackPanel x:Name="ConstraintsPanel"
-                                Spacing="8">
+                                Spacing="8"
+                                AutomationProperties.Name="约束评估列表"
+                                AutomationProperties.LandmarkType="Region">
                         <!-- 约束评估项将动态添加 -->
                     </StackPanel>
                 </Border>
@@ -177,20 +199,31 @@
             <StackPanel Spacing="8">
                 <TextBlock Text="操作"
                            FontSize="16"
-                           FontWeight="SemiBold"/>
+                           FontWeight="SemiBold"
+                           AutomationProperties.Name="操作标题"
+                           AutomationProperties.HeadingLevel="Level2"/>
                 
                 <StackPanel Orientation="Horizontal"
                             Spacing="8">
                     <Button x:Name="EditButton"
                             Content="修改分配"
                             Style="{StaticResource AccentButtonStyle}"
-                            Click="EditButton_Click"/>
+                            Click="EditButton_Click"
+                            AutomationProperties.Name="修改分配按钮"
+                            AutomationProperties.HelpText="打开修改分配对话框以更改此班次的人员"
+                            ToolTipService.ToolTip="修改分配"/>
                     <Button x:Name="RemoveButton"
                             Content="取消分配"
-                            Click="RemoveButton_Click"/>
+                            Click="RemoveButton_Click"
+                            AutomationProperties.Name="取消分配按钮"
+                            AutomationProperties.HelpText="取消此班次的人员分配"
+                            ToolTipService.ToolTip="取消分配"/>
                     <Button x:Name="ViewPersonnelButton"
                             Content="查看人员详情"
-                            Click="ViewPersonnelButton_Click"/>
+                            Click="ViewPersonnelButton_Click"
+                            AutomationProperties.Name="查看人员详情按钮"
+                            AutomationProperties.HelpText="查看此人员的完整信息"
+                            ToolTipService.ToolTip="查看人员详情"/>
                 </StackPanel>
             </StackPanel>
         </StackPanel>

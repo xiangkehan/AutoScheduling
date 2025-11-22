@@ -10,7 +10,17 @@
     SecondaryButtonText="取消"
     DefaultButton="Primary"
     PrimaryButtonClick="ContentDialog_PrimaryButtonClick"
-    Opened="ContentDialog_Opened">
+    Opened="ContentDialog_Opened"
+    AutomationProperties.Name="修改班次分配对话框"
+    AutomationProperties.HelpText="选择新的人员来替换当前班次的分配">
+    
+    <!-- 键盘快捷键 -->
+    <ContentDialog.KeyboardAccelerators>
+        <!-- Esc: 取消对话框 -->
+        <KeyboardAccelerator Key="Escape" Invoked="EscapeAccelerator_Invoked"/>
+        <!-- Enter: 确认选择 -->
+        <KeyboardAccelerator Key="Enter" Invoked="EnterAccelerator_Invoked"/>
+    </ContentDialog.KeyboardAccelerators>
 
     <ScrollViewer MaxHeight="600" MinWidth="550">
         <StackPanel Spacing="16">
@@ -18,7 +28,9 @@
             <StackPanel Spacing="8">
                 <TextBlock Text="当前分配"
                            FontSize="16"
-                           FontWeight="SemiBold"/>
+                           FontWeight="SemiBold"
+                           AutomationProperties.Name="当前分配标题"
+                           AutomationProperties.HeadingLevel="Level2"/>
                 
                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -75,13 +87,18 @@
             <StackPanel Spacing="8">
                 <TextBlock Text="选择新人员"
                            FontSize="16"
-                           FontWeight="SemiBold"/>
+                           FontWeight="SemiBold"
+                           AutomationProperties.Name="选择新人员标题"
+                           AutomationProperties.HeadingLevel="Level2"/>
 
                 <!-- 搜索框 -->
                 <AutoSuggestBox x:Name="SearchBox"
                                 PlaceholderText="输入姓名搜索..."
                                 QueryIcon="Find"
-                                TextChanged="SearchBox_TextChanged"/>
+                                TextChanged="SearchBox_TextChanged"
+                                AutomationProperties.Name="人员搜索框"
+                                AutomationProperties.HelpText="输入人员姓名进行搜索筛选"
+                                ToolTipService.ToolTip="搜索人员"/>
 
                 <!-- 推荐人员提示 -->
                 <Border x:Name="RecommendationPanel"
@@ -112,7 +129,10 @@
                         MaxHeight="350">
                     <ListView x:Name="PersonnelListView"
                               SelectionMode="Single"
-                              SelectionChanged="PersonnelListView_SelectionChanged">
+                              SelectionChanged="PersonnelListView_SelectionChanged"
+                              AutomationProperties.Name="可用人员列表"
+                              AutomationProperties.HelpText="选择要分配到此班次的人员"
+                              AutomationProperties.LandmarkType="List">
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <Grid Padding="8"
@@ -181,7 +201,9 @@
             <InfoBar x:Name="ValidationErrorBar"
                      Severity="Error"
                      IsOpen="False"
-                     IsClosable="True"/>
+                     IsClosable="True"
+                     AutomationProperties.Name="验证错误提示"
+                     AutomationProperties.LiveSetting="Assertive"/>
         </StackPanel>
     </ScrollViewer>
 </ContentDialog>

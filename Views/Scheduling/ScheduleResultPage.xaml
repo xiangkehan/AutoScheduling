@@ -19,6 +19,18 @@
         <converters:EnumToBoolConverter x:Key="EnumToBoolConverter"/>
     </Page.Resources>
 
+    <!-- 键盘快捷键 -->
+    <Page.KeyboardAccelerators>
+        <!-- Ctrl+F: 打开筛选 -->
+        <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="FilterAccelerator_Invoked"/>
+        <!-- Ctrl+E: 导出 -->
+        <KeyboardAccelerator Key="E" Modifiers="Control" Invoked="ExportAccelerator_Invoked"/>
+        <!-- Ctrl+S: 保存更改 -->
+        <KeyboardAccelerator Key="S" Modifiers="Control" Invoked="SaveAccelerator_Invoked"/>
+        <!-- Esc: 关闭冲突面板 -->
+        <KeyboardAccelerator Key="Escape" Invoked="EscapeAccelerator_Invoked"/>
+    </Page.KeyboardAccelerators>
+
     <Grid>
         <!-- Main content visible when Schedule not null -->
         <Grid Visibility="{x:Bind ViewModel.Schedule, Converter={StaticResource NullToVisibilityConverter}, Mode=OneWay}">
@@ -31,9 +43,14 @@
             <!-- Header and Toolbar -->
             <StackPanel Grid.Row="0" Margin="24,24,24,12" Spacing="12">
                 <!-- Title Section -->
-                <StackPanel>
-                    <TextBlock Text="{x:Bind ViewModel.Schedule.Title, Mode=OneWay, FallbackValue='Schedule Result'}" Style="{ThemeResource TitleTextBlockStyle}"/>
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                <StackPanel AutomationProperties.Name="排班结果标题区域" AutomationProperties.HeadingLevel="Level1">
+                    <TextBlock Text="{x:Bind ViewModel.Schedule.Title, Mode=OneWay, FallbackValue='Schedule Result'}" 
+                               Style="{ThemeResource TitleTextBlockStyle}"
+                               AutomationProperties.Name="排班标题"
+                               AutomationProperties.HeadingLevel="Level1"/>
+                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" 
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               AutomationProperties.Name="排班日期范围">
                         <Run Text="{x:Bind ViewModel.Schedule.StartDate, Mode=OneWay, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
                         <Run Text=" to "/>
                         <Run Text="{x:Bind ViewModel.Schedule.EndDate, Mode=OneWay, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
@@ -41,7 +58,14 @@
                 </StackPanel>
 
                 <!-- Filter Toolbar -->
-                <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
+                <Grid x:Name="FilterToolbar"
+                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                      BorderThickness="1" 
+                      CornerRadius="8" 
+                      Padding="16"
+                      AutomationProperties.Name="筛选工具栏"
+                      AutomationProperties.LandmarkType="Search">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
@@ -53,32 +77,46 @@
 
                     <!-- Date Range Filter -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,0,16,0">
-                        <TextBlock Text="日期:" VerticalAlignment="Center"/>
-                        <CalendarDatePicker Date="{x:Bind ViewModel.FilterStartDate, Mode=TwoWay}" PlaceholderText="开始日期"/>
+                        <TextBlock Text="日期:" 
+                                   VerticalAlignment="Center"
+                                   AutomationProperties.Name="日期筛选标签"/>
+                        <CalendarDatePicker Date="{x:Bind ViewModel.FilterStartDate, Mode=TwoWay}" 
+                                            PlaceholderText="开始日期"
+                                            AutomationProperties.Name="筛选开始日期"
+                                            AutomationProperties.HelpText="选择筛选的开始日期"/>
                         <TextBlock Text="至" VerticalAlignment="Center"/>
-                        <CalendarDatePicker Date="{x:Bind ViewModel.FilterEndDate, Mode=TwoWay}" PlaceholderText="结束日期"/>
+                        <CalendarDatePicker Date="{x:Bind ViewModel.FilterEndDate, Mode=TwoWay}" 
+                                            PlaceholderText="结束日期"
+                                            AutomationProperties.Name="筛选结束日期"
+                                            AutomationProperties.HelpText="选择筛选的结束日期"/>
                     </StackPanel>
 
                     <!-- Position Filter -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,16,0">
-                        <TextBlock Text="哨位:" VerticalAlignment="Center"/>
+                        <TextBlock Text="哨位:" 
+                                   VerticalAlignment="Center"
+                                   AutomationProperties.Name="哨位筛选标签"/>
                         <ComboBox x:Name="PositionFilterComboBox"
                                   MinWidth="150"
                                   ItemsSource="{x:Bind ViewModel.SelectedPositionIds}"
                                   IsEditable="False"
                                   PlaceholderText="选择哨位"
-                                  AutomationProperties.Name="哨位筛选下拉框"/>
+                                  AutomationProperties.Name="哨位筛选下拉框"
+                                  AutomationProperties.HelpText="选择要筛选的哨位，可多选"/>
                     </StackPanel>
 
                     <!-- Personnel Search -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" Margin="0,0,16,0">
-                        <TextBlock Text="人员:" VerticalAlignment="Center"/>
+                        <TextBlock Text="人员:" 
+                                   VerticalAlignment="Center"
+                                   AutomationProperties.Name="人员搜索标签"/>
                         <AutoSuggestBox x:Name="PersonnelSearchBox"
                                         Text="{x:Bind ViewModel.PersonnelSearchText, Mode=TwoWay}"
                                         PlaceholderText="搜索人员"
                                         MinWidth="200"
                                         QueryIcon="Find"
-                                        AutomationProperties.Name="人员搜索框"/>
+                                        AutomationProperties.Name="人员搜索框"
+                                        AutomationProperties.HelpText="输入人员姓名进行搜索"/>
                     </StackPanel>
 
                     <!-- Spacer -->
@@ -86,28 +124,86 @@
 
                     <!-- Filter Actions -->
                     <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
-                        <Button Content="应用筛选" Command="{x:Bind ViewModel.ApplyFiltersCommand}" Style="{ThemeResource AccentButtonStyle}"/>
-                        <Button Content="重置" Command="{x:Bind ViewModel.ResetFiltersCommand}"/>
+                        <Button Content="应用筛选" 
+                                Command="{x:Bind ViewModel.ApplyFiltersCommand}" 
+                                Style="{ThemeResource AccentButtonStyle}"
+                                AutomationProperties.Name="应用筛选按钮"
+                                AutomationProperties.HelpText="应用当前设置的筛选条件"
+                                ToolTipService.ToolTip="应用筛选 (Ctrl+F)"/>
+                        <Button Content="重置" 
+                                Command="{x:Bind ViewModel.ResetFiltersCommand}"
+                                AutomationProperties.Name="重置筛选按钮"
+                                AutomationProperties.HelpText="清除所有筛选条件并重新加载数据"
+                                ToolTipService.ToolTip="重置筛选"/>
                     </StackPanel>
                 </Grid>
 
                 <!-- View Mode and Actions Toolbar -->
-                <CommandBar Background="Transparent" DefaultLabelPosition="Right" HorizontalAlignment="Stretch">
+                <CommandBar Background="Transparent" 
+                            DefaultLabelPosition="Right" 
+                            HorizontalAlignment="Stretch"
+                            AutomationProperties.Name="视图模式和操作工具栏"
+                            AutomationProperties.LandmarkType="Navigation">
                     <CommandBar.Content>
                         <StackPanel Orientation="Horizontal" Spacing="16">
                             <!-- View Mode Selector -->
-                            <StackPanel Orientation="Horizontal" Spacing="8" AutomationProperties.Name="视图模式选择">
-                                <RadioButton x:Name="GridRadioButton" Content="Grid" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Grid}"/>
-                                <RadioButton x:Name="ListRadioButton" Content="List" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=List}"/>
-                                <RadioButton x:Name="ByPersonnelRadioButton" Content="By Personnel" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=ByPersonnel}"/>
-                                <RadioButton x:Name="ByPositionRadioButton" Content="By Position" IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=ByPosition}"/>
+                            <StackPanel Orientation="Horizontal" 
+                                        Spacing="8" 
+                                        AutomationProperties.Name="视图模式选择"
+                                        AutomationProperties.LandmarkType="Navigation">
+                                <RadioButton x:Name="GridRadioButton" 
+                                             Content="Grid" 
+                                             IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Grid}"
+                                             AutomationProperties.Name="网格视图模式"
+                                             AutomationProperties.HelpText="以表格形式展示排班结果，行为日期加时段，列为哨位"
+                                             ToolTipService.ToolTip="网格视图"/>
+                                <RadioButton x:Name="ListRadioButton" 
+                                             Content="List" 
+                                             IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=List}"
+                                             AutomationProperties.Name="列表视图模式"
+                                             AutomationProperties.HelpText="以列表形式展示所有班次分配"
+                                             ToolTipService.ToolTip="列表视图"/>
+                                <RadioButton x:Name="ByPersonnelRadioButton" 
+                                             Content="By Personnel" 
+                                             IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=ByPersonnel}"
+                                             AutomationProperties.Name="人员视图模式"
+                                             AutomationProperties.HelpText="按人员分组展示每个人的班次安排"
+                                             ToolTipService.ToolTip="人员视图"/>
+                                <RadioButton x:Name="ByPositionRadioButton" 
+                                             Content="By Position" 
+                                             IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=ByPosition}"
+                                             AutomationProperties.Name="哨位视图模式"
+                                             AutomationProperties.HelpText="按哨位分别展示排班表，每个哨位一张表"
+                                             ToolTipService.ToolTip="哨位视图"/>
                             </StackPanel>
                         </StackPanel>
                     </CommandBar.Content>
-                    <AppBarButton Icon="Save" Label="Export" Command="{x:Bind ViewModel.ExportExcelCommand}"/>
-                    <AppBarButton x:Name="FullScreenButton" Icon="FullScreen" Label="Full Screen" Command="{x:Bind ViewModel.ToggleFullScreenCommand}"/>
-                    <AppBarButton x:Name="CompareButton" Icon="Columns" Label="Compare" Command="{x:Bind ViewModel.CompareSchedulesCommand}"/>
-                    <AppBarToggleButton Icon="Flag" Label="Conflicts" IsChecked="{x:Bind ViewModel.IsConflictPaneOpen, Mode=TwoWay}"/>
+                    <AppBarButton Icon="Save" 
+                                  Label="Export" 
+                                  Command="{x:Bind ViewModel.ExportExcelCommand}"
+                                  AutomationProperties.Name="导出排班表"
+                                  AutomationProperties.HelpText="导出排班结果为Excel、CSV或PDF文件"
+                                  ToolTipService.ToolTip="导出 (Ctrl+E)"/>
+                    <AppBarButton x:Name="FullScreenButton" 
+                                  Icon="FullScreen" 
+                                  Label="Full Screen" 
+                                  Command="{x:Bind ViewModel.ToggleFullScreenCommand}"
+                                  AutomationProperties.Name="全屏查看"
+                                  AutomationProperties.HelpText="在全屏模式下查看排班表格"
+                                  ToolTipService.ToolTip="全屏查看"/>
+                    <AppBarButton x:Name="CompareButton" 
+                                  Icon="Columns" 
+                                  Label="Compare" 
+                                  Command="{x:Bind ViewModel.CompareSchedulesCommand}"
+                                  AutomationProperties.Name="比较排班"
+                                  AutomationProperties.HelpText="与历史排班方案进行比较"
+                                  ToolTipService.ToolTip="比较排班"/>
+                    <AppBarToggleButton Icon="Flag" 
+                                        Label="Conflicts" 
+                                        IsChecked="{x:Bind ViewModel.IsConflictPaneOpen, Mode=TwoWay}"
+                                        AutomationProperties.Name="冲突面板开关"
+                                        AutomationProperties.HelpText="显示或隐藏冲突和警告面板"
+                                        ToolTipService.ToolTip="冲突和警告"/>
                 </CommandBar>
             </StackPanel>
 
@@ -118,7 +214,11 @@
                        DisplayMode="Inline"
                        OpenPaneLength="360">
                 <SplitView.Pane>
-                    <Grid BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1,0,0,0" Padding="12">
+                    <Grid BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                          BorderThickness="1,0,0,0" 
+                          Padding="12"
+                          AutomationProperties.Name="冲突和统计信息面板"
+                          AutomationProperties.LandmarkType="Complementary">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -127,8 +227,15 @@
 
                         <!-- Conflict and Warnings Header -->
                         <StackPanel Grid.Row="0" Spacing="8">
-                            <TextBlock Text="Conflicts and Warnings" Style="{ThemeResource SubtitleTextBlockStyle}"/>
-                            <TextBlock Text="{x:Bind ViewModel.Conflicts.Count, Mode=OneWay, FallbackValue=0}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Text="Conflicts and Warnings" 
+                                       Style="{ThemeResource SubtitleTextBlockStyle}"
+                                       AutomationProperties.Name="冲突和警告标题"
+                                       AutomationProperties.HeadingLevel="Level2"/>
+                            <TextBlock Text="{x:Bind ViewModel.Conflicts.Count, Mode=OneWay, FallbackValue=0}" 
+                                       FontSize="12" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       AutomationProperties.Name="冲突数量"
+                                       AutomationProperties.LiveSetting="Polite"/>
                         </StackPanel>
 
                         <!-- Statistics Panel -->
@@ -136,42 +243,90 @@
                                   Header="Statistics"
                                   IsExpanded="True"
                                   Margin="0,12,0,0"
-                                  AutomationProperties.Name="统计信息面板">
+                                  AutomationProperties.Name="统计信息面板"
+                                  AutomationProperties.HeadingLevel="Level2">
                             <StackPanel Spacing="12" Margin="0,8,0,0">
                                 <!-- Summary Stats -->
-                                <Grid>
+                                <Grid AutomationProperties.Name="统计摘要">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <Border Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                                    <Border Grid.Column="0" 
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                            BorderThickness="1" 
+                                            CornerRadius="8" 
+                                            Padding="12"
+                                            AutomationProperties.Name="总分配数统计卡片">
                                         <StackPanel>
-                                            <TextBlock Text="Total Assignments" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                            <TextBlock Text="{x:Bind ViewModel.Statistics.TotalAssignments, Mode=OneWay, FallbackValue=0}" FontSize="24" FontWeight="Bold"/>
+                                            <TextBlock Text="Total Assignments" 
+                                                       FontSize="12" 
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       AutomationProperties.Name="总分配数标签"/>
+                                            <TextBlock Text="{x:Bind ViewModel.Statistics.TotalAssignments, Mode=OneWay, FallbackValue=0}" 
+                                                       FontSize="24" 
+                                                       FontWeight="Bold"
+                                                       AutomationProperties.Name="总分配数值"
+                                                       AutomationProperties.LiveSetting="Polite"/>
                                         </StackPanel>
                                     </Border>
 
-                                    <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                                    <Border Grid.Column="1" 
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                            BorderThickness="1" 
+                                            CornerRadius="8" 
+                                            Padding="12"
+                                            AutomationProperties.Name="参与人员数统计卡片">
                                         <StackPanel>
-                                            <TextBlock Text="Personnel Count" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                            <TextBlock Text="{x:Bind ViewModel.PersonnelWorkloads.Count, Mode=OneWay, FallbackValue=0}" FontSize="24" FontWeight="Bold"/>
+                                            <TextBlock Text="Personnel Count" 
+                                                       FontSize="12" 
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       AutomationProperties.Name="参与人员数标签"/>
+                                            <TextBlock Text="{x:Bind ViewModel.PersonnelWorkloads.Count, Mode=OneWay, FallbackValue=0}" 
+                                                       FontSize="24" 
+                                                       FontWeight="Bold"
+                                                       AutomationProperties.Name="参与人员数值"
+                                                       AutomationProperties.LiveSetting="Polite"/>
                                         </StackPanel>
                                     </Border>
 
-                                    <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                                    <Border Grid.Column="2" 
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                            BorderThickness="1" 
+                                            CornerRadius="8" 
+                                            Padding="12"
+                                            AutomationProperties.Name="参与哨位数统计卡片">
                                         <StackPanel>
-                                            <TextBlock Text="Position Count" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                            <TextBlock Text="{x:Bind ViewModel.PositionCoverages.Count, Mode=OneWay, FallbackValue=0}" FontSize="24" FontWeight="Bold"/>
+                                            <TextBlock Text="Position Count" 
+                                                       FontSize="12" 
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       AutomationProperties.Name="参与哨位数标签"/>
+                                            <TextBlock Text="{x:Bind ViewModel.PositionCoverages.Count, Mode=OneWay, FallbackValue=0}" 
+                                                       FontSize="24" 
+                                                       FontWeight="Bold"
+                                                       AutomationProperties.Name="参与哨位数值"
+                                                       AutomationProperties.LiveSetting="Polite"/>
                                         </StackPanel>
                                     </Border>
                                 </Grid>
 
                                 <!-- Personnel Workload Table -->
                                 <StackPanel>
-                                    <TextBlock Text="Personnel Workload" FontWeight="SemiBold" Margin="0,8,0,4"/>
-                                    <ListView ItemsSource="{x:Bind ViewModel.PersonnelWorkloads, Mode=OneWay}" MaxHeight="200" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                    <TextBlock Text="Personnel Workload" 
+                                               FontWeight="SemiBold" 
+                                               Margin="0,8,0,4"
+                                               AutomationProperties.Name="人员工作量统计标题"
+                                               AutomationProperties.HeadingLevel="Level3"/>
+                                    <ListView ItemsSource="{x:Bind ViewModel.PersonnelWorkloads, Mode=OneWay}" 
+                                              MaxHeight="200" 
+                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                              AutomationProperties.Name="人员工作量统计表"
+                                              AutomationProperties.LandmarkType="Region">
                                         <ListView.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid>
@@ -193,8 +348,16 @@
 
                                 <!-- Position Coverage Table -->
                                 <StackPanel>
-                                    <TextBlock Text="Position Coverage" FontWeight="SemiBold" Margin="0,8,0,4"/>
-                                    <ListView ItemsSource="{x:Bind ViewModel.PositionCoverages, Mode=OneWay}" MaxHeight="200" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                    <TextBlock Text="Position Coverage" 
+                                               FontWeight="SemiBold" 
+                                               Margin="0,8,0,4"
+                                               AutomationProperties.Name="哨位覆盖率统计标题"
+                                               AutomationProperties.HeadingLevel="Level3"/>
+                                    <ListView ItemsSource="{x:Bind ViewModel.PositionCoverages, Mode=OneWay}" 
+                                              MaxHeight="200" 
+                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                              AutomationProperties.Name="哨位覆盖率统计表"
+                                              AutomationProperties.LandmarkType="Region">
                                         <ListView.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid>
@@ -215,20 +378,43 @@
                         </Expander>
 
                         <!-- Conflict List -->
-                        <ScrollViewer Grid.Row="2" Margin="0,12,0,0">
-                            <ListView ItemsSource="{x:Bind ViewModel.ConflictInfos, Mode=OneWay}" SelectionMode="None">
+                        <ScrollViewer Grid.Row="2" 
+                                      Margin="0,12,0,0"
+                                      AutomationProperties.Name="冲突列表区域">
+                            <ListView ItemsSource="{x:Bind ViewModel.ConflictInfos, Mode=OneWay}" 
+                                      SelectionMode="None"
+                                      AutomationProperties.Name="冲突列表"
+                                      AutomationProperties.LandmarkType="Region"
+                                      AutomationProperties.LiveSetting="Polite">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
                                         <InfoBar Title="{Binding Type}"
                                                  Message="{Binding Description}"
                                                  Severity="Warning"
                                                  IsOpen="True"
-                                                 Margin="0,0,0,8">
+                                                 Margin="0,0,0,8"
+                                                 AutomationProperties.Name="{Binding Type}"
+                                                 AutomationProperties.HelpText="{Binding Description}">
                                             <InfoBar.ActionButton>
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <Button Content="定位" Command="{x:Bind ViewModel.LocateConflictCommand}" CommandParameter="{Binding}" />
-                                                    <Button Content="忽略" Command="{x:Bind ViewModel.IgnoreConflictCommand}" CommandParameter="{Binding}"/>
-                                                    <Button Content="修复" Command="{x:Bind ViewModel.FixConflictCommand}" CommandParameter="{Binding}"/>
+                                                    <Button Content="定位" 
+                                                            Command="{x:Bind ViewModel.LocateConflictCommand}" 
+                                                            CommandParameter="{Binding}"
+                                                            AutomationProperties.Name="定位冲突"
+                                                            AutomationProperties.HelpText="在表格中定位并高亮显示此冲突"
+                                                            ToolTipService.ToolTip="定位冲突"/>
+                                                    <Button Content="忽略" 
+                                                            Command="{x:Bind ViewModel.IgnoreConflictCommand}" 
+                                                            CommandParameter="{Binding}"
+                                                            AutomationProperties.Name="忽略冲突"
+                                                            AutomationProperties.HelpText="将此冲突标记为已忽略"
+                                                            ToolTipService.ToolTip="忽略冲突"/>
+                                                    <Button Content="修复" 
+                                                            Command="{x:Bind ViewModel.FixConflictCommand}" 
+                                                            CommandParameter="{Binding}"
+                                                            AutomationProperties.Name="修复冲突"
+                                                            AutomationProperties.HelpText="打开修复对话框以解决此冲突"
+                                                            ToolTipService.ToolTip="修复冲突"/>
                                                 </StackPanel>
                                             </InfoBar.ActionButton>
                                         </InfoBar>
@@ -239,7 +425,9 @@
                     </Grid>
                 </SplitView.Pane>
                 <SplitView.Content>
-                    <Grid Padding="24,0,24,0">
+                    <Grid Padding="24,0,24,0"
+                          AutomationProperties.Name="主内容区域"
+                          AutomationProperties.LandmarkType="Main">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
@@ -248,12 +436,16 @@
                         <controls:ScheduleGridControl
                             Grid.Row="0"
                             GridData="{x:Bind ViewModel.GridData, Mode=OneWay}"
-                            Visibility="{x:Bind GridRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            Visibility="{x:Bind GridRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                            AutomationProperties.Name="网格视图排班表"
+                            AutomationProperties.LandmarkType="Main"/>
 
                         <!-- List View -->
                         <ListView Grid.Row="0"
                                   ItemsSource="{x:Bind ViewModel.ShiftList, Mode=OneWay}"
-                                  Visibility="{x:Bind ListRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                  Visibility="{x:Bind ListRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                  AutomationProperties.Name="列表视图班次列表"
+                                  AutomationProperties.LandmarkType="Main">
                             <ListView.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Padding="12">
@@ -287,8 +479,18 @@
 
                                         <!-- Actions -->
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                                            <Button Content="详情" Command="{x:Bind ViewModel.ViewShiftDetailsCommand}" CommandParameter="{Binding}"/>
-                                            <Button Content="编辑" Command="{x:Bind ViewModel.EditShiftCommand}" CommandParameter="{Binding}"/>
+                                            <Button Content="详情" 
+                                                    Command="{x:Bind ViewModel.ViewShiftDetailsCommand}" 
+                                                    CommandParameter="{Binding}"
+                                                    AutomationProperties.Name="查看班次详情"
+                                                    AutomationProperties.HelpText="查看此班次的详细信息"
+                                                    ToolTipService.ToolTip="查看详情"/>
+                                            <Button Content="编辑" 
+                                                    Command="{x:Bind ViewModel.EditShiftCommand}" 
+                                                    CommandParameter="{Binding}"
+                                                    AutomationProperties.Name="编辑班次分配"
+                                                    AutomationProperties.HelpText="修改此班次的人员分配"
+                                                    ToolTipService.ToolTip="编辑分配"/>
                                         </StackPanel>
                                     </Grid>
                                 </DataTemplate>
@@ -299,19 +501,29 @@
                         <controls:PositionScheduleControl
                             Grid.Row="0"
                             ScheduleData="{x:Bind ViewModel.SelectedPositionSchedule, Mode=OneWay}"
-                            Visibility="{x:Bind ByPositionRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            Visibility="{x:Bind ByPositionRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                            AutomationProperties.Name="哨位视图排班表"
+                            AutomationProperties.LandmarkType="Main"/>
 
                         <!-- By Personnel View -->
                         <controls:PersonnelScheduleControl
                             Grid.Row="0"
                             ScheduleData="{x:Bind ViewModel.SelectedPersonnelSchedule, Mode=OneWay}"
-                            Visibility="{x:Bind ByPersonnelRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            Visibility="{x:Bind ByPersonnelRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                            AutomationProperties.Name="人员视图排班信息"
+                            AutomationProperties.LandmarkType="Main"/>
                     </Grid>
                 </SplitView.Content>
             </SplitView>
 
             <!-- Bottom Action Bar -->
-            <Grid Grid.Row="2" Padding="24" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+            <Grid Grid.Row="2" 
+                  Padding="24" 
+                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                  BorderThickness="0,1,0,0" 
+                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                  AutomationProperties.Name="底部操作栏"
+                  AutomationProperties.LandmarkType="Navigation">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -323,26 +535,44 @@
                            Foreground="{ThemeResource WarningBrush}"
                            VerticalAlignment="Center"
                            Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                           AutomationProperties.Name="未保存更改警告"/>
+                           AutomationProperties.Name="未保存更改警告"
+                           AutomationProperties.LiveSetting="Assertive"/>
 
                 <!-- Action Buttons -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                     <!-- Unsaved Changes Actions -->
                     <Button Content="Discard Changes"
                             Command="{x:Bind ViewModel.DiscardChangesCommand}"
-                            Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                            AutomationProperties.Name="撤销更改"
+                            AutomationProperties.HelpText="撤销所有未保存的更改"
+                            ToolTipService.ToolTip="撤销更改"/>
                     <Button Content="Save Changes"
                             Command="{x:Bind ViewModel.SaveChangesCommand}"
                             Style="{ThemeResource AccentButtonStyle}"
-                            Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                            AutomationProperties.Name="保存更改"
+                            AutomationProperties.HelpText="保存所有更改到数据库"
+                            ToolTipService.ToolTip="保存更改 (Ctrl+S)"/>
 
                     <!-- Primary Actions -->
-                    <Button Content="Back" Command="{x:Bind ViewModel.BackCommand}"/>
-                    <Button Content="Reschedule" Command="{x:Bind ViewModel.RescheduleCommand}"/>
+                    <Button Content="Back" 
+                            Command="{x:Bind ViewModel.BackCommand}"
+                            AutomationProperties.Name="返回"
+                            AutomationProperties.HelpText="返回上一页"
+                            ToolTipService.ToolTip="返回"/>
+                    <Button Content="Reschedule" 
+                            Command="{x:Bind ViewModel.RescheduleCommand}"
+                            AutomationProperties.Name="重新排班"
+                            AutomationProperties.HelpText="重新生成排班方案"
+                            ToolTipService.ToolTip="重新排班"/>
                     <Button Content="Confirm Schedule"
                             Style="{ThemeResource AccentButtonStyle}"
                             Command="{x:Bind ViewModel.ConfirmCommand}"
-                            IsEnabled="{x:Bind ViewModel.Schedule.ConfirmedAt, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            IsEnabled="{x:Bind ViewModel.Schedule.ConfirmedAt, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"
+                            AutomationProperties.Name="确认排班"
+                            AutomationProperties.HelpText="确认并应用此排班方案"
+                            ToolTipService.ToolTip="确认排班"/>
                 </StackPanel>
             </Grid>
         </Grid>

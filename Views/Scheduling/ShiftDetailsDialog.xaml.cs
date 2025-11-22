@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Input;
 using AutoScheduling3.DTOs;
 using System;
 using System.Collections.Generic;
@@ -183,6 +184,16 @@ public sealed partial class ShiftDetailsDialog : ContentDialog
     {
         SelectedAction = ShiftDetailsAction.ViewPersonnel;
         Hide();
+    }
+
+    /// <summary>
+    /// Esc键快捷键处理 - 关闭对话框
+    /// </summary>
+    private void EscapeAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        SelectedAction = ShiftDetailsAction.None;
+        Hide();
+        args.Handled = true;
     }
 }
 

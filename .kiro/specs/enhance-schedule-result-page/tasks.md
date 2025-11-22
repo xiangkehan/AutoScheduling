@@ -325,7 +325,7 @@
   - 将资源字典放置在 `Themes/` 目录下
   - _需求: 所有需求_
 
-- [ ] 12. 实现可访问性支持
+- [x] 12. 实现可访问性支持
   - 为所有控件设置 AutomationProperties.Name
   - 为表格设置语义化标记
   - 为状态变化设置 AutomationProperties.LiveSetting

@@ -12,6 +12,7 @@
                 <ResourceDictionary Source="/Themes/ThemeResources.xaml"/>
                 <ResourceDictionary Source="/Themes/AnimationResources.xaml"/>
                 <ResourceDictionary Source="/Themes/SchedulingProgressResources.xaml"/>
+                <ResourceDictionary Source="/Themes/ScheduleResultResources.xaml"/>
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
 
