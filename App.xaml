@@ -17,6 +17,7 @@
 
             <!-- 缺失的空值到可见性转换器 -->
             <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+            <conv:IntToVisibilityConverter x:Key="IntToVisibilityConverter" />
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
             <conv:BoolToTextConverter x:Key="BoolToTextConverter" />
             <conv:BoolToBrushConverter x:Key="BoolToBrushConverter" />

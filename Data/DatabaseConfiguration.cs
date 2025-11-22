@@ -217,10 +217,33 @@ namespace AutoScheduling3.Data
 
         /// <summary>
         /// 获取带有性能优化的连接字符串
+        /// 注意：WAL 模式需要通过 PRAGMA 命令设置，不能在连接字符串中设置
         /// </summary>
         public static string GetOptimizedConnectionString(string databasePath)
         {
-            return $"Data Source={databasePath};Cache=Shared;Journal Mode=WAL;Synchronous=Normal;";
+            return $"Data Source={databasePath};Cache=Shared;";
+        }
+        
+        /// <summary>
+        /// 为数据库连接启用 WAL 模式和性能优化
+        /// 必须在打开连接后立即调用
+        /// </summary>
+        public static async Task EnableWalModeAsync(Microsoft.Data.Sqlite.SqliteConnection connection)
+        {
+            // 启用 WAL 模式
+            var walCmd = connection.CreateCommand();
+            walCmd.CommandText = "PRAGMA journal_mode=WAL;";
+            await walCmd.ExecuteNonQueryAsync();
+            
+            // 设置同步模式为 NORMAL（平衡性能和安全性）
+            var syncCmd = connection.CreateCommand();
+            syncCmd.CommandText = "PRAGMA synchronous=NORMAL;";
+            await syncCmd.ExecuteNonQueryAsync();
+            
+            // 设置缓存大小（提高性能）
+            var cacheCmd = connection.CreateCommand();
+            cacheCmd.CommandText = "PRAGMA cache_size=-2000;"; // 2MB 缓存
+            await cacheCmd.ExecuteNonQueryAsync();
         }
 
         /// <summary>

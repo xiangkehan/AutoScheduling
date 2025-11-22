@@ -23,9 +23,6 @@ namespace AutoScheduling3.Views.Scheduling
             ViewModel = (App.Current as App).ServiceProvider.GetRequiredService<SchedulingViewModel>();
             _draftService = (App.Current as App).ServiceProvider.GetRequiredService<ISchedulingDraftService>();
             
-            // Inject draft service into ViewModel
-            ViewModel.InjectDraftService(_draftService);
-            
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
@@ -118,7 +115,7 @@ namespace AutoScheduling3.Views.Scheduling
                         try
                         {
                             System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] User chose to restore draft");
-                            await ViewModel.RestoreFromDraftAsync(draft);
+                            await ViewModel.RestoreFromDraftAsync();
                             _isDraftRestored = true;
                             
                             // 显示恢复成功的临时通知
@@ -193,8 +190,7 @@ namespace AutoScheduling3.Views.Scheduling
                 try
                 {
                     System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] Saving draft on navigation away...");
-                    var draft = await ViewModel.CreateDraftAsync();
-                    await _draftService.SaveDraftAsync(draft);
+                    await ViewModel.CreateDraftAsync();
                     System.Diagnostics.Debug.WriteLine("[CreateSchedulingPage] Draft saved successfully");
                     
                     // 可选：显示简短通知（非阻塞）
@@ -282,34 +278,79 @@ namespace AutoScheduling3.Views.Scheduling
                     ManualAssignmentEditDialog.Hide();
                 }
             }
-        }
-
-        private void AddPersonnel_Click(object sender, RoutedEventArgs e)
-        {
-            var selectedItems = AvailablePersonnelList?.SelectedItems.Cast<PersonnelDto>().ToList();
-            if (selectedItems != null && selectedItems.Any())
+            else if (e.PropertyName == nameof(ViewModel.IsAddingPersonnelToPosition))
             {
-                foreach (var item in selectedItems)
+                if (AddPersonnelToPositionDialog == null)
+                    return;
+
+                if (ViewModel.IsAddingPersonnelToPosition)
                 {
-                    if (!ViewModel.SelectedPersonnels.Any(p => p.Id == item.Id))
+                    // 使用安全方法显示对话框
+                    if (AddPersonnelToPositionDialog.XamlRoot == null && this.XamlRoot != null)
                     {
-                        ViewModel.SelectedPersonnels.Add(item);
+                        AddPersonnelToPositionDialog.XamlRoot = this.XamlRoot;
+                    }
+
+                    // 如果XamlRoot仍不可用，使用ShowDialogWithXamlRoot
+                    if (AddPersonnelToPositionDialog.XamlRoot == null)
+                    {
+                        await ShowDialogWithXamlRoot(async () =>
+                        {
+                            if (AddPersonnelToPositionDialog.XamlRoot == null && this.XamlRoot != null)
+                            {
+                                AddPersonnelToPositionDialog.XamlRoot = this.XamlRoot;
+                            }
+                            return await AddPersonnelToPositionDialog.ShowAsync();
+                        });
+                    }
+                    else
+                    {
+                        await AddPersonnelToPositionDialog.ShowAsync();
                     }
                 }
-            }
-        }
-
-        private void RemovePersonnel_Click(object sender, RoutedEventArgs e)
-        {
-            var selectedItems = SelectedPersonnelList?.SelectedItems.Cast<PersonnelDto>().ToList();
-            if (selectedItems != null && selectedItems.Any())
-            {
-                foreach (var item in selectedItems)
+                else
                 {
-                    ViewModel.SelectedPersonnels.Remove(item);
+                    AddPersonnelToPositionDialog.Hide();
+                }
+            }
+            else if (e.PropertyName == nameof(ViewModel.IsManualAddingPersonnel))
+            {
+                if (ManualAddPersonnelDialog == null)
+                    return;
+
+                if (ViewModel.IsManualAddingPersonnel)
+                {
+                    // 使用安全方法显示对话框
+                    if (ManualAddPersonnelDialog.XamlRoot == null && this.XamlRoot != null)
+                    {
+                        ManualAddPersonnelDialog.XamlRoot = this.XamlRoot;
+                    }
+
+                    // 如果XamlRoot仍不可用，使用ShowDialogWithXamlRoot
+                    if (ManualAddPersonnelDialog.XamlRoot == null)
+                    {
+                        await ShowDialogWithXamlRoot(async () =>
+                        {
+                            if (ManualAddPersonnelDialog.XamlRoot == null && this.XamlRoot != null)
+                            {
+                                ManualAddPersonnelDialog.XamlRoot = this.XamlRoot;
+                            }
+                            return await ManualAddPersonnelDialog.ShowAsync();
+                        });
+                    }
+                    else
+                    {
+                        await ManualAddPersonnelDialog.ShowAsync();
+                    }
+                }
+                else
+                {
+                    ManualAddPersonnelDialog.Hide();
                 }
             }
         }
+
+
 
         private void AddPosition_Click(object sender, RoutedEventArgs e)
         {
@@ -334,6 +375,30 @@ namespace AutoScheduling3.Views.Scheduling
                 foreach (var item in selectedItems)
                 {
                     ViewModel.SelectedPositions.Remove(item);
+                }
+            }
+        }
+
+        private void AddPersonnelListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is ListView listView)
+            {
+                ViewModel.SelectedPersonnelIdsForPosition.Clear();
+                foreach (var item in listView.SelectedItems.Cast<PersonnelDto>())
+                {
+                    ViewModel.SelectedPersonnelIdsForPosition.Add(item.Id);
+                }
+            }
+        }
+
+        private void ManualAddPersonnelListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is ListView listView)
+            {
+                ViewModel.SelectedPersonnelIdsForManualAdd.Clear();
+                foreach (var item in listView.SelectedItems.Cast<PersonnelDto>())
+                {
+                    ViewModel.SelectedPersonnelIdsForManualAdd.Add(item.Id);
                 }
             }
         }
@@ -394,7 +459,7 @@ namespace AutoScheduling3.Views.Scheduling
                     };
 
                     // 创建自动关闭任务
-                    var autoCloseTask = Task.Run(async () =>
+                    Task autoCloseTask = Task.Run(async () =>
                     {
                         await Task.Delay(3000); // 3秒后自动关闭
 

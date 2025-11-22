@@ -38,7 +38,7 @@ namespace AutoScheduling3.Services.ImportExport.Importers
         /// </summary>
         protected override string GetTableName()
         {
-            return "Personnel";
+            return "Personals";
         }
 
         /// <summary>

@@ -18,7 +18,8 @@ namespace AutoScheduling3.Data
 
         public ConstraintRepository(string dbPath)
         {
-            _connectionString = new SqliteConnectionStringBuilder { DataSource = dbPath }.ToString();
+            // 使用优化的连接字符串，启用 WAL 模式以支持并发访问
+            _connectionString = DatabaseConfiguration.GetOptimizedConnectionString(dbPath);
         }
 
         /// <summary>
