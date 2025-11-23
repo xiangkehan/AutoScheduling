@@ -14,7 +14,6 @@ namespace AutoScheduling3.Views.Scheduling
             this.InitializeComponent();
             ViewModel = (App.Current as App).ServiceProvider.GetRequiredService<DraftsViewModel>();
             this.DataContext = ViewModel;
-            this.Name = "DraftsPage"; // For ElementName binding
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)

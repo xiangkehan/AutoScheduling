@@ -106,4 +106,11 @@ public interface ISchedulingService
  /// <param name="scheduleDto">排班DTO</param>
  /// <returns>排班表格数据</returns>
  Task<ScheduleGridData> BuildScheduleGridData(ScheduleDto scheduleDto);
+
+ /// <summary>
+ /// 确认草稿并清空其他草稿
+ /// </summary>
+ /// <param name="id">要确认的草稿ID</param>
+ /// <param name="clearOtherDrafts">是否清空其他草稿，默认为true</param>
+ Task ConfirmScheduleAndClearOthersAsync(int id, bool clearOtherDrafts = true);
 }
