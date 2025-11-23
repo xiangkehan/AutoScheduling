@@ -530,12 +530,79 @@
                             AutomationProperties.LandmarkType="Main"/>
 
                         <!-- By Personnel View -->
-                        <controls:PersonnelScheduleControl
-                            Grid.Row="0"
-                            ScheduleData="{x:Bind ViewModel.SelectedPersonnelSchedule, Mode=OneWay}"
-                            Visibility="{x:Bind ByPersonnelRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                            AutomationProperties.Name="人员视图排班信息"
-                            AutomationProperties.LandmarkType="Main"/>
+                        <Grid Grid.Row="0"
+                              Visibility="{x:Bind ByPersonnelRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- 人员选择器 -->
+                            <Grid Grid.Row="0" 
+                                  Margin="0,0,0,12"
+                                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                  BorderThickness="1"
+                                  CornerRadius="8"
+                                  Padding="16"
+                                  AutomationProperties.Name="人员选择区域">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0"
+                                           Text="选择人员:"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,12,0"
+                                           FontWeight="SemiBold"
+                                           AutomationProperties.Name="人员选择标签"/>
+
+                                <ComboBox Grid.Column="1"
+                                          x:Name="PersonnelSelectorComboBox"
+                                          ItemsSource="{x:Bind ViewModel.PersonnelSchedules, Mode=OneWay}"
+                                          SelectedItem="{x:Bind ViewModel.SelectedPersonnelSchedule, Mode=TwoWay}"
+                                          DisplayMemberPath="PersonnelName"
+                                          HorizontalAlignment="Stretch"
+                                          MinWidth="300"
+                                          AutomationProperties.Name="人员选择下拉框"
+                                          AutomationProperties.HelpText="选择要查看排班详情的人员">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="dto:PersonnelScheduleData">
+                                            <Grid Padding="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{x:Bind PersonnelName}"
+                                                           FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"/>
+
+                                                <StackPanel Grid.Column="1"
+                                                            Orientation="Horizontal"
+                                                            Spacing="8">
+                                                    <TextBlock Text="{x:Bind Workload.TotalShifts}"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock Text="班次"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Grid>
+
+                            <!-- 人员排班详情控件 -->
+                            <controls:PersonnelScheduleControl
+                                Grid.Row="1"
+                                ScheduleData="{x:Bind ViewModel.SelectedPersonnelSchedule, Mode=OneWay}"
+                                AutomationProperties.Name="人员视图排班信息"
+                                AutomationProperties.LandmarkType="Main"/>
+                        </Grid>
                     </Grid>
                 </SplitView.Content>
             </SplitView>
