@@ -80,13 +80,15 @@
                         <TextBlock Text="日期:" 
                                    VerticalAlignment="Center"
                                    AutomationProperties.Name="日期筛选标签"/>
-                        <CalendarDatePicker Date="{x:Bind ViewModel.FilterStartDate, Mode=TwoWay}" 
+                        <CalendarDatePicker x:Name="FilterStartDatePicker"
                                             PlaceholderText="开始日期"
+                                            DateChanged="FilterStartDatePicker_DateChanged"
                                             AutomationProperties.Name="筛选开始日期"
                                             AutomationProperties.HelpText="选择筛选的开始日期"/>
                         <TextBlock Text="至" VerticalAlignment="Center"/>
-                        <CalendarDatePicker Date="{x:Bind ViewModel.FilterEndDate, Mode=TwoWay}" 
+                        <CalendarDatePicker x:Name="FilterEndDatePicker"
                                             PlaceholderText="结束日期"
+                                            DateChanged="FilterEndDatePicker_DateChanged"
                                             AutomationProperties.Name="筛选结束日期"
                                             AutomationProperties.HelpText="选择筛选的结束日期"/>
                     </StackPanel>
@@ -254,13 +256,16 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <Border Grid.Column="0" 
+                                    <Border x:Name="TotalAssignmentsCard"
+                                            Grid.Column="0" 
                                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
                                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
                                             BorderThickness="1" 
                                             CornerRadius="8" 
                                             Padding="12"
-                                            AutomationProperties.Name="总分配数统计卡片">
+                                            AutomationProperties.Name="总分配数统计卡片"
+                                            PointerEntered="StatCard_PointerEntered"
+                                            PointerExited="StatCard_PointerExited">
                                         <StackPanel>
                                             <TextBlock Text="Total Assignments" 
                                                        FontSize="12" 
@@ -274,13 +279,16 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <Border Grid.Column="1" 
+                                    <Border x:Name="PersonnelCountCard"
+                                            Grid.Column="1" 
                                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
                                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
                                             BorderThickness="1" 
                                             CornerRadius="8" 
                                             Padding="12"
-                                            AutomationProperties.Name="参与人员数统计卡片">
+                                            AutomationProperties.Name="参与人员数统计卡片"
+                                            PointerEntered="StatCard_PointerEntered"
+                                            PointerExited="StatCard_PointerExited">
                                         <StackPanel>
                                             <TextBlock Text="Personnel Count" 
                                                        FontSize="12" 
@@ -294,13 +302,16 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <Border Grid.Column="2" 
+                                    <Border x:Name="PositionCountCard"
+                                            Grid.Column="2" 
                                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
                                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
                                             BorderThickness="1" 
                                             CornerRadius="8" 
                                             Padding="12"
-                                            AutomationProperties.Name="参与哨位数统计卡片">
+                                            AutomationProperties.Name="参与哨位数统计卡片"
+                                            PointerEntered="StatCard_PointerEntered"
+                                            PointerExited="StatCard_PointerExited">
                                         <StackPanel>
                                             <TextBlock Text="Position Count" 
                                                        FontSize="12" 
@@ -391,37 +402,38 @@
                         <ScrollViewer Grid.Row="2" 
                                       Margin="0,12,0,0"
                                       AutomationProperties.Name="冲突列表区域">
-                            <ListView ItemsSource="{x:Bind ViewModel.ConflictInfos, Mode=OneWay}" 
+                            <ListView x:Name="ConflictListView"
+                                      ItemsSource="{x:Bind ViewModel.ConflictInfos, Mode=OneWay}" 
                                       SelectionMode="None"
                                       AutomationProperties.Name="冲突列表"
                                       AutomationProperties.LandmarkType="Custom"
                                       AutomationProperties.LiveSetting="Polite">
                                 <ListView.ItemTemplate>
-                                    <DataTemplate>
-                                        <InfoBar Title="{Binding Type}"
-                                                 Message="{Binding Description}"
+                                    <DataTemplate x:DataType="dto:ConflictInfo">
+                                        <InfoBar Title="{x:Bind ConflictType}"
+                                                 Message="{x:Bind Description}"
                                                  Severity="Warning"
                                                  IsOpen="True"
                                                  Margin="0,0,0,8"
-                                                 AutomationProperties.Name="{Binding Type}"
-                                                 AutomationProperties.HelpText="{Binding Description}">
+                                                 AutomationProperties.Name="{x:Bind ConflictType}"
+                                                 AutomationProperties.HelpText="{x:Bind Description}">
                                             <InfoBar.Content>
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <Button Content="定位" 
-                                                            Command="{x:Bind ViewModel.LocateConflictCommand}" 
-                                                            CommandParameter="{Binding}"
+                                                            Tag="{x:Bind}"
+                                                            Click="LocateConflictButton_Click"
                                                             AutomationProperties.Name="定位冲突"
                                                             AutomationProperties.HelpText="在表格中定位并高亮显示此冲突"
                                                             ToolTipService.ToolTip="定位冲突"/>
                                                     <Button Content="忽略" 
-                                                            Command="{x:Bind ViewModel.IgnoreConflictCommand}" 
-                                                            CommandParameter="{Binding}"
+                                                            Tag="{x:Bind}"
+                                                            Click="IgnoreConflictButton_Click"
                                                             AutomationProperties.Name="忽略冲突"
                                                             AutomationProperties.HelpText="将此冲突标记为已忽略"
                                                             ToolTipService.ToolTip="忽略冲突"/>
                                                     <Button Content="修复" 
-                                                            Command="{x:Bind ViewModel.FixConflictCommand}" 
-                                                            CommandParameter="{Binding}"
+                                                            Tag="{x:Bind}"
+                                                            Click="FixConflictButton_Click"
                                                             AutomationProperties.Name="修复冲突"
                                                             AutomationProperties.HelpText="打开修复对话框以解决此冲突"
                                                             ToolTipService.ToolTip="修复冲突"/>
@@ -451,13 +463,14 @@
                             AutomationProperties.LandmarkType="Main"/>
 
                         <!-- List View -->
-                        <ListView Grid.Row="0"
+                        <ListView x:Name="ShiftListView"
+                                  Grid.Row="0"
                                   ItemsSource="{x:Bind ViewModel.ShiftList, Mode=OneWay}"
                                   Visibility="{x:Bind ListRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                                   AutomationProperties.Name="列表视图班次列表"
                                   AutomationProperties.LandmarkType="Main">
                             <ListView.ItemTemplate>
-                                <DataTemplate>
+                                <DataTemplate x:DataType="dto:ShiftListItem">
                                     <Grid Padding="12">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -467,21 +480,21 @@
 
                                         <!-- Date -->
                                         <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                                            <TextBlock Text="{Binding Date, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='MM-dd'}" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding DateTimeDescription}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{x:Bind Date, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='MM-dd'}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{x:Bind DateTimeDescription}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         </StackPanel>
 
                                         <!-- Personnel and Position -->
                                         <StackPanel Grid.Column="1">
-                                            <TextBlock Text="{Binding PersonnelName}" FontSize="16" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{x:Bind PersonnelName}" FontSize="16" FontWeight="SemiBold"/>
                                             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-                                                <TextBlock Text="{Binding TimeSlot}" FontSize="12"/>
-                                                <TextBlock Text="{Binding PositionName}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                <TextBlock Text="{x:Bind TimeSlot}" FontSize="12"/>
+                                                <TextBlock Text="{x:Bind PositionName}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                                 <!-- Tags -->
-                                                <Border Background="{ThemeResource AccentBrush}" CornerRadius="4" Padding="4,2" Visibility="{Binding IsManualAssignment, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <Border Background="{ThemeResource AccentBrush}" CornerRadius="4" Padding="4,2" Visibility="{x:Bind IsManualAssignment, Converter={StaticResource BoolToVisibilityConverter}}">
                                                     <TextBlock Text="手动" FontSize="10" Foreground="White"/>
                                                 </Border>
-                                                <Border Background="{ThemeResource WarningBrush}" CornerRadius="4" Padding="4,2" Visibility="{Binding HasConflict, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <Border Background="{ThemeResource WarningBrush}" CornerRadius="4" Padding="4,2" Visibility="{x:Bind HasConflict, Converter={StaticResource BoolToVisibilityConverter}}">
                                                     <TextBlock Text="冲突" FontSize="10" Foreground="White"/>
                                                 </Border>
                                             </StackPanel>
@@ -490,14 +503,14 @@
                                         <!-- Actions -->
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
                                             <Button Content="详情" 
-                                                    Command="{x:Bind ViewModel.ViewShiftDetailsCommand}" 
-                                                    CommandParameter="{Binding}"
+                                                    Tag="{x:Bind}"
+                                                    Click="ViewShiftDetailsButton_Click"
                                                     AutomationProperties.Name="查看班次详情"
                                                     AutomationProperties.HelpText="查看此班次的详细信息"
                                                     ToolTipService.ToolTip="查看详情"/>
                                             <Button Content="编辑" 
-                                                    Command="{x:Bind ViewModel.EditShiftCommand}" 
-                                                    CommandParameter="{Binding}"
+                                                    Tag="{x:Bind}"
+                                                    Click="EditShiftButton_Click"
                                                     AutomationProperties.Name="编辑班次分配"
                                                     AutomationProperties.HelpText="修改此班次的人员分配"
                                                     ToolTipService.ToolTip="编辑分配"/>

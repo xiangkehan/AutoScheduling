@@ -179,6 +179,15 @@ public sealed partial class CompareSchedulesDialog : ContentDialog
         ValidationErrorBar.Message = message;
         ValidationErrorBar.IsOpen = true;
     }
+
+    /// <summary>
+    /// Esc 键快捷键处理
+    /// </summary>
+    private void EscapeAccelerator_Invoked(Microsoft.UI.Xaml.Input.KeyboardAccelerator sender, Microsoft.UI.Xaml.Input.KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        Hide();
+    }
 }
 
 /// <summary>

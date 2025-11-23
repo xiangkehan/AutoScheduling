@@ -5,6 +5,7 @@ using AutoScheduling3.ViewModels.Scheduling;
 using Microsoft.UI.Xaml;
 using AutoScheduling3.DTOs;
 using Microsoft.UI.Xaml.Input;
+using AutoScheduling3.Helpers;
 
 namespace AutoScheduling3.Views.Scheduling
 {
@@ -17,7 +18,43 @@ namespace AutoScheduling3.Views.Scheduling
             this.InitializeComponent();
             ViewModel = ((App)Application.Current).ServiceProvider.GetRequiredService<ScheduleResultViewModel>();
             this.DataContext = ViewModel;
+
+            // 页面加载完成后附加光标行为
+            this.Loaded += OnPageLoaded;
         }
+
+        /// <summary>
+        /// 页面加载完成时的处理
+        /// </summary>
+        private void OnPageLoaded(object sender, RoutedEventArgs e)
+        {
+            // 页面加载完成后的初始化逻辑
+        }
+
+        #region 光标交互处理
+
+        /// <summary>
+        /// 统计卡片鼠标进入时显示手型光标
+        /// </summary>
+        private void StatCard_PointerEntered(object sender, PointerRoutedEventArgs e)
+        {
+            // 在 WinUI 3 中，通过设置 ProtectedCursor 属性来改变光标
+            // 由于这是在 Page 类内部，我们可以访问 this.ProtectedCursor
+            this.ProtectedCursor = Microsoft.UI.Input.InputSystemCursor.Create(
+                Microsoft.UI.Input.InputSystemCursorShape.Hand);
+        }
+
+        /// <summary>
+        /// 统计卡片鼠标离开时恢复默认光标
+        /// </summary>
+        private void StatCard_PointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            // 恢复默认箭头光标
+            this.ProtectedCursor = Microsoft.UI.Input.InputSystemCursor.Create(
+                Microsoft.UI.Input.InputSystemCursorShape.Arrow);
+        }
+
+        #endregion
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
@@ -79,6 +116,110 @@ namespace AutoScheduling3.Views.Scheduling
             {
                 ViewModel.IsConflictPaneOpen = false;
                 args.Handled = true;
+            }
+        }
+
+        #endregion
+
+        #region 日期筛选处理
+
+        /// <summary>
+        /// 开始日期改变时的处理
+        /// </summary>
+        private void FilterStartDatePicker_DateChanged(CalendarDatePicker sender, CalendarDatePickerDateChangedEventArgs args)
+        {
+            if (args.NewDate.HasValue)
+            {
+                ViewModel.FilterStartDate = args.NewDate.Value.DateTime;
+            }
+        }
+
+        /// <summary>
+        /// 结束日期改变时的处理
+        /// </summary>
+        private void FilterEndDatePicker_DateChanged(CalendarDatePicker sender, CalendarDatePickerDateChangedEventArgs args)
+        {
+            if (args.NewDate.HasValue)
+            {
+                ViewModel.FilterEndDate = args.NewDate.Value.DateTime;
+            }
+        }
+
+        #endregion
+
+        #region 冲突操作处理
+
+        /// <summary>
+        /// 定位冲突按钮点击处理
+        /// </summary>
+        private void LocateConflictButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag != null)
+            {
+                if (ViewModel.LocateConflictCommand.CanExecute(button.Tag))
+                {
+                    _ = ViewModel.LocateConflictCommand.ExecuteAsync(button.Tag);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 忽略冲突按钮点击处理
+        /// </summary>
+        private void IgnoreConflictButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag != null)
+            {
+                if (ViewModel.IgnoreConflictCommand.CanExecute(button.Tag))
+                {
+                    _ = ViewModel.IgnoreConflictCommand.ExecuteAsync(button.Tag);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 修复冲突按钮点击处理
+        /// </summary>
+        private void FixConflictButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag != null)
+            {
+                if (ViewModel.FixConflictCommand.CanExecute(button.Tag))
+                {
+                    _ = ViewModel.FixConflictCommand.ExecuteAsync(button.Tag);
+                }
+            }
+        }
+
+        #endregion
+
+        #region 班次操作处理
+
+        /// <summary>
+        /// 查看班次详情按钮点击处理
+        /// </summary>
+        private void ViewShiftDetailsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag != null)
+            {
+                if (ViewModel.ViewShiftDetailsCommand.CanExecute(button.Tag))
+                {
+                    _ = ViewModel.ViewShiftDetailsCommand.ExecuteAsync(button.Tag);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 编辑班次按钮点击处理
+        /// </summary>
+        private void EditShiftButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag != null)
+            {
+                if (ViewModel.EditShiftCommand.CanExecute(button.Tag))
+                {
+                    _ = ViewModel.EditShiftCommand.ExecuteAsync(button.Tag);
+                }
             }
         }
 

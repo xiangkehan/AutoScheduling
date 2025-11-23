@@ -136,7 +136,7 @@
 
     <!-- 可交互单元格样式（带悬停效果） -->
     <Style x:Key="ResultInteractiveCellStyle" TargetType="Border" BasedOn="{StaticResource ResultCellStyle}">
-        <Setter Property="Cursor" Value="Hand"/>
+        <!-- 注意：WinUI 3 中 Border 不支持 Cursor 属性，需要在代码中通过 ProtectedCursor 设置 -->
     </Style>
 
     <!-- 选中单元格样式 -->
@@ -169,7 +169,7 @@
 
     <!-- 可点击卡片样式 -->
     <Style x:Key="ResultClickableCardStyle" TargetType="Border" BasedOn="{StaticResource ResultCardStyle}">
-        <Setter Property="Cursor" Value="Hand"/>
+        <!-- 注意：WinUI 3 中 Border 不支持 Cursor 属性，需要在代码中通过 ProtectedCursor 设置 -->
     </Style>
 
     <!-- 统计卡片样式 -->
