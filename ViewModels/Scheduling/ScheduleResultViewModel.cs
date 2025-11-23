@@ -243,6 +243,36 @@ namespace AutoScheduling3.ViewModels.Scheduling
             set => SetProperty(ref _personnelSearchText, value);
         }
 
+        private ObservableCollection<PersonnelDto> _allPersonnel = new();
+        public ObservableCollection<PersonnelDto> AllPersonnel
+        {
+            get => _allPersonnel;
+            set => SetProperty(ref _allPersonnel, value);
+        }
+
+        private ObservableCollection<PersonnelDto> _personnelSuggestions = new();
+        public ObservableCollection<PersonnelDto> PersonnelSuggestions
+        {
+            get => _personnelSuggestions;
+            set => SetProperty(ref _personnelSuggestions, value);
+        }
+
+        private PersonnelDto? _selectedPersonnel;
+        public PersonnelDto? SelectedPersonnel
+        {
+            get => _selectedPersonnel;
+            set
+            {
+                if (SetProperty(ref _selectedPersonnel, value))
+                {
+                    if (value != null)
+                    {
+                        PersonnelSearchText = value.Name;
+                    }
+                }
+            }
+        }
+
         #endregion
 
         #region 命令
@@ -361,6 +391,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     return;
                 }
                 Schedule = dto;
+
+                // 加载所有人员数据用于筛选
+                await LoadAllPersonnelAsync();
             }
             catch (Exception ex)
             {
@@ -370,6 +403,41 @@ namespace AutoScheduling3.ViewModels.Scheduling
             {
                 IsLoading = false;
             }
+        }
+
+        /// <summary>
+        /// 加载所有人员数据
+        /// </summary>
+        private async Task LoadAllPersonnelAsync()
+        {
+            try
+            {
+                var personnel = await _personnelService.GetAllAsync();
+                AllPersonnel = new ObservableCollection<PersonnelDto>(personnel);
+                PersonnelSuggestions = new ObservableCollection<PersonnelDto>(personnel);
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowErrorAsync("加载人员列表失败", ex);
+            }
+        }
+
+        /// <summary>
+        /// 更新人员搜索建议
+        /// </summary>
+        public void UpdatePersonnelSuggestions(string searchText)
+        {
+            if (string.IsNullOrWhiteSpace(searchText))
+            {
+                PersonnelSuggestions = new ObservableCollection<PersonnelDto>(AllPersonnel);
+                return;
+            }
+
+            var filtered = AllPersonnel
+                .Where(p => p.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            PersonnelSuggestions = new ObservableCollection<PersonnelDto>(filtered);
         }
 
         private async Task ConfirmAsync()

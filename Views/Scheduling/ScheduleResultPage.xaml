@@ -115,11 +115,24 @@
                                    AutomationProperties.Name="人员搜索标签"/>
                         <AutoSuggestBox x:Name="PersonnelSearchBox"
                                         Text="{x:Bind ViewModel.PersonnelSearchText, Mode=TwoWay}"
-                                        PlaceholderText="搜索人员"
+                                        ItemsSource="{x:Bind ViewModel.PersonnelSuggestions, Mode=OneWay}"
+                                        PlaceholderText="搜索或选择人员"
                                         MinWidth="200"
                                         QueryIcon="Find"
+                                        TextChanged="PersonnelSearchBox_TextChanged"
+                                        SuggestionChosen="PersonnelSearchBox_SuggestionChosen"
+                                        QuerySubmitted="PersonnelSearchBox_QuerySubmitted"
                                         AutomationProperties.Name="人员搜索框"
-                                        AutomationProperties.HelpText="输入人员姓名进行搜索"/>
+                                        AutomationProperties.HelpText="输入人员姓名进行搜索或从下拉列表选择"
+                                        ToolTipService.ToolTip="输入姓名或编号搜索，或点击下拉选择">
+                            <AutoSuggestBox.ItemTemplate>
+                                <DataTemplate x:DataType="dto:PersonnelDto">
+                                    <TextBlock Text="{x:Bind Name}" 
+                                              Padding="8,4"
+                                              VerticalAlignment="Center"/>
+                                </DataTemplate>
+                            </AutoSuggestBox.ItemTemplate>
+                        </AutoSuggestBox>
                     </StackPanel>
 
                     <!-- Spacer -->

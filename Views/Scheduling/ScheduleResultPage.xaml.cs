@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml;
 using AutoScheduling3.DTOs;
 using Microsoft.UI.Xaml.Input;
 using AutoScheduling3.Helpers;
+using System.Linq;
 
 namespace AutoScheduling3.Views.Scheduling
 {
@@ -142,6 +143,57 @@ namespace AutoScheduling3.Views.Scheduling
             if (args.NewDate.HasValue)
             {
                 ViewModel.FilterEndDate = args.NewDate.Value.DateTime;
+            }
+        }
+
+        #endregion
+
+        #region 人员搜索处理
+
+        /// <summary>
+        /// 人员搜索框文本改变时的处理
+        /// </summary>
+        private void PersonnelSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+        {
+            // 只在用户输入时更新建议列表
+            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+            {
+                ViewModel.UpdatePersonnelSuggestions(sender.Text);
+            }
+        }
+
+        /// <summary>
+        /// 人员搜索框选择建议项时的处理
+        /// </summary>
+        private void PersonnelSearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+        {
+            if (args.SelectedItem is PersonnelDto personnel)
+            {
+                ViewModel.SelectedPersonnel = personnel;
+                sender.Text = personnel.Name;
+            }
+        }
+
+        /// <summary>
+        /// 人员搜索框提交查询时的处理
+        /// </summary>
+        private void PersonnelSearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+        {
+            if (args.ChosenSuggestion is PersonnelDto personnel)
+            {
+                // 用户从下拉列表选择了一个项
+                ViewModel.SelectedPersonnel = personnel;
+            }
+            else if (!string.IsNullOrWhiteSpace(args.QueryText))
+            {
+                // 用户直接输入并按回车
+                // 尝试从建议列表中找到匹配的第一个人员
+                var matchedPersonnel = ViewModel.PersonnelSuggestions.FirstOrDefault();
+                if (matchedPersonnel != null)
+                {
+                    ViewModel.SelectedPersonnel = matchedPersonnel;
+                    sender.Text = matchedPersonnel.Name;
+                }
             }
         }
 
