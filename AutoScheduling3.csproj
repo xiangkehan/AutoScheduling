@@ -59,6 +59,7 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6901" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="TinyPinyin" Version="1.1.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
