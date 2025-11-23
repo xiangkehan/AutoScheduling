@@ -319,10 +319,15 @@ namespace AutoScheduling3.Controls
         /// </summary>
         private void ShowListView()
         {
-            ListViewRadioButton.IsChecked = true;
-            CalendarViewRadioButton.IsChecked = false;
-            ShiftsListView.Visibility = Visibility.Visible;
-            CalendarViewContainer.Visibility = Visibility.Collapsed;
+            // 在 XAML 初始化期间，某些控件可能尚未创建，需要进行空值检查
+            if (ListViewRadioButton != null)
+                ListViewRadioButton.IsChecked = true;
+            if (CalendarViewRadioButton != null)
+                CalendarViewRadioButton.IsChecked = false;
+            if (ShiftsListView != null)
+                ShiftsListView.Visibility = Visibility.Visible;
+            if (CalendarViewContainer != null)
+                CalendarViewContainer.Visibility = Visibility.Collapsed;
         }
 
         /// <summary>
@@ -330,10 +335,15 @@ namespace AutoScheduling3.Controls
         /// </summary>
         private void ShowCalendarView()
         {
-            ListViewRadioButton.IsChecked = false;
-            CalendarViewRadioButton.IsChecked = true;
-            ShiftsListView.Visibility = Visibility.Collapsed;
-            CalendarViewContainer.Visibility = Visibility.Visible;
+            // 在 XAML 初始化期间，某些控件可能尚未创建，需要进行空值检查
+            if (ListViewRadioButton != null)
+                ListViewRadioButton.IsChecked = false;
+            if (CalendarViewRadioButton != null)
+                CalendarViewRadioButton.IsChecked = true;
+            if (ShiftsListView != null)
+                ShiftsListView.Visibility = Visibility.Collapsed;
+            if (CalendarViewContainer != null)
+                CalendarViewContainer.Visibility = Visibility.Visible;
         }
 
         #region 事件处理程序

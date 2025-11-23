@@ -256,7 +256,6 @@
                               BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                               BorderThickness="1"
                               CornerRadius="8"
-                              ItemContainerStyle="{StaticResource ListViewItemContainerStyle1}"
                               AutomationProperties.Name="班次列表">
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="local:PersonnelShiftItem">

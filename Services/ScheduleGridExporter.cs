@@ -18,8 +18,7 @@ public class ScheduleGridExporter : IScheduleGridExporter
 {
     public ScheduleGridExporter()
     {
-        // 设置 EPPlus 许可证上下文
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        // EPPlus 许可证已在 App.xaml.cs 中设置
     }
 
     /// <summary>
