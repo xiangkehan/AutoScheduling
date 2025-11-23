@@ -618,7 +618,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             if (_personnelNameCache.TryGetValue(personnelId, out var name))
                 return name;
 
-            var personnel = await _personnelService.GetPersonnelByIdAsync(personnelId);
+            var personnel = await _personnelService.GetByIdAsync(personnelId);
             name = personnel?.Name ?? $"人员{personnelId}";
             _personnelNameCache[personnelId] = name;
             return name;
@@ -632,7 +632,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             if (_positionNameCache.TryGetValue(positionId, out var name))
                 return name;
 
-            var position = await _positionService.GetPositionByIdAsync(positionId);
+            var position = await _positionService.GetByIdAsync(positionId);
             name = position?.Name ?? $"哨位{positionId}";
             _positionNameCache[positionId] = name;
             return name;
@@ -660,7 +660,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// <summary>
         /// 获取班次备注
         /// </summary>
-        private string? GetShiftRemarks(SingleShift shift)
+        private string? GetShiftRemarks(ShiftDto shift)
         {
             var remarks = new List<string>();
             

@@ -6,14 +6,48 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Microsoft.UI.Text;
+using Windows.UI.Text;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace AutoScheduling3.Controls
 {
     /// <summary>
     /// 人员排班视图控件（按人员显示工作量、班次列表和日历视图）
     /// </summary>
-    public sealed partial class PersonnelScheduleControl : UserControl
+    public sealed partial class PersonnelScheduleControl : UserControl, INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        // Add properties for data binding
+        public ObservableCollection<PersonnelShiftItem> SelectedDateShifts { get; } = new ObservableCollection<PersonnelShiftItem>();
+        
+        private bool _hasSelectedDateShifts;
+        public bool HasSelectedDateShifts
+        {
+            get => _hasSelectedDateShifts;
+            set
+            {
+                if (_hasSelectedDateShifts != value)
+                {
+                    _hasSelectedDateShifts = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        // Add this constructor to ensure InitializeComponent is called
+        public PersonnelScheduleControl()
+        {
+            InitializeComponent();
+            _currentMonth = DateTime.Now;
+        }
+
         /// <summary>
         /// ScheduleData 依赖属性
         /// </summary>
@@ -53,6 +87,8 @@ namespace AutoScheduling3.Controls
         /// </summary>
         public event EventHandler<ShiftClickedEventArgs>? ShiftClicked;
 
+   
+
         // 时段描述数组
         private static readonly string[] TimeSlotDescriptions = new[]
         {
@@ -64,18 +100,11 @@ namespace AutoScheduling3.Controls
         // 星期数组
         private static readonly string[] DayOfWeekNames = new[]
         {
-            "周一", "周二", "周三", "周四", "周五", "周六", "周日"
+            "周日", "周一", "周二", "周三", "周四", "周五", "周六"
         };
 
-        // 日历视图相关
         private DateTime _currentMonth;
         private DateTime? _selectedDate;
-
-        public PersonnelScheduleControl()
-        {
-            InitializeComponent();
-            _currentMonth = DateTime.Now;
-        }
 
         /// <summary>
         /// ScheduleData 属性变化回调
@@ -131,7 +160,8 @@ namespace AutoScheduling3.Controls
             WeekComboBox.Items.Clear();
             ShiftsListView.Items.Clear();
             CalendarItemsRepeater.ItemsSource = null;
-            SelectedDateShiftsRepeater.ItemsSource = null;
+            SelectedDateShifts.Clear();
+            HasSelectedDateShifts = false;
         }
 
         /// <summary>
@@ -160,8 +190,8 @@ namespace AutoScheduling3.Controls
             DayShiftsProgress.Maximum = maxShifts;
             DayShiftsProgress.Value = workload.DayShifts;
 
-            NightShiftsProgress.Maximum = maxShifts;
-            NightShiftsProgress.Value = workload.NightShifts;
+            NightShiftsProgressBar.Maximum = maxShifts;
+            NightShiftsProgressBar.Value = workload.NightShifts;
 
             WorkHoursProgress.Maximum = maxShifts * 2;
             WorkHoursProgress.Value = workHours;
@@ -200,7 +230,7 @@ namespace AutoScheduling3.Controls
                 {
                     Date = s.Date,
                     DateString = s.Date.ToString("MM-dd"),
-                    DayOfWeek = DayOfWeekNames[(int)s.Date.DayOfWeek - 1],
+                    DayOfWeek = DayOfWeekNames[(int)s.Date.DayOfWeek],
                     TimeSlot = s.TimeSlot,
                     PositionName = s.PositionName,
                     IsNightShift = s.IsNightShift,
@@ -241,9 +271,8 @@ namespace AutoScheduling3.Controls
             var firstDayOfMonth = new DateTime(_currentMonth.Year, _currentMonth.Month, 1);
             var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
-            // 获取第一周需要显示的起始日期（从周一开始）
+            // 获取第一周需要显示的起始日期（从周日开始）
             int daysToSubtract = (int)firstDayOfMonth.DayOfWeek;
-            if (daysToSubtract == 0) daysToSubtract = 7; // 周日是0，转换为7
             var startDate = firstDayOfMonth.AddDays(-daysToSubtract);
 
             // 生成42天的日期（6周）
@@ -268,7 +297,6 @@ namespace AutoScheduling3.Controls
                     DayForeground = isCurrentMonth
                         ? (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"]
                         : (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
-                    DayFontWeight = isToday ? Microsoft.UI.Text.FontWeights.Bold : Microsoft.UI.Text.FontWeights.Normal,
                     Shifts = shifts
                 };
 
@@ -383,12 +411,15 @@ namespace AutoScheduling3.Controls
         /// <summary>
         /// 日历日期项点击事件
         /// </summary>
-        private void CalendarDayItem_Tapped(object sender, RoutedEventArgs e)
+        private void CalendarDayItem_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is CalendarDayItem dayItem)
             {
                 _selectedDate = dayItem.Date;
                 UpdateSelectedDateShifts(dayItem.Shifts);
+
+                // Re-build calendar to update selection state
+                BuildCalendarDays(ScheduleData?.CalendarData);
             }
         }
 
@@ -397,6 +428,8 @@ namespace AutoScheduling3.Controls
         /// </summary>
         private void UpdateSelectedDateShifts(List<PersonnelShift> shifts)
         {
+            SelectedDateShifts.Clear();
+
             if (shifts != null && shifts.Count > 0)
             {
                 var shiftItems = shifts
@@ -411,15 +444,14 @@ namespace AutoScheduling3.Controls
                         Remarks = s.Remarks ?? "",
                         HasRemarks = !string.IsNullOrEmpty(s.Remarks),
                         OriginalShift = s
-                    })
-                    .ToList();
+                    });
 
-                SelectedDateShiftsRepeater.ItemsSource = shiftItems;
+                foreach (var item in shiftItems)
+                {
+                    SelectedDateShifts.Add(item);
+                }
             }
-            else
-            {
-                SelectedDateShiftsRepeater.ItemsSource = null;
-            }
+            HasSelectedDateShifts = SelectedDateShifts.Any();
         }
 
         /// <summary>
@@ -439,7 +471,7 @@ namespace AutoScheduling3.Controls
     #region 数据模型
 
     /// <summary>
-    /// 班次列表项（用于列表视图显示）
+    /// 人员班次列表项（用于列表视图显示）
     /// </summary>
     public class PersonnelShiftItem
     {
@@ -468,7 +500,7 @@ namespace AutoScheduling3.Controls
         public bool HasDayShift { get; set; }
         public bool HasNightShift { get; set; }
         public Brush DayForeground { get; set; } = new SolidColorBrush(Microsoft.UI.Colors.Black);
-        public Microsoft.UI.Text.FontWeight DayFontWeight { get; set; } = Microsoft.UI.Text.FontWeights.Normal;
+        public FontWeight DayFontWeight { get; set; }
         public List<PersonnelShift> Shifts { get; set; } = new();
         public bool HasSelectedDateShifts => Shifts?.Count > 0;
     }

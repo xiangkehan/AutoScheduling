@@ -61,6 +61,11 @@ namespace AutoScheduling3.Models
         /// </summary>
         public bool IsNightShift { get; set; } = false;
 
+        /// <summary>
+        /// 是否为手动分配（用于标记用户手动编辑的班次）
+        /// </summary>
+        public bool IsManualAssignment { get; set; } = false;
+
         public override string ToString() => $"Shift[{Id}] Pos={PositionId} Person={PersonnelId} {StartTime:o} -> {EndTime:o}";
     }
 }

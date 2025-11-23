@@ -54,7 +54,7 @@
                           SelectionChanged="ScheduleListView_SelectionChanged"
                           AutomationProperties.Name="历史排班列表"
                           AutomationProperties.HelpText="选择要与当前排班进行比较的历史排班"
-                          AutomationProperties.LandmarkType="List">
+                          AutomationProperties.LandmarkType="Custom">
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <Grid Padding="12"

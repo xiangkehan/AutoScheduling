@@ -192,7 +192,7 @@
                                   AutomationProperties.HelpText="在全屏模式下查看排班表格"
                                   ToolTipService.ToolTip="全屏查看"/>
                     <AppBarButton x:Name="CompareButton" 
-                                  Icon="Columns" 
+                                  Icon="TwoPage" 
                                   Label="Compare" 
                                   Command="{x:Bind ViewModel.CompareSchedulesCommand}"
                                   AutomationProperties.Name="比较排班"
@@ -214,11 +214,11 @@
                        DisplayMode="Inline"
                        OpenPaneLength="360">
                 <SplitView.Pane>
-                    <Grid BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                      <Grid BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
                           BorderThickness="1,0,0,0" 
                           Padding="12"
                           AutomationProperties.Name="冲突和统计信息面板"
-                          AutomationProperties.LandmarkType="Complementary">
+                          AutomationProperties.LandmarkType="Custom">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -326,7 +326,7 @@
                                               MaxHeight="200" 
                                               ScrollViewer.VerticalScrollBarVisibility="Auto"
                                               AutomationProperties.Name="人员工作量统计表"
-                                              AutomationProperties.LandmarkType="Region">
+                                              AutomationProperties.LandmarkType="Custom">
                                         <ListView.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid>
@@ -339,7 +339,12 @@
                                                     <TextBlock Grid.Column="0" Text="{Binding PersonnelName}" VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding TotalShifts}" Margin="16,0" VerticalAlignment="Center"/>
                                                     <ProgressBar Grid.Column="2" Width="100" Value="{Binding TotalShifts}" Maximum="20" Margin="8,0"/>
-                                                    <TextBlock Grid.Column="3" Text="{Binding DayShifts, StringFormat='{}{0}日/{1}夜', ConverterParameter=DayNight}" Margin="16,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    <TextBlock Grid.Column="3"
+                                                               Text="{Binding DayNightSummary}"
+                                                               Margin="16,0,0,0"
+                                                               VerticalAlignment="Center"
+                                                               FontSize="12"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                                 </Grid>
                                             </DataTemplate>
                                         </ListView.ItemTemplate>
@@ -357,7 +362,7 @@
                                               MaxHeight="200" 
                                               ScrollViewer.VerticalScrollBarVisibility="Auto"
                                               AutomationProperties.Name="哨位覆盖率统计表"
-                                              AutomationProperties.LandmarkType="Region">
+                                              AutomationProperties.LandmarkType="Custom">
                                         <ListView.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid>
@@ -368,7 +373,12 @@
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Grid.Column="0" Text="{Binding PositionName}" VerticalAlignment="Center"/>
                                                     <ProgressBar Grid.Column="1" Width="100" Value="{Binding CoverageRate}" Maximum="1" Margin="8,0"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding CoverageRate, StringFormat='{}{0:P0}', ConverterParameter=Percentage}" Margin="16,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding CoverageRateDisplay}"
+                                                               Margin="16,0,0,0"
+                                                               VerticalAlignment="Center"
+                                                               FontSize="12"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                                 </Grid>
                                             </DataTemplate>
                                         </ListView.ItemTemplate>
@@ -384,7 +394,7 @@
                             <ListView ItemsSource="{x:Bind ViewModel.ConflictInfos, Mode=OneWay}" 
                                       SelectionMode="None"
                                       AutomationProperties.Name="冲突列表"
-                                      AutomationProperties.LandmarkType="Region"
+                                      AutomationProperties.LandmarkType="Custom"
                                       AutomationProperties.LiveSetting="Polite">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
@@ -395,7 +405,7 @@
                                                  Margin="0,0,0,8"
                                                  AutomationProperties.Name="{Binding Type}"
                                                  AutomationProperties.HelpText="{Binding Description}">
-                                            <InfoBar.ActionButton>
+                                            <InfoBar.Content>
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <Button Content="定位" 
                                                             Command="{x:Bind ViewModel.LocateConflictCommand}" 
@@ -416,7 +426,7 @@
                                                             AutomationProperties.HelpText="打开修复对话框以解决此冲突"
                                                             ToolTipService.ToolTip="修复冲突"/>
                                                 </StackPanel>
-                                            </InfoBar.ActionButton>
+                                            </InfoBar.Content>
                                         </InfoBar>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>

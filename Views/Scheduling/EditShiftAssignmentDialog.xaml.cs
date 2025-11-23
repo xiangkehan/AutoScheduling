@@ -218,14 +218,24 @@ public sealed partial class EditShiftAssignmentDialog : ContentDialog
         // 只有在选中了人员时才处理
         if (PersonnelListView.SelectedItem != null && IsPrimaryButtonEnabled)
         {
-            // 触发主按钮点击
-            var clickArgs = new ContentDialogButtonClickEventArgs();
-            ContentDialog_PrimaryButtonClick(this, clickArgs);
-            
-            if (!clickArgs.Cancel)
+            if (PersonnelListView.SelectedItem is PersonnelOption selected)
             {
+                // 检查是否选择了不可用的人员
+                if (!selected.IsAvailable)
+                {
+                    ShowValidationError($"人员 {selected.Name} 当前不可用: {selected.AvailabilityText}");
+                    args.Handled = true;
+                    return;
+                }
+
+                SelectedPersonnelId = selected.Id;
                 Hide();
             }
+            else
+            {
+                ShowValidationError("请选择一个人员");
+            }
+            
             args.Handled = true;
         }
     }

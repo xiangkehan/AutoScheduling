@@ -189,7 +189,7 @@
                     <StackPanel x:Name="ConstraintsPanel"
                                 Spacing="8"
                                 AutomationProperties.Name="约束评估列表"
-                                AutomationProperties.LandmarkType="Region">
+                                AutomationProperties.LandmarkType="Custom">
                         <!-- 约束评估项将动态添加 -->
                     </StackPanel>
                 </Border>

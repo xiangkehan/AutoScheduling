@@ -167,7 +167,7 @@ public class ScheduleGridExporter : IScheduleGridExporter
                 int excelRow = startRow + rowIndex;
 
                 // 写入行头（日期时段）
-                worksheet.Cells[excelRow, 1].Value = row.DateTimeLabel;
+                worksheet.Cells[excelRow, 1].Value = row.DisplayText;
                 worksheet.Cells[excelRow, 1].Style.Font.Bold = true;
 
                 // 写入单元格数据
@@ -243,7 +243,7 @@ public class ScheduleGridExporter : IScheduleGridExporter
             // 写入数据行
             foreach (var row in gridData.Rows)
             {
-                sb.Append(EscapeCsvValue(row.DateTimeLabel));
+                sb.Append(EscapeCsvValue(row.DisplayText));
 
                 foreach (var column in gridData.Columns)
                 {
@@ -415,7 +415,7 @@ public class ScheduleGridExporter : IScheduleGridExporter
             currentRow++;
 
             worksheet.Cells[currentRow, 1].Value = "工作时长";
-            worksheet.Cells[currentRow, 2].Value = $"{personnelSchedule.Workload.TotalHours} 小时";
+            worksheet.Cells[currentRow, 2].Value = $"{personnelSchedule.Workload.TotalShifts * 2} 小时";
             currentRow += 2;
 
             // 班次列表

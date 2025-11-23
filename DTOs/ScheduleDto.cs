@@ -79,6 +79,12 @@ public class ScheduleDto
     [Required(ErrorMessage = "结束日期不能为空")]
     [JsonPropertyName("endDate")]
     public DateTime EndDate { get; set; }
+
+    /// <summary>
+    /// 软约束评分
+    /// </summary>
+    [JsonPropertyName("softScores")]
+    public SoftConstraintScores? SoftScores { get; set; }
 }
 
 /// <summary>
@@ -145,6 +151,12 @@ public class ShiftDto
     [Range(0, 11, ErrorMessage = "时段索引必须在0-11之间")]
     [JsonPropertyName("periodIndex")]
     public int PeriodIndex { get; set; }
+
+    /// <summary>
+    /// 是否为手动指定的班次
+    /// </summary>
+    [JsonPropertyName("isManualAssignment")]
+    public bool IsManualAssignment { get; set; }
 }
 
 /// <summary>

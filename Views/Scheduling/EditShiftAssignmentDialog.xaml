@@ -132,7 +132,7 @@
                               SelectionChanged="PersonnelListView_SelectionChanged"
                               AutomationProperties.Name="可用人员列表"
                               AutomationProperties.HelpText="选择要分配到此班次的人员"
-                              AutomationProperties.LandmarkType="List">
+                              AutomationProperties.LandmarkType="Custom">
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <Grid Padding="8"
