@@ -80,10 +80,10 @@ public static class PinyinHelper
     }
 
     /// <summary>
-    /// 获取中文字符串的完整拼音
+    /// 获取中文字符串的完整拼音（无空格连续）
     /// </summary>
     /// <param name="chinese">中文字符串</param>
-    /// <returns>完整拼音字符串（小写，空格分隔），例如："张三" -> "zhang san"</returns>
+    /// <returns>完整拼音字符串（小写，无空格），例如："张三" -> "zhangsan"</returns>
     public static string GetFullPinyin(string chinese)
     {
         if (string.IsNullOrWhiteSpace(chinese))
@@ -98,6 +98,60 @@ public static class PinyinHelper
             {
                 return cached;
             }
+        }
+
+        try
+        {
+            var result = new StringBuilder();
+
+            foreach (char c in chinese)
+            {
+                // 如果是中文字符，获取完整拼音
+                if (TinyPinyinLib.IsChinese(c))
+                {
+                    var pinyin = TinyPinyinLib.GetPinyin(c);
+                    if (!string.IsNullOrEmpty(pinyin))
+                    {
+                        result.Append(pinyin.ToLower());
+                    }
+                }
+                // 如果是字母或数字，直接添加
+                else if (char.IsLetterOrDigit(c))
+                {
+                    result.Append(char.ToLower(c));
+                }
+            }
+
+            var fullPinyin = result.ToString();
+
+            // 缓存结果
+            lock (_cacheLock)
+            {
+                if (!_fullPinyinCache.ContainsKey(chinese))
+                {
+                    _fullPinyinCache[chinese] = fullPinyin;
+                }
+            }
+
+            return fullPinyin;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PinyinHelper: 获取完整拼音失败: {ex.Message}");
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// 获取中文字符串的完整拼音（带空格分隔）
+    /// </summary>
+    /// <param name="chinese">中文字符串</param>
+    /// <returns>完整拼音字符串（小写，空格分隔），例如："张三" -> "zhang san"</returns>
+    public static string GetFullPinyinWithSeparator(string chinese)
+    {
+        if (string.IsNullOrWhiteSpace(chinese))
+        {
+            return string.Empty;
         }
 
         try
@@ -130,22 +184,11 @@ public static class PinyinHelper
                 }
             }
 
-            var fullPinyin = result.ToString();
-
-            // 缓存结果
-            lock (_cacheLock)
-            {
-                if (!_fullPinyinCache.ContainsKey(chinese))
-                {
-                    _fullPinyinCache[chinese] = fullPinyin;
-                }
-            }
-
-            return fullPinyin;
+            return result.ToString();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"PinyinHelper: 获取完整拼音失败: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"PinyinHelper: 获取完整拼音（带分隔符）失败: {ex.Message}");
             return string.Empty;
         }
     }

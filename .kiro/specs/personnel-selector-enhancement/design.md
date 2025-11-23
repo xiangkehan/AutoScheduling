@@ -62,30 +62,68 @@ AutoSuggestBox (WinUI 3原生控件)
 
 ### 1. FuzzyMatcher 类（核心算法）
 
-负责实现模糊匹配算法。
+负责实现增强的模糊匹配算法。
 
 **接口：**
 ```csharp
-public class FuzzyMatcher
+public static class FuzzyMatcher
 {
-    // 模糊匹配
+    // 主匹配方法
     public static List<MatchResult> Match(
         string query, 
         IEnumerable<PersonnelDto> candidates,
+        FuzzyMatchOptions? options = null);
+    
+    // 匹配单个候选人
+    private static MatchResult MatchSingle(
+        string normalizedQuery,
+        PersonnelDto candidate,
         FuzzyMatchOptions options);
     
-    // 计算匹配分数
-    private static int CalculateScore(string query, string target);
+    // 标准化文本
+    private static string NormalizeText(string text, bool removePunctuation = true);
     
-    // 拼音首字母匹配
-    private static bool MatchPinyinInitials(string query, string target);
+    // 计算编辑距离
+    private static int CalculateEditDistance(string source, string target);
+    
+    // 拼音完全匹配
+    private static bool MatchFullPinyin(string query, string name);
+    
+    // 拼音前缀匹配
+    private static bool MatchPinyinPrefix(string query, string name);
+    
+    // 拼音首字母完全匹配
+    private static bool MatchPinyinInitialsExact(string query, string name);
+    
+    // 拼音首字母前缀匹配
+    private static bool MatchPinyinInitialsPrefix(string query, string name);
+    
+    // 序列模糊匹配
+    private static bool FuzzySequenceMatch(string query, string target);
+    
+    // 计算精细化分数
+    private static int CalculateFinalScore(
+        int baseScore,
+        string query,
+        string target,
+        int matchPosition,
+        FuzzyMatchOptions options);
+    
+    // 计算长度相似度
+    private static double CalculateLengthSimilarity(int queryLength, int targetLength);
+    
+    // 计算匹配位置加成
+    private static int CalculatePositionBonus(int position, int targetLength);
+    
+    // 计算连续匹配加成
+    private static int CalculateContinuousMatchBonus(string query, string target);
 }
 ```
 
 
 ### 2. PinyinHelper 类（拼音转换）
 
-负责中文转拼音和拼音首字母提取。
+负责中文转拼音和拼音首字母提取，支持缓存优化。
 
 **接口：**
 ```csharp
@@ -94,11 +132,25 @@ public static class PinyinHelper
     // 获取拼音首字母
     public static string GetPinyinInitials(string chinese);
     
-    // 获取完整拼音
+    // 获取完整拼音（无空格连续）
     public static string GetFullPinyin(string chinese);
     
-    // 缓存拼音结果
-    private static Dictionary<string, string> _pinyinCache;
+    // 获取完整拼音（带空格分隔）
+    public static string GetFullPinyinWithSeparator(string chinese);
+    
+    // 判断字符是否为中文
+    public static bool IsChinese(char c);
+    
+    // 清空缓存
+    public static void ClearCache();
+    
+    // 获取缓存统计信息
+    public static (int InitialsCount, int FullPinyinCount) GetCacheStats();
+    
+    // 拼音缓存
+    private static Dictionary<string, string> _pinyinInitialsCache;
+    private static Dictionary<string, string> _fullPinyinCache;
+    private static object _cacheLock;
 }
 ```
 
@@ -136,15 +188,22 @@ public class MatchResult
     public PersonnelDto Personnel { get; set; }
     public int Score { get; set; }  // 匹配分数，越高越匹配
     public MatchType Type { get; set; }  // 匹配类型
+    public int EditDistance { get; set; }  // 编辑距离（用于编辑距离匹配）
+    public double Similarity { get; set; }  // 相似度（0-1之间）
 }
 
 public enum MatchType
 {
-    ExactMatch,      // 完全匹配
-    PrefixMatch,     // 前缀匹配
-    SubstringMatch,  // 子串匹配
-    PinyinMatch,     // 拼音匹配
-    FuzzyMatch       // 模糊匹配
+    None = 0,                    // 无匹配
+    ExactMatch = 1,              // 完全匹配
+    PrefixMatch = 2,             // 前缀匹配
+    SubstringMatch = 3,          // 子串匹配
+    PinyinExactMatch = 4,        // 拼音完全匹配
+    PinyinPrefixMatch = 5,       // 拼音前缀匹配
+    PinyinInitialsExactMatch = 6,// 拼音首字母完全匹配
+    PinyinInitialsPrefixMatch = 7,// 拼音首字母前缀匹配
+    EditDistanceMatch = 8,       // 编辑距离模糊匹配
+    SequenceFuzzyMatch = 9       // 序列模糊匹配
 }
 ```
 
@@ -153,11 +212,26 @@ public enum MatchType
 ```csharp
 public class FuzzyMatchOptions
 {
+    // 基础选项
     public bool EnableFuzzyMatch { get; set; } = true;
     public bool EnablePinyinMatch { get; set; } = true;
+    public bool EnableEditDistanceMatch { get; set; } = true;
     public bool CaseSensitive { get; set; } = false;
     public int MaxResults { get; set; } = 50;
     public int MinScore { get; set; } = 0;
+    
+    // 编辑距离选项
+    public int MaxEditDistance { get; set; } = 2;  // 最大编辑距离
+    public bool AutoAdjustEditDistance { get; set; } = true;  // 根据查询长度自动调整
+    
+    // 拼音选项
+    public bool EnableFullPinyinMatch { get; set; } = true;  // 启用完整拼音匹配
+    public bool EnablePinyinInitialsMatch { get; set; } = true;  // 启用拼音首字母匹配
+    
+    // 分数调整选项
+    public bool EnableLengthSimilarityBonus { get; set; } = true;  // 启用长度相似度加成
+    public bool EnablePositionBonus { get; set; } = true;  // 启用匹配位置加成
+    public bool EnableContinuousMatchBonus { get; set; } = true;  // 启用连续匹配加成
 }
 ```
 
@@ -244,6 +318,26 @@ public class PersonnelSelectedEventArgs : EventArgs
 *对于任意*快速连续输入，系统应该减少搜索调用次数（使用防抖技术）
 **验证：需求 6.2**
 
+### 属性 18：拼音完全匹配正确性
+*对于任意*完整拼音输入，系统应该返回拼音完全匹配的人员
+**验证：需求 1.4, 2.1**
+
+### 属性 19：拼音前缀匹配正确性
+*对于任意*拼音前缀输入，系统应该返回拼音以该前缀开头的人员
+**验证：需求 1.4, 2.2**
+
+### 属性 20：编辑距离容错性
+*对于任意*包含少量错误的输入（编辑距离≤阈值），系统应该返回相近的匹配结果
+**验证：需求 2.1, 2.3**
+
+### 属性 21：标准化一致性
+*对于任意*包含空格或特殊字符的输入，标准化后应该与不含这些字符的输入产生相同的匹配结果
+**验证：需求 2.1**
+
+### 属性 22：分数计算单调性
+*对于任意*两个匹配结果，更精确的匹配应该获得更高的分数
+**验证：需求 2.8**
+
 
 ## 错误处理
 
@@ -327,39 +421,204 @@ public class PersonnelSelectedEventArgs : EventArgs
 
 ## 实现细节
 
-### 模糊匹配算法
+### 增强的模糊匹配算法
 
-使用多层匹配策略，按优先级排序：
+基于"标准化处理→拼音映射→模糊比对→结果排序"四步流程，实现高精度的拼音+模糊匹配：
 
-1. **完全匹配**（分数：100）
+#### 第一步：标准化处理
+
+**目的**：消除格式干扰，确保匹配准确性
+
+- **文本标准化**：
+  - 转小写（不区分大小写）
+  - 去除空格和特殊字符（如！、，、。等）
+  - 示例："苹果！" → "苹果"，" 计算 机 " → "计算机"
+
+- **查询词标准化**：
+  - 转小写
+  - 去除空格
+  - 过滤非字母非中文字符
+  - 示例："Ping Guo123" → "pingguo"，"PYQ " → "pyq"
+
+#### 第二步：拼音映射
+
+**目的**：建立汉字与拼音的对应关系，支持全拼和简拼双模式
+
+- **全拼生成**：将汉字转为连续无空格全拼
+  - 示例："朋友圈" → "pengyouquan"
+  
+- **简拼生成**：提取每个汉字拼音的首字母
+  - 示例："朋友圈" → "pyq"
+
+- **拼音缓存**：预生成并缓存拼音，避免重复转换
+
+#### 第三步：多层匹配策略
+
+使用分层匹配，按优先级和精度计算分数：
+
+1. **完全匹配**（基础分：100）
    - 输入文本与人员姓名完全相同（不区分大小写）
+   - 示例："张三" 完全匹配 "张三"
 
-2. **前缀匹配**（分数：90）
+2. **前缀匹配**（基础分：90）
    - 人员姓名以输入文本开头
+   - 示例："张" 前缀匹配 "张三"
 
-3. **子串匹配**（分数：70）
+3. **子串匹配**（基础分：70）
    - 人员姓名包含输入文本
+   - 示例："三" 子串匹配 "张三"
 
-4. **拼音首字母匹配**（分数：60）
-   - 输入文本匹配人员姓名的拼音首字母
-   - 例如："zs" 匹配 "张三"（Zhang San）
+4. **拼音完全匹配**（基础分：85）
+   - 输入文本与完整拼音完全匹配
+   - 示例："zhangsan" 完全匹配 "张三"（zhang san）
 
-5. **模糊匹配**（分数：40）
+5. **拼音前缀匹配**（基础分：75）
+   - 完整拼音以输入文本开头
+   - 示例："zhang" 前缀匹配 "张三"（zhang san）
+
+6. **拼音首字母完全匹配**（基础分：65）
+   - 输入文本与拼音首字母完全匹配
+   - 示例："zs" 完全匹配 "张三"（zhang san → zs）
+
+7. **拼音首字母前缀匹配**（基础分：55）
+   - 拼音首字母以输入文本开头
+   - 示例："z" 前缀匹配 "张三"（zs）
+
+8. **编辑距离模糊匹配**（基础分：30-50，根据编辑距离动态计算）
+   - 使用Levenshtein编辑距离算法
+   - 允许少量错误（替换、插入、删除）
+   - 分数计算：`50 - (编辑距离 * 10)`
+   - 阈值：查询词长度≤3时，最大编辑距离=1；长度≥4时，最大编辑距离=2
+   - 示例："zhangsa" 匹配 "zhangsan"（编辑距离1，分数40）
+
+9. **序列模糊匹配**（基础分：25）
    - 输入文本的字符在人员姓名中按顺序出现
-   - 例如："张四" 匹配 "张三四"
+   - 示例："张四" 匹配 "张三四"
+
+#### 第四步：精细化分数计算
+
+在基础分数上，根据匹配精度进行微调：
+
+- **长度相似度加成**：`基础分 + (1 - |查询长度 - 匹配长度| / max(查询长度, 匹配长度)) * 5`
+- **匹配位置加成**：匹配位置越靠前，加成越高（最多+3分）
+- **连续匹配加成**：连续匹配的字符越多，加成越高（最多+2分）
+
+#### 第五步：结果排序
+
+- 按匹配分数降序排序
+- 分数相同时，按姓名字典序排序
+- 限制最大返回结果数（默认50个）
 
 ### 拼音转换
 
-使用第三方库（如TinyPinyin.NET）进行拼音转换：
+使用TinyPinyin.NET库进行拼音转换，支持完整拼音和拼音首字母：
 
 ```csharp
+// 获取拼音首字母
 public static string GetPinyinInitials(string chinese)
 {
-    var pinyin = PinyinHelper.GetPinyin(chinese);
-    return new string(pinyin.Split(' ')
-        .Select(p => p.FirstOrDefault())
-        .Where(c => c != default)
-        .ToArray());
+    var result = new StringBuilder();
+    foreach (char c in chinese)
+    {
+        if (TinyPinyinLib.IsChinese(c))
+        {
+            var pinyin = TinyPinyinLib.GetPinyin(c);
+            if (!string.IsNullOrEmpty(pinyin))
+            {
+                result.Append(char.ToLower(pinyin[0]));
+            }
+        }
+        else if (char.IsLetterOrDigit(c))
+        {
+            result.Append(char.ToLower(c));
+        }
+    }
+    return result.ToString();
+}
+
+// 获取完整拼音（无空格）
+public static string GetFullPinyin(string chinese)
+{
+    var result = new StringBuilder();
+    foreach (char c in chinese)
+    {
+        if (TinyPinyinLib.IsChinese(c))
+        {
+            var pinyin = TinyPinyinLib.GetPinyin(c);
+            if (!string.IsNullOrEmpty(pinyin))
+            {
+                result.Append(pinyin.ToLower());
+            }
+        }
+        else if (char.IsLetterOrDigit(c))
+        {
+            result.Append(char.ToLower(c));
+        }
+    }
+    return result.ToString();
+}
+```
+
+### 编辑距离算法
+
+使用Levenshtein编辑距离算法计算两个字符串的相似度：
+
+```csharp
+private static int CalculateEditDistance(string source, string target)
+{
+    if (string.IsNullOrEmpty(source))
+        return target?.Length ?? 0;
+    if (string.IsNullOrEmpty(target))
+        return source.Length;
+
+    int[,] distance = new int[source.Length + 1, target.Length + 1];
+
+    // 初始化第一行和第一列
+    for (int i = 0; i <= source.Length; i++)
+        distance[i, 0] = i;
+    for (int j = 0; j <= target.Length; j++)
+        distance[0, j] = j;
+
+    // 动态规划计算编辑距离
+    for (int i = 1; i <= source.Length; i++)
+    {
+        for (int j = 1; j <= target.Length; j++)
+        {
+            int cost = (source[i - 1] == target[j - 1]) ? 0 : 1;
+            distance[i, j] = Math.Min(
+                Math.Min(distance[i - 1, j] + 1,      // 删除
+                         distance[i, j - 1] + 1),     // 插入
+                         distance[i - 1, j - 1] + cost); // 替换
+        }
+    }
+
+    return distance[source.Length, target.Length];
+}
+```
+
+### 标准化处理
+
+统一文本格式，消除干扰字符：
+
+```csharp
+private static string NormalizeText(string text, bool removePunctuation = true)
+{
+    if (string.IsNullOrWhiteSpace(text))
+        return string.Empty;
+
+    var result = new StringBuilder();
+    foreach (char c in text)
+    {
+        if (char.IsWhiteSpace(c))
+            continue;  // 去除空格
+        
+        if (removePunctuation && char.IsPunctuation(c))
+            continue;  // 去除标点符号
+        
+        result.Append(char.ToLower(c));  // 转小写
+    }
+    
+    return result.ToString();
 }
 ```
 

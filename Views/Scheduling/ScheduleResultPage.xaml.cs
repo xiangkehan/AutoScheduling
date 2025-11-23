@@ -268,8 +268,8 @@ namespace AutoScheduling3.Views.Scheduling
                 // 如果搜索框为空，显示所有人员
                 if (string.IsNullOrWhiteSpace(searchBox.Text))
                 {
-                    ViewModel.PersonnelSelectorSuggestions = new System.Collections.ObjectModel.ObservableCollection<PersonnelScheduleData>(
-                        ViewModel.PersonnelSchedules);
+                    // 调用 ViewModel 的方法来更新建议列表，而不是直接设置
+                    ViewModel.UpdatePersonnelSelectorSuggestions(string.Empty);
                 }
             }
         }

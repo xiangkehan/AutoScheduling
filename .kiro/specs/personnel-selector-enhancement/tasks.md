@@ -51,6 +51,60 @@
   - 处理取消令牌和异常
   - _需求：1.2, 2.6, 6.2_
 
+- [ ] 1.12 增强PinyinHelper支持完整拼音匹配
+  - 修改GetFullPinyin方法，返回无空格连续拼音
+  - 添加GetFullPinyinWithSeparator方法，返回带空格分隔的拼音
+  - 优化缓存机制，分别缓存首字母和完整拼音
+  - 添加单元测试验证完整拼音转换的正确性
+  - _需求：7.1, 7.2_
+
+- [ ]* 1.13 为PinyinHelper编写属性测试
+  - **属性 18：拼音完全匹配正确性**
+  - **验证：需求 7.1**
+
+- [ ]* 1.14 为PinyinHelper编写属性测试
+  - **属性 19：拼音前缀匹配正确性**
+  - **验证：需求 7.2**
+
+- [ ] 1.15 增强FuzzyMatcher实现编辑距离算法
+  - 添加CalculateEditDistance方法（Levenshtein算法）
+  - 添加NormalizeText方法（标准化处理）
+  - 实现编辑距离匹配逻辑（EditDistanceMatch）
+  - 实现动态编辑距离阈值（根据查询长度调整）
+  - 更新MatchType枚举，添加新的匹配类型
+  - 更新MatchResult类，添加EditDistance和Similarity属性
+  - _需求：7.3, 7.4, 7.6, 7.7_
+
+- [ ]* 1.16 为FuzzyMatcher编写属性测试
+  - **属性 20：编辑距离容错性**
+  - **验证：需求 7.3**
+
+- [ ]* 1.17 为FuzzyMatcher编写属性测试
+  - **属性 21：标准化一致性**
+  - **验证：需求 7.4**
+
+- [ ] 1.18 增强FuzzyMatcher实现完整拼音匹配
+  - 添加MatchFullPinyin方法（完整拼音完全匹配）
+  - 添加MatchPinyinPrefix方法（拼音前缀匹配）
+  - 添加MatchPinyinInitialsExact方法（拼音首字母完全匹配）
+  - 添加MatchPinyinInitialsPrefix方法（拼音首字母前缀匹配）
+  - 更新MatchSingle方法，集成新的拼音匹配策略
+  - 更新匹配优先级和基础分数
+  - _需求：7.1, 7.2, 7.8_
+
+- [ ] 1.19 增强FuzzyMatcher实现精细化分数计算
+  - 添加CalculateFinalScore方法（精细化分数计算）
+  - 添加CalculateLengthSimilarity方法（长度相似度）
+  - 添加CalculatePositionBonus方法（匹配位置加成）
+  - 添加CalculateContinuousMatchBonus方法（连续匹配加成）
+  - 更新FuzzyMatchOptions，添加分数调整选项
+  - 更新Match方法，应用精细化分数计算
+  - _需求：7.5, 7.8_
+
+- [ ]* 1.20 为FuzzyMatcher编写属性测试
+  - **属性 22：分数计算单调性**
+  - **验证：需求 7.5, 7.8**
+
 - [ ]* 1.9 为PersonnelSearchHelper编写属性测试
   - **属性 1：输入响应一致性**
   - **验证：需求 1.2**
@@ -117,6 +171,14 @@
 - [ ]* 3.3 为ScheduleResultPage编写属性测试
   - **属性 4：选择状态一致性**
   - **验证：需求 1.5**
+
+- [x] 3.4 增强"按人员展示"视图的人员选择器
+  - 在ScheduleResultViewModel中添加人员选择器相关属性和方法
+  - 实现PersonnelSelectorSuggestions、PersonnelSelectorSearchText属性
+  - 实现UpdatePersonnelSelectorSuggestions方法，使用PersonnelSearchHelper
+  - 实现PersonnelSchedules集合的加载和管理
+  - 确保选择人员后正确更新SelectedPersonnelSchedule
+  - _需求：1.1, 1.2, 1.3, 1.4, 1.5_
 
 - [ ] 4. 添加搜索功能到CreateSchedulingPage（可选优化）
   - 在现有的双列表选择基础上添加搜索框

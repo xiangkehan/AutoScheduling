@@ -89,7 +89,7 @@ public class PersonnelSearchHelper
                 EnablePinyinMatch = true,
                 CaseSensitive = false,
                 MaxResults = 50,
-                MinScore = 0
+                MinScore = 1  // 至少需要有一些匹配才返回结果
             };
 
             var matchResults = FuzzyMatcher.Match(query, candidateList, options);
