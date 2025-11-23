@@ -93,12 +93,38 @@
 
                 <!-- 搜索框 -->
                 <AutoSuggestBox x:Name="SearchBox"
-                                PlaceholderText="输入姓名搜索..."
+                                PlaceholderText="输入姓名搜索或选择..."
                                 QueryIcon="Find"
                                 TextChanged="SearchBox_TextChanged"
+                                SuggestionChosen="SearchBox_SuggestionChosen"
+                                QuerySubmitted="SearchBox_QuerySubmitted"
                                 AutomationProperties.Name="人员搜索框"
-                                AutomationProperties.HelpText="输入人员姓名进行搜索筛选"
-                                ToolTipService.ToolTip="搜索人员"/>
+                                AutomationProperties.HelpText="输入人员姓名进行模糊搜索，支持拼音首字母，或从下拉列表选择"
+                                ToolTipService.ToolTip="支持模糊搜索和拼音首字母匹配">
+                    <AutoSuggestBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="8,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" 
+                                           Text="{Binding Name}" 
+                                           VerticalAlignment="Center"/>
+                                <Border Grid.Column="1"
+                                        Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                        CornerRadius="4"
+                                        Padding="6,2"
+                                        Margin="8,0,0,0"
+                                        Visibility="{Binding IsRecommended}">
+                                    <TextBlock Text="推荐"
+                                               FontSize="10"
+                                               Foreground="White"/>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </AutoSuggestBox.ItemTemplate>
+                </AutoSuggestBox>
 
                 <!-- 推荐人员提示 -->
                 <Border x:Name="RecommendationPanel"

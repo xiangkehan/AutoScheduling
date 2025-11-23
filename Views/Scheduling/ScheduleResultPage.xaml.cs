@@ -163,6 +163,21 @@ namespace AutoScheduling3.Views.Scheduling
         }
 
         /// <summary>
+        /// 人员搜索框获得焦点时显示所有人员
+        /// </summary>
+        private void PersonnelSearchBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is AutoSuggestBox searchBox)
+            {
+                // 如果搜索框为空，显示所有人员
+                if (string.IsNullOrWhiteSpace(searchBox.Text))
+                {
+                    ViewModel.UpdatePersonnelSuggestions(string.Empty);
+                }
+            }
+        }
+
+        /// <summary>
         /// 人员搜索框选择建议项时的处理
         /// </summary>
         private void PersonnelSearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
@@ -193,6 +208,68 @@ namespace AutoScheduling3.Views.Scheduling
                 {
                     ViewModel.SelectedPersonnel = matchedPersonnel;
                     sender.Text = matchedPersonnel.Name;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 人员选择器文本改变时的处理
+        /// </summary>
+        private void PersonnelSelectorAutoSuggestBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+        {
+            // 只处理用户输入的情况
+            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+            {
+                ViewModel.UpdatePersonnelSelectorSuggestions(sender.Text);
+            }
+        }
+
+        /// <summary>
+        /// 人员选择器选择建议项时的处理
+        /// </summary>
+        private void PersonnelSelectorAutoSuggestBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+        {
+            if (args.SelectedItem is PersonnelScheduleData personnelSchedule)
+            {
+                ViewModel.SelectedPersonnelSchedule = personnelSchedule;
+                sender.Text = personnelSchedule.PersonnelName;
+            }
+        }
+
+        /// <summary>
+        /// 人员选择器提交查询时的处理
+        /// </summary>
+        private void PersonnelSelectorAutoSuggestBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+        {
+            if (args.ChosenSuggestion is PersonnelScheduleData personnelSchedule)
+            {
+                // 用户从下拉列表选择了一个项
+                ViewModel.SelectedPersonnelSchedule = personnelSchedule;
+            }
+            else if (!string.IsNullOrWhiteSpace(args.QueryText))
+            {
+                // 用户直接输入并按回车，选择第一个匹配项
+                var matchedPersonnel = ViewModel.PersonnelSelectorSuggestions.FirstOrDefault();
+                if (matchedPersonnel != null)
+                {
+                    ViewModel.SelectedPersonnelSchedule = matchedPersonnel;
+                    sender.Text = matchedPersonnel.PersonnelName;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 人员选择器获得焦点时显示所有人员
+        /// </summary>
+        private void PersonnelSelectorAutoSuggestBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is AutoSuggestBox searchBox)
+            {
+                // 如果搜索框为空，显示所有人员
+                if (string.IsNullOrWhiteSpace(searchBox.Text))
+                {
+                    ViewModel.PersonnelSelectorSuggestions = new System.Collections.ObjectModel.ObservableCollection<PersonnelScheduleData>(
+                        ViewModel.PersonnelSchedules);
                 }
             }
         }

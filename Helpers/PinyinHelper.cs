@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using TinyPinyin;
+using TinyPinyinLib = TinyPinyin.PinyinHelper;
 
 namespace AutoScheduling3.Helpers;
 
@@ -44,9 +44,9 @@ public static class PinyinHelper
             foreach (char c in chinese)
             {
                 // 如果是中文字符，获取拼音首字母
-                if (PinyinHelper.IsChinese(c))
+                if (TinyPinyinLib.IsChinese(c))
                 {
-                    var pinyin = PinyinHelper.GetPinyin(c);
+                    var pinyin = TinyPinyinLib.GetPinyin(c);
                     if (!string.IsNullOrEmpty(pinyin))
                     {
                         result.Append(char.ToLower(pinyin[0]));
@@ -107,9 +107,9 @@ public static class PinyinHelper
             foreach (char c in chinese)
             {
                 // 如果是中文字符，获取完整拼音
-                if (PinyinHelper.IsChinese(c))
+                if (TinyPinyinLib.IsChinese(c))
                 {
-                    var pinyin = PinyinHelper.GetPinyin(c);
+                    var pinyin = TinyPinyinLib.GetPinyin(c);
                     if (!string.IsNullOrEmpty(pinyin))
                     {
                         if (result.Length > 0)
@@ -157,7 +157,7 @@ public static class PinyinHelper
     /// <returns>是否为中文字符</returns>
     public static bool IsChinese(char c)
     {
-        return PinyinHelper.IsChinese(c);
+        return TinyPinyinLib.IsChinese(c);
     }
 
     /// <summary>

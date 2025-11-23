@@ -29,6 +29,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private readonly IPersonnelService _personnelService;
         private readonly IPositionService _positionService;
         private readonly IScheduleGridExporter _gridExporter;
+        private readonly PersonnelSearchHelper _searchHelper = new();
 
         #endregion
 
@@ -141,6 +142,20 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             get => _selectedPersonnelSchedule;
             set => SetProperty(ref _selectedPersonnelSchedule, value);
+        }
+
+        private ObservableCollection<PersonnelScheduleData> _personnelSelectorSuggestions = new();
+        public ObservableCollection<PersonnelScheduleData> PersonnelSelectorSuggestions
+        {
+            get => _personnelSelectorSuggestions;
+            set => SetProperty(ref _personnelSelectorSuggestions, value);
+        }
+
+        private string _personnelSelectorSearchText = string.Empty;
+        public string PersonnelSelectorSearchText
+        {
+            get => _personnelSelectorSearchText;
+            set => SetProperty(ref _personnelSelectorSearchText, value);
         }
 
         #endregion
@@ -423,21 +438,125 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         /// <summary>
-        /// 更新人员搜索建议
+        /// 更新人员搜索建议（使用模糊匹配）
         /// </summary>
-        public void UpdatePersonnelSuggestions(string searchText)
+        public async void UpdatePersonnelSuggestions(string searchText)
+        {
+            try
+            {
+                // 使用PersonnelSearchHelper进行模糊搜索
+                var searchResults = await _searchHelper.SearchAsync(searchText, AllPersonnel);
+                PersonnelSuggestions = new ObservableCollection<PersonnelDto>(searchResults);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ScheduleResultViewModel: 搜索失败: {ex.Message}");
+                
+                // 降级到简单搜索
+                if (string.IsNullOrWhiteSpace(searchText))
+                {
+                    PersonnelSuggestions = new ObservableCollection<PersonnelDto>(AllPersonnel);
+                }
+                else
+                {
+                    var filtered = AllPersonnel
+                        .Where(p => p.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    PersonnelSuggestions = new ObservableCollection<PersonnelDto>(filtered);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 搜索人员排班数据（支持模糊匹配和拼音首字母）
+        /// </summary>
+        /// <param name="searchText">搜索文本</param>
+        /// <returns>匹配的人员排班数据列表</returns>
+        public async Task<List<PersonnelScheduleData>> SearchPersonnelAsync(string searchText)
         {
             if (string.IsNullOrWhiteSpace(searchText))
             {
-                PersonnelSuggestions = new ObservableCollection<PersonnelDto>(AllPersonnel);
-                return;
+                return PersonnelSchedules.ToList();
             }
 
-            var filtered = AllPersonnel
-                .Where(p => p.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            try
+            {
+                // 转换为PersonnelDto进行搜索
+                var personnelDtos = PersonnelSchedules.Select(p => new PersonnelDto
+                {
+                    Id = p.PersonnelId,
+                    Name = p.PersonnelName
+                }).ToList();
 
-            PersonnelSuggestions = new ObservableCollection<PersonnelDto>(filtered);
+                var matchedDtos = await _searchHelper.SearchAsync(searchText, personnelDtos);
+
+                // 转换回PersonnelScheduleData
+                var matchedIds = matchedDtos.Select(d => d.Id).ToHashSet();
+                var results = PersonnelSchedules
+                    .Where(p => matchedIds.Contains(p.PersonnelId))
+                    .ToList();
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"人员搜索失败: {ex.Message}");
+                
+                // 降级到简单匹配
+                return PersonnelSchedules
+                    .Where(p => p.PersonnelName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+        }
+
+        /// <summary>
+        /// 更新人员选择器的建议列表（同步版本，用于 AutoSuggestBox）
+        /// </summary>
+        public void UpdatePersonnelSelectorSuggestions(string searchText)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(searchText))
+                {
+                    PersonnelSelectorSuggestions = new ObservableCollection<PersonnelScheduleData>(PersonnelSchedules);
+                    return;
+                }
+
+                // 转换为PersonnelDto进行搜索
+                var personnelDtos = PersonnelSchedules.Select(p => new PersonnelDto
+                {
+                    Id = p.PersonnelId,
+                    Name = p.PersonnelName
+                }).ToList();
+
+                // 使用立即搜索（不防抖）
+                var matchedDtos = _searchHelper.SearchImmediate(searchText, personnelDtos);
+
+                // 转换回PersonnelScheduleData
+                var matchedIds = matchedDtos.Select(d => d.Id).ToHashSet();
+                var results = PersonnelSchedules
+                    .Where(p => matchedIds.Contains(p.PersonnelId))
+                    .ToList();
+
+                PersonnelSelectorSuggestions = new ObservableCollection<PersonnelScheduleData>(results);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"更新人员选择器建议失败: {ex.Message}");
+                
+                // 降级到简单匹配
+                if (string.IsNullOrWhiteSpace(searchText))
+                {
+                    PersonnelSelectorSuggestions = new ObservableCollection<PersonnelScheduleData>(PersonnelSchedules);
+                }
+                else
+                {
+                    var results = PersonnelSchedules
+                        .Where(p => p.PersonnelName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    PersonnelSelectorSuggestions = new ObservableCollection<PersonnelScheduleData>(results);
+                }
+            }
         }
 
         private async Task ConfirmAsync()
@@ -896,6 +1015,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
 
             PersonnelSchedules = new ObservableCollection<PersonnelScheduleData>(personnelSchedules);
+            
+            // 初始化人员选择器建议列表
+            PersonnelSelectorSuggestions = new ObservableCollection<PersonnelScheduleData>(personnelSchedules);
+            
             if (PersonnelSchedules.Count > 0)
             {
                 SelectedPersonnelSchedule = PersonnelSchedules[0];

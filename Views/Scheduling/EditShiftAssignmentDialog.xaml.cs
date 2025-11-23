@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using AutoScheduling3.Helpers;
+using AutoScheduling3.DTOs;
 
 namespace AutoScheduling3.Views.Scheduling;
 
@@ -17,6 +19,7 @@ public sealed partial class EditShiftAssignmentDialog : ContentDialog
 {
     private ObservableCollection<PersonnelOption> _allPersonnel = new();
     private ObservableCollection<PersonnelOption> _filteredPersonnel = new();
+    private readonly PersonnelSearchHelper _searchHelper = new();
 
     /// <summary>
     /// 当前分配信息
@@ -100,7 +103,7 @@ public sealed partial class EditShiftAssignmentDialog : ContentDialog
         }
 
         // 初始显示所有人员
-        UpdateFilteredPersonnel(string.Empty);
+        _ = UpdateFilteredPersonnelAsync(string.Empty);
 
         // 显示推荐人员
         var recommended = AvailablePersonnel.FirstOrDefault(p => p.IsRecommended);
@@ -114,19 +117,63 @@ public sealed partial class EditShiftAssignmentDialog : ContentDialog
     /// <summary>
     /// 搜索框文本变化
     /// </summary>
-    private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    private async void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
         {
             var searchText = sender.Text?.Trim() ?? string.Empty;
-            UpdateFilteredPersonnel(searchText);
+            
+            // 使用PersonnelSearchHelper进行模糊搜索
+            await UpdateFilteredPersonnelAsync(searchText);
+            
+            // 同时更新AutoSuggestBox的建议列表
+            UpdateSuggestions(searchText);
         }
     }
 
     /// <summary>
-    /// 更新筛选后的人员列表
+    /// 更新筛选后的人员列表（使用模糊匹配）
     /// </summary>
-    private void UpdateFilteredPersonnel(string searchText)
+    private async System.Threading.Tasks.Task UpdateFilteredPersonnelAsync(string searchText)
+    {
+        try
+        {
+            // 转换PersonnelOption到PersonnelDto用于搜索
+            var personnelDtos = _allPersonnel.Select(p => new PersonnelDto
+            {
+                Id = p.Id,
+                Name = p.Name
+            }).ToList();
+
+            // 使用PersonnelSearchHelper进行搜索
+            var searchResults = await _searchHelper.SearchAsync(searchText, personnelDtos);
+
+            // 转换回PersonnelOption并保持原有属性
+            var resultIds = new HashSet<int>(searchResults.Select(r => r.Id));
+            var filtered = _allPersonnel.Where(p => resultIds.Contains(p.Id));
+
+            _filteredPersonnel.Clear();
+            foreach (var personnel in filtered.OrderByDescending(p => p.IsRecommended)
+                                               .ThenBy(p => p.Name))
+            {
+                _filteredPersonnel.Add(personnel);
+            }
+
+            PersonnelListView.ItemsSource = _filteredPersonnel;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"EditShiftAssignmentDialog: 搜索失败: {ex.Message}");
+            
+            // 降级到简单搜索
+            UpdateFilteredPersonnelSimple(searchText);
+        }
+    }
+
+    /// <summary>
+    /// 简单搜索（降级方案）
+    /// </summary>
+    private void UpdateFilteredPersonnelSimple(string searchText)
     {
         _filteredPersonnel.Clear();
 
@@ -144,11 +191,74 @@ public sealed partial class EditShiftAssignmentDialog : ContentDialog
     }
 
     /// <summary>
+    /// 更新AutoSuggestBox的建议列表
+    /// </summary>
+    private void UpdateSuggestions(string searchText)
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            // 空查询显示所有人员
+            SearchBox.ItemsSource = _allPersonnel.Take(10).ToList();
+        }
+        else
+        {
+            // 显示过滤后的人员（最多10个）
+            SearchBox.ItemsSource = _filteredPersonnel.Take(10).ToList();
+        }
+    }
+
+    /// <summary>
+    /// AutoSuggestBox建议被选择
+    /// </summary>
+    private void SearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+    {
+        if (args.SelectedItem is PersonnelOption selected)
+        {
+            // 更新搜索框文本
+            sender.Text = selected.Name;
+            
+            // 在ListView中选中该人员
+            PersonnelListView.SelectedItem = selected;
+            PersonnelListView.ScrollIntoView(selected);
+        }
+    }
+
+    /// <summary>
+    /// AutoSuggestBox查询提交
+    /// </summary>
+    private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        if (args.ChosenSuggestion is PersonnelOption selected)
+        {
+            // 用户选择了建议项
+            PersonnelListView.SelectedItem = selected;
+            PersonnelListView.ScrollIntoView(selected);
+        }
+        else if (!string.IsNullOrWhiteSpace(args.QueryText))
+        {
+            // 用户按了回车，选择第一个匹配项
+            var firstMatch = _filteredPersonnel.FirstOrDefault();
+            if (firstMatch != null)
+            {
+                PersonnelListView.SelectedItem = firstMatch;
+                PersonnelListView.ScrollIntoView(firstMatch);
+                sender.Text = firstMatch.Name;
+            }
+        }
+    }
+
+    /// <summary>
     /// 人员列表选择变化
     /// </summary>
     private void PersonnelListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         IsPrimaryButtonEnabled = PersonnelListView.SelectedItem != null;
+        
+        // 双向同步：更新搜索框文本
+        if (PersonnelListView.SelectedItem is PersonnelOption selected)
+        {
+            SearchBox.Text = selected.Name;
+        }
     }
 
     /// <summary>

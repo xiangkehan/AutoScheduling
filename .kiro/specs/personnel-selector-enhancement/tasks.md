@@ -63,12 +63,12 @@
   - **属性 17：防抖效果正确性**
   - **验证：需求 6.2**
 
-- [ ] 2. 增强EditShiftAssignmentDialog（高优先级）
+- [x] 2. 增强EditShiftAssignmentDialog（高优先级）
   - 这是用户痛点最明显的场景
   - 需要实现搜索框和列表的双向同步
   - _需求：3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 2.1 更新EditShiftAssignmentDialog.xaml.cs
+- [x] 2.1 更新EditShiftAssignmentDialog.xaml.cs
   - 添加PersonnelSearchHelper实例
   - 修改SearchBox_TextChanged方法，使用PersonnelSearchHelper
   - 实现AutoSuggestBox的SuggestionChosen事件处理
@@ -77,7 +77,7 @@
   - 添加点击展开显示所有人员的功能
   - _需求：3.2, 3.3, 3.4_
 
-- [ ] 2.2 更新EditShiftAssignmentDialog.xaml
+- [x] 2.2 更新EditShiftAssignmentDialog.xaml
   - 为AutoSuggestBox添加ItemsSource绑定
   - 添加ItemTemplate显示人员信息
   - 添加SuggestionChosen和QuerySubmitted事件绑定
@@ -96,18 +96,18 @@
   - **属性 11：验证警告显示**
   - **验证：需求 3.5**
 
-- [ ] 3. 增强ScheduleResultPage（中优先级）
+- [x] 3. 增强ScheduleResultPage（中优先级）
   - 已有AutoSuggestBox基础，主要是增强搜索算法
   - _需求：1.1, 1.2, 1.3, 1.4_
 
-- [ ] 3.1 更新ScheduleResultViewModel.cs
+- [x] 3.1 更新ScheduleResultViewModel.cs
   - 添加PersonnelSearchHelper实例
   - 修改UpdatePersonnelSuggestions方法，使用PersonnelSearchHelper
   - 添加点击展开显示所有人员的逻辑
   - 优化性能（使用防抖）
   - _需求：1.2, 2.6, 6.2_
 
-- [ ] 3.2 更新ScheduleResultPage.xaml.cs
+- [x] 3.2 更新ScheduleResultPage.xaml.cs
   - 修改PersonnelSearchBox_TextChanged事件处理
   - 修改PersonnelSearchBox_SuggestionChosen事件处理
   - 修改PersonnelSearchBox_QuerySubmitted事件处理
@@ -169,18 +169,18 @@
   - 执行：dotnet add package FsCheck.Xunit
   - 验证包安装成功
 
-- [ ] 7. 文档和示例
+- [x] 7. 文档和示例
   - 创建使用指南和代码示例
   - 更新相关文档
 
-- [ ] 7.1 创建使用指南文档
+- [x] 7.1 创建使用指南文档
   - 创建Helpers/PersonnelSelector.README.md
   - 说明如何使用PersonnelSearchHelper
   - 提供AutoSuggestBox配置示例
   - 说明模糊匹配和拼音匹配的工作原理
   - _需求：4.1_
 
-- [ ] 7.2 更新项目README
+- [x] 7.2 更新项目README
   - 在README.md中添加人员选择器功能说明
   - 添加使用示例和截图
   - 说明新增的依赖项
