@@ -35,7 +35,7 @@
 
             <!-- 草稿列表 -->
             <ListView ItemsSource="{x:Bind ViewModel.Drafts, Mode=OneWay}"
-                      Visibility="{x:Bind ViewModel.Drafts.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}">
+                      Visibility="{x:Bind ViewModel.Drafts.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=True}">
                 <ListView.HeaderTemplate>
                     <DataTemplate>
                         <Grid Padding="12" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
@@ -97,7 +97,7 @@
                 IconGlyph="&#xE8F4;" 
                 Title="暂无草稿排班" 
                 Subtitle="所有排班都已确认或删除"
-                Visibility="{x:Bind ViewModel.Drafts.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=True}"/>
+                Visibility="{x:Bind ViewModel.Drafts.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
         </Grid>
     </Grid>
 </Page>
