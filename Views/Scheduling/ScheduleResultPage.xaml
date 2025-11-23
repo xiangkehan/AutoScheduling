@@ -562,13 +562,12 @@
                                           x:Name="PersonnelSelectorComboBox"
                                           ItemsSource="{x:Bind ViewModel.PersonnelSchedules, Mode=OneWay}"
                                           SelectedItem="{x:Bind ViewModel.SelectedPersonnelSchedule, Mode=TwoWay}"
-                                          DisplayMemberPath="PersonnelName"
                                           HorizontalAlignment="Stretch"
                                           MinWidth="300"
                                           AutomationProperties.Name="人员选择下拉框"
                                           AutomationProperties.HelpText="选择要查看排班详情的人员">
                                     <ComboBox.ItemTemplate>
-                                        <DataTemplate x:DataType="dto:PersonnelScheduleData">
+                                        <DataTemplate>
                                             <Grid Padding="8">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -576,14 +575,14 @@
                                                 </Grid.ColumnDefinitions>
 
                                                 <TextBlock Grid.Column="0"
-                                                           Text="{x:Bind PersonnelName}"
+                                                           Text="{Binding PersonnelName}"
                                                            FontWeight="SemiBold"
                                                            VerticalAlignment="Center"/>
 
                                                 <StackPanel Grid.Column="1"
                                                             Orientation="Horizontal"
                                                             Spacing="8">
-                                                    <TextBlock Text="{x:Bind Workload.TotalShifts}"
+                                                    <TextBlock Text="{Binding Workload.TotalShifts}"
                                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                                VerticalAlignment="Center"/>
                                                     <TextBlock Text="班次"

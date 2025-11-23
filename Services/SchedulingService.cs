@@ -1301,6 +1301,10 @@ public class SchedulingService : ISchedulingService
             LastConfirmedSchedule = await _historyMgmt.GetLastConfirmedScheduleAsync()
         };
 
+        // 初始化映射关系和评分状态
+        context.InitializeMappings();
+        context.InitializePersonScoreStates();
+
         // 创建软约束计算器
         var softConstraintCalculator = new SchedulingEngine.Core.SoftConstraintCalculator(context);
 
