@@ -24,7 +24,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private DateTimeOffset _startDate = DateTimeOffset.Now;
 
         [ObservableProperty]
-        private DateTimeOffset _endDate = DateTimeOffset.Now.AddDays(7);
+        private DateTimeOffset _endDate = DateTimeOffset.Now.AddDays(6);
 
         #endregion
 

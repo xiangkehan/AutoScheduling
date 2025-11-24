@@ -283,11 +283,11 @@ namespace AutoScheduling3.Views.Scheduling
         /// </summary>
         private void LocateConflictButton_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag != null)
+            if (sender is Button button && button.Tag is ConflictDto conflict)
             {
-                if (ViewModel.LocateConflictCommand.CanExecute(button.Tag))
+                if (ViewModel.LocateConflictInGridCommand?.CanExecute(conflict) == true)
                 {
-                    _ = ViewModel.LocateConflictCommand.ExecuteAsync(button.Tag);
+                    _ = ViewModel.LocateConflictInGridCommand.ExecuteAsync(conflict);
                 }
             }
         }
@@ -297,11 +297,11 @@ namespace AutoScheduling3.Views.Scheduling
         /// </summary>
         private void IgnoreConflictButton_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag != null)
+            if (sender is Button button && button.Tag is ConflictDto conflict)
             {
-                if (ViewModel.IgnoreConflictCommand.CanExecute(button.Tag))
+                if (ViewModel.IgnoreConflictInGridCommand?.CanExecute(conflict) == true)
                 {
-                    _ = ViewModel.IgnoreConflictCommand.ExecuteAsync(button.Tag);
+                    _ = ViewModel.IgnoreConflictInGridCommand.ExecuteAsync(conflict);
                 }
             }
         }
@@ -311,11 +311,11 @@ namespace AutoScheduling3.Views.Scheduling
         /// </summary>
         private void FixConflictButton_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag != null)
+            if (sender is Button button && button.Tag is ConflictDto conflict)
             {
-                if (ViewModel.FixConflictCommand.CanExecute(button.Tag))
+                if (ViewModel.FixConflictInGridCommand?.CanExecute(conflict) == true)
                 {
-                    _ = ViewModel.FixConflictCommand.ExecuteAsync(button.Tag);
+                    _ = ViewModel.FixConflictInGridCommand.ExecuteAsync(conflict);
                 }
             }
         }

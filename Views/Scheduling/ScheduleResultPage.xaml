@@ -378,11 +378,11 @@
                                           Margin="0,0,4,0"
                                           AutomationProperties.Name="冲突类型筛选器"
                                           AutomationProperties.HelpText="按冲突类型筛选">
-                                    <x:String>All</x:String>
-                                    <x:String>hard</x:String>
-                                    <x:String>soft</x:String>
-                                    <x:String>info</x:String>
-                                    <x:String>unassigned</x:String>
+                                    <x:String>全部</x:String>
+                                    <x:String>硬约束</x:String>
+                                    <x:String>软约束</x:String>
+                                    <x:String>信息</x:String>
+                                    <x:String>未分配</x:String>
                                 </ComboBox>
 
                                 <!-- Severity Filter -->
@@ -394,12 +394,12 @@
                                           Margin="4,0,0,0"
                                           AutomationProperties.Name="严重程度筛选器"
                                           AutomationProperties.HelpText="按严重程度筛选">
-                                    <x:String>All</x:String>
-                                    <x:String>5</x:String>
-                                    <x:String>4</x:String>
-                                    <x:String>3</x:String>
-                                    <x:String>2</x:String>
-                                    <x:String>1</x:String>
+                                    <x:String>全部</x:String>
+                                    <x:String>5 - 最高</x:String>
+                                    <x:String>4 - 高</x:String>
+                                    <x:String>3 - 中</x:String>
+                                    <x:String>2 - 低</x:String>
+                                    <x:String>1 - 最低</x:String>
                                 </ComboBox>
                             </Grid>
 
@@ -418,9 +418,9 @@
                                           Margin="0,0,4,0"
                                           AutomationProperties.Name="排序选择器"
                                           AutomationProperties.HelpText="选择排序方式">
-                                    <x:String>Type</x:String>
-                                    <x:String>Date</x:String>
-                                    <x:String>Severity</x:String>
+                                    <x:String>按类型</x:String>
+                                    <x:String>按日期</x:String>
+                                    <x:String>按严重程度</x:String>
                                 </ComboBox>
 
                                 <!-- Search Box -->
@@ -628,7 +628,7 @@
 
                                                     <!-- Conflict Type and Description -->
                                                     <StackPanel Grid.Column="1" Spacing="4">
-                                                        <TextBlock Text="{x:Bind SubType}"
+                                                        <TextBlock Text="{x:Bind SubType, Converter={StaticResource ConflictSubTypeToTextConverter}}"
                                                                    FontWeight="SemiBold"
                                                                    TextWrapping="Wrap"
                                                                    AutomationProperties.Name="冲突类型"/>

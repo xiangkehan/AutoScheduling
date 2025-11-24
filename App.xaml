@@ -22,6 +22,7 @@
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
             <conv:BoolToTextConverter x:Key="BoolToTextConverter" />
             <conv:BoolToBrushConverter x:Key="BoolToBrushConverter" />
+            <conv:ConflictSubTypeToTextConverter x:Key="ConflictSubTypeToTextConverter" />
 
             <!-- 缺失的 GridViewItem 样式 (无悬停特效的占位样式，可按需再精细化) -->
             <Style x:Key="GridViewItemStyleWithoutHover" TargetType="GridViewItem">

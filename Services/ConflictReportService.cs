@@ -16,9 +16,6 @@ public class ConflictReportService : IConflictReportService
     public ConflictReportService(IHistoryService historyService)
     {
         _historyService = historyService;
-        
-        // 设置 EPPlus 许可证上下文
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
     }
 
     /// <summary>

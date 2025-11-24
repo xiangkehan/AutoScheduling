@@ -784,6 +784,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             System.Diagnostics.Debug.WriteLine("=== 开始更新哨位人员视图模型 ===");
+            System.Diagnostics.Debug.WriteLine($"SelectedPositions 数量: {SelectedPositions?.Count ?? 0}");
+            System.Diagnostics.Debug.WriteLine($"更新前 SelectedPersonnels 数量: {SelectedPersonnels?.Count ?? 0}");
 
             try
             {
@@ -913,6 +915,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
                 stopwatch.Stop();
                 System.Diagnostics.Debug.WriteLine($"哨位人员视图模型更新完成: {PositionPersonnelViewModels.Count} 个哨位");
+                System.Diagnostics.Debug.WriteLine($"更新后 SelectedPersonnels 数量: {SelectedPersonnels?.Count ?? 0}");
                 System.Diagnostics.Debug.WriteLine($"总耗时: {stopwatch.ElapsedMilliseconds}ms");
                 System.Diagnostics.Debug.WriteLine("=== 哨位人员视图模型更新完成 ===");
             }

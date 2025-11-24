@@ -65,9 +65,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         /// <summary>
-        /// 冲突类型筛选器（All, hard, soft, info, unassigned）
+        /// 冲突类型筛选器（全部, 硬约束, 软约束, 信息, 未分配）
         /// </summary>
-        private string _conflictTypeFilter = "All";
+        private string _conflictTypeFilter = "全部";
         public string ConflictTypeFilter
         {
             get => _conflictTypeFilter;
@@ -81,9 +81,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         /// <summary>
-        /// 冲突严重程度筛选器（All, 1-5）
+        /// 冲突严重程度筛选器（全部, 1-5）
         /// </summary>
-        private string _conflictSeverityFilter = "All";
+        private string _conflictSeverityFilter = "全部";
         public string ConflictSeverityFilter
         {
             get => _conflictSeverityFilter;
@@ -97,9 +97,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         /// <summary>
-        /// 冲突排序方式（Type, Date, Severity）
+        /// 冲突排序方式（按类型, 按日期, 按严重程度）
         /// </summary>
-        private string _conflictSortBy = "Type";
+        private string _conflictSortBy = "按类型";
         public string ConflictSortBy
         {
             get => _conflictSortBy;
@@ -251,15 +251,25 @@ namespace AutoScheduling3.ViewModels.Scheduling
             var filtered = AllConflicts.AsEnumerable();
 
             // 按类型筛选
-            if (ConflictTypeFilter != "All")
+            if (ConflictTypeFilter != "全部")
             {
-                filtered = filtered.Where(c => c.Type == ConflictTypeFilter);
+                var typeFilter = ConflictTypeFilter switch
+                {
+                    "硬约束" => "hard",
+                    "软约束" => "soft",
+                    "信息" => "info",
+                    "未分配" => "unassigned",
+                    _ => ConflictTypeFilter
+                };
+                filtered = filtered.Where(c => c.Type == typeFilter);
             }
 
             // 按严重程度筛选
-            if (ConflictSeverityFilter != "All")
+            if (ConflictSeverityFilter != "全部")
             {
-                if (int.TryParse(ConflictSeverityFilter, out var severity))
+                // 提取数字部分（例如 "5 - 最高" -> "5"）
+                var severityStr = ConflictSeverityFilter.Split(' ')[0];
+                if (int.TryParse(severityStr, out var severity))
                 {
                     filtered = filtered.Where(c => c.Severity >= severity);
                 }
@@ -277,9 +287,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
             // 排序
             filtered = ConflictSortBy switch
             {
-                "Type" => filtered.OrderBy(c => c.Type).ThenBy(c => c.SubType),
-                "Date" => filtered.OrderBy(c => c.StartTime),
-                "Severity" => filtered.OrderByDescending(c => c.Severity),
+                "按类型" => filtered.OrderBy(c => c.Type).ThenBy(c => c.SubType),
+                "按日期" => filtered.OrderBy(c => c.StartTime),
+                "按严重程度" => filtered.OrderByDescending(c => c.Severity),
                 _ => filtered
             };
 

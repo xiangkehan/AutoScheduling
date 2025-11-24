@@ -21,6 +21,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             if (CurrentStep < 5 && CanGoNext())
             {
+                System.Diagnostics.Debug.WriteLine($"=== NextStep: 从步骤 {CurrentStep} 前进 ===");
+                
                 // 如果模板已应用，并且在第1步，直接跳到第5步
                 if (TemplateApplied && CurrentStep == 1)
                 {
@@ -32,6 +34,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     CurrentStep++;
                 }
 
+                System.Diagnostics.Debug.WriteLine($"=== NextStep: 当前步骤 {CurrentStep} ===");
+                System.Diagnostics.Debug.WriteLine($"=== SelectedPersonnels 数量: {SelectedPersonnels.Count} ===");
+
                 if (CurrentStep == 4 && !IsLoadingConstraints && FixedPositionRules.Count == 0)
                 {
                     _ = LoadConstraintsAsync();
@@ -41,6 +46,22 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     BuildSummarySections();
                 }
                 RefreshCommandStates();
+                
+                System.Diagnostics.Debug.WriteLine($"=== NextStep 完成，SelectedPersonnels 数量: {SelectedPersonnels.Count} ===");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"=== NextStep 被阻止: CurrentStep={CurrentStep}, CanGoNext={CanGoNext()} ===");
+                if (!CanGoNext())
+                {
+                    // 输出详细的验证失败原因
+                    if (CurrentStep == 1 && !ValidateStep1(out var e1))
+                        System.Diagnostics.Debug.WriteLine($"步骤1验证失败: {e1}");
+                    else if (CurrentStep == 2 && !ValidateStep2(out var e2))
+                        System.Diagnostics.Debug.WriteLine($"步骤2验证失败: {e2}");
+                    else if (CurrentStep == 3 && !ValidateStep3(out var e3))
+                        System.Diagnostics.Debug.WriteLine($"步骤3验证失败: {e3}");
+                }
             }
         }
 
