@@ -271,7 +271,7 @@ public sealed partial class ConflictTrendDialog : ContentDialog
     /// <summary>
     /// 获取冲突类型颜色
     /// </summary>
-    private SolidColorBrush GetConflictTypeColor(ConflictSubType subType)
+    private static SolidColorBrush GetConflictTypeColor(ConflictSubType subType)
     {
         return subType switch
         {

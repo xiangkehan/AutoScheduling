@@ -306,21 +306,81 @@ namespace AutoScheduling3.ViewModels.Scheduling
         #region 冲突定位
 
         /// <summary>
-        /// 定位冲突到表格
+        /// 定位冲突到表格（根据当前视图模式选择定位策略）
         /// </summary>
         private async Task LocateConflictInGridAsync(ConflictDto? conflict)
         {
-            if (conflict == null || Schedule == null || GridData == null) return;
+            if (conflict == null || Schedule == null) return;
 
             try
             {
-                // 清除之前的高亮
-                HighlightedCellKeys.Clear();
+                // 根据当前视图模式选择不同的定位策略
+                switch (CurrentViewMode)
+                {
+                    case ViewMode.Grid:
+                        await LocateConflictInGridViewAsync(conflict);
+                        break;
 
-                int? firstRowIndex = null;
-                int? firstColumnIndex = null;
+                    case ViewMode.ByPosition:
+                        await LocateConflictInPositionViewAsync(conflict);
+                        break;
 
-                // 根据冲突相关的班次ID找到对应的单元格
+                    case ViewMode.ByPersonnel:
+                        // TODO: 未来支持人员视图定位
+                        await _dialogService.ShowWarningAsync("人员视图暂不支持冲突定位", "请切换到网格视图或哨位视图进行定位");
+                        break;
+
+                    case ViewMode.List:
+                        // TODO: 未来支持列表视图定位
+                        await _dialogService.ShowWarningAsync("列表视图暂不支持冲突定位", "请切换到网格视图或哨位视图进行定位");
+                        break;
+
+                    default:
+                        await _dialogService.ShowWarningAsync("当前视图不支持冲突定位");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowErrorAsync("定位冲突失败", ex);
+            }
+        }
+
+        /// <summary>
+        /// 在网格视图中定位冲突
+        /// </summary>
+        private async Task LocateConflictInGridViewAsync(ConflictDto conflict)
+        {
+            if (GridData == null) return;
+
+            // 创建新的高亮集合
+            var newHighlightKeys = new HashSet<string>();
+
+            int? firstRowIndex = null;
+            int? firstColumnIndex = null;
+
+            // 处理未分配冲突（没有 RelatedShiftIds）
+            if (conflict.Type == "unassigned" && conflict.PositionId.HasValue && 
+                conflict.StartTime.HasValue && conflict.PeriodIndex.HasValue)
+            {
+                // 直接根据哨位、日期和时段定位
+                var row = GridData.Rows.FirstOrDefault(r =>
+                    r.Date.Date == conflict.StartTime.Value.Date &&
+                    r.PeriodIndex == conflict.PeriodIndex.Value);
+                var col = GridData.Columns.FirstOrDefault(c =>
+                    c.PositionId == conflict.PositionId.Value);
+
+                if (row != null && col != null)
+                {
+                    var cellKey = $"{row.RowIndex}_{col.ColumnIndex}";
+                    newHighlightKeys.Add(cellKey);
+                    firstRowIndex = row.RowIndex;
+                    firstColumnIndex = col.ColumnIndex;
+                }
+            }
+            else
+            {
+                // 处理其他类型的冲突（根据 RelatedShiftIds）
                 foreach (var shiftId in conflict.RelatedShiftIds)
                 {
                     var shift = Schedule.Shifts.FirstOrDefault(s => s.Id == shiftId);
@@ -336,7 +396,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     if (row != null && col != null)
                     {
                         var cellKey = $"{row.RowIndex}_{col.ColumnIndex}";
-                        HighlightedCellKeys.Add(cellKey);
+                        newHighlightKeys.Add(cellKey);
 
                         // 记录第一个单元格的位置（用于滚动）
                         if (firstRowIndex == null)
@@ -346,22 +406,160 @@ namespace AutoScheduling3.ViewModels.Scheduling
                         }
                     }
                 }
+            }
 
-                // 触发UI更新
-                OnPropertyChanged(nameof(HighlightedCellKeys));
+            // 更新高亮集合（触发属性变化通知）
+            HighlightedCellKeys = newHighlightKeys;
 
-                // 触发滚动到第一个高亮单元格
-                if (firstRowIndex.HasValue && firstColumnIndex.HasValue)
+            // 触发滚动到第一个高亮单元格
+            if (firstRowIndex.HasValue && firstColumnIndex.HasValue)
+            {
+                ScrollToCellRequested?.Invoke(this, new ScrollToCellEventArgs(
+                    firstRowIndex.Value, 
+                    firstColumnIndex.Value));
+            }
+
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 在哨位视图中定位冲突
+        /// </summary>
+        private async Task LocateConflictInPositionViewAsync(ConflictDto conflict)
+        {
+            if (PositionSchedules == null || !PositionSchedules.Any())
+            {
+                await _dialogService.ShowWarningAsync("哨位数据未加载", "请等待数据加载完成后再试");
+                return;
+            }
+
+            // 确定目标哨位和班次
+            int targetPositionId;
+            ShiftDto? targetShift = null;
+
+            // 处理未分配冲突
+            if (conflict.Type == "unassigned" && conflict.PositionId.HasValue)
+            {
+                targetPositionId = conflict.PositionId.Value;
+            }
+            // 处理其他类型的冲突
+            else if (conflict.RelatedShiftIds.Any())
+            {
+                var firstShiftId = conflict.RelatedShiftIds.First();
+                targetShift = Schedule.Shifts.FirstOrDefault(s => s.Id == firstShiftId);
+                
+                if (targetShift == null)
                 {
-                    ScrollToCellRequested?.Invoke(this, new ScrollToCellEventArgs(
-                        firstRowIndex.Value, 
-                        firstColumnIndex.Value));
+                    await _dialogService.ShowWarningAsync("无法定位", "未找到相关班次");
+                    return;
+                }
+                
+                targetPositionId = targetShift.PositionId;
+            }
+            else
+            {
+                await _dialogService.ShowWarningAsync("无法定位", "冲突未关联任何班次或哨位");
+                return;
+            }
+
+            // 查找对应的哨位
+            var targetPosition = PositionSchedules.FirstOrDefault(p => p.PositionId == targetPositionId);
+            if (targetPosition == null)
+            {
+                await _dialogService.ShowWarningAsync("无法定位", $"未找到哨位 ID：{targetPositionId}");
+                return;
+            }
+
+            // 切换到目标哨位
+            SelectedPositionSchedule = targetPosition;
+            PositionSelectorSearchText = targetPosition.PositionName;
+
+            // 计算目标日期和周次
+            DateTime targetDate;
+            int targetPeriodIndex;
+
+            if (conflict.Type == "unassigned" && conflict.StartTime.HasValue && conflict.PeriodIndex.HasValue)
+            {
+                targetDate = conflict.StartTime.Value.Date;
+                targetPeriodIndex = conflict.PeriodIndex.Value;
+            }
+            else if (targetShift != null)
+            {
+                targetDate = targetShift.StartTime.Date;
+                targetPeriodIndex = targetShift.PeriodIndex;
+            }
+            else
+            {
+                await _dialogService.ShowWarningAsync("无法定位", "无法确定目标日期和时段");
+                return;
+            }
+
+            // 计算班次所在的周次
+            var daysDiff = (targetDate - Schedule.StartDate.Date).Days;
+            var weekIndex = daysDiff / 7;
+
+            // 确保周次在有效范围内
+            if (weekIndex >= 0 && weekIndex < targetPosition.Weeks.Count)
+            {
+                CurrentWeekIndex = weekIndex;
+            }
+            else
+            {
+                await _dialogService.ShowWarningAsync("无法定位", $"目标日期不在排班范围内（周次：{weekIndex}）");
+                return;
+            }
+
+            // 创建高亮集合（用于哨位视图的单元格高亮）
+            var newHighlightKeys = new HashSet<string>();
+
+            // 计算周开始日期
+            var weekStartDate = Schedule.StartDate.AddDays(weekIndex * 7);
+
+            // 为所有相关班次创建高亮键
+            if (conflict.Type == "unassigned")
+            {
+                // 未分配冲突：只高亮一个单元格
+                var dayOfWeek = (targetDate - weekStartDate).Days;
+                if (dayOfWeek >= 0 && dayOfWeek < 7)
+                {
+                    var cellKey = $"{targetPeriodIndex}_{dayOfWeek}";
+                    newHighlightKeys.Add(cellKey);
                 }
             }
-            catch (Exception ex)
+            else
             {
-                await _dialogService.ShowErrorAsync("定位冲突失败", ex);
+                // 其他冲突：高亮所有相关班次
+                foreach (var shiftId in conflict.RelatedShiftIds)
+                {
+                    var relatedShift = Schedule.Shifts.FirstOrDefault(s => s.Id == shiftId);
+                    if (relatedShift == null || relatedShift.PositionId != targetPositionId) continue;
+
+                    // 计算单元格键：periodIndex_dayOfWeek
+                    var shiftDate = relatedShift.StartTime.Date;
+                    var dayOfWeek = (shiftDate - weekStartDate).Days;
+
+                    if (dayOfWeek >= 0 && dayOfWeek < 7)
+                    {
+                        var cellKey = $"{relatedShift.PeriodIndex}_{dayOfWeek}";
+                        newHighlightKeys.Add(cellKey);
+                    }
+                }
             }
+
+            // 更新高亮集合
+            HighlightedCellKeys = newHighlightKeys;
+
+            // 触发滚动到第一个高亮单元格
+            var firstDayOfWeek = (targetDate - weekStartDate).Days;
+            if (firstDayOfWeek >= 0 && firstDayOfWeek < 7)
+            {
+                // 使用 periodIndex 作为行索引，dayOfWeek 作为列索引
+                ScrollToCellRequested?.Invoke(this, new ScrollToCellEventArgs(
+                    targetPeriodIndex,
+                    firstDayOfWeek));
+            }
+
+            await Task.CompletedTask;
         }
 
         /// <summary>
@@ -369,8 +567,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private void ClearHighlights()
         {
-            HighlightedCellKeys.Clear();
-            OnPropertyChanged(nameof(HighlightedCellKeys));
+            HighlightedCellKeys = new HashSet<string>();
         }
 
         #endregion
@@ -533,6 +730,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
                         
                         // 触发表格数据更新（通过 OnPropertyChanged）
                         OnPropertyChanged(nameof(GridData));
+                        
+                        // 根据当前视图模式刷新对应的数据
+                        await RefreshCurrentViewDataAsync();
                         
                         // 重新检测冲突
                         await DetectConflictsAsync();

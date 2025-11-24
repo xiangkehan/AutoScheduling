@@ -844,12 +844,89 @@
                         </ListView>
 
                         <!-- By Position View -->
-                        <controls:PositionScheduleControl
-                            Grid.Row="0"
-                            ScheduleData="{x:Bind ViewModel.SelectedPositionSchedule, Mode=OneWay}"
-                            Visibility="{x:Bind ByPositionRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                            AutomationProperties.Name="哨位视图排班表"
-                            AutomationProperties.LandmarkType="Main"/>
+                        <Grid Grid.Row="0"
+                              Visibility="{x:Bind ByPositionRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- 哨位选择器 -->
+                            <Grid Grid.Row="0" 
+                                  Margin="0,0,0,12"
+                                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                  BorderThickness="1"
+                                  CornerRadius="8"
+                                  Padding="16"
+                                  AutomationProperties.Name="哨位选择区域">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0"
+                                           Text="选择哨位:"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,12,0"
+                                           FontWeight="SemiBold"
+                                           AutomationProperties.Name="哨位选择标签"/>
+
+                                <AutoSuggestBox Grid.Column="1"
+                                                x:Name="PositionSelectorAutoSuggestBox"
+                                                PlaceholderText="输入哨位名称或拼音首字母搜索..."
+                                                ItemsSource="{x:Bind ViewModel.PositionSelectorSuggestions, Mode=OneWay}"
+                                                Text="{x:Bind ViewModel.PositionSelectorSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                HorizontalAlignment="Stretch"
+                                                MinWidth="300"
+                                                QueryIcon="Find"
+                                                TextChanged="PositionSelectorAutoSuggestBox_TextChanged"
+                                                SuggestionChosen="PositionSelectorAutoSuggestBox_SuggestionChosen"
+                                                QuerySubmitted="PositionSelectorAutoSuggestBox_QuerySubmitted"
+                                                GotFocus="PositionSelectorAutoSuggestBox_GotFocus"
+                                                AutomationProperties.Name="哨位选择搜索框"
+                                                AutomationProperties.HelpText="输入哨位名称或拼音首字母搜索哨位，支持模糊匹配"
+                                                AutomationProperties.LiveSetting="Polite">
+                                    <AutoSuggestBox.ItemTemplate>
+                                        <DataTemplate x:DataType="dto:PositionScheduleData">
+                                            <Grid Padding="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{x:Bind PositionName}"
+                                                           FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"/>
+
+                                                <StackPanel Grid.Column="1"
+                                                            Orientation="Horizontal"
+                                                            Spacing="4"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="班次:"
+                                                               FontSize="12"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    <TextBlock Text="{x:Bind TotalShifts}"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </AutoSuggestBox.ItemTemplate>
+                                </AutoSuggestBox>
+                            </Grid>
+
+                            <!-- 哨位排班详情控件 -->
+                            <controls:PositionScheduleControl
+                                x:Name="PositionScheduleControl"
+                                Grid.Row="1"
+                                ScheduleData="{x:Bind ViewModel.SelectedPositionSchedule, Mode=OneWay}"
+                                HighlightedCellKeys="{x:Bind ViewModel.HighlightedCellKeys, Mode=OneWay}"
+                                AutomationProperties.Name="哨位视图排班表"
+                                AutomationProperties.LandmarkType="Main"/>
+                        </Grid>
 
                         <!-- By Personnel View -->
                         <Grid Grid.Row="0"

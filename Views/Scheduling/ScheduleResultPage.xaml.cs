@@ -39,8 +39,21 @@ namespace AutoScheduling3.Views.Scheduling
         /// </summary>
         private void OnScrollToCellRequested(object? sender, ScrollToCellEventArgs e)
         {
-            // 直接使用命名的 ScheduleGrid 控件
-            ScheduleGrid?.ScrollToCell(e.RowIndex, e.ColumnIndex);
+            // 根据当前视图模式选择对应的控件进行滚动
+            switch (ViewModel.CurrentViewMode)
+            {
+                case ViewMode.Grid:
+                    // 网格视图：使用 ScheduleGrid 控件
+                    ScheduleGrid?.ScrollToCell(e.RowIndex, e.ColumnIndex);
+                    break;
+
+                case ViewMode.ByPosition:
+                    // 哨位视图：使用 PositionScheduleControl 控件
+                    PositionScheduleControl?.ScrollToCell(e.RowIndex, e.ColumnIndex);
+                    break;
+
+                // 其他视图暂不支持滚动
+            }
         }
 
         #region 光标交互处理
@@ -282,6 +295,67 @@ namespace AutoScheduling3.Views.Scheduling
                     // 调用 ViewModel 的方法来更新建议列表，而不是直接设置
                     ViewModel.UpdatePersonnelSelectorSuggestions(string.Empty);
                 }
+            }
+        }
+
+        #endregion
+
+        #region 哨位选择器处理
+
+        /// <summary>
+        /// 哨位选择器文本改变时的处理
+        /// </summary>
+        private void PositionSelectorAutoSuggestBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+        {
+            // 只处理用户输入的情况
+            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+            {
+                ViewModel.UpdatePositionSelectorSuggestions(sender.Text);
+            }
+        }
+
+        /// <summary>
+        /// 哨位选择器选择建议项时的处理
+        /// </summary>
+        private void PositionSelectorAutoSuggestBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+        {
+            if (args.SelectedItem is PositionScheduleData positionSchedule)
+            {
+                ViewModel.SelectPosition(positionSchedule);
+            }
+        }
+
+        /// <summary>
+        /// 哨位选择器提交查询时的处理
+        /// </summary>
+        private void PositionSelectorAutoSuggestBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+        {
+            if (args.ChosenSuggestion is PositionScheduleData positionSchedule)
+            {
+                // 用户从下拉列表选择了一个项
+                ViewModel.SelectPosition(positionSchedule);
+            }
+            else if (!string.IsNullOrWhiteSpace(args.QueryText))
+            {
+                // 用户直接输入并按回车，选择第一个匹配项
+                var matchedPosition = ViewModel.PositionSelectorSuggestions.FirstOrDefault();
+                if (matchedPosition != null)
+                {
+                    ViewModel.SelectPosition(matchedPosition);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 哨位选择器获得焦点时显示所有哨位
+        /// </summary>
+        private void PositionSelectorAutoSuggestBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is AutoSuggestBox searchBox)
+            {
+                // 显示所有可用哨位
+                ViewModel.UpdatePositionSelectorSuggestions(string.Empty);
+                searchBox.IsSuggestionListOpen = true;
             }
         }
 

@@ -30,6 +30,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private readonly IPositionService _positionService;
         private readonly IScheduleGridExporter _gridExporter;
         private readonly PersonnelSearchHelper _searchHelper = new();
+        private readonly PositionSearchHelper _positionSearchHelper = new();
 
         #endregion
 
@@ -124,6 +125,20 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             get => _currentWeekIndex;
             set => SetProperty(ref _currentWeekIndex, value);
+        }
+
+        private ObservableCollection<PositionScheduleData> _positionSelectorSuggestions = new();
+        public ObservableCollection<PositionScheduleData> PositionSelectorSuggestions
+        {
+            get => _positionSelectorSuggestions;
+            set => SetProperty(ref _positionSelectorSuggestions, value);
+        }
+
+        private string _positionSelectorSearchText = string.Empty;
+        public string PositionSelectorSearchText
+        {
+            get => _positionSelectorSearchText;
+            set => SetProperty(ref _positionSelectorSearchText, value);
         }
 
         #endregion
@@ -570,6 +585,62 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     PersonnelSelectorSuggestions = new ObservableCollection<PersonnelScheduleData>(results);
                 }
             }
+        }
+
+        /// <summary>
+        /// 更新哨位选择器的建议列表（同步版本，用于 AutoSuggestBox）
+        /// </summary>
+        public void UpdatePositionSelectorSuggestions(string searchText)
+        {
+            try
+            {
+                if (PositionSchedules == null || !PositionSchedules.Any())
+                {
+                    PositionSelectorSuggestions.Clear();
+                    return;
+                }
+
+                // 使用立即搜索（不防抖）
+                var results = _positionSearchHelper.SearchImmediate(searchText, PositionSchedules);
+                PositionSelectorSuggestions = new ObservableCollection<PositionScheduleData>(results);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"更新哨位选择器建议失败: {ex.Message}");
+                
+                // 降级到简单匹配
+                if (string.IsNullOrWhiteSpace(searchText))
+                {
+                    PositionSelectorSuggestions = new ObservableCollection<PositionScheduleData>(PositionSchedules);
+                }
+                else
+                {
+                    var results = PositionSchedules
+                        .Where(p => p.PositionName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    PositionSelectorSuggestions = new ObservableCollection<PositionScheduleData>(results);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 选择哨位
+        /// </summary>
+        public void SelectPosition(PositionScheduleData position)
+        {
+            if (position == null) return;
+
+            SelectedPositionSchedule = position;
+            PositionSelectorSearchText = position.PositionName;
+        }
+
+        /// <summary>
+        /// 清空哨位选择
+        /// </summary>
+        public void ClearPositionSelection()
+        {
+            SelectedPositionSchedule = null;
+            PositionSelectorSearchText = string.Empty;
         }
 
         private async Task ConfirmAsync()
@@ -1174,6 +1245,16 @@ namespace AutoScheduling3.ViewModels.Scheduling
                         {
                             await BuildPositionScheduleDataAsync();
                         }
+                        // 初始化哨位选择器
+                        if (PositionSchedules.Count > 0)
+                        {
+                            PositionSelectorSuggestions = new ObservableCollection<PositionScheduleData>(PositionSchedules);
+                            if (SelectedPositionSchedule == null)
+                            {
+                                SelectedPositionSchedule = PositionSchedules[0];
+                                PositionSelectorSearchText = SelectedPositionSchedule.PositionName;
+                            }
+                        }
                         break;
 
                     case ViewMode.ByPersonnel:
@@ -1198,6 +1279,60 @@ namespace AutoScheduling3.ViewModels.Scheduling
             finally
             {
                 IsLoading = false;
+            }
+        }
+
+        #endregion
+
+        #region 数据刷新
+
+        /// <summary>
+        /// 刷新当前视图的数据
+        /// </summary>
+        public async Task RefreshCurrentViewDataAsync()
+        {
+            if (Schedule == null) return;
+
+            try
+            {
+                switch (CurrentViewMode)
+                {
+                    case ViewMode.Grid:
+                        // Grid View 通过 GridData 属性自动刷新
+                        OnPropertyChanged(nameof(GridData));
+                        break;
+
+                    case ViewMode.ByPosition:
+                        // 重新构建哨位视图数据
+                        await BuildPositionScheduleDataAsync();
+                        // 如果有选中的哨位，重新选择它
+                        if (SelectedPositionSchedule != null)
+                        {
+                            var positionId = SelectedPositionSchedule.PositionId;
+                            SelectedPositionSchedule = PositionSchedules.FirstOrDefault(p => p.PositionId == positionId);
+                        }
+                        break;
+
+                    case ViewMode.ByPersonnel:
+                        // 重新构建人员视图数据
+                        await BuildPersonnelScheduleDataAsync();
+                        // 如果有选中的人员，重新选择它
+                        if (SelectedPersonnelSchedule != null)
+                        {
+                            var personnelId = SelectedPersonnelSchedule.PersonnelId;
+                            SelectedPersonnelSchedule = PersonnelSchedules.FirstOrDefault(p => p.PersonnelId == personnelId);
+                        }
+                        break;
+
+                    case ViewMode.List:
+                        // 重新构建列表视图数据
+                        await BuildShiftListDataAsync();
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowErrorAsync("刷新视图数据失败", ex);
             }
         }
 

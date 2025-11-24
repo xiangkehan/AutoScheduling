@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace AutoScheduling3.DTOs;
 
 /// <summary>
@@ -24,4 +26,11 @@ public class PositionScheduleData
     /// 当前选中的周次索引
     /// </summary>
     public int CurrentWeekIndex { get; set; }
+
+    /// <summary>
+    /// 班次总数（统计所有周次的已分配班次）
+    /// </summary>
+    public int TotalShifts => Weeks
+        .SelectMany(w => w.Cells.Values)
+        .Count(c => c.IsAssigned);
 }

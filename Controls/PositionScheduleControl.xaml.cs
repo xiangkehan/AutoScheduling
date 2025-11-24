@@ -24,12 +24,31 @@ namespace AutoScheduling3.Controls
                 new PropertyMetadata(null, OnScheduleDataChanged));
 
         /// <summary>
+        /// HighlightedCellKeys 依赖属性
+        /// </summary>
+        public static readonly DependencyProperty HighlightedCellKeysProperty =
+            DependencyProperty.Register(
+                nameof(HighlightedCellKeys),
+                typeof(HashSet<string>),
+                typeof(PositionScheduleControl),
+                new PropertyMetadata(null, OnHighlightedCellKeysChanged));
+
+        /// <summary>
         /// 排班数据
         /// </summary>
         public PositionScheduleData? ScheduleData
         {
             get => (PositionScheduleData?)GetValue(ScheduleDataProperty);
             set => SetValue(ScheduleDataProperty, value);
+        }
+
+        /// <summary>
+        /// 高亮显示的单元格键集合（格式：periodIndex_dayOfWeek）
+        /// </summary>
+        public HashSet<string>? HighlightedCellKeys
+        {
+            get => (HashSet<string>?)GetValue(HighlightedCellKeysProperty);
+            set => SetValue(HighlightedCellKeysProperty, value);
         }
 
         /// <summary>
@@ -84,6 +103,17 @@ namespace AutoScheduling3.Controls
             if (d is PositionScheduleControl control)
             {
                 control.OnScheduleDataChangedInternal(e.NewValue as PositionScheduleData);
+            }
+        }
+
+        /// <summary>
+        /// HighlightedCellKeys 属性变化回调
+        /// </summary>
+        private static void OnHighlightedCellKeysChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is PositionScheduleControl control)
+            {
+                control.UpdateCellHighlights();
             }
         }
 
@@ -289,17 +319,27 @@ namespace AutoScheduling3.Controls
         /// </summary>
         private Border CreateScheduleCell(PositionScheduleCell? cellData, int periodIndex, int dayOfWeek)
         {
+            var cellKey = $"{periodIndex}_{dayOfWeek}";
+            var isHighlighted = HighlightedCellKeys?.Contains(cellKey) ?? false;
+
             var border = new Border
             {
                 BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
                 BorderThickness = new Thickness(1),
                 Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"],
                 Padding = new Thickness(4),
-                Tag = cellData
+                Tag = new CellTag { CellData = cellData, CellKey = cellKey }
             };
 
             // 根据单元格状态应用不同样式
-            if (cellData != null)
+            if (isHighlighted)
+            {
+                // 高亮单元格：橙色边框 + 半透明橙色背景（与网格视图一致）
+                border.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Orange);
+                border.BorderThickness = new Thickness(3);
+                border.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(50, 255, 165, 0)); // 半透明橙色
+            }
+            else if (cellData != null)
             {
                 if (cellData.HasConflict)
                 {
@@ -457,6 +497,119 @@ namespace AutoScheduling3.Controls
         {
             FullScreenRequested?.Invoke(this, EventArgs.Empty);
         }
+
+        /// <summary>
+        /// 更新所有单元格的高亮状态
+        /// </summary>
+        private void UpdateCellHighlights()
+        {
+            var highlightKeys = HighlightedCellKeys ?? new HashSet<string>();
+
+            // 遍历所有单元格，更新高亮状态
+            foreach (var child in WeeklyGrid.Children)
+            {
+                if (child is Border border && border.Tag is CellTag cellTag)
+                {
+                    var isHighlighted = highlightKeys.Contains(cellTag.CellKey);
+
+                    // 更新样式
+                    if (isHighlighted)
+                    {
+                        // 高亮单元格：橙色边框 + 半透明橙色背景（与网格视图一致）
+                        border.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Orange);
+                        border.BorderThickness = new Thickness(3);
+                        border.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(50, 255, 165, 0)); // 半透明橙色
+                    }
+                    else
+                    {
+                        // 恢复默认样式
+                        border.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
+                        border.BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
+                        border.BorderThickness = new Thickness(1);
+
+                        // 根据单元格状态应用特殊样式
+                        if (cellTag.CellData != null)
+                        {
+                            if (cellTag.CellData.HasConflict)
+                            {
+                                border.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Red);
+                                border.BorderThickness = new Thickness(2);
+                            }
+                            else if (cellTag.CellData.IsManualAssignment)
+                            {
+                                border.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue);
+                                border.BorderThickness = new Thickness(2);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 滚动到指定单元格
+        /// </summary>
+        /// <param name="periodIndex">时段索引（行索引，0-11）</param>
+        /// <param name="dayOfWeek">星期索引（列索引，0-6）</param>
+        public void ScrollToCell(int periodIndex, int dayOfWeek)
+        {
+            try
+            {
+                // 查找目标单元格
+                var targetCell = FindCellElement(periodIndex, dayOfWeek);
+                if (targetCell == null) return;
+
+                // 获取单元格相对于 ScrollViewer 的位置
+                var transform = targetCell.TransformToVisual(GridScrollViewer);
+                var position = transform.TransformPoint(new Windows.Foundation.Point(0, 0));
+
+                // 计算滚动位置（将单元格滚动到视口中央）
+                var scrollToX = position.X + GridScrollViewer.HorizontalOffset - (GridScrollViewer.ViewportWidth / 2);
+                var scrollToY = position.Y + GridScrollViewer.VerticalOffset - (GridScrollViewer.ViewportHeight / 2);
+
+                // 确保滚动位置不超出范围
+                scrollToX = Math.Max(0, Math.Min(scrollToX, GridScrollViewer.ScrollableWidth));
+                scrollToY = Math.Max(0, Math.Min(scrollToY, GridScrollViewer.ScrollableHeight));
+
+                // 执行滚动（使用动画效果）
+                GridScrollViewer.ChangeView(scrollToX, scrollToY, null, false);
+            }
+            catch
+            {
+                // 滚动失败时静默处理
+            }
+        }
+
+        /// <summary>
+        /// 查找指定位置的单元格元素
+        /// </summary>
+        private UIElement? FindCellElement(int periodIndex, int dayOfWeek)
+        {
+            var cellKey = $"{periodIndex}_{dayOfWeek}";
+
+            // 在 WeeklyGrid 中查找对应的单元格
+            foreach (var child in WeeklyGrid.Children)
+            {
+                if (child is Border border && border.Tag is CellTag cellTag)
+                {
+                    if (cellTag.CellKey == cellKey)
+                    {
+                        return border;
+                    }
+                }
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 单元格标签（用于存储单元格数据和键）
+    /// </summary>
+    internal class CellTag
+    {
+        public PositionScheduleCell? CellData { get; set; }
+        public string CellKey { get; set; } = string.Empty;
     }
 
     /// <summary>

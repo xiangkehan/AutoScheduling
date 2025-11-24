@@ -152,10 +152,10 @@ public sealed partial class ConflictResolutionDialog : ContentDialog
     private void OnPrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
     {
         // 获取选中的方案
-        var selectedRadioButton = FindSelectedRadioButton(ResolutionOptionsItemsControl);
-        if (selectedRadioButton != null && selectedRadioButton.DataContext is ConflictResolutionOption option)
+        var selectedOption = FindSelectedOption();
+        if (selectedOption != null)
         {
-            SelectedResolution = option;
+            SelectedResolution = selectedOption;
         }
         else if (_resolutionOptions.Count > 0)
         {
@@ -174,16 +174,48 @@ public sealed partial class ConflictResolutionDialog : ContentDialog
     }
 
     /// <summary>
-    /// 查找选中的 RadioButton
+    /// 查找选中的修复方案
     /// </summary>
-    private RadioButton? FindSelectedRadioButton(ItemsControl itemsControl)
+    private ConflictResolutionOption? FindSelectedOption()
     {
-        for (int i = 0; i < itemsControl.Items.Count; i++)
+        // 遍历所有方案，查找对应的 RadioButton
+        for (int i = 0; i < _resolutionOptions.Count; i++)
         {
-            var container = itemsControl.ContainerFromIndex(i);
-            if (container is RadioButton radioButton && radioButton.IsChecked == true)
+            var container = ResolutionOptionsItemsControl.ContainerFromIndex(i);
+            if (container != null)
             {
-                return radioButton;
+                // 在容器中查找 RadioButton
+                var radioButton = FindVisualChild<RadioButton>(container);
+                if (radioButton != null && radioButton.IsChecked == true)
+                {
+                    return _resolutionOptions[i];
+                }
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 在可视化树中查找指定类型的子元素
+    /// </summary>
+    private T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        if (parent == null) return null;
+
+        int childCount = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < childCount; i++)
+        {
+            var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(parent, i);
+            
+            if (child is T typedChild)
+            {
+                return typedChild;
+            }
+
+            var result = FindVisualChild<T>(child);
+            if (result != null)
+            {
+                return result;
             }
         }
         return null;
