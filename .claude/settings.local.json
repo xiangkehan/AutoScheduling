@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git add .)",
       "Bash(dotnet build:*)",
-      "Bash(gh pr list:*)"
+      "Bash(gh pr list:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
