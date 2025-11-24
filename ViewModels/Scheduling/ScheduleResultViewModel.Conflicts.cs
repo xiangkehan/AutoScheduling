@@ -18,6 +18,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
         private IConflictDetectionService? _conflictDetectionService;
         private IConflictReportService? _conflictReportService;
+        private IConflictResolutionService? _conflictResolutionService;
 
         #endregion
 
@@ -462,12 +463,55 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private async Task FixConflictInGridAsync(ConflictDto? conflict)
         {
-            if (conflict == null) return;
+            if (conflict == null || Schedule == null) return;
 
             try
             {
-                // TODO: 打开修复对话框
-                await _dialogService.ShowWarningAsync("功能开发中", "冲突修复功能正在开发中");
+                // 检查服务是否可用
+                if (_conflictResolutionService == null)
+                {
+                    await _dialogService.ShowWarningAsync("服务不可用", "冲突修复服务未初始化");
+                    return;
+                }
+
+                // 获取修复方案
+                var resolutionOptions = await _conflictResolutionService.GenerateResolutionOptionsAsync(conflict, Schedule);
+                
+                // 创建并显示修复对话框
+                var dialog = new Views.Scheduling.ConflictResolutionDialog();
+                dialog.XamlRoot = App.MainWindow.Content.XamlRoot;
+                
+                // 初始化对话框数据
+                dialog.Initialize(conflict, resolutionOptions);
+                
+                // 显示对话框
+                var result = await dialog.ShowAsync();
+                
+                // 如果用户选择了修复方案
+                if (result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary && dialog.SelectedResolution != null)
+                {
+                    // 应用修复方案
+                    var updatedSchedule = await _conflictResolutionService.ApplyResolutionAsync(
+                        dialog.SelectedResolution,
+                        Schedule);
+                    
+                    if (updatedSchedule != null)
+                    {
+                        // 更新排班数据
+                        Schedule = updatedSchedule;
+                        
+                        // 触发表格数据更新（通过 OnPropertyChanged）
+                        OnPropertyChanged(nameof(GridData));
+                        
+                        // 重新检测冲突
+                        await DetectConflictsAsync();
+                        
+                        // 标记有未保存的更改
+                        HasUnsavedChanges = true;
+                        
+                        await _dialogService.ShowSuccessAsync("冲突修复成功");
+                    }
+                }
             }
             catch (Exception ex)
             {

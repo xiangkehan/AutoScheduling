@@ -161,7 +161,7 @@ public class ConflictResolutionService : IConflictResolutionService
         return new ScheduleDto
         {
             Id = schedule.Id,
-            Name = schedule.Name,
+            Title = schedule.Title,
             StartDate = schedule.StartDate,
             EndDate = schedule.EndDate,
             PositionIds = new List<int>(schedule.PositionIds),
@@ -213,7 +213,7 @@ public class ConflictResolutionService : IConflictResolutionService
     {
         // 这里需要根据 ResolutionData 的实际结构进行验证
         // 暂时返回有效
-        return await Task.FromResult((true, null));
+        return await Task.FromResult<(bool, string?)>((true, null));
     }
 
     /// <summary>
@@ -223,7 +223,7 @@ public class ConflictResolutionService : IConflictResolutionService
         ConflictResolutionOption option,
         ScheduleDto schedule)
     {
-        return await Task.FromResult((true, null));
+        return await Task.FromResult<(bool, string?)>((true, null));
     }
 
     /// <summary>
@@ -233,7 +233,7 @@ public class ConflictResolutionService : IConflictResolutionService
         ConflictResolutionOption option,
         ScheduleDto schedule)
     {
-        return await Task.FromResult((true, null));
+        return await Task.FromResult<(bool, string?)>((true, null));
     }
 
     /// <summary>

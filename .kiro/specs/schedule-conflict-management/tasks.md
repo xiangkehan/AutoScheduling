@@ -106,15 +106,15 @@
   - **Validates: Requirements 2.1**
 
 
-- [ ] 4. 实现冲突修复服务
-- [ ] 4.1 创建冲突修复服务接口和基础实现
+- [x] 4. 实现冲突修复服务
+- [x] 4.1 创建冲突修复服务接口和基础实现
   - 创建 IConflictResolutionService 接口
   - 创建 ConflictResolutionService 基础类
   - 实现 ValidateResolutionAsync 方法（验证方案有效性）
   - 实现 EvaluateImpactAsync 方法（评估方案影响）
   - _Requirements: 4.1, 4.7_
 
-- [ ] 4.2 实现技能不匹配修复方案生成
+- [x] 4.2 实现技能不匹配修复方案生成
   - 实现 GenerateSkillMismatchResolutionsAsync 方法
   - 查找具有匹配技能的可用人员
   - 按工作量排序候选人员
@@ -122,26 +122,26 @@
   - 生成取消分配方案
   - _Requirements: 4.1_
 
-- [ ] 4.3 实现工作量不均衡修复方案生成
+- [x] 4.3 实现工作量不均衡修复方案生成
   - 实现 GenerateWorkloadImbalanceResolutionsAsync 方法
   - 识别工作量较低的人员
   - 生成重新分配班次方案
   - _Requirements: 4.2_
 
-- [ ] 4.4 实现未分配时段修复方案生成
+- [x] 4.4 实现未分配时段修复方案生成
   - 实现 GenerateUnassignedSlotResolutionsAsync 方法
   - 查找可用且技能匹配的人员
   - 按工作量和休息时间排序
   - 生成推荐人员列表
   - _Requirements: 4.3_
 
-- [ ] 4.5 实现休息时间不足修复方案生成
+- [x] 4.5 实现休息时间不足修复方案生成
   - 实现 GenerateInsufficientRestResolutionsAsync 方法
   - 生成调整班次时间方案
   - 生成替换人员方案
   - _Requirements: 4.4_
 
-- [ ] 4.6 实现修复方案应用逻辑
+- [x] 4.6 实现修复方案应用逻辑
   - 实现 ApplyResolutionAsync 方法
   - 根据方案类型执行相应操作（替换人员、取消分配等）
   - 更新排班数据
@@ -356,10 +356,10 @@
 
 - [x] 10. 注册服务和依赖注入
 - [x] 10.1 更新 ServiceCollectionExtensions.cs
-  - 注册 IConflictDetectionService
-  - 注册 IConflictResolutionService
-  - 注册 IConflictReportService
-  - 更新 ScheduleResultViewModel 的构造函数注入
+  - ✅ 注册 IConflictDetectionService
+  - ✅ 注册 IConflictResolutionService
+  - ✅ 注册 IConflictReportService
+  - ✅ 更新 ScheduleResultViewModel 的构造函数注入
   - _Requirements: 所有_
 
 - [ ] 11. 集成测试和验证

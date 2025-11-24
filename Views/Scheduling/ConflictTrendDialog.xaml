@@ -296,7 +296,6 @@
 
             <!-- 导出按钮 -->
             <Button 
-                Content="导出报告"
                 Click="OnExportReportClick"
                 HorizontalAlignment="Left"
                 Style="{StaticResource AccentButtonStyle}">
