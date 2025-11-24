@@ -331,7 +331,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
             NavigationService navigationService,
             IPersonnelService personnelService,
             IPositionService positionService,
-            IScheduleGridExporter gridExporter)
+            IScheduleGridExporter gridExporter,
+            IConflictDetectionService? conflictDetectionService = null,
+            IConflictReportService? conflictReportService = null)
         {
             _schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
@@ -339,6 +341,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
             _personnelService = personnelService ?? throw new ArgumentNullException(nameof(personnelService));
             _positionService = positionService ?? throw new ArgumentNullException(nameof(positionService));
             _gridExporter = gridExporter ?? throw new ArgumentNullException(nameof(gridExporter));
+            
+            // 冲突管理服务（可选）
+            _conflictDetectionService = conflictDetectionService;
+            _conflictReportService = conflictReportService;
 
             // 初始化命令
             LoadScheduleCommand = new AsyncRelayCommand<int>(LoadScheduleAsync);
@@ -363,6 +369,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
             FixConflictCommand = new AsyncRelayCommand<ConflictInfo>(FixConflictAsync);
             ToggleFullScreenCommand = new AsyncRelayCommand(ToggleFullScreenAsync);
             CompareSchedulesCommand = new AsyncRelayCommand(CompareSchedulesAsync);
+            
+            // 初始化冲突相关命令
+            InitializeConflictCommands();
 
             PropertyChanged += (s, e) =>
             {
@@ -375,6 +384,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     {
                         Conflicts = new ObservableCollection<ConflictDto>(Schedule.Conflicts);
                     }
+                    // 自动检测冲突
+                    _ = DetectConflictsAsync();
                 }
                 if (e.PropertyName is nameof(IsLoading) or nameof(IsConfirming))
                 {

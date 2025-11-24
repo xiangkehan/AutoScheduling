@@ -14,6 +14,7 @@
 
     <Page.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:BoolToTextConverter x:Key="BoolToTextConverter"/>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <converters:NullToBoolConverter x:Key="NullToBoolConverter"/>
         <converters:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
@@ -234,32 +235,210 @@
                       <Grid BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
                           BorderThickness="1,0,0,0" 
                           Padding="12"
-                          AutomationProperties.Name="冲突和统计信息面板"
+                          AutomationProperties.Name="冲突管理面板"
                           AutomationProperties.LandmarkType="Custom">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Conflict and Warnings Header -->
-                        <StackPanel Grid.Row="0" Spacing="8">
-                            <TextBlock Text="冲突和警告" 
+                        <!-- Conflict Panel Header -->
+                        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,12">
+                            <TextBlock Text="冲突管理" 
                                        Style="{ThemeResource SubtitleTextBlockStyle}"
-                                       AutomationProperties.Name="冲突和警告标题"
+                                       AutomationProperties.Name="冲突管理标题"
                                        AutomationProperties.HeadingLevel="Level2"/>
-                            <TextBlock Text="{x:Bind ViewModel.Conflicts.Count, Mode=OneWay, FallbackValue=0}" 
-                                       FontSize="12" 
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                       AutomationProperties.Name="冲突数量"
-                                       AutomationProperties.LiveSetting="Polite"/>
                         </StackPanel>
 
-                        <!-- Statistics Panel -->
-                        <Expander Grid.Row="1"
+                        <!-- Conflict Statistics Cards -->
+                        <Grid Grid.Row="1" Margin="0,0,0,12" AutomationProperties.Name="冲突统计卡片">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Hard Constraint Conflicts Card -->
+                            <Border Grid.Row="0" Grid.Column="0"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                    BorderBrush="{ThemeResource SystemFillColorCriticalBrush}" 
+                                    BorderThickness="2" 
+                                    CornerRadius="8" 
+                                    Padding="12"
+                                    Margin="0,0,4,4"
+                                    AutomationProperties.Name="硬约束冲突统计卡片">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="⚠ 硬约束冲突" 
+                                               FontSize="12" 
+                                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                               FontWeight="SemiBold"
+                                               AutomationProperties.Name="硬约束冲突标签"/>
+                                    <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.HardConflictCount, Mode=OneWay, FallbackValue=0}" 
+                                               FontSize="24" 
+                                               FontWeight="Bold"
+                                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                               AutomationProperties.Name="硬约束冲突数量"
+                                               AutomationProperties.LiveSetting="Polite"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Soft Constraint Conflicts Card -->
+                            <Border Grid.Row="0" Grid.Column="1"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                    BorderBrush="{ThemeResource SystemFillColorCautionBrush}" 
+                                    BorderThickness="2" 
+                                    CornerRadius="8" 
+                                    Padding="12"
+                                    Margin="4,0,0,4"
+                                    AutomationProperties.Name="软约束冲突统计卡片">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="⚠ 软约束冲突" 
+                                               FontSize="12" 
+                                               Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                               FontWeight="SemiBold"
+                                               AutomationProperties.Name="软约束冲突标签"/>
+                                    <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.SoftConflictCount, Mode=OneWay, FallbackValue=0}" 
+                                               FontSize="24" 
+                                               FontWeight="Bold"
+                                               Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                               AutomationProperties.Name="软约束冲突数量"
+                                               AutomationProperties.LiveSetting="Polite"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Unassigned Slots Card -->
+                            <Border Grid.Row="1" Grid.Column="0"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                    BorderThickness="1" 
+                                    CornerRadius="8" 
+                                    Padding="12"
+                                    Margin="0,4,4,0"
+                                    AutomationProperties.Name="未分配时段统计卡片">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="ℹ 未分配时段" 
+                                               FontSize="12" 
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               FontWeight="SemiBold"
+                                               AutomationProperties.Name="未分配时段标签"/>
+                                    <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.UnassignedSlotCount, Mode=OneWay, FallbackValue=0}" 
+                                               FontSize="24" 
+                                               FontWeight="Bold"
+                                               AutomationProperties.Name="未分配时段数量"
+                                               AutomationProperties.LiveSetting="Polite"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Ignored Conflicts Card -->
+                            <Border Grid.Row="1" Grid.Column="1"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                    BorderThickness="1" 
+                                    CornerRadius="8" 
+                                    Padding="12"
+                                    Margin="4,4,0,0"
+                                    AutomationProperties.Name="已忽略冲突统计卡片">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="✓ 已忽略" 
+                                               FontSize="12" 
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               FontWeight="SemiBold"
+                                               AutomationProperties.Name="已忽略冲突标签"/>
+                                    <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.IgnoredConflictCount, Mode=OneWay, FallbackValue=0}" 
+                                               FontSize="24" 
+                                               FontWeight="Bold"
+                                               AutomationProperties.Name="已忽略冲突数量"
+                                               AutomationProperties.LiveSetting="Polite"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Filter and Sort Controls -->
+                        <StackPanel Grid.Row="2" Spacing="8" Margin="0,0,0,12" AutomationProperties.Name="筛选和排序控件">
+                            <!-- Type and Severity Filters -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Type Filter -->
+                                <ComboBox Grid.Column="0"
+                                          Header="类型"
+                                          SelectedValue="{x:Bind ViewModel.ConflictTypeFilter, Mode=TwoWay}"
+                                          PlaceholderText="全部"
+                                          HorizontalAlignment="Stretch"
+                                          Margin="0,0,4,0"
+                                          AutomationProperties.Name="冲突类型筛选器"
+                                          AutomationProperties.HelpText="按冲突类型筛选">
+                                    <x:String>All</x:String>
+                                    <x:String>hard</x:String>
+                                    <x:String>soft</x:String>
+                                    <x:String>info</x:String>
+                                    <x:String>unassigned</x:String>
+                                </ComboBox>
+
+                                <!-- Severity Filter -->
+                                <ComboBox Grid.Column="1"
+                                          Header="严重程度"
+                                          SelectedValue="{x:Bind ViewModel.ConflictSeverityFilter, Mode=TwoWay}"
+                                          PlaceholderText="全部"
+                                          HorizontalAlignment="Stretch"
+                                          Margin="4,0,0,0"
+                                          AutomationProperties.Name="严重程度筛选器"
+                                          AutomationProperties.HelpText="按严重程度筛选">
+                                    <x:String>All</x:String>
+                                    <x:String>5</x:String>
+                                    <x:String>4</x:String>
+                                    <x:String>3</x:String>
+                                    <x:String>2</x:String>
+                                    <x:String>1</x:String>
+                                </ComboBox>
+                            </Grid>
+
+                            <!-- Sort and Search -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Sort By -->
+                                <ComboBox Grid.Column="0"
+                                          Header="排序"
+                                          SelectedValue="{x:Bind ViewModel.ConflictSortBy, Mode=TwoWay}"
+                                          HorizontalAlignment="Stretch"
+                                          Margin="0,0,4,0"
+                                          AutomationProperties.Name="排序选择器"
+                                          AutomationProperties.HelpText="选择排序方式">
+                                    <x:String>Type</x:String>
+                                    <x:String>Date</x:String>
+                                    <x:String>Severity</x:String>
+                                </ComboBox>
+
+                                <!-- Search Box -->
+                                <TextBox Grid.Column="1"
+                                         Header="搜索"
+                                         Text="{x:Bind ViewModel.ConflictSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         PlaceholderText="人员/哨位..."
+                                         Margin="4,0,0,0"
+                                         AutomationProperties.Name="冲突搜索框"
+                                         AutomationProperties.HelpText="按人员或哨位名称搜索冲突"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- Statistics Panel (Collapsible) -->
+                        <Expander Grid.Row="3"
                                   Header="统计信息"
-                                  IsExpanded="True"
-                                  Margin="0,12,0,0"
+                                  IsExpanded="False"
+                                  Margin="0,0,0,12"
                                   AutomationProperties.Name="统计信息面板"
                                   AutomationProperties.HeadingLevel="Level2">
                             <StackPanel Spacing="12" Margin="0,8,0,0">
@@ -413,52 +592,179 @@
                             </StackPanel>
                         </Expander>
 
-                        <!-- Conflict List -->
-                        <ScrollViewer Grid.Row="2" 
-                                      Margin="0,12,0,0"
+                        <!-- Conflict List with Grouping -->
+                        <ScrollViewer Grid.Row="4" 
+                                      Margin="0,0,0,0"
                                       AutomationProperties.Name="冲突列表区域">
-                            <ListView x:Name="ConflictListView"
-                                      ItemsSource="{x:Bind ViewModel.ConflictInfos, Mode=OneWay}" 
-                                      SelectionMode="None"
-                                      AutomationProperties.Name="冲突列表"
-                                      AutomationProperties.LandmarkType="Custom"
-                                      AutomationProperties.LiveSetting="Polite">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="dto:ConflictInfo">
-                                        <InfoBar Title="{x:Bind ConflictType}"
-                                                 Message="{x:Bind Description}"
-                                                 Severity="Warning"
-                                                 IsOpen="True"
-                                                 Margin="0,0,0,8"
-                                                 AutomationProperties.Name="{x:Bind ConflictType}"
-                                                 AutomationProperties.HelpText="{x:Bind Description}">
-                                            <InfoBar.Content>
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <Button Content="定位" 
+                            <ItemsControl x:Name="ConflictListView"
+                                          ItemsSource="{x:Bind ViewModel.FilteredConflicts, Mode=OneWay}"
+                                          AutomationProperties.Name="冲突列表"
+                                          AutomationProperties.LandmarkType="Custom"
+                                          AutomationProperties.LiveSetting="Polite">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="dto:ConflictDto">
+                                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="12"
+                                                Margin="0,0,0,8"
+                                                AutomationProperties.Name="{x:Bind Message}">
+                                            <StackPanel Spacing="8">
+                                                <!-- Conflict Header -->
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Icon based on type -->
+                                                    <FontIcon Grid.Column="0"
+                                                              Glyph="&#xE7BA;"
+                                                              FontSize="16"
+                                                              Margin="0,0,8,0"
+                                                              VerticalAlignment="Top"
+                                                              Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+
+                                                    <!-- Conflict Type and Description -->
+                                                    <StackPanel Grid.Column="1" Spacing="4">
+                                                        <TextBlock Text="{x:Bind SubType}"
+                                                                   FontWeight="SemiBold"
+                                                                   TextWrapping="Wrap"
+                                                                   AutomationProperties.Name="冲突类型"/>
+                                                        <TextBlock Text="{x:Bind Message}"
+                                                                   FontSize="12"
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                                   TextWrapping="Wrap"
+                                                                   AutomationProperties.Name="冲突描述"/>
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <!-- Conflict Details -->
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Personnel Info -->
+                                                    <StackPanel Grid.Column="0" Spacing="2">
+                                                        <TextBlock Text="人员" 
+                                                                   FontSize="10" 
+                                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                                        <TextBlock Text="{x:Bind PersonnelName, FallbackValue='-'}" 
+                                                                   FontSize="12"
+                                                                   FontWeight="SemiBold"/>
+                                                    </StackPanel>
+
+                                                    <!-- Position Info -->
+                                                    <StackPanel Grid.Column="1" Spacing="2">
+                                                        <TextBlock Text="哨位" 
+                                                                   FontSize="10" 
+                                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                                        <TextBlock Text="{x:Bind PositionName, FallbackValue='-'}" 
+                                                                   FontSize="12"
+                                                                   FontWeight="SemiBold"/>
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <!-- Date and Time Info -->
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="时间" 
+                                                               FontSize="10" 
+                                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                                    <TextBlock FontSize="12">
+                                                        <Run Text="{x:Bind StartTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd HH:mm', FallbackValue='-'}"/>
+                                                        <Run Text=" - "/>
+                                                        <Run Text="{x:Bind EndTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='HH:mm', FallbackValue='-'}"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+
+                                                <!-- Action Buttons -->
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <Button Grid.Column="0"
+                                                            Content="定位" 
                                                             Tag="{x:Bind}"
                                                             Click="LocateConflictButton_Click"
+                                                            HorizontalAlignment="Stretch"
+                                                            Margin="0,0,4,0"
                                                             AutomationProperties.Name="定位冲突"
                                                             AutomationProperties.HelpText="在表格中定位并高亮显示此冲突"
                                                             ToolTipService.ToolTip="定位冲突"/>
-                                                    <Button Content="忽略" 
+
+                                                    <Button Grid.Column="1"
+                                                            Content="{x:Bind IsIgnored, Mode=OneWay, Converter={StaticResource BoolToTextConverter}, ConverterParameter='取消忽略|忽略'}"
                                                             Tag="{x:Bind}"
                                                             Click="IgnoreConflictButton_Click"
-                                                            AutomationProperties.Name="忽略冲突"
-                                                            AutomationProperties.HelpText="将此冲突标记为已忽略"
-                                                            ToolTipService.ToolTip="忽略冲突"/>
-                                                    <Button Content="修复" 
+                                                            HorizontalAlignment="Stretch"
+                                                            Margin="4,0,4,0"
+                                                            AutomationProperties.Name="忽略或取消忽略冲突"
+                                                            AutomationProperties.HelpText="将此冲突标记为已忽略或取消忽略"
+                                                            ToolTipService.ToolTip="忽略/取消忽略"/>
+
+                                                    <Button Grid.Column="2"
+                                                            Content="修复" 
                                                             Tag="{x:Bind}"
                                                             Click="FixConflictButton_Click"
+                                                            HorizontalAlignment="Stretch"
+                                                            Margin="4,0,0,0"
+                                                            IsEnabled="{x:Bind IsFixable}"
                                                             AutomationProperties.Name="修复冲突"
                                                             AutomationProperties.HelpText="打开修复对话框以解决此冲突"
                                                             ToolTipService.ToolTip="修复冲突"/>
-                                                </StackPanel>
-                                            </InfoBar.Content>
-                                        </InfoBar>
+                                                </Grid>
+
+                                                <!-- Ignored Badge -->
+                                                <Border Background="{ThemeResource SystemFillColorSuccessBrush}"
+                                                        CornerRadius="4"
+                                                        Padding="8,4"
+                                                        HorizontalAlignment="Left"
+                                                        Visibility="{x:Bind IsIgnored, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="✓ 已忽略"
+                                                               FontSize="10"
+                                                               Foreground="White"
+                                                               FontWeight="SemiBold"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
                                     </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </ScrollViewer>
+
+                        <!-- Bottom Action Buttons -->
+                        <StackPanel Grid.Row="5" 
+                                    Orientation="Vertical" 
+                                    Spacing="8" 
+                                    Margin="0,12,0,0"
+                                    AutomationProperties.Name="冲突操作按钮">
+                            <Button Content="全部忽略软约束"
+                                    Command="{x:Bind ViewModel.IgnoreAllSoftConflictsCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.Name="全部忽略软约束冲突"
+                                    AutomationProperties.HelpText="将所有软约束冲突标记为已忽略"
+                                    ToolTipService.ToolTip="忽略所有软约束冲突"/>
+
+                            <Button Content="导出冲突报告"
+                                    Command="{x:Bind ViewModel.ExportConflictReportCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.Name="导出冲突报告"
+                                    AutomationProperties.HelpText="导出冲突报告为Excel或PDF文件"
+                                    ToolTipService.ToolTip="导出冲突报告"/>
+
+                            <Button Content="冲突趋势"
+                                    Command="{x:Bind ViewModel.ShowConflictTrendCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.Name="查看冲突趋势"
+                                    AutomationProperties.HelpText="查看冲突趋势分析和统计"
+                                    ToolTipService.ToolTip="查看冲突趋势"/>
+                        </StackPanel>
                     </Grid>
                 </SplitView.Pane>
                 <SplitView.Content>

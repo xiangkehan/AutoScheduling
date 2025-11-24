@@ -1,6 +1,6 @@
 # 实现计划
 
-- [ ] 1. 创建冲突管理数据模型和枚举
+- [x] 1. 创建冲突管理数据模型和枚举
   - 扩展 ConflictDto 类，添加新字段（ID、SubType、详细信息、相关班次ID、严重程度、忽略状态等）
   - 创建 ConflictSubType 枚举（技能不匹配、人员不可用、休息时间不足等）
   - 创建 ConflictStatistics 类（统计硬约束、软约束、未分配时段数量）
@@ -14,7 +14,7 @@
   - **Property 3: 冲突信息完整性**
   - **Validates: Requirements 2.2, 2.3, 2.4, 2.5, 2.6**
 
-- [ ] 2. 实现冲突检测服务接口和基础实现
+- [x] 2. 实现冲突检测服务接口和基础实现
   - 创建 IConflictDetectionService 接口
   - 创建 ConflictDetectionService 基础类
   - 实现 DetectConflictsAsync 方法（协调所有检测器）
@@ -22,8 +22,8 @@
   - 添加人员和哨位信息缓存机制
   - _Requirements: 1.1, 2.1_
 
-- [ ] 3. 实现各类冲突检测器
-- [ ] 3.1 实现技能不匹配检测
+- [x] 3. 实现各类冲突检测器
+- [x] 3.1 实现技能不匹配检测
   - 实现 DetectSkillMismatchAsync 方法
   - 查询哨位要求的技能和人员拥有的技能
   - 识别缺少的必需技能
@@ -34,7 +34,7 @@
   - **Property 1: 冲突检测完整性（技能不匹配部分）**
   - **Validates: Requirements 1.2**
 
-- [ ] 3.3 实现人员不可用检测
+- [x] 3.3 实现人员不可用检测
   - 实现 DetectPersonnelUnavailableAsync 方法
   - 检查人员的可用性状态（请假、休假等）
   - 生成冲突信息
@@ -44,7 +44,7 @@
   - **Property 1: 冲突检测完整性（人员不可用部分）**
   - **Validates: Requirements 1.3**
 
-- [ ] 3.5 实现休息时间不足检测
+- [x] 3.5 实现休息时间不足检测
   - 实现 DetectInsufficientRestAsync 方法
   - 按人员分组计算班次间隔
   - 识别少于最小休息时间的情况
@@ -55,7 +55,7 @@
   - **Property 1: 冲突检测完整性（休息时间部分）**
   - **Validates: Requirements 1.5**
 
-- [ ] 3.7 实现工作量不均衡检测
+- [x] 3.7 实现工作量不均衡检测
   - 实现 DetectWorkloadImbalanceAsync 方法
   - 计算每个人员的工作量
   - 识别超出平均值一定比例的情况
@@ -66,7 +66,7 @@
   - **Property 1: 冲突检测完整性（工作量部分）**
   - **Validates: Requirements 1.6**
 
-- [ ] 3.9 实现连续工作超时检测
+- [x] 3.9 实现连续工作超时检测
   - 实现 DetectConsecutiveOvertimeAsync 方法
   - 识别连续工作时间过长的情况
   - 生成冲突信息
@@ -76,7 +76,7 @@
   - **Property 1: 冲突检测完整性（连续工作部分）**
   - **Validates: Requirements 1.4**
 
-- [ ] 3.11 实现未分配时段检测
+- [x] 3.11 实现未分配时段检测
   - 实现 DetectUnassignedSlotsAsync 方法
   - 识别所有哨位在所有时段的分配情况
   - 找出未分配的时段
@@ -87,7 +87,7 @@
   - **Property 1: 冲突检测完整性（未分配部分）**
   - **Validates: Requirements 1.7**
 
-- [ ] 3.13 实现重复分配检测
+- [x] 3.13 实现重复分配检测
   - 实现 DetectDuplicateAssignmentsAsync 方法
   - 识别同一人员在同一时段被分配到多个哨位的情况
   - 生成冲突信息
@@ -156,8 +156,8 @@
   - **Property 9: 修复方案影响评估准确性**
   - **Validates: Requirements 4.7**
 
-- [ ] 5. 实现冲突报告服务
-- [ ] 5.1 创建冲突报告服务接口和基础实现
+- [x] 5. 实现冲突报告服务
+- [x] 5.1 创建冲突报告服务接口和基础实现
   - 创建 IConflictReportService 接口
   - 创建 ConflictReportService 基础类
   - _Requirements: 6.1_
@@ -193,21 +193,21 @@
   - **Property 17: 趋势统计准确性**
   - **Validates: Requirements 10.4**
 
-- [ ] 6. 扩展 ScheduleResultViewModel 的冲突管理功能
-- [ ] 6.1 创建 ScheduleResultViewModel.Conflicts.cs partial class
+- [x] 6. 扩展 ScheduleResultViewModel 的冲突管理功能
+- [x] 6.1 创建 ScheduleResultViewModel.Conflicts.cs partial class
   - 添加冲突相关属性（AllConflicts、FilteredConflicts、ConflictStatistics等）
   - 添加筛选和排序属性（ConflictTypeFilter、ConflictSeverityFilter等）
   - 添加高亮状态属性（HighlightedCellKeys）
   - _Requirements: 2.1, 8.1, 8.3, 8.5_
 
-- [ ] 6.2 实现冲突检测命令
+- [x] 6.2 实现冲突检测命令
   - 注入 IConflictDetectionService 依赖
   - 实现 DetectConflictsAsync 方法
   - 实现 RefreshConflictsCommand
   - 在加载排班时自动执行冲突检测
   - _Requirements: 1.1, 7.1_
 
-- [ ] 6.3 实现冲突筛选和排序逻辑
+- [x] 6.3 实现冲突筛选和排序逻辑
   - 实现 ApplyConflictFilters 方法
   - 按类型筛选
   - 按严重程度筛选
@@ -223,7 +223,7 @@
   - **Property 15: 冲突排序一致性**
   - **Validates: Requirements 8.6**
 
-- [ ] 6.6 实现冲突定位命令
+- [x] 6.6 实现冲突定位命令
   - 实现 LocateConflictCommand
   - 根据冲突相关的班次ID找到对应单元格
   - 更新 HighlightedCellKeys 集合
@@ -236,7 +236,7 @@
   - **Property 7: 高亮状态唯一性**
   - **Validates: Requirements 3.1, 3.2, 3.3, 3.6**
 
-- [ ] 6.8 实现冲突忽略命令
+- [x] 6.8 实现冲突忽略命令
   - 实现 IgnoreConflictCommand
   - 更新冲突的 IsIgnored 状态
   - 更新冲突统计信息
@@ -250,7 +250,7 @@
   - **Property 11: 硬约束不可忽略**
   - **Validates: Requirements 5.6, 5.7**
 
-- [ ] 6.10 实现冲突修复命令
+- [x] 6.10 实现冲突修复命令
   - 注入 IConflictResolutionService 依赖
   - 实现 FixConflictCommand
   - 打开修复对话框
@@ -259,7 +259,7 @@
   - 重新检测冲突
   - _Requirements: 4.5, 4.6, 4.8, 4.9_
 
-- [ ] 6.11 实现冲突报告导出命令
+- [x] 6.11 实现冲突报告导出命令
   - 注入 IConflictReportService 依赖
   - 实现 ExportConflictReportCommand
   - 显示格式选择对话框
@@ -267,14 +267,14 @@
   - 保存文件
   - _Requirements: 6.1, 6.8_
 
-- [ ] 6.12 实现冲突趋势显示命令
+- [x] 6.12 实现冲突趋势显示命令
   - 实现 ShowConflictTrendCommand
   - 打开趋势对话框
   - 加载趋势数据
   - 显示图表
   - _Requirements: 10.1, 10.5_
 
-- [ ] 6.13 实现实时更新逻辑
+- [x] 6.13 实现实时更新逻辑
   - 监听排班修改事件
   - 自动重新执行冲突检测
   - 更新冲突列表和统计信息
@@ -286,8 +286,8 @@
   - **Validates: Requirements 7.1, 7.2, 7.3, 7.4**
 
 
-- [ ] 7. 增强冲突面板 UI
-- [ ] 7.1 更新 ScheduleResultPage.xaml 的冲突面板
+- [x] 7. 增强冲突面板 UI
+- [x] 7.1 更新 ScheduleResultPage.xaml 的冲突面板
   - 添加冲突统计卡片（硬约束、软约束、未分配、已忽略）
   - 添加筛选和排序控件（类型筛选器、严重程度筛选器、排序选择器、搜索框）
   - 更新冲突列表显示（按类型分组、显示详细信息）
@@ -295,7 +295,7 @@
   - 添加底部操作按钮（全部忽略软约束、导出报告、冲突趋势）
   - _Requirements: 2.1, 2.8, 8.1, 8.3, 8.5_
 
-- [ ] 7.2 实现冲突列表项模板
+- [x] 7.2 实现冲突列表项模板
   - 根据冲突类型显示不同图标和颜色
   - 显示冲突描述和详细信息
   - 显示相关人员和哨位信息
@@ -303,13 +303,13 @@
   - 显示忽略状态
   - _Requirements: 2.2, 2.3, 2.4, 2.5, 2.6, 5.2_
 
-- [ ] 7.3 实现冲突高亮显示
+- [x] 7.3 实现冲突高亮显示
   - 在表格单元格上绑定高亮状态
   - 根据 HighlightedCellKeys 应用高亮样式
   - 实现滚动到高亮单元格的逻辑
   - _Requirements: 3.4, 3.5_
 
-- [ ] 7.4 在表格单元格上显示冲突图标
+- [x] 7.4 在表格单元格上显示冲突图标
   - 为有硬约束冲突的单元格显示红色警告图标
   - 为有软约束冲突的单元格显示黄色警告图标
   - 为未分配的单元格显示灰色提示图标
@@ -320,8 +320,8 @@
   - **Property 16: 视觉提示准确性**
   - **Validates: Requirements 9.1, 9.2, 9.3**
 
-- [ ] 8. 创建冲突修复对话框
-- [ ] 8.1 创建 ConflictResolutionDialog.xaml
+- [x] 8. 创建冲突修复对话框
+- [x] 8.1 创建 ConflictResolutionDialog.xaml
   - 显示冲突详情（类型、人员、哨位、时间、问题描述）
   - 显示修复方案列表（单选）
   - 为每个方案显示标题、描述、优缺点、影响
@@ -329,7 +329,7 @@
   - 添加应用和取消按钮
   - _Requirements: 4.5, 4.6, 4.7_
 
-- [ ] 8.2 创建 ConflictResolutionDialog.xaml.cs
+- [x] 8.2 创建 ConflictResolutionDialog.xaml.cs
   - 实现对话框初始化逻辑
   - 加载修复方案
   - 处理方案选择
@@ -337,8 +337,8 @@
   - 返回选定的方案
   - _Requirements: 4.5, 4.6_
 
-- [ ] 9. 创建冲突趋势对话框
-- [ ] 9.1 创建 ConflictTrendDialog.xaml
+- [x] 9. 创建冲突趋势对话框
+- [x] 9.1 创建 ConflictTrendDialog.xaml
   - 添加时间范围选择器
   - 显示冲突数量趋势图表（折线图）
   - 显示冲突类型分布图表（饼图或条形图）
@@ -346,7 +346,7 @@
   - 添加导出报告按钮
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.6_
 
-- [ ] 9.2 创建 ConflictTrendDialog.xaml.cs
+- [x] 9.2 创建 ConflictTrendDialog.xaml.cs
   - 实现对话框初始化逻辑
   - 加载趋势数据
   - 渲染图表

@@ -89,6 +89,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISchedulingDraftService, SchedulingDraftService>();
         services.AddSingleton<IScheduleGridExporter, ScheduleGridExporter>();
 
+        // 注册冲突管理服务
+        services.AddSingleton<IConflictDetectionService, ConflictDetectionService>();
+        services.AddSingleton<IConflictReportService, ConflictReportService>();
+
         // 注册数据导入导出相关服务
         // Register data validation service
         services.AddSingleton<Services.ImportExport.IDataValidationService>(sp =>
