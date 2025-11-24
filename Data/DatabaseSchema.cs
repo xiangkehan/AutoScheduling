@@ -113,6 +113,10 @@ namespace AutoScheduling3.Data
                         new() { Name = "StartDate", DataType = "TEXT", IsNullable = false },
                         new() { Name = "EndDate", DataType = "TEXT", IsNullable = false },
                         new() { Name = "IsConfirmed", DataType = "INTEGER", IsNullable = false, DefaultValue = "0" },
+                        new() { Name = "HolidayConfigId", DataType = "INTEGER", IsNullable = true },
+                        new() { Name = "UseActiveHolidayConfig", DataType = "INTEGER", IsNullable = false, DefaultValue = "1" },
+                        new() { Name = "EnabledFixedRuleIds", DataType = "TEXT", IsNullable = false, DefaultValue = "'[]'" },
+                        new() { Name = "EnabledManualAssignmentIds", DataType = "TEXT", IsNullable = false, DefaultValue = "'[]'" },
                         new() { Name = "CreatedAt", DataType = "TEXT", IsNullable = false, DefaultValue = "CURRENT_TIMESTAMP" },
                         new() { Name = "UpdatedAt", DataType = "TEXT", IsNullable = false, DefaultValue = "CURRENT_TIMESTAMP" }
                     },

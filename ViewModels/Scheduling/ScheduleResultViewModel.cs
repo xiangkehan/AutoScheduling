@@ -414,7 +414,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 var dto = await _schedulingService.GetScheduleByIdAsync(id);
                 if (dto == null)
                 {
-                    await _dialogService.ShowWarningAsync("δ�ҵ��Ű�����");
+                    await _dialogService.ShowWarningAsync("未找到排班数据");
                     _navigationService.GoBack();
                     return;
                 }
@@ -425,7 +425,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("�����Ű�����ʧ��", ex);
+                await _dialogService.ShowErrorAsync("加载排班数据失败", ex);
             }
             finally
             {
@@ -575,7 +575,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private async Task ConfirmAsync()
         {
             if (!CanConfirm()) return;
-            var ok = await _dialogService.ShowConfirmAsync("ȷ���Ű�", "ȷ�Ϻ��޷��޸ģ��Ƿ����?", "ȷ��", "ȡ��");
+            var ok = await _dialogService.ShowConfirmAsync("确认排班", "确认后将无法修改，是否继续？", "确认", "取消");
             if (!ok) return;
             IsConfirming = true;
             try
@@ -583,11 +583,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 await _schedulingService.ConfirmScheduleAsync(Schedule.Id);
                 var dto = await _schedulingService.GetScheduleByIdAsync(Schedule.Id);
                 Schedule = dto;
-                await _dialogService.ShowSuccessAsync("�Ű���ȷ��");
+                await _dialogService.ShowSuccessAsync("排班已确认");
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowErrorAsync("ȷ���Ű�ʧ��", ex);
+                await _dialogService.ShowErrorAsync("确认排班失败", ex);
             }
             finally
             {
@@ -713,13 +713,16 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
             var request = new SchedulingRequestDto
             {
-                Title = $"{Schedule.Title} (����)",
+                Title = $"{Schedule.Title} (重排)",
                 StartDate = Schedule.StartDate,
                 EndDate = Schedule.EndDate,
                 PersonnelIds = Schedule.PersonnelIds.ToList(),
                 PositionIds = Schedule.PositionIds.ToList(),
-                // Note: Constraint information is not part of ScheduleDto, so it cannot be carried over.
-                // The user will need to re-configure constraints on the creation page.
+                // 继承原排班的约束配置
+                HolidayConfigId = Schedule.HolidayConfigId,
+                UseActiveHolidayConfig = Schedule.UseActiveHolidayConfig,
+                EnabledFixedRuleIds = Schedule.EnabledFixedRuleIds?.ToList(),
+                EnabledManualAssignmentIds = Schedule.EnabledManualAssignmentIds?.ToList()
             };
 
             _navigationService.NavigateTo("CreateScheduling", request);

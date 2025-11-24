@@ -777,8 +777,10 @@
 
                         <!-- Grid View -->
                         <controls:ScheduleGridControl
+                            x:Name="ScheduleGrid"
                             Grid.Row="0"
                             GridData="{x:Bind ViewModel.GridData, Mode=OneWay}"
+                            HighlightedCellKeys="{x:Bind ViewModel.HighlightedCellKeys, Mode=OneWay}"
                             Visibility="{x:Bind GridRadioButton.IsChecked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                             AutomationProperties.Name="网格视图排班表"
                             AutomationProperties.LandmarkType="Main"/>

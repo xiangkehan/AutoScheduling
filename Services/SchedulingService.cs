@@ -255,6 +255,11 @@ public class SchedulingService : ISchedulingService
             modelSchedule.CreatedAt = DateTime.UtcNow;
             modelSchedule.PersonnelIds = request.PersonnelIds;
             modelSchedule.PositionIds = request.PositionIds;
+            // 保存约束配置信息
+            modelSchedule.HolidayConfigId = request.HolidayConfigId;
+            modelSchedule.UseActiveHolidayConfig = request.UseActiveHolidayConfig;
+            modelSchedule.EnabledFixedRuleIds = request.EnabledFixedRuleIds ?? new List<int>();
+            modelSchedule.EnabledManualAssignmentIds = request.EnabledManualAssignmentIds ?? new List<int>();
             
             // 取消检查点 - 对应需求7.1, 7.2, 7.3
             cancellationToken.ThrowIfCancellationRequested();
@@ -681,7 +686,12 @@ public class SchedulingService : ISchedulingService
             ConfirmedAt = confirmedAt,
             StartDate = schedule.StartDate,
             EndDate = schedule.EndDate,
-            Conflicts = GenerateBasicConflicts(schedule)
+            Conflicts = GenerateBasicConflicts(schedule),
+            // 映射约束配置信息
+            HolidayConfigId = schedule.HolidayConfigId,
+            UseActiveHolidayConfig = schedule.UseActiveHolidayConfig,
+            EnabledFixedRuleIds = schedule.EnabledFixedRuleIds.ToList(),
+            EnabledManualAssignmentIds = schedule.EnabledManualAssignmentIds.ToList()
         };
         return dto;
     }

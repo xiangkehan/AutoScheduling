@@ -37,7 +37,7 @@ namespace AutoScheduling3.Data
     {
         private readonly string _connectionString;
         private readonly string _dbPath;
-        private const int CurrentVersion = 1;
+        private const int CurrentVersion = 2;
 
         // New components for enhanced initialization
         private readonly DatabaseHealthChecker _healthChecker;
@@ -955,14 +955,46 @@ CREATE INDEX IF NOT EXISTS idx_manual_assignments_enabled ON ManualAssignments(I
                     // 初始版本，无需迁移
                     _logger.Log("Version 1 is the initial version, no migration needed");
                     break;
-                // 未来版本的迁移逻辑在这里添加
-                // Example for future versions:
-                // case 2:
-                //     await MigrateToVersion2Async(conn, transaction);
-                //     break;
+                case 2:
+                    // 添加约束配置字段到 Schedules 表
+                    await MigrateToVersion2Async(conn, transaction);
+                    break;
                 default:
                     throw new NotSupportedException($"Migration to version {version} is not supported.");
             }
+        }
+
+        /// <summary>
+        /// 迁移到版本 2：为 Schedules 表添加约束配置字段
+        /// </summary>
+        private async Task MigrateToVersion2Async(SqliteConnection conn, SqliteTransaction transaction)
+        {
+            _logger.Log("Migrating to version 2: Adding constraint configuration fields to Schedules table");
+
+            var cmd = conn.CreateCommand();
+            cmd.Transaction = transaction;
+
+            // 添加 HolidayConfigId 字段
+            cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN HolidayConfigId INTEGER";
+            await cmd.ExecuteNonQueryAsync();
+            _logger.Log("Added HolidayConfigId column");
+
+            // 添加 UseActiveHolidayConfig 字段
+            cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN UseActiveHolidayConfig INTEGER NOT NULL DEFAULT 1";
+            await cmd.ExecuteNonQueryAsync();
+            _logger.Log("Added UseActiveHolidayConfig column");
+
+            // 添加 EnabledFixedRuleIds 字段
+            cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN EnabledFixedRuleIds TEXT NOT NULL DEFAULT '[]'";
+            await cmd.ExecuteNonQueryAsync();
+            _logger.Log("Added EnabledFixedRuleIds column");
+
+            // 添加 EnabledManualAssignmentIds 字段
+            cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN EnabledManualAssignmentIds TEXT NOT NULL DEFAULT '[]'";
+            await cmd.ExecuteNonQueryAsync();
+            _logger.Log("Added EnabledManualAssignmentIds column");
+
+            _logger.Log("Version 2 migration completed successfully");
         }
 
         /// <summary>

@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using AutoScheduling3.DTOs;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace AutoScheduling3.Controls
 {
@@ -22,12 +23,31 @@ namespace AutoScheduling3.Controls
                 new PropertyMetadata(null, OnGridDataChanged));
 
         /// <summary>
+        /// HighlightedCellKeys 依赖属性
+        /// </summary>
+        public static readonly DependencyProperty HighlightedCellKeysProperty =
+            DependencyProperty.Register(
+                nameof(HighlightedCellKeys),
+                typeof(HashSet<string>),
+                typeof(ScheduleGridControl),
+                new PropertyMetadata(null, OnHighlightedCellKeysChanged));
+
+        /// <summary>
         /// 表格数据
         /// </summary>
         public ScheduleGridData? GridData
         {
             get => (ScheduleGridData?)GetValue(GridDataProperty);
             set => SetValue(GridDataProperty, value);
+        }
+
+        /// <summary>
+        /// 高亮显示的单元格键集合
+        /// </summary>
+        public HashSet<string>? HighlightedCellKeys
+        {
+            get => (HashSet<string>?)GetValue(HighlightedCellKeysProperty);
+            set => SetValue(HighlightedCellKeysProperty, value);
         }
 
         /// <summary>
@@ -58,6 +78,17 @@ namespace AutoScheduling3.Controls
             if (d is ScheduleGridControl control)
             {
                 control.OnGridDataChangedInternal(e.NewValue as ScheduleGridData);
+            }
+        }
+
+        /// <summary>
+        /// HighlightedCellKeys 属性变化回调
+        /// </summary>
+        private static void OnHighlightedCellKeysChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is ScheduleGridControl control)
+            {
+                control.UpdateCellHighlights();
             }
         }
 
@@ -279,6 +310,85 @@ namespace AutoScheduling3.Controls
         private void FullScreenButton_Click(object sender, RoutedEventArgs e)
         {
             FullScreenRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 滚动到指定单元格
+        /// </summary>
+        /// <param name="rowIndex">行索引</param>
+        /// <param name="columnIndex">列索引</param>
+        public void ScrollToCell(int rowIndex, int columnIndex)
+        {
+            try
+            {
+                // 查找目标单元格
+                var targetCell = FindCellElement(rowIndex, columnIndex);
+                if (targetCell == null) return;
+
+                // 获取单元格相对于 ScrollViewer 的位置
+                var transform = targetCell.TransformToVisual(GridScrollViewer);
+                var position = transform.TransformPoint(new Windows.Foundation.Point(0, 0));
+
+                // 计算滚动位置（将单元格滚动到视口中央）
+                var scrollToX = position.X + GridScrollViewer.HorizontalOffset - (GridScrollViewer.ViewportWidth / 2);
+                var scrollToY = position.Y + GridScrollViewer.VerticalOffset - (GridScrollViewer.ViewportHeight / 2);
+
+                // 确保滚动位置不超出范围
+                scrollToX = Math.Max(0, Math.Min(scrollToX, GridScrollViewer.ScrollableWidth));
+                scrollToY = Math.Max(0, Math.Min(scrollToY, GridScrollViewer.ScrollableHeight));
+
+                // 执行滚动（使用动画效果）
+                GridScrollViewer.ChangeView(scrollToX, scrollToY, null, false);
+            }
+            catch
+            {
+                // 滚动失败时静默处理
+            }
+        }
+
+        /// <summary>
+        /// 查找指定位置的单元格元素
+        /// </summary>
+        private UIElement? FindCellElement(int rowIndex, int columnIndex)
+        {
+            // 在 GridBody 中查找对应位置的单元格
+            foreach (var child in GridBody.Children)
+            {
+                if (child is FrameworkElement element)
+                {
+                    var row = Grid.GetRow(element);
+                    var col = Grid.GetColumn(element);
+
+                    // 注意：列索引需要 +1，因为第一列是行头
+                    if (row == rowIndex && col == columnIndex + 1)
+                    {
+                        return element;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 更新所有单元格的高亮状态
+        /// </summary>
+        private void UpdateCellHighlights()
+        {
+            var highlightKeys = HighlightedCellKeys ?? new HashSet<string>();
+
+            // 遍历所有单元格，更新高亮状态
+            foreach (var child in GridBody.Children)
+            {
+                if (child is CellModel cellControl)
+                {
+                    var row = Grid.GetRow(cellControl);
+                    var col = Grid.GetColumn(cellControl) - 1; // -1 因为第一列是行头
+
+                    var cellKey = $"{row}_{col}";
+                    cellControl.IsHighlighted = highlightKeys.Contains(cellKey);
+                }
+            }
         }
     }
 

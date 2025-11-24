@@ -85,6 +85,30 @@ public class ScheduleDto
     /// </summary>
     [JsonPropertyName("softScores")]
     public SoftConstraintScores? SoftScores { get; set; }
+
+    /// <summary>
+    /// 休息日配置ID（可选）
+    /// </summary>
+    [JsonPropertyName("holidayConfigId")]
+    public int? HolidayConfigId { get; set; }
+
+    /// <summary>
+    /// 是否使用活动的休息日配置
+    /// </summary>
+    [JsonPropertyName("useActiveHolidayConfig")]
+    public bool UseActiveHolidayConfig { get; set; } = true;
+
+    /// <summary>
+    /// 启用的定岗规则ID列表
+    /// </summary>
+    [JsonPropertyName("enabledFixedRuleIds")]
+    public List<int> EnabledFixedRuleIds { get; set; } = new();
+
+    /// <summary>
+    /// 启用的手动指定ID列表
+    /// </summary>
+    [JsonPropertyName("enabledManualAssignmentIds")]
+    public List<int> EnabledManualAssignmentIds { get; set; } = new();
 }
 
 /// <summary>

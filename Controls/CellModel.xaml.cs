@@ -71,6 +71,16 @@ public sealed partial class CellModel : UserControl
             new PropertyMetadata("0 班次"));
 
     /// <summary>
+    /// 是否高亮显示依赖属性
+    /// </summary>
+    public static readonly DependencyProperty IsHighlightedProperty =
+        DependencyProperty.Register(
+            nameof(IsHighlighted),
+            typeof(bool),
+            typeof(CellModel),
+            new PropertyMetadata(false, OnIsHighlightedChanged));
+
+    /// <summary>
     /// 单元格点击事件
     /// </summary>
     public event EventHandler<ScheduleGridCell>? CellClicked;
@@ -107,12 +117,56 @@ public sealed partial class CellModel : UserControl
         set => SetValue(PersonnelWorkloadProperty, value);
     }
 
+    /// <summary>
+    /// 是否高亮显示
+    /// </summary>
+    public bool IsHighlighted
+    {
+        get => (bool)GetValue(IsHighlightedProperty);
+        set => SetValue(IsHighlightedProperty, value);
+    }
+
     private static void OnCellDataChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is CellModel cell)
         {
             cell.UpdateCellAppearance();
         }
+    }
+
+    private static void OnIsHighlightedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is CellModel cell)
+        {
+            cell.UpdateHighlightState();
+        }
+    }
+
+    /// <summary>
+    /// 更新高亮状态
+    /// </summary>
+    private void UpdateHighlightState()
+    {
+        if (IsHighlighted)
+        {
+            ApplyHighlightStyle();
+        }
+        else
+        {
+            UpdateCellAppearance();
+        }
+    }
+
+    /// <summary>
+    /// 应用高亮样式
+    /// </summary>
+    private void ApplyHighlightStyle()
+    {
+        // 使用明显的高亮效果：橙色边框 + 浅橙色背景
+        CellBorder.BorderBrush = new SolidColorBrush(Colors.Orange);
+        CellBorder.BorderThickness = new Thickness(3);
+        CellBorder.Background = new SolidColorBrush(Color.FromArgb(50, 255, 165, 0)); // 半透明橙色
+        PersonnelNameText.Foreground = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
     }
 
     /// <summary>

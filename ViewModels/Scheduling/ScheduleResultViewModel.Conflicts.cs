@@ -138,6 +138,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
             set => SetProperty(ref _highlightedCellKeys, value);
         }
 
+        /// <summary>
+        /// 滚动到单元格请求事件
+        /// </summary>
+        public event EventHandler<ScrollToCellEventArgs>? ScrollToCellRequested;
+
         #endregion
 
         #region 冲突相关命令
@@ -312,6 +317,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 // 清除之前的高亮
                 HighlightedCellKeys.Clear();
 
+                int? firstRowIndex = null;
+                int? firstColumnIndex = null;
+
                 // 根据冲突相关的班次ID找到对应的单元格
                 foreach (var shiftId in conflict.RelatedShiftIds)
                 {
@@ -329,13 +337,26 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     {
                         var cellKey = $"{row.RowIndex}_{col.ColumnIndex}";
                         HighlightedCellKeys.Add(cellKey);
+
+                        // 记录第一个单元格的位置（用于滚动）
+                        if (firstRowIndex == null)
+                        {
+                            firstRowIndex = row.RowIndex;
+                            firstColumnIndex = col.ColumnIndex;
+                        }
                     }
                 }
 
                 // 触发UI更新
                 OnPropertyChanged(nameof(HighlightedCellKeys));
 
-                // TODO: 触发滚动到第一个高亮单元格（需要在View中实现）
+                // 触发滚动到第一个高亮单元格
+                if (firstRowIndex.HasValue && firstColumnIndex.HasValue)
+                {
+                    ScrollToCellRequested?.Invoke(this, new ScrollToCellEventArgs(
+                        firstRowIndex.Value, 
+                        firstColumnIndex.Value));
+                }
             }
             catch (Exception ex)
             {
@@ -592,5 +613,27 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         #endregion
+    }
+
+    /// <summary>
+    /// 滚动到单元格事件参数
+    /// </summary>
+    public class ScrollToCellEventArgs : EventArgs
+    {
+        /// <summary>
+        /// 行索引
+        /// </summary>
+        public int RowIndex { get; }
+
+        /// <summary>
+        /// 列索引
+        /// </summary>
+        public int ColumnIndex { get; }
+
+        public ScrollToCellEventArgs(int rowIndex, int columnIndex)
+        {
+            RowIndex = rowIndex;
+            ColumnIndex = columnIndex;
+        }
     }
 }

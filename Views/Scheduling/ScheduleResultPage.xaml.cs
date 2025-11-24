@@ -7,6 +7,7 @@ using AutoScheduling3.DTOs;
 using Microsoft.UI.Xaml.Input;
 using AutoScheduling3.Helpers;
 using System.Linq;
+using Microsoft.UI.Xaml.Media;
 
 namespace AutoScheduling3.Views.Scheduling
 {
@@ -29,7 +30,17 @@ namespace AutoScheduling3.Views.Scheduling
         /// </summary>
         private void OnPageLoaded(object sender, RoutedEventArgs e)
         {
-            // 页面加载完成后的初始化逻辑
+            // 订阅 ViewModel 的滚动请求事件
+            ViewModel.ScrollToCellRequested += OnScrollToCellRequested;
+        }
+
+        /// <summary>
+        /// 处理滚动到单元格请求
+        /// </summary>
+        private void OnScrollToCellRequested(object? sender, ScrollToCellEventArgs e)
+        {
+            // 直接使用命名的 ScheduleGrid 控件
+            ScheduleGrid?.ScrollToCell(e.RowIndex, e.ColumnIndex);
         }
 
         #region 光标交互处理
