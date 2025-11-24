@@ -354,8 +354,8 @@
   - 处理导出操作
   - _Requirements: 10.1, 10.5, 10.6_
 
-- [ ] 10. 注册服务和依赖注入
-- [ ] 10.1 更新 ServiceCollectionExtensions.cs
+- [x] 10. 注册服务和依赖注入
+- [x] 10.1 更新 ServiceCollectionExtensions.cs
   - 注册 IConflictDetectionService
   - 注册 IConflictResolutionService
   - 注册 IConflictReportService
