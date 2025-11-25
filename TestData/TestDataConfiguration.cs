@@ -61,6 +61,17 @@ public class TestDataConfiguration
     public double PersonnelRetirementRate { get; set; } = 0.10;
 
     /// <summary>
+    /// 多技能人员比例（0.0-1.0），默认 35%
+    /// 该值越低，哨位之间共享的人员越少
+    /// </summary>
+    public double MultiSkilledPersonnelRate { get; set; } = 0.35;
+
+    /// <summary>
+    /// 无技能模式（开启后生成的哨位都没有技能要求，人员也都没有技能）
+    /// </summary>
+    public bool NoSkillMode { get; set; } = false;
+
+    /// <summary>
     /// 创建默认配置（中等规模）
     /// </summary>
     public static TestDataConfiguration CreateDefault()
@@ -73,6 +84,7 @@ public class TestDataConfiguration
             MinPersonnelPerPosition = 3,
             PersonnelAvailabilityRate = 0.85,
             PersonnelRetirementRate = 0.10,
+            MultiSkilledPersonnelRate = 0.35,
             TemplateCount = 3,
             FixedAssignmentCount = 5,
             ManualAssignmentCount = 8,
@@ -94,6 +106,7 @@ public class TestDataConfiguration
             MinPersonnelPerPosition = 2,
             PersonnelAvailabilityRate = 0.85,
             PersonnelRetirementRate = 0.10,
+            MultiSkilledPersonnelRate = 0.30,
             TemplateCount = 2,
             FixedAssignmentCount = 3,
             ManualAssignmentCount = 5,
@@ -115,6 +128,7 @@ public class TestDataConfiguration
             MinPersonnelPerPosition = 3,
             PersonnelAvailabilityRate = 0.85,
             PersonnelRetirementRate = 0.10,
+            MultiSkilledPersonnelRate = 0.40,
             TemplateCount = 5,
             FixedAssignmentCount = 10,
             ManualAssignmentCount = 15,
@@ -136,6 +150,7 @@ public class TestDataConfiguration
             MinPersonnelPerPosition = 3,
             PersonnelAvailabilityRate = 0.95,  // 95% 可用
             PersonnelRetirementRate = 0.05,    // 5% 退役
+            MultiSkilledPersonnelRate = 0.25,  // 较低的多技能比例
             TemplateCount = 2,
             FixedAssignmentCount = 3,
             ManualAssignmentCount = 5,
@@ -157,6 +172,7 @@ public class TestDataConfiguration
             MinPersonnelPerPosition = 4,
             PersonnelAvailabilityRate = 0.75,  // 75% 可用
             PersonnelRetirementRate = 0.15,    // 15% 退役
+            MultiSkilledPersonnelRate = 0.30,  // 较低的多技能比例
             TemplateCount = 4,
             FixedAssignmentCount = 8,
             ManualAssignmentCount = 12,
@@ -203,6 +219,9 @@ public class TestDataConfiguration
 
         if (PersonnelRetirementRate < 0.0 || PersonnelRetirementRate > 1.0)
             errors.Add($"人员退役率必须在 0.0-1.0 之间，当前值: {PersonnelRetirementRate}");
+
+        if (MultiSkilledPersonnelRate < 0.0 || MultiSkilledPersonnelRate > 1.0)
+            errors.Add($"多技能人员比例必须在 0.0-1.0 之间，当前值: {MultiSkilledPersonnelRate}");
 
         // 验证最大值
         if (SkillCount > 50)
@@ -326,6 +345,9 @@ public class TestDataConfiguration
 
         if (PersonnelRetirementRate < 0.0 || PersonnelRetirementRate > 1.0)
             errors.Add($"人员退役率必须在 0.0-1.0 之间，当前值: {PersonnelRetirementRate}");
+
+        if (MultiSkilledPersonnelRate < 0.0 || MultiSkilledPersonnelRate > 1.0)
+            errors.Add($"多技能人员比例必须在 0.0-1.0 之间，当前值: {MultiSkilledPersonnelRate}");
 
         // 验证最大值
         if (SkillCount > 50)

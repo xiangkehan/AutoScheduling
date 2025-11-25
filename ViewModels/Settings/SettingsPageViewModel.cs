@@ -4,6 +4,7 @@ using AutoScheduling3.Models;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.Helpers;
 using AutoScheduling3.DTOs.ImportExport;
+using AutoScheduling3.Data;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -23,6 +24,7 @@ public partial class SettingsPageViewModel : ObservableObject
     private readonly IConfigurationService _configurationService;
     private readonly IDataImportExportService _importExportService;
     private readonly DialogService _dialogService;
+    private readonly DatabaseService _databaseService;
 
     /// <summary>
     /// 存储文件信息集合
@@ -46,12 +48,14 @@ public partial class SettingsPageViewModel : ObservableObject
         IStoragePathService storagePathService,
         IThemeService themeService,
         IConfigurationService configurationService,
-        IDataImportExportService importExportService)
+        IDataImportExportService importExportService,
+        DatabaseService databaseService)
     {
         _storagePathService = storagePathService ?? throw new ArgumentNullException(nameof(storagePathService));
         _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
         _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
         _importExportService = importExportService ?? throw new ArgumentNullException(nameof(importExportService));
+        _databaseService = databaseService ?? throw new ArgumentNullException(nameof(databaseService));
         _dialogService = new DialogService();
 
         // 初始化时加载存储文件信息
@@ -539,5 +543,87 @@ public partial class SettingsPageViewModel : ObservableObject
     private string FormatFileSize(long bytes)
     {
         return FileManagementHelper.FormatFileSize(bytes);
+    }
+
+    /// <summary>
+    /// 清空所有数据库内容命令
+    /// </summary>
+    [RelayCommand]
+    private async Task ClearAllDatabaseAsync()
+    {
+        try
+        {
+            // 第一次确认
+            var confirmed1 = await _dialogService.ShowConfirmAsync(
+                "清空所有数据",
+                "此操作将删除所有人员、哨位、技能、排班记录等数据。\n\n系统会在清空前自动创建备份。\n\n是否继续？",
+                "继续",
+                "取消"
+            );
+
+            if (!confirmed1)
+            {
+                return;
+            }
+
+            // 第二次确认（更严格）
+            var confirmed2 = await _dialogService.ShowConfirmAsync(
+                "最后确认",
+                "⚠️ 警告：此操作不可撤销！\n\n所有数据将被永久删除（可从备份恢复）。\n\n确定要清空所有数据吗？",
+                "确定清空",
+                "取消"
+            );
+
+            if (!confirmed2)
+            {
+                return;
+            }
+
+            IsImportExportInProgress = true;
+
+            // 创建备份
+            string backupPath;
+            try
+            {
+                backupPath = await _databaseService.CreateBackupAsync();
+                System.Diagnostics.Debug.WriteLine($"备份已创建：{backupPath}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"创建备份失败: {ex.Message}");
+                await _dialogService.ShowErrorAsync("创建备份失败，操作已取消", ex);
+                return;
+            }
+
+            // 清空数据
+            int deletedCount = 0;
+            try
+            {
+                deletedCount = await _databaseService.ClearAllDataAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"清空数据失败: {ex.Message}");
+                await _dialogService.ShowErrorAsync("清空数据失败", ex);
+                return;
+            }
+
+            // 显示成功消息
+            await _dialogService.ShowSuccessAsync(
+                $"数据清空成功！\n\n共删除 {deletedCount} 条记录。\n\n备份文件已保存，如需恢复请联系管理员。"
+            );
+
+            // 刷新存储信息
+            await RefreshStorageInfoAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"清空数据库失败: {ex.Message}");
+            await _dialogService.ShowErrorAsync("清空数据库时发生错误", ex);
+        }
+        finally
+        {
+            IsImportExportInProgress = false;
+        }
     }
 }

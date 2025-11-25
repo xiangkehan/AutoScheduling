@@ -130,7 +130,7 @@ public class SkillAssigner
     }
 
     /// <summary>
-    /// 阶段2：创建多技能人员（30-40%）
+    /// 阶段2：创建多技能人员
     /// </summary>
     private void CreateMultiSkilledPersonnel(
         List<PersonnelDto> personnel,
@@ -138,7 +138,7 @@ public class SkillAssigner
         List<SkillDto> skills,
         Dictionary<int, HashSet<int>> personnelSkillSets)
     {
-        Console.WriteLine("[SkillAssigner] 阶段2：创建多技能人员（30-40%）");
+        Console.WriteLine($"[SkillAssigner] 阶段2：创建多技能人员（目标比例：{_config.MultiSkilledPersonnelRate:P0}）");
 
         // 构建技能共现矩阵
         _cooccurrenceAnalyzer.BuildCooccurrenceMatrix(positions);
@@ -154,9 +154,8 @@ public class SkillAssigner
             return;
         }
 
-        // 计算目标数量（30-40%）
-        double targetRate = 0.3 + _random.NextDouble() * 0.1; // 30%-40%
-        int targetCount = (int)(availablePersonnel.Count * targetRate);
+        // 使用配置中的多技能人员比例
+        int targetCount = (int)(availablePersonnel.Count * _config.MultiSkilledPersonnelRate);
 
         Console.WriteLine($"  目标：为 {targetCount}/{availablePersonnel.Count} 个人员添加额外技能");
 

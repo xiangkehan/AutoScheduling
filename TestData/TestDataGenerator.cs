@@ -88,29 +88,57 @@ public class TestDataGenerator
             $"人员可用率={_config.PersonnelAvailabilityRate:P0}, 人员退役率={_config.PersonnelRetirementRate:P0}");
         System.Diagnostics.Debug.WriteLine($"其他配置：节假日配置={_config.HolidayConfigCount}, " +
             $"模板={_config.TemplateCount}, 定岗规则={_config.FixedAssignmentCount}, " +
-            $"手动指定={_config.ManualAssignmentCount}");
+            $"手动指定={_config.ManualAssignmentCount}, 无技能模式={_config.NoSkillMode}");
         
-        // 按依赖顺序调用各个生成器
-        // 1. 技能（无依赖）
-        var skills = _skillGenerator.Generate();
-        System.Diagnostics.Debug.WriteLine($"✓ 生成技能数据：{skills.Count} 条");
-        
-        // 2. 人员（无技能）
-        var personnel = _personnelGenerator.Generate();
-        System.Diagnostics.Debug.WriteLine($"✓ 生成人员数据：{personnel.Count} 条（暂无技能）");
-        
-        // 3. 哨位（含技能需求，但无可用人员）
-        var positions = _positionGenerator.Generate(skills);
-        System.Diagnostics.Debug.WriteLine($"✓ 生成哨位数据：{positions.Count} 条（含技能需求）");
-        
-        // 4. 根据哨位需求为人员分配技能
-        System.Diagnostics.Debug.WriteLine("开始智能技能分配...");
-        personnel = _skillAssigner.AssignSkills(personnel, positions, skills);
-        System.Diagnostics.Debug.WriteLine($"✓ 技能分配完成");
-        
-        // 5. 更新哨位的可用人员列表
-        UpdatePositionAvailablePersonnel(positions, personnel);
-        System.Diagnostics.Debug.WriteLine($"✓ 更新哨位可用人员列表完成");
+        List<SkillDto> skills;
+        List<PersonnelDto> personnel;
+        List<PositionDto> positions;
+
+        if (_config.NoSkillMode)
+        {
+            // 无技能模式：生成空技能列表，哨位无技能要求，人员无技能
+            System.Diagnostics.Debug.WriteLine("*** 无技能模式已启用 ***");
+            
+            // 1. 生成空技能列表
+            skills = new List<SkillDto>();
+            System.Diagnostics.Debug.WriteLine($"✓ 跳过技能生成（无技能模式）");
+            
+            // 2. 生成人员（无技能）
+            personnel = _personnelGenerator.Generate();
+            System.Diagnostics.Debug.WriteLine($"✓ 生成人员数据：{personnel.Count} 条（无技能）");
+            
+            // 3. 生成哨位（无技能要求）
+            positions = GeneratePositionsWithoutSkills();
+            System.Diagnostics.Debug.WriteLine($"✓ 生成哨位数据：{positions.Count} 条（无技能要求）");
+            
+            // 4. 更新哨位的可用人员列表（所有可用且未退役的人员）
+            UpdatePositionAvailablePersonnelNoSkill(positions, personnel);
+            System.Diagnostics.Debug.WriteLine($"✓ 更新哨位可用人员列表完成（无技能模式）");
+        }
+        else
+        {
+            // 正常模式：按依赖顺序调用各个生成器
+            // 1. 技能（无依赖）
+            skills = _skillGenerator.Generate();
+            System.Diagnostics.Debug.WriteLine($"✓ 生成技能数据：{skills.Count} 条");
+            
+            // 2. 人员（无技能）
+            personnel = _personnelGenerator.Generate();
+            System.Diagnostics.Debug.WriteLine($"✓ 生成人员数据：{personnel.Count} 条（暂无技能）");
+            
+            // 3. 哨位（含技能需求，但无可用人员）
+            positions = _positionGenerator.Generate(skills);
+            System.Diagnostics.Debug.WriteLine($"✓ 生成哨位数据：{positions.Count} 条（含技能需求）");
+            
+            // 4. 根据哨位需求为人员分配技能
+            System.Diagnostics.Debug.WriteLine("开始智能技能分配...");
+            personnel = _skillAssigner.AssignSkills(personnel, positions, skills);
+            System.Diagnostics.Debug.WriteLine($"✓ 技能分配完成");
+            
+            // 5. 更新哨位的可用人员列表
+            UpdatePositionAvailablePersonnel(positions, personnel);
+            System.Diagnostics.Debug.WriteLine($"✓ 更新哨位可用人员列表完成");
+        }
         
         // 6. 节假日配置（无依赖）
         var holidayConfigs = _holidayConfigGenerator.Generate();
@@ -145,7 +173,7 @@ public class TestDataGenerator
 
         // 使用 TestDataValidator 验证数据
         System.Diagnostics.Debug.WriteLine("开始验证生成的数据...");
-        _validator.Validate(exportData);
+        _validator.Validate(exportData, _config.NoSkillMode);
         System.Diagnostics.Debug.WriteLine("✓ 数据验证通过");
         
         System.Diagnostics.Debug.WriteLine("=== 测试数据生成完成 ===");
@@ -176,6 +204,78 @@ public class TestDataGenerator
             position.AvailablePersonnelIds = availablePersonnel.Select(p => p.Id).ToList();
             position.AvailablePersonnelNames = availablePersonnel.Select(p => p.Name).ToList();
         }
+    }
+
+    /// <summary>
+    /// 更新哨位的可用人员列表（无技能模式）
+    /// 所有可用且未退役的人员都可以分配到任何哨位
+    /// </summary>
+    /// <param name="positions">哨位列表</param>
+    /// <param name="personnel">人员列表</param>
+    private void UpdatePositionAvailablePersonnelNoSkill(
+        List<PositionDto> positions,
+        List<PersonnelDto> personnel)
+    {
+        // 获取所有可用且未退役的人员
+        var availablePersonnel = personnel
+            .Where(p => p.IsAvailable && !p.IsRetired)
+            .ToList();
+        
+        var availablePersonnelIds = availablePersonnel.Select(p => p.Id).ToList();
+        var availablePersonnelNames = availablePersonnel.Select(p => p.Name).ToList();
+
+        // 所有哨位共享相同的可用人员列表
+        foreach (var position in positions)
+        {
+            position.AvailablePersonnelIds = new List<int>(availablePersonnelIds);
+            position.AvailablePersonnelNames = new List<string>(availablePersonnelNames);
+        }
+    }
+
+    /// <summary>
+    /// 生成无技能要求的哨位
+    /// </summary>
+    /// <returns>哨位列表（无技能要求）</returns>
+    private List<PositionDto> GeneratePositionsWithoutSkills()
+    {
+        var positions = new List<PositionDto>();
+        var availableNames = _sampleData.GetAllPositionNames();
+        var availableLocations = _sampleData.GetAllLocations();
+        var usedNames = new HashSet<string>();
+        var usedLocations = new HashSet<string>();
+
+        for (int i = 1; i <= _config.PositionCount; i++)
+        {
+            // 使用UniqueNameGenerator生成唯一的哨位名称
+            string name = _nameGenerator.Generate(availableNames, usedNames, "哨位", i);
+            usedNames.Add(name);
+
+            // 使用UniqueNameGenerator生成唯一的地点名称
+            string location = _nameGenerator.Generate(availableLocations, usedLocations, "位置", i);
+            usedLocations.Add(location);
+
+            // 生成时间戳
+            var positionCreatedAt = DateTime.UtcNow.AddDays(-_random.Next(180));
+            var positionUpdatedAt = positionCreatedAt.AddDays(_random.Next(0, (int)(DateTime.UtcNow - positionCreatedAt).TotalDays + 1));
+
+            positions.Add(new PositionDto
+            {
+                Id = i,
+                Name = name,
+                Location = location,
+                Description = _sampleData.GetRandomDescription(name),
+                Requirements = "无特殊技能要求",
+                RequiredSkillIds = new List<int>(),  // 无技能要求
+                RequiredSkillNames = new List<string>(),  // 无技能要求
+                AvailablePersonnelIds = new List<int>(),  // 初始化为空列表
+                AvailablePersonnelNames = new List<string>(),  // 初始化为空列表
+                IsActive = true,
+                CreatedAt = positionCreatedAt,
+                UpdatedAt = positionUpdatedAt
+            });
+        }
+
+        return positions;
     }
 
     /// <summary>

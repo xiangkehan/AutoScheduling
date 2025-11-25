@@ -229,6 +229,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <!-- 每哨位最小人员数 -->
@@ -337,6 +338,49 @@
                             <Run Text="{x:Bind ViewModel.PersonnelRetirementRatePercent, Mode=OneWay}"/>
                             <Run Text="% (0%-30%，模拟人员退役、离职等情况)"/>
                         </TextBlock>
+
+                        <!-- 多技能人员比例 -->
+                        <TextBlock Grid.Row="3" Grid.Column="0" 
+                                   Text="多技能人员比例:" 
+                                   VerticalAlignment="Center">
+                            <ToolTipService.ToolTip>
+                                <ToolTip>
+                                    <TextBlock TextWrapping="Wrap" MaxWidth="300">
+                                        <Run Text="拥有多个技能的人员比例，直接影响哨位之间的人员共享程度。"/>
+                                        <LineBreak/>
+                                        <LineBreak/>
+                                        <Run Text="场景参考：" FontWeight="SemiBold"/>
+                                        <LineBreak/>
+                                        <Run Text="• 0%：每个人员只有一个技能（最少共享）"/>
+                                        <LineBreak/>
+                                        <Run Text="• 25-30%：实战场景（低共享）"/>
+                                        <LineBreak/>
+                                        <Run Text="• 35%：默认值（适度共享）"/>
+                                        <LineBreak/>
+                                        <Run Text="• 40%+：演练场景（高共享，灵活性强）"/>
+                                        <LineBreak/>
+                                        <LineBreak/>
+                                        <Run Text="提示：值越低，哨位之间共享的人员越少" FontWeight="SemiBold" Foreground="Orange"/>
+                                    </TextBlock>
+                                </ToolTip>
+                            </ToolTipService.ToolTip>
+                        </TextBlock>
+                        <Slider Grid.Row="3" Grid.Column="1" 
+                                Value="{x:Bind ViewModel.MultiSkilledPersonnelRate, Mode=TwoWay}"
+                                Minimum="0.0" Maximum="0.6" 
+                                StepFrequency="0.05"
+                                TickFrequency="0.1"
+                                TickPlacement="BottomRight">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="调整多技能人员比例以控制哨位之间的人员共享程度"/>
+                            </ToolTipService.ToolTip>
+                        </Slider>
+                        <TextBlock Grid.Row="3" Grid.Column="2" 
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}">
+                            <Run Text="{x:Bind ViewModel.MultiSkilledPersonnelRatePercent, Mode=OneWay}"/>
+                            <Run Text="% (0%-60%，值越低人员共享越少)"/>
+                        </TextBlock>
                     </Grid>
 
                     <!-- 其他配置 -->
@@ -349,6 +393,10 @@
                             <ColumnDefinition Width="150"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
                         <!-- 随机种子 -->
                         <TextBlock Grid.Row="0" Grid.Column="0" 
@@ -362,6 +410,32 @@
                                    Text="(用于生成可重现的随机数据)" 
                                    VerticalAlignment="Center"
                                    Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
+
+                        <!-- 无技能模式 -->
+                        <TextBlock Grid.Row="1" Grid.Column="0" 
+                                   Text="无技能模式:" 
+                                   VerticalAlignment="Center">
+                            <ToolTipService.ToolTip>
+                                <ToolTip>
+                                    <TextBlock TextWrapping="Wrap" MaxWidth="300">
+                                        <Run Text="开启后，生成的哨位都没有技能要求，人员也都没有技能。"/>
+                                        <LineBreak/>
+                                        <LineBreak/>
+                                        <Run Text="适用场景：" FontWeight="SemiBold"/>
+                                        <LineBreak/>
+                                        <Run Text="• 测试不考虑技能匹配的排班算法"/>
+                                        <LineBreak/>
+                                        <Run Text="• 简化测试数据，专注于其他约束"/>
+                                        <LineBreak/>
+                                        <Run Text="• 快速生成基础测试数据"/>
+                                    </TextBlock>
+                                </ToolTip>
+                            </ToolTipService.ToolTip>
+                        </TextBlock>
+                        <CheckBox Grid.Row="1" Grid.Column="1" 
+                                  Grid.ColumnSpan="2"
+                                  Content="启用无技能模式（哨位无技能要求，人员无技能）"
+                                  IsChecked="{x:Bind ViewModel.NoSkillMode, Mode=TwoWay}"/>
                     </Grid>
                 </StackPanel>
 

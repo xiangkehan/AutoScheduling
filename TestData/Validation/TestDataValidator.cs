@@ -13,13 +13,15 @@ public class TestDataValidator
     /// 验证生成的数据
     /// </summary>
     /// <param name="data">要验证的数据</param>
+    /// <param name="noSkillMode">是否为无技能模式</param>
     /// <exception cref="InvalidOperationException">当数据验证失败时抛出</exception>
-    public void Validate(ExportData data)
+    public void Validate(ExportData data, bool noSkillMode = false)
     {
         var errors = new List<string>();
 
         // 验证数据不为空
-        if (data.Skills == null || data.Skills.Count == 0)
+        // 在无技能模式下，技能数据可以为空
+        if (!noSkillMode && (data.Skills == null || data.Skills.Count == 0))
             errors.Add("技能数据为空");
 
         if (data.Personnel == null || data.Personnel.Count == 0)
@@ -41,19 +43,22 @@ public class TestDataValidator
         }
 
         // 创建ID集合用于引用验证
-        var skillIds = new HashSet<int>(data.Skills.Select(s => s.Id));
+        var skillIds = new HashSet<int>(data.Skills?.Select(s => s.Id) ?? Enumerable.Empty<int>());
         var personnelIds = new HashSet<int>(data.Personnel.Select(p => p.Id));
         var positionIds = new HashSet<int>(data.Positions.Select(p => p.Id));
         var holidayConfigIds = new HashSet<int>(data.HolidayConfigs.Select(h => h.Id));
 
-        // 验证技能数据
-        ValidateSkills(data.Skills, errors);
+        // 验证技能数据（无技能模式下跳过）
+        if (!noSkillMode && data.Skills != null && data.Skills.Count > 0)
+        {
+            ValidateSkills(data.Skills, errors);
+        }
 
         // 验证人员数据
-        ValidatePersonnel(data.Personnel, skillIds, errors);
+        ValidatePersonnel(data.Personnel, skillIds, noSkillMode, errors);
 
         // 验证哨位数据
-        ValidatePositions(data.Positions, skillIds, personnelIds, errors);
+        ValidatePositions(data.Positions, skillIds, personnelIds, noSkillMode, errors);
 
         // 验证节假日配置
         ValidateHolidayConfigs(data.HolidayConfigs, errors);
@@ -122,7 +127,7 @@ public class TestDataValidator
     /// <summary>
     /// 验证人员数据
     /// </summary>
-    private void ValidatePersonnel(List<PersonnelDto> personnel, HashSet<int> skillIds, List<string> errors)
+    private void ValidatePersonnel(List<PersonnelDto> personnel, HashSet<int> skillIds, bool noSkillMode, List<string> errors)
     {
         var nameSet = new HashSet<string>();
 
@@ -140,21 +145,24 @@ public class TestDataValidator
             else
                 nameSet.Add(person.Name);
 
-            // 验证技能引用
-            if (person.SkillIds == null || person.SkillIds.Count == 0)
-                errors.Add($"人员 {person.Name} 必须至少拥有一个技能");
-            else
+            // 验证技能引用（无技能模式下跳过）
+            if (!noSkillMode)
             {
-                foreach (var skillId in person.SkillIds)
+                if (person.SkillIds == null || person.SkillIds.Count == 0)
+                    errors.Add($"人员 {person.Name} 必须至少拥有一个技能");
+                else
                 {
-                    if (!skillIds.Contains(skillId))
-                        errors.Add($"人员 {person.Name} 引用了不存在的技能ID: {skillId}");
+                    foreach (var skillId in person.SkillIds)
+                    {
+                        if (!skillIds.Contains(skillId))
+                            errors.Add($"人员 {person.Name} 引用了不存在的技能ID: {skillId}");
+                    }
                 }
-            }
 
-            // 验证技能名称列表与ID列表一致
-            if (person.SkillNames == null || person.SkillNames.Count != person.SkillIds.Count)
-                errors.Add($"人员 {person.Name} 的技能名称列表与技能ID列表数量不一致");
+                // 验证技能名称列表与ID列表一致
+                if (person.SkillNames == null || person.SkillNames.Count != person.SkillIds.Count)
+                    errors.Add($"人员 {person.Name} 的技能名称列表与技能ID列表数量不一致");
+            }
 
             // 验证班次间隔数组
             if (person.RecentPeriodShiftIntervals == null || person.RecentPeriodShiftIntervals.Length != 12)
@@ -173,7 +181,7 @@ public class TestDataValidator
     /// 验证哨位数据
     /// </summary>
     private void ValidatePositions(List<PositionDto> positions, HashSet<int> skillIds, 
-        HashSet<int> personnelIds, List<string> errors)
+        HashSet<int> personnelIds, bool noSkillMode, List<string> errors)
     {
         var nameSet = new HashSet<string>();
 
@@ -195,22 +203,25 @@ public class TestDataValidator
             if (string.IsNullOrWhiteSpace(position.Location))
                 errors.Add($"哨位 {position.Name} 的地点不能为空");
 
-            // 验证所需技能引用
-            if (position.RequiredSkillIds == null || position.RequiredSkillIds.Count == 0)
-                errors.Add($"哨位 {position.Name} 必须至少需要一个技能");
-            else
+            // 验证所需技能引用（无技能模式下跳过）
+            if (!noSkillMode)
             {
-                foreach (var skillId in position.RequiredSkillIds)
+                if (position.RequiredSkillIds == null || position.RequiredSkillIds.Count == 0)
+                    errors.Add($"哨位 {position.Name} 必须至少需要一个技能");
+                else
                 {
-                    if (!skillIds.Contains(skillId))
-                        errors.Add($"哨位 {position.Name} 引用了不存在的技能ID: {skillId}");
+                    foreach (var skillId in position.RequiredSkillIds)
+                    {
+                        if (!skillIds.Contains(skillId))
+                            errors.Add($"哨位 {position.Name} 引用了不存在的技能ID: {skillId}");
+                    }
                 }
-            }
 
-            // 验证技能名称列表与ID列表一致
-            if (position.RequiredSkillNames == null || 
-                position.RequiredSkillNames.Count != position.RequiredSkillIds.Count)
-                errors.Add($"哨位 {position.Name} 的技能名称列表与技能ID列表数量不一致");
+                // 验证技能名称列表与ID列表一致
+                if (position.RequiredSkillNames == null || 
+                    position.RequiredSkillNames.Count != position.RequiredSkillIds.Count)
+                    errors.Add($"哨位 {position.Name} 的技能名称列表与技能ID列表数量不一致");
+            }
 
             // 验证可用人员引用
             if (position.AvailablePersonnelIds != null)

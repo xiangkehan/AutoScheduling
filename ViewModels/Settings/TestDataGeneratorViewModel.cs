@@ -129,11 +129,30 @@ public partial class TestDataGeneratorViewModel : ObservableObject
     public int PersonnelRetirementRatePercent => (int)(PersonnelRetirementRate * 100);
 
     /// <summary>
+    /// 多技能人员比例（0.0-1.0）
+    /// </summary>
+    [ObservableProperty]
+    private double multiSkilledPersonnelRate = 0.35;
+
+    /// <summary>
+    /// 多技能人员比例百分比（用于显示）
+    /// </summary>
+    public int MultiSkilledPersonnelRatePercent => (int)(MultiSkilledPersonnelRate * 100);
+
+    /// <summary>
     /// 当可用率改变时，通知百分比属性更新
     /// </summary>
     partial void OnPersonnelAvailabilityRateChanged(double value)
     {
         OnPropertyChanged(nameof(PersonnelAvailabilityRatePercent));
+    }
+
+    /// <summary>
+    /// 当多技能人员比例改变时，通知百分比属性更新
+    /// </summary>
+    partial void OnMultiSkilledPersonnelRateChanged(double value)
+    {
+        OnPropertyChanged(nameof(MultiSkilledPersonnelRatePercent));
     }
 
     /// <summary>
@@ -158,6 +177,12 @@ public partial class TestDataGeneratorViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int randomSeed = 42;
+
+    /// <summary>
+    /// 无技能模式（开启后生成的哨位都没有技能要求，人员也都没有技能）
+    /// </summary>
+    [ObservableProperty]
+    private bool noSkillMode = false;
 
     #endregion
 
@@ -341,6 +366,7 @@ public partial class TestDataGeneratorViewModel : ObservableObject
             MinPersonnelPerPosition = config.MinPersonnelPerPosition;
             PersonnelAvailabilityRate = config.PersonnelAvailabilityRate;
             PersonnelRetirementRate = config.PersonnelRetirementRate;
+            MultiSkilledPersonnelRate = config.MultiSkilledPersonnelRate;
             RandomSeed = config.RandomSeed;
         }
     }
@@ -385,7 +411,9 @@ public partial class TestDataGeneratorViewModel : ObservableObject
             MinPersonnelPerPosition = MinPersonnelPerPosition,
             PersonnelAvailabilityRate = PersonnelAvailabilityRate,
             PersonnelRetirementRate = PersonnelRetirementRate,
-            RandomSeed = RandomSeed
+            MultiSkilledPersonnelRate = MultiSkilledPersonnelRate,
+            RandomSeed = RandomSeed,
+            NoSkillMode = NoSkillMode
         };
     }
 

@@ -1267,6 +1267,76 @@ CREATE INDEX IF NOT EXISTS idx_manual_assignments_enabled ON ManualAssignments(I
         }
 
         /// <summary>
+        /// 清空所有数据表（保留 DatabaseVersion 表）
+        /// 此操作会删除所有业务数据，但保留数据库结构
+        /// </summary>
+        /// <returns>清空的记录总数</returns>
+        public async Task<int> ClearAllDataAsync()
+        {
+            _logger.Log("开始清空所有数据表");
+            int totalRecordsDeleted = 0;
+
+            try
+            {
+                using var conn = new SqliteConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // 需要清空的表（按依赖关系倒序）
+                var tablesToClear = new[]
+                {
+                    "SingleShifts",           // 依赖 Schedules, Positions, Personals
+                    "Schedules",              // 依赖 HolidayConfigs
+                    "ManualAssignments",      // 依赖 Positions, Personals
+                    "FixedPositionRules",     // 依赖 Personals
+                    "SchedulingTemplates",    // 独立表
+                    "HolidayConfigs",         // 独立表
+                    "Positions",              // 依赖 Skills
+                    "Personals",              // 依赖 Skills
+                    "Skills"                  // 基础表
+                };
+
+                using var transaction = conn.BeginTransaction();
+                
+                try
+                {
+                    foreach (var tableName in tablesToClear)
+                    {
+                        var countCmd = conn.CreateCommand();
+                        countCmd.Transaction = transaction;
+                        countCmd.CommandText = $"SELECT COUNT(*) FROM {tableName}";
+                        var count = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
+                        
+                        if (count > 0)
+                        {
+                            var deleteCmd = conn.CreateCommand();
+                            deleteCmd.Transaction = transaction;
+                            deleteCmd.CommandText = $"DELETE FROM {tableName}";
+                            await deleteCmd.ExecuteNonQueryAsync();
+                            
+                            totalRecordsDeleted += count;
+                            _logger.Log($"已清空表 {tableName}：{count} 条记录");
+                        }
+                    }
+
+                    await transaction.CommitAsync();
+                    _logger.Log($"成功清空所有数据表，共删除 {totalRecordsDeleted} 条记录");
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"清空数据表失败: {ex.Message}");
+                throw;
+            }
+
+            return totalRecordsDeleted;
+        }
+
+        /// <summary>
         /// Exports the database schema as SQL text
         /// Requirements: 10.2, 10.5
         /// </summary>
