@@ -29,6 +29,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private readonly IPersonnelService _personnelService;
         private readonly IPositionService _positionService;
         private readonly IScheduleGridExporter _gridExporter;
+        private readonly ILayoutPreferenceService? _layoutPreferenceService;
         private readonly PersonnelSearchHelper _searchHelper = new();
         private readonly PositionSearchHelper _positionSearchHelper = new();
 
@@ -347,6 +348,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             IPersonnelService personnelService,
             IPositionService positionService,
             IScheduleGridExporter gridExporter,
+            ILayoutPreferenceService? layoutPreferenceService = null,
             IConflictDetectionService? conflictDetectionService = null,
             IConflictReportService? conflictReportService = null,
             IConflictResolutionService? conflictResolutionService = null)
@@ -357,6 +359,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
             _personnelService = personnelService ?? throw new ArgumentNullException(nameof(personnelService));
             _positionService = positionService ?? throw new ArgumentNullException(nameof(positionService));
             _gridExporter = gridExporter ?? throw new ArgumentNullException(nameof(gridExporter));
+            
+            // 布局偏好服务（可选）
+            _layoutPreferenceService = layoutPreferenceService;
             
             // 冲突管理服务（可选）
             _conflictDetectionService = conflictDetectionService;

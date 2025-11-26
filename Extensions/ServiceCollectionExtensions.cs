@@ -94,6 +94,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConflictReportService, ConflictReportService>();
         services.AddSingleton<IConflictResolutionService, ConflictResolutionService>();
 
+        // 注册布局偏好服务
+        services.AddSingleton<ILayoutPreferenceService, LayoutPreferenceService>();
+
         // 注册数据导入导出相关服务
         // Register data validation service
         services.AddSingleton<Services.ImportExport.IDataValidationService>(sp =>

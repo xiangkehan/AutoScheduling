@@ -8,6 +8,7 @@
     xmlns:controls="using:AutoScheduling3.Controls"
     xmlns:converters="using:AutoScheduling3.Converters"
     xmlns:dto="using:AutoScheduling3.DTOs"
+    xmlns:leftpanel="using:AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.LeftPanel"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     d:DataContext="{d:DesignInstance Type=viewmodels:ScheduleResultViewModel, IsDesignTimeCreatable=True}">
@@ -39,8 +40,158 @@
     </Page.KeyboardAccelerators>
 
     <Grid>
-        <!-- Main content visible when Schedule not null -->
-        <Grid Visibility="{x:Bind ViewModel.Schedule, Converter={StaticResource NullToVisibilityConverter}, Mode=OneWay}">
+        <!-- 新UI三栏布局 -->
+        <Grid x:Name="NewUIContainer" 
+              Visibility="{x:Bind ViewModel.UseNewUI, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+                <!-- 左侧面板 -->
+                <ColumnDefinition x:Name="LeftPanelColumn" 
+                                  Width="{x:Bind ViewModel.LeftPanelWidth, Mode=TwoWay}" 
+                                  MinWidth="200" 
+                                  MaxWidth="500"/>
+                <!-- 左侧分隔符 -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- 主内容区 -->
+                <ColumnDefinition Width="*" MinWidth="400"/>
+                <!-- 右侧分隔符 -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- 右侧面板 -->
+                <ColumnDefinition x:Name="RightPanelColumn" 
+                                  Width="{x:Bind ViewModel.RightPanelWidth, Mode=TwoWay}" 
+                                  MinWidth="250" 
+                                  MaxWidth="600"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>    <!-- 主内容 -->
+                <RowDefinition Height="Auto"/> <!-- 底部操作栏 -->
+            </Grid.RowDefinitions>
+
+            <!-- 左侧导航/摘要面板 -->
+            <Border Grid.Column="0" 
+                    Grid.Row="0"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,1,0"
+                    Visibility="{x:Bind ViewModel.IsLeftPanelVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <!-- 暂时注释以解决编译问题 -->
+                <!--<leftpanel:LeftNavigationPanel DataContext="{x:Bind ViewModel}"/>-->
+                <TextBlock Text="左侧面板（待集成）" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </Border>
+
+            <!-- 左侧GridSplitter -->
+            <Border Grid.Column="1" 
+                    Grid.Row="0"
+                    Width="8"
+                    Background="Transparent"
+                    Visibility="{x:Bind ViewModel.IsLeftPanelVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                    PointerEntered="GridSplitter_PointerEntered"
+                    PointerExited="GridSplitter_PointerExited"
+                    PointerPressed="LeftGridSplitter_PointerPressed"
+                    PointerMoved="LeftGridSplitter_PointerMoved"
+                    PointerReleased="GridSplitter_PointerReleased"
+                    PointerCaptureLost="GridSplitter_PointerReleased">
+                <Rectangle Fill="{ThemeResource CardStrokeColorDefaultBrush}" 
+                           Width="1" 
+                           HorizontalAlignment="Center"/>
+            </Border>
+
+            <!-- 主内容区 -->
+            <Grid Grid.Column="2" 
+                  Grid.Row="0"
+                  Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/> <!-- 工具栏 -->
+                    <RowDefinition Height="*"/>    <!-- 内容 -->
+                </Grid.RowDefinitions>
+
+                <!-- 工具栏占位 -->
+                <Border Grid.Row="0" 
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="16,12">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="主内容区（待实现）" 
+                                   Style="{ThemeResource BodyStrongTextBlockStyle}"/>
+                        <TextBlock Text="- 网格视图将在任务4中实现" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 内容占位 -->
+                <Border Grid.Row="1" Padding="24">
+                    <TextBlock Text="排班表格将在这里显示" 
+                               Style="{ThemeResource SubtitleTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
+            </Grid>
+
+            <!-- 右侧GridSplitter -->
+            <Border Grid.Column="3" 
+                    Grid.Row="0"
+                    Width="8"
+                    Background="Transparent"
+                    Visibility="{x:Bind ViewModel.IsRightPanelVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                    PointerEntered="GridSplitter_PointerEntered"
+                    PointerExited="GridSplitter_PointerExited"
+                    PointerPressed="RightGridSplitter_PointerPressed"
+                    PointerMoved="RightGridSplitter_PointerMoved"
+                    PointerReleased="GridSplitter_PointerReleased"
+                    PointerCaptureLost="GridSplitter_PointerReleased">
+                <Rectangle Fill="{ThemeResource CardStrokeColorDefaultBrush}" 
+                           Width="1" 
+                           HorizontalAlignment="Center"/>
+            </Border>
+
+            <!-- 右侧上下文详情面板 -->
+            <Border Grid.Column="4" 
+                    Grid.Row="0"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1,0,0,0"
+                    Visibility="{x:Bind ViewModel.IsRightPanelVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid Padding="16">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="右侧详情区（待实现）" 
+                                   Style="{ThemeResource BodyStrongTextBlockStyle}"/>
+                        <TextBlock Text="冲突详情、班次编辑等功能将在任务5中实现" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                        <Button Content="关闭" 
+                                Command="{x:Bind ViewModel.CloseDetailPanelCommand}"
+                                HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 底部操作栏占位 -->
+            <Border Grid.Column="0" 
+                    Grid.ColumnSpan="5"
+                    Grid.Row="1"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="0,1,0,0"
+                    Padding="24,12">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="底部操作栏（待实现）" 
+                               Style="{ThemeResource BodyStrongTextBlockStyle}"/>
+                    <TextBlock Text="- 保存、撤销等操作将在任务7中实现" 
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 旧UI容器 - 保持现有内容不变 -->
+        <Grid x:Name="OldUIContainer"
+              Visibility="{x:Bind ViewModel.UseOldUI, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+            <!-- Main content visible when Schedule not null -->
+            <Grid Visibility="{x:Bind ViewModel.Schedule, Converter={StaticResource NullToVisibilityConverter}, Mode=OneWay}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -1361,5 +1512,7 @@
         <TextBlock Text="未加载排班数据"
                    Visibility="{x:Bind ViewModel.Schedule, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter='invert', Mode=OneWay}"
                    HorizontalAlignment="Center" VerticalAlignment="Center" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+            </Grid>
+        </Grid>
     </Grid>
 </Page>
