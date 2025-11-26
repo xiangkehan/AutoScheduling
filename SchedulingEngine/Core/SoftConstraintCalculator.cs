@@ -53,29 +53,25 @@ namespace AutoScheduling3.SchedulingEngine.Core
         /// 基于人员距离上次分配的时段间隔
         /// </summary>
         /// <param name="personIdx">人员索引</param>
+        /// <param name="timeSlot">时段索引</param>
         /// <param name="date">当前日期</param>
         /// <returns>充分休息得分（0-1之间，越高越优先）</returns>
-        public double CalculateRestScore(int personIdx, DateTime date)
+        public double CalculateRestScore(int personIdx, int timeSlot, DateTime date)
         {
             int personId = _context.PersonIdxToId[personIdx];
             if (!_context.PersonScoreStates.TryGetValue(personId, out var scoreState))
                 return 0.5; // 默认中等分
 
-            // 基于总体休息间隔计算得分
-            double intervalDays = scoreState.RecentShiftInterval / 12.0; // 12个时段 = 1天
-            double normalizedScore = Math.Min(intervalDays / MaxRestDays, 1.0);
+            // 动态计算到最近班次的间隔
+            int interval = scoreState.CalculateRecentShiftInterval(date, timeSlot, _context);
 
             // 如果从未分配过，给予较高分数
-            if (scoreState.LastAssignedDate == null)
+            if (interval == int.MaxValue)
                 return 0.8;
 
-            // 考虑距离上次分配的实际天数
-            var daysSinceLastAssignment = (date - scoreState.LastAssignedDate.Value).TotalDays;
-            if (daysSinceLastAssignment > 0)
-            {
-                double dayScore = Math.Min(daysSinceLastAssignment / MaxRestDays, 1.0);
-                normalizedScore = Math.Max(normalizedScore, dayScore);
-            }
+            // 基于间隔计算得分
+            double intervalDays = interval / 12.0; // 12个时段 = 1天
+            double normalizedScore = Math.Min(intervalDays / MaxRestDays, 1.0);
 
             return normalizedScore;
         }
@@ -97,13 +93,15 @@ namespace AutoScheduling3.SchedulingEngine.Core
             if (!_context.PersonScoreStates.TryGetValue(personId, out var scoreState))
                 return 0.5;
 
-            // 基于休息日间隔计算得分
-            double intervalDays = scoreState.RecentHolidayInterval;
-            double normalizedScore = Math.Min(intervalDays / MaxHolidayDays, 1.0);
+            // 动态计算到最近休息日班次的间隔
+            int intervalDays = scoreState.CalculateHolidayInterval(date, _context);
 
             // 如果从未在休息日分配过，给予较高分数
-            if (scoreState.LastAssignedDate == null || !_context.IsHoliday(scoreState.LastAssignedDate.Value))
+            if (intervalDays == int.MaxValue)
                 return 0.8;
+
+            // 基于休息日间隔计算得分
+            double normalizedScore = Math.Min((double)intervalDays / MaxHolidayDays, 1.0);
 
             return normalizedScore;
         }
@@ -114,8 +112,9 @@ namespace AutoScheduling3.SchedulingEngine.Core
         /// </summary>
         /// <param name="personIdx">人员索引</param>
         /// <param name="timeSlot">时段索引（0-11）</param>
+        /// <param name="date">当前日期</param>
         /// <returns>时段平衡得分（0-1之间，越高越优先）</returns>
-        public double CalculateTimeSlotBalanceScore(int personIdx, int timeSlot)
+        public double CalculateTimeSlotBalanceScore(int personIdx, int timeSlot, DateTime date)
         {
             if (timeSlot < 0 || timeSlot > 11)
                 return 0;
@@ -124,8 +123,15 @@ namespace AutoScheduling3.SchedulingEngine.Core
             if (!_context.PersonScoreStates.TryGetValue(personId, out var scoreState))
                 return 0.5;
 
+            // 动态计算到最近同时段班次的间隔
+            int interval = scoreState.CalculatePeriodInterval(timeSlot, date, _context);
+
+            // 如果从未在该时段分配过，给予较高分数
+            if (interval == int.MaxValue)
+                return 0.8;
+
             // 基于该时段的间隔计算得分
-            double intervalDays = scoreState.PeriodIntervals[timeSlot] / 12.0; // 转换为天数
+            double intervalDays = interval / 12.0; // 转换为天数
             double normalizedScore = Math.Min(intervalDays / MaxTimeSlotDays, 1.0);
 
             return normalizedScore;
@@ -141,9 +147,9 @@ namespace AutoScheduling3.SchedulingEngine.Core
         /// <returns>综合得分（越高越优先）</returns>
         public double CalculateTotalScore(int personIdx, int timeSlot, DateTime date)
         {
-            double restScore = CalculateRestScore(personIdx, date);
+            double restScore = CalculateRestScore(personIdx, timeSlot, date);
             double holidayScore = CalculateHolidayBalanceScore(personIdx, date);
-            double timeSlotScore = CalculateTimeSlotBalanceScore(personIdx, timeSlot);
+            double timeSlotScore = CalculateTimeSlotBalanceScore(personIdx, timeSlot, date);
 
             // 加权计算总分
             double totalScore = (restScore * RestWeight) + 
@@ -206,9 +212,9 @@ namespace AutoScheduling3.SchedulingEngine.Core
         /// <returns>得分详情字符串</returns>
         public string GetScoreDetails(int personIdx, int timeSlot, DateTime date)
         {
-            double restScore = CalculateRestScore(personIdx, date);
+            double restScore = CalculateRestScore(personIdx, timeSlot, date);
             double holidayScore = CalculateHolidayBalanceScore(personIdx, date);
-            double timeSlotScore = CalculateTimeSlotBalanceScore(personIdx, timeSlot);
+            double timeSlotScore = CalculateTimeSlotBalanceScore(personIdx, timeSlot, date);
             double totalScore = CalculateTotalScore(personIdx, timeSlot, date);
 
             int personId = _context.PersonIdxToId[personIdx];

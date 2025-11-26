@@ -1423,10 +1423,10 @@ public class SchedulingService : ISchedulingService
                 var periodIndex = CalcPeriodIndex(shift.StartTime);
 
                 // 计算休息时间评分
-                restScore += softConstraintCalculator.CalculateRestScore(personIdx, date);
+                restScore += softConstraintCalculator.CalculateRestScore(personIdx, periodIndex, date);
 
                 // 计算时段平衡评分
-                timeSlotBalanceScore += softConstraintCalculator.CalculateTimeSlotBalanceScore(personIdx, periodIndex);
+                timeSlotBalanceScore += softConstraintCalculator.CalculateTimeSlotBalanceScore(personIdx, periodIndex, date);
 
                 // 计算节假日平衡评分
                 holidayBalanceScore += softConstraintCalculator.CalculateHolidayBalanceScore(personIdx, date);

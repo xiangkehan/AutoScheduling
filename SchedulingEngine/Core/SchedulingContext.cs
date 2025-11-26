@@ -38,6 +38,13 @@ namespace AutoScheduling3.SchedulingEngine.Core
         // 分配记录：[日期][时段][哨位索引] = 人员索引（-1表示未分配）
         public Dictionary<DateTime, int[,]> Assignments { get; set; } = new();
 
+        // 人员分配索引：personId -> 已分配班次的时间戳集合（有序）
+        // 时间戳 = (date - StartDate).Days * 12 + periodIdx
+        public Dictionary<int, SortedSet<int>> PersonAssignmentTimestamps { get; set; } = new();
+
+        // 时间戳到班次详情的映射：personId -> timestamp -> (date, period, positionIdx)
+        public Dictionary<int, Dictionary<int, (DateTime date, int period, int positionIdx)>> PersonAssignmentDetails { get; set; } = new();
+
         /// <summary>
         /// 初始化序号映射
         /// </summary>
@@ -65,41 +72,55 @@ namespace AutoScheduling3.SchedulingEngine.Core
         {
             foreach (var person in Personals)
             {
-                var state = new PersonScoreState(
-                    person.Id,
-                    person.RecentShiftIntervalCount,
-                    person.RecentHolidayShiftIntervalCount,
-                    person.RecentPeriodShiftIntervals
-                );
+                var state = new PersonScoreState(person.Id);
                 PersonScoreStates[person.Id] = state;
             }
-            IntegrateHistoryIntoScoreStates();
+            InitializePersonAssignmentIndex();
         }
 
         /// <summary>
-        /// 根据最近一次已确认排班整合历史信息（设置最后分配日期与时段）
+        /// 初始化人员分配索引（包含历史排班数据）
         /// </summary>
-        private void IntegrateHistoryIntoScoreStates()
+        private void InitializePersonAssignmentIndex()
         {
-            if (LastConfirmedSchedule == null) return;
-            // 找到每个人员最近的一个班次
-            var lastByPerson = new Dictionary<int, SingleShift>();
-            foreach (var shift in LastConfirmedSchedule.Results)
+            // 为每个人员初始化空索引
+            foreach (var person in Personals)
             {
-                if (!lastByPerson.TryGetValue(shift.PersonnelId, out var existing) || shift.StartTime > existing.StartTime)
+                PersonAssignmentTimestamps[person.Id] = new SortedSet<int>();
+                PersonAssignmentDetails[person.Id] = new Dictionary<int, (DateTime, int, int)>();
+            }
+
+            // 从历史排班中加载数据
+            if (LastConfirmedSchedule != null)
+            {
+                foreach (var shift in LastConfirmedSchedule.Results)
                 {
-                    lastByPerson[shift.PersonnelId] = shift;
+                    // 计算历史班次的时间戳（可能为负数）
+                    int timestamp = CalculateTimestamp(shift.StartTime.Date, shift.StartTime.Hour / 2);
+
+                    // 添加到该人员的时间戳集合
+                    PersonAssignmentTimestamps[shift.PersonnelId].Add(timestamp);
+
+                    // 尝试获取哨位索引（历史哨位可能已被删除）
+                    int positionIdx = -1;
+                    if (PositionIdToIdx.TryGetValue(shift.PositionId, out int idx))
+                    {
+                        positionIdx = idx;
+                    }
+
+                    // 记录详细信息
+                    PersonAssignmentDetails[shift.PersonnelId][timestamp] =
+                        (shift.StartTime.Date, shift.StartTime.Hour / 2, positionIdx);
                 }
             }
-            foreach (var kvp in lastByPerson)
-            {
-                if (PersonScoreStates.TryGetValue(kvp.Key, out var state))
-                {
-                    var lastShift = kvp.Value;
-                    state.LastAssignedDate = lastShift.StartTime.Date;
-                    state.LastAssignedPeriod = lastShift.StartTime.Hour / 2; //2小时一个时段
-                }
-            }
+        }
+
+        /// <summary>
+        /// 计算时间戳（以时段为单位，以 StartDate 为基准）
+        /// </summary>
+        public int CalculateTimestamp(DateTime date, int periodIdx)
+        {
+            return (date.Date - StartDate.Date).Days * 12 + periodIdx;
         }
 
         /// <summary>
@@ -132,6 +153,13 @@ namespace AutoScheduling3.SchedulingEngine.Core
             {
                 Assignments[date.Date][periodIdx, positionIdx] = personIdx;
             }
+
+            // 更新人员分配索引
+            int personId = PersonIdxToId[personIdx];
+            int timestamp = CalculateTimestamp(date, periodIdx);
+
+            PersonAssignmentTimestamps[personId].Add(timestamp);
+            PersonAssignmentDetails[personId][timestamp] = (date, periodIdx, positionIdx);
         }
 
         /// <summary>

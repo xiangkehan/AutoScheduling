@@ -974,27 +974,76 @@ CREATE INDEX IF NOT EXISTS idx_manual_assignments_enabled ON ManualAssignments(I
             var cmd = conn.CreateCommand();
             cmd.Transaction = transaction;
 
-            // 添加 HolidayConfigId 字段
-            cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN HolidayConfigId INTEGER";
-            await cmd.ExecuteNonQueryAsync();
-            _logger.Log("Added HolidayConfigId column");
+            // 检查并添加 HolidayConfigId 字段
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "HolidayConfigId"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN HolidayConfigId INTEGER";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added HolidayConfigId column");
+            }
+            else
+            {
+                _logger.Log("HolidayConfigId column already exists, skipping");
+            }
 
-            // 添加 UseActiveHolidayConfig 字段
-            cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN UseActiveHolidayConfig INTEGER NOT NULL DEFAULT 1";
-            await cmd.ExecuteNonQueryAsync();
-            _logger.Log("Added UseActiveHolidayConfig column");
+            // 检查并添加 UseActiveHolidayConfig 字段
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "UseActiveHolidayConfig"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN UseActiveHolidayConfig INTEGER NOT NULL DEFAULT 1";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added UseActiveHolidayConfig column");
+            }
+            else
+            {
+                _logger.Log("UseActiveHolidayConfig column already exists, skipping");
+            }
 
-            // 添加 EnabledFixedRuleIds 字段
-            cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN EnabledFixedRuleIds TEXT NOT NULL DEFAULT '[]'";
-            await cmd.ExecuteNonQueryAsync();
-            _logger.Log("Added EnabledFixedRuleIds column");
+            // 检查并添加 EnabledFixedRuleIds 字段
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "EnabledFixedRuleIds"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN EnabledFixedRuleIds TEXT NOT NULL DEFAULT '[]'";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added EnabledFixedRuleIds column");
+            }
+            else
+            {
+                _logger.Log("EnabledFixedRuleIds column already exists, skipping");
+            }
 
-            // 添加 EnabledManualAssignmentIds 字段
-            cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN EnabledManualAssignmentIds TEXT NOT NULL DEFAULT '[]'";
-            await cmd.ExecuteNonQueryAsync();
-            _logger.Log("Added EnabledManualAssignmentIds column");
+            // 检查并添加 EnabledManualAssignmentIds 字段
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "EnabledManualAssignmentIds"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN EnabledManualAssignmentIds TEXT NOT NULL DEFAULT '[]'";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added EnabledManualAssignmentIds column");
+            }
+            else
+            {
+                _logger.Log("EnabledManualAssignmentIds column already exists, skipping");
+            }
 
             _logger.Log("Version 2 migration completed successfully");
+        }
+
+        /// <summary>
+        /// 检查列是否存在
+        /// </summary>
+        private async Task<bool> ColumnExistsAsync(SqliteConnection conn, SqliteTransaction transaction, string tableName, string columnName)
+        {
+            var cmd = conn.CreateCommand();
+            cmd.Transaction = transaction;
+            cmd.CommandText = $"PRAGMA table_info({tableName})";
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var colName = reader.GetString(1); // 列名在第2列（索引1）
+                if (colName.Equals(columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>

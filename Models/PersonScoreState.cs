@@ -1,9 +1,10 @@
 using System;
+using AutoScheduling3.SchedulingEngine.Core;
 
 namespace AutoScheduling3.Models
 {
     /// <summary>
-    /// 人员评分状态模型：在排班过程中维护每个人员的实时评分状态，用于软约束评分计算
+    /// 人员评分状态模型：在排班过程中动态计算每个人员的评分状态，用于软约束评分计算
     /// </summary>
     public class PersonScoreState
     {
@@ -12,134 +13,113 @@ namespace AutoScheduling3.Models
         /// </summary>
         public int PersonalId { get; set; }
 
-        /// <summary>
-        /// 距离上次班次的间隔（时段数）
-        /// 用于计算充分休息得分
-        /// </summary>
-        public int RecentShiftInterval { get; set; }
-
-        /// <summary>
-        /// 距离上次休息日班次的间隔（天数）
-        /// 用于计算休息日平衡得分
-        /// </summary>
-        public int RecentHolidayInterval { get; set; }
-
-        /// <summary>
-        /// 各时段的间隔数组（12个时段，索引0-11）
-        /// 用于计算时段平衡得分
-        /// </summary>
-        public int[] PeriodIntervals { get; set; }
-
-        /// <summary>
-        /// 最后分配的时段序号（-1表示未分配）
-        /// </summary>
-        public int LastAssignedPeriod { get; set; }
-
-        /// <summary>
-        /// 最后分配的日期
-        /// </summary>
-        public DateTime? LastAssignedDate { get; set; }
-
-        // 替换原有的 PeriodIntervals 长度检查和 Resize 逻辑
-        public PersonScoreState(int personalId, int recentShiftInterval = 0, int recentHolidayInterval = 0, int[]? periodIntervals = null)
+        public PersonScoreState(int personalId)
         {
             PersonalId = personalId;
-            RecentShiftInterval = recentShiftInterval;
-            RecentHolidayInterval = recentHolidayInterval;
-            // 如果 periodIntervals 不为 null 且长度为 12，则直接赋值，否则新建长度为 12 的数组并复制已有内容
-            if (periodIntervals != null && periodIntervals.Length == 12)
+        }
+
+        /// <summary>
+        /// 计算到最近班次的间隔（时段数）
+        /// </summary>
+        /// <param name="targetDate">目标日期</param>
+        /// <param name="targetPeriod">目标时段</param>
+        /// <param name="context">排班上下文</param>
+        /// <returns>间隔时段数，如果从未分配则返回 int.MaxValue</returns>
+        public int CalculateRecentShiftInterval(DateTime targetDate, int targetPeriod, SchedulingContext context)
+        {
+            int targetTimestamp = context.CalculateTimestamp(targetDate, targetPeriod);
+
+            if (!context.PersonAssignmentTimestamps.TryGetValue(PersonalId, out var timestamps) || timestamps.Count == 0)
+                return int.MaxValue; // 从未分配过
+
+            // 使用 SortedSet 的 GetViewBetween 找到小于目标时间戳的所有时间戳
+            var beforeTarget = timestamps.GetViewBetween(int.MinValue, targetTimestamp - 1);
+
+            if (beforeTarget.Count == 0)
+                return int.MaxValue; // 在目标时间之前没有分配
+
+            int nearestTimestamp = beforeTarget.Max;
+            return targetTimestamp - nearestTimestamp;
+        }
+
+        /// <summary>
+        /// 计算到最近同时段班次的间隔（时段数）
+        /// </summary>
+        /// <param name="targetPeriod">目标时段（0-11）</param>
+        /// <param name="targetDate">目标日期</param>
+        /// <param name="context">排班上下文</param>
+        /// <returns>间隔时段数，如果从未在该时段分配则返回 int.MaxValue</returns>
+        public int CalculatePeriodInterval(int targetPeriod, DateTime targetDate, SchedulingContext context)
+        {
+            int targetTimestamp = context.CalculateTimestamp(targetDate, targetPeriod);
+
+            if (!context.PersonAssignmentTimestamps.TryGetValue(PersonalId, out var timestamps) || timestamps.Count == 0)
+                return int.MaxValue;
+
+            // 筛选出同时段的时间戳（时间戳 % 12 == targetPeriod）
+            int nearestSamePeriodTimestamp = -1;
+
+            foreach (var ts in timestamps)
             {
-                PeriodIntervals = periodIntervals;
-            }
-            else
-            {
-                PeriodIntervals = new int[12];
-                if (periodIntervals != null)
+                if (ts >= targetTimestamp) break; // 已经超过目标时间
+
+                // 检查是否同时段
+                if (ts % 12 == targetPeriod)
                 {
-                    Array.Copy(periodIntervals, PeriodIntervals, Math.Min(periodIntervals.Length, 12));
+                    nearestSamePeriodTimestamp = ts;
                 }
             }
-            LastAssignedPeriod = -1;
-            LastAssignedDate = null;
+
+            if (nearestSamePeriodTimestamp == -1)
+                return int.MaxValue;
+
+            return targetTimestamp - nearestSamePeriodTimestamp;
         }
 
         /// <summary>
-        /// 计算该人员在指定时段和日期的得分
+        /// 计算到最近休息日班次的间隔（天数）
         /// </summary>
-        /// <param name="periodIndex">时段序号（0-11）</param>
-        /// <param name="date">日期</param>
-        /// <param name="isHoliday">是否为休息日</param>
-        /// <returns>总得分</returns>
-        public double CalculateScore(int periodIndex, DateTime date, bool isHoliday)
+        /// <param name="targetDate">目标日期</param>
+        /// <param name="context">排班上下文</param>
+        /// <returns>间隔天数，如果从未在休息日分配则返回 int.MaxValue</returns>
+        public int CalculateHolidayInterval(DateTime targetDate, SchedulingContext context)
         {
-            // 充分休息得分
-            double restScore = RecentShiftInterval;
+            if (!context.IsHoliday(targetDate))
+                return int.MaxValue; // 不是休息日，返回最大值
 
-            // 时段平衡得分
-            double periodScore = PeriodIntervals[periodIndex];
+            int targetTimestamp = context.CalculateTimestamp(targetDate, 0); // 使用当天0时段作为基准
 
-            // 如果是休息日，加上休息日平衡得分
-            double totalScore = restScore + periodScore;
-            if (isHoliday)
+            if (!context.PersonAssignmentTimestamps.TryGetValue(PersonalId, out var timestamps) ||
+                !context.PersonAssignmentDetails.TryGetValue(PersonalId, out var details) ||
+                timestamps.Count == 0)
+                return int.MaxValue;
+
+            // 找到最近的休息日班次
+            int nearestHolidayTimestamp = -1;
+
+            foreach (var ts in timestamps)
             {
-                double holidayScore = RecentHolidayInterval;
-                totalScore += holidayScore;
+                if (ts >= targetTimestamp) break;
+
+                if (details.TryGetValue(ts, out var detail))
+                {
+                    if (context.IsHoliday(detail.date))
+                    {
+                        nearestHolidayTimestamp = ts;
+                    }
+                }
             }
 
-            return totalScore;
-        }
+            if (nearestHolidayTimestamp == -1)
+                return int.MaxValue;
 
-        /// <summary>
-        /// 更新状态：在分配后调用
-        /// </summary>
-        /// <param name="periodIndex">分配的时段序号</param>
-        /// <param name="date">分配的日期</param>
-        /// <param name="isHoliday">是否为休息日</param>
-        public void UpdateAfterAssignment(int periodIndex, DateTime date, bool isHoliday)
-        {
-            // 重置充分休息间隔
-            RecentShiftInterval = 0;
-
-            // 重置当前时段间隔
-            PeriodIntervals[periodIndex] = 0;
-
-            // 如果是休息日，重置休息日间隔
-            if (isHoliday)
-            {
-                RecentHolidayInterval = 0;
-            }
-
-            // 记录最后分配信息
-            LastAssignedPeriod = periodIndex;
-            LastAssignedDate = date;
-        }
-
-        /// <summary>
-        /// 增量更新：在时段推进时调用
-        /// </summary>
-        public void IncrementIntervals()
-        {
-            // 充分休息间隔+1
-            RecentShiftInterval++;
-
-            // 各时段间隔+1
-            for (int i = 0; i < 12; i++)
-            {
-                PeriodIntervals[i]++;
-            }
-        }
-
-        /// <summary>
-        /// 增量更新休息日间隔：在休息日推进时调用
-        /// </summary>
-        public void IncrementHolidayInterval()
-        {
-            RecentHolidayInterval++;
+            // 返回天数间隔
+            return (targetTimestamp - nearestHolidayTimestamp) / 12;
         }
 
         public override string ToString()
         {
-            return $"PersonScoreState[{PersonalId}] Rest={RecentShiftInterval} Holiday={RecentHolidayInterval} LastPeriod={LastAssignedPeriod}";
+            return $"PersonScoreState[{PersonalId}]";
         }
     }
 }
