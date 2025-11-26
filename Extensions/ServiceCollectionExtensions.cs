@@ -174,7 +174,7 @@ public static class ServiceCollectionExtensions
 
         // 历史ViewModels
         services.AddTransient<HistoryViewModel>();
-        services.AddTransient<HistoryDetailViewModel>();
+        // HistoryDetailViewModel 已移除，使用 ScheduleResultViewModel 代替
         services.AddTransient<DraftsViewModel>();
         services.AddTransient<CompareViewModel>();
 

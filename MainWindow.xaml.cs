@@ -90,7 +90,7 @@ namespace AutoScheduling3
             // 历史页面注册
             _navigationService.RegisterPage("History", typeof(HistoryPage));
             _navigationService.RegisterPage("Compare", typeof(ComparePage));
-            // 如果存在详情页面，可在此注册: _navigationService.RegisterPage("HistoryDetail", typeof(HistoryDetailPage));
+            // 注意：历史详情使用 ScheduleResult 页面展示，无需单独注册
 
             // 设置页面注册
             _navigationService.RegisterPage("Settings", typeof(SettingsPage));

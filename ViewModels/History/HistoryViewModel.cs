@@ -36,7 +36,7 @@ namespace AutoScheduling3.ViewModels.History
         private bool _isListView = false;
 
         [ObservableProperty]
-        private string _selectedSortBy = "Time";
+        private string _selectedSortBy = "按时间";
 
         [ObservableProperty]
         private bool _isSortAscending = false;
@@ -50,12 +50,12 @@ namespace AutoScheduling3.ViewModels.History
         [ObservableProperty]
         private int _totalPages =1;
 
-        public List<string> SortByOptions { get; } = new List<string> { "Time", "Name" };
+        public List<string> SortByOptions { get; } = new List<string> { "按时间", "按名称" };
 
         public HistoryViewModel(IHistoryService historyService)
         {
             _historyService = historyService;
-            Title = "��ʷ��¼";
+            Title = "历史记录";
             GroupedHistorySchedules = new ObservableCollection<GroupedHistorySchedule>();
         }
 
@@ -77,12 +77,20 @@ namespace AutoScheduling3.ViewModels.History
         public override async Task LoadDataAsync()
         {
             IsLoading = true;
+            // 将中文排序选项转换为英文
+            var sortBy = SelectedSortBy switch
+            {
+                "按时间" => "Time",
+                "按名称" => "Name",
+                _ => "Time"
+            };
+            
             var options = new HistoryQueryOptions
             {
                 StartDate = StartDate?.Date,
                 EndDate = EndDate?.Date,
                 Keyword = Keyword,
-                SortBy = SelectedSortBy,
+                SortBy = sortBy,
                 IsAscending = IsSortAscending
             };
 
@@ -182,7 +190,8 @@ namespace AutoScheduling3.ViewModels.History
         private void ViewDetail(int scheduleId)
         {
             var navigationService = (App.Current as App).ServiceProvider.GetRequiredService<NavigationService>();
-            navigationService.NavigateTo("HistoryDetail", scheduleId);
+            // 使用 ScheduleResult 页面展示历史详情
+            navigationService.NavigateTo("ScheduleResult", scheduleId);
         }
 
         [RelayCommand]
@@ -208,12 +217,15 @@ namespace AutoScheduling3.ViewModels.History
         }
     }
 
-    public class GroupedHistorySchedule : List<HistoryScheduleDto>
+    public class GroupedHistorySchedule
     {
         public string Key { get; private set; }
-        public GroupedHistorySchedule(int year, int month, List<HistoryScheduleDto> items) : base(items)
+        public List<HistoryScheduleDto> Items { get; private set; }
+        
+        public GroupedHistorySchedule(int year, int month, List<HistoryScheduleDto> items)
         {
-            Key = $"{year}�� {month}��";
+            Key = $"{year}年 {month}月";
+            Items = items;
         }
     }
 }

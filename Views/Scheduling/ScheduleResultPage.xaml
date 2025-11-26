@@ -46,10 +46,37 @@
             <StackPanel Grid.Row="0" Margin="24,24,24,12" Spacing="12">
                 <!-- Title Section -->
                 <StackPanel AutomationProperties.Name="排班结果标题区域" AutomationProperties.HeadingLevel="Level1">
-                    <TextBlock Text="{x:Bind ViewModel.Schedule.Title, Mode=OneWay, FallbackValue='排班结果'}" 
-                               Style="{ThemeResource TitleTextBlockStyle}"
-                               AutomationProperties.Name="排班标题"
-                               AutomationProperties.HeadingLevel="Level1"/>
+                    <!-- 标题和状态标识 -->
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="{x:Bind ViewModel.Schedule.Title, Mode=OneWay, FallbackValue='排班结果'}" 
+                                   Style="{ThemeResource TitleTextBlockStyle}"
+                                   AutomationProperties.Name="排班标题"
+                                   AutomationProperties.HeadingLevel="Level1"/>
+                        <!-- 草稿/历史标识 -->
+                        <Border VerticalAlignment="Center"
+                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                CornerRadius="4"
+                                Padding="8,4"
+                                Visibility="{x:Bind ViewModel.Schedule.ConfirmedAt, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=invert}">
+                            <TextBlock Text="草稿" 
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                       AutomationProperties.Name="草稿标识"/>
+                        </Border>
+                        <Border VerticalAlignment="Center"
+                                Background="{ThemeResource SystemFillColorSuccessBrush}"
+                                CornerRadius="4"
+                                Padding="8,4"
+                                Visibility="{x:Bind ViewModel.Schedule.ConfirmedAt, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}">
+                            <TextBlock Text="已确认" 
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="White"
+                                       AutomationProperties.Name="已确认标识"/>
+                        </Border>
+                    </StackPanel>
+                    <!-- 日期范围 -->
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" 
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                AutomationProperties.Name="排班日期范围">
