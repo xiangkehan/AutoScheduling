@@ -363,17 +363,19 @@ namespace AutoScheduling3.ViewModels.Scheduling
             if (conflict.Type == "unassigned" && conflict.PositionId.HasValue && 
                 conflict.StartTime.HasValue && conflict.PeriodIndex.HasValue)
             {
-                // 直接根据哨位、日期和时段定位
+                // 未分配冲突没有 ShiftId，使用特殊格式：unassigned_{positionId}_{date}_{period}
+                var cellKey = $"unassigned_{conflict.PositionId.Value}_{conflict.StartTime.Value:yyyyMMdd}_{conflict.PeriodIndex.Value}";
+                newHighlightKeys.Add(cellKey);
+                
+                // 计算坐标用于滚动
                 var row = GridData.Rows.FirstOrDefault(r =>
                     r.Date.Date == conflict.StartTime.Value.Date &&
                     r.PeriodIndex == conflict.PeriodIndex.Value);
                 var col = GridData.Columns.FirstOrDefault(c =>
                     c.PositionId == conflict.PositionId.Value);
-
+                
                 if (row != null && col != null)
                 {
-                    var cellKey = $"{row.RowIndex}_{col.ColumnIndex}";
-                    newHighlightKeys.Add(cellKey);
                     firstRowIndex = row.RowIndex;
                     firstColumnIndex = col.ColumnIndex;
                 }
@@ -386,20 +388,20 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     var shift = Schedule.Shifts.FirstOrDefault(s => s.Id == shiftId);
                     if (shift == null) continue;
 
-                    // 计算单元格键
-                    var row = GridData.Rows.FirstOrDefault(r =>
-                        r.Date.Date == shift.StartTime.Date &&
-                        r.PeriodIndex == shift.PeriodIndex);
-                    var col = GridData.Columns.FirstOrDefault(c =>
-                        c.PositionId == shift.PositionId);
+                    // 使用基于 ShiftId 的键格式：shift_{shiftId}_{viewType}
+                    var cellKey = $"shift_{shiftId}_Grid";
+                    newHighlightKeys.Add(cellKey);
 
-                    if (row != null && col != null)
+                    // 计算坐标用于滚动
+                    if (firstRowIndex == null)
                     {
-                        var cellKey = $"{row.RowIndex}_{col.ColumnIndex}";
-                        newHighlightKeys.Add(cellKey);
+                        var row = GridData.Rows.FirstOrDefault(r =>
+                            r.Date.Date == shift.StartTime.Date &&
+                            r.PeriodIndex == shift.PeriodIndex);
+                        var col = GridData.Columns.FirstOrDefault(c =>
+                            c.PositionId == shift.PositionId);
 
-                        // 记录第一个单元格的位置（用于滚动）
-                        if (firstRowIndex == null)
+                        if (row != null && col != null)
                         {
                             firstRowIndex = row.RowIndex;
                             firstColumnIndex = col.ColumnIndex;
@@ -518,31 +520,25 @@ namespace AutoScheduling3.ViewModels.Scheduling
             // 为所有相关班次创建高亮键
             if (conflict.Type == "unassigned")
             {
-                // 未分配冲突：只高亮一个单元格
+                // 未分配冲突：使用特殊格式
                 var dayOfWeek = (targetDate - weekStartDate).Days;
                 if (dayOfWeek >= 0 && dayOfWeek < 7)
                 {
-                    var cellKey = $"{targetPeriodIndex}_{dayOfWeek}";
+                    var cellKey = $"unassigned_{conflict.PositionId}_{targetDate:yyyyMMdd}_{targetPeriodIndex}";
                     newHighlightKeys.Add(cellKey);
                 }
             }
             else
             {
-                // 其他冲突：高亮所有相关班次
+                // 其他冲突：使用基于 ShiftId 的键格式
                 foreach (var shiftId in conflict.RelatedShiftIds)
                 {
                     var relatedShift = Schedule.Shifts.FirstOrDefault(s => s.Id == shiftId);
                     if (relatedShift == null || relatedShift.PositionId != targetPositionId) continue;
 
-                    // 计算单元格键：periodIndex_dayOfWeek
-                    var shiftDate = relatedShift.StartTime.Date;
-                    var dayOfWeek = (shiftDate - weekStartDate).Days;
-
-                    if (dayOfWeek >= 0 && dayOfWeek < 7)
-                    {
-                        var cellKey = $"{relatedShift.PeriodIndex}_{dayOfWeek}";
-                        newHighlightKeys.Add(cellKey);
-                    }
+                    // 使用基于 ShiftId 的键格式：shift_{shiftId}_{viewType}
+                    var cellKey = $"shift_{shiftId}_ByPosition";
+                    newHighlightKeys.Add(cellKey);
                 }
             }
 

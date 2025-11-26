@@ -34,6 +34,16 @@ namespace AutoScheduling3.Controls
                 new PropertyMetadata(null, OnHighlightedCellKeysChanged));
 
         /// <summary>
+        /// FocusedShiftId 依赖属性
+        /// </summary>
+        public static readonly DependencyProperty FocusedShiftIdProperty =
+            DependencyProperty.Register(
+                nameof(FocusedShiftId),
+                typeof(int?),
+                typeof(PositionScheduleControl),
+                new PropertyMetadata(null, OnFocusedShiftIdChanged));
+
+        /// <summary>
         /// 排班数据
         /// </summary>
         public PositionScheduleData? ScheduleData
@@ -49,6 +59,15 @@ namespace AutoScheduling3.Controls
         {
             get => (HashSet<string>?)GetValue(HighlightedCellKeysProperty);
             set => SetValue(HighlightedCellKeysProperty, value);
+        }
+
+        /// <summary>
+        /// 当前焦点高亮的班次ID
+        /// </summary>
+        public int? FocusedShiftId
+        {
+            get => (int?)GetValue(FocusedShiftIdProperty);
+            set => SetValue(FocusedShiftIdProperty, value);
         }
 
         /// <summary>
@@ -110,6 +129,17 @@ namespace AutoScheduling3.Controls
         /// HighlightedCellKeys 属性变化回调
         /// </summary>
         private static void OnHighlightedCellKeysChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is PositionScheduleControl control)
+            {
+                control.UpdateCellHighlights();
+            }
+        }
+
+        /// <summary>
+        /// FocusedShiftId 属性变化回调
+        /// </summary>
+        private static void OnFocusedShiftIdChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is PositionScheduleControl control)
             {
@@ -320,7 +350,22 @@ namespace AutoScheduling3.Controls
         private Border CreateScheduleCell(PositionScheduleCell? cellData, int periodIndex, int dayOfWeek)
         {
             var cellKey = $"{periodIndex}_{dayOfWeek}";
-            var isHighlighted = HighlightedCellKeys?.Contains(cellKey) ?? false;
+            
+            // 检查是否高亮：支持多种键格式
+            bool isHighlighted = false;
+            
+            // 1. 基于 ShiftId 的键格式：shift_{shiftId}_ByPosition
+            if (cellData?.ShiftId != null && HighlightedCellKeys != null)
+            {
+                var shiftKey = $"shift_{cellData.ShiftId}_ByPosition";
+                isHighlighted = HighlightedCellKeys.Contains(shiftKey);
+            }
+            
+            // 2. 兼容旧的坐标格式
+            if (!isHighlighted && HighlightedCellKeys != null)
+            {
+                isHighlighted = HighlightedCellKeys.Contains(cellKey);
+            }
 
             var border = new Border
             {
@@ -510,15 +555,70 @@ namespace AutoScheduling3.Controls
             {
                 if (child is Border border && border.Tag is CellTag cellTag)
                 {
-                    var isHighlighted = highlightKeys.Contains(cellTag.CellKey);
-
-                    // 更新样式
-                    if (isHighlighted)
+                    // 检查是否高亮：支持多种键格式
+                    bool isHighlighted = false;
+                    
+                    // 1. 基于 ShiftId 的键格式：shift_{shiftId}_ByPosition
+                    if (cellTag.CellData?.ShiftId != null)
                     {
-                        // 高亮单元格：橙色边框 + 半透明橙色背景（与网格视图一致）
-                        border.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Orange);
-                        border.BorderThickness = new Thickness(3);
-                        border.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(50, 255, 165, 0)); // 半透明橙色
+                        var shiftKey = $"shift_{cellTag.CellData.ShiftId}_ByPosition";
+                        isHighlighted = highlightKeys.Contains(shiftKey);
+                    }
+                    
+                    // 2. 兼容旧的坐标格式
+                    if (!isHighlighted)
+                    {
+                        isHighlighted = highlightKeys.Contains(cellTag.CellKey);
+                    }
+                    
+                    var isFocused = FocusedShiftId.HasValue && cellTag.CellData?.ShiftId == FocusedShiftId.Value;
+
+                    // 更新样式（焦点高亮优先级最高）
+                    if (isFocused)
+                    {
+                        // 焦点高亮：使用资源字典中的颜色
+                        try
+                        {
+                            border.BorderBrush = (Brush)Application.Current.Resources["FocusedHighlightBrush"];
+                            border.BorderThickness = (Thickness)Application.Current.Resources["FocusedHighlightBorderThickness"];
+                            border.Background = (Brush)Application.Current.Resources["FocusedHighlightBackgroundBrush"];
+                        }
+                        catch
+                        {
+                            // 回退到硬编码颜色
+                            border.BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 140, 0));
+                            border.BorderThickness = new Thickness(4);
+                            border.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(100, 255, 140, 0));
+                        }
+                        
+                        // 更新文本样式
+                        if (border.Child is TextBlock textBlock)
+                        {
+                            textBlock.FontWeight = Microsoft.UI.Text.FontWeights.Bold;
+                        }
+                    }
+                    else if (isHighlighted)
+                    {
+                        // 普通高亮：使用资源字典中的颜色
+                        try
+                        {
+                            border.BorderBrush = (Brush)Application.Current.Resources["SearchHighlightBrush"];
+                            border.BorderThickness = (Thickness)Application.Current.Resources["SearchHighlightBorderThickness"];
+                            border.Background = (Brush)Application.Current.Resources["SearchHighlightBackgroundBrush"];
+                        }
+                        catch
+                        {
+                            // 回退到硬编码颜色
+                            border.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Orange);
+                            border.BorderThickness = new Thickness(3);
+                            border.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(50, 255, 165, 0));
+                        }
+                        
+                        // 恢复文本样式
+                        if (border.Child is TextBlock textBlock)
+                        {
+                            textBlock.FontWeight = Microsoft.UI.Text.FontWeights.Normal;
+                        }
                     }
                     else
                     {
@@ -526,6 +626,12 @@ namespace AutoScheduling3.Controls
                         border.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
                         border.BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
                         border.BorderThickness = new Thickness(1);
+
+                        // 恢复文本样式
+                        if (border.Child is TextBlock textBlock)
+                        {
+                            textBlock.FontWeight = Microsoft.UI.Text.FontWeights.Normal;
+                        }
 
                         // 根据单元格状态应用特殊样式
                         if (cellTag.CellData != null)

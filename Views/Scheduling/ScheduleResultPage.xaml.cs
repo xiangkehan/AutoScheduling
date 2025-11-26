@@ -438,5 +438,23 @@ namespace AutoScheduling3.Views.Scheduling
         }
 
         #endregion
+
+        #region 搜索结果处理
+
+        /// <summary>
+        /// 搜索结果项点击处理
+        /// </summary>
+        private void SearchResultItem_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            if (sender is Border border && border.Tag is SearchResultItem item)
+            {
+                if (ViewModel.SelectSearchResultCommand?.CanExecute(item) == true)
+                {
+                    _ = ViewModel.SelectSearchResultCommand.ExecuteAsync(item);
+                }
+            }
+        }
+
+        #endregion
     }
 }

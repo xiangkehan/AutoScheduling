@@ -81,6 +81,16 @@ public sealed partial class CellModel : UserControl
             new PropertyMetadata(false, OnIsHighlightedChanged));
 
     /// <summary>
+    /// 是否为焦点高亮依赖属性（比普通高亮更明显）
+    /// </summary>
+    public static readonly DependencyProperty IsFocusedHighlightProperty =
+        DependencyProperty.Register(
+            nameof(IsFocusedHighlight),
+            typeof(bool),
+            typeof(CellModel),
+            new PropertyMetadata(false, OnIsFocusedHighlightChanged));
+
+    /// <summary>
     /// 单元格点击事件
     /// </summary>
     public event EventHandler<ScheduleGridCell>? CellClicked;
@@ -126,6 +136,15 @@ public sealed partial class CellModel : UserControl
         set => SetValue(IsHighlightedProperty, value);
     }
 
+    /// <summary>
+    /// 是否为焦点高亮（比普通高亮更明显）
+    /// </summary>
+    public bool IsFocusedHighlight
+    {
+        get => (bool)GetValue(IsFocusedHighlightProperty);
+        set => SetValue(IsFocusedHighlightProperty, value);
+    }
+
     private static void OnCellDataChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is CellModel cell)
@@ -142,12 +161,24 @@ public sealed partial class CellModel : UserControl
         }
     }
 
+    private static void OnIsFocusedHighlightChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is CellModel cell)
+        {
+            cell.UpdateHighlightState();
+        }
+    }
+
     /// <summary>
     /// 更新高亮状态
     /// </summary>
     private void UpdateHighlightState()
     {
-        if (IsHighlighted)
+        if (IsFocusedHighlight)
+        {
+            ApplyFocusedHighlightStyle();
+        }
+        else if (IsHighlighted)
         {
             ApplyHighlightStyle();
         }
@@ -158,15 +189,66 @@ public sealed partial class CellModel : UserControl
     }
 
     /// <summary>
-    /// 应用高亮样式
+    /// 应用普通高亮样式
     /// </summary>
     private void ApplyHighlightStyle()
     {
-        // 使用明显的高亮效果：橙色边框 + 浅橙色背景
-        CellBorder.BorderBrush = new SolidColorBrush(Colors.Orange);
-        CellBorder.BorderThickness = new Thickness(3);
-        CellBorder.Background = new SolidColorBrush(Color.FromArgb(50, 255, 165, 0)); // 半透明橙色
+        // 使用资源字典中定义的高亮颜色
+        try
+        {
+            CellBorder.BorderBrush = (Brush)Application.Current.Resources["SearchHighlightBrush"];
+            CellBorder.BorderThickness = (Thickness)Application.Current.Resources["SearchHighlightBorderThickness"];
+            CellBorder.Background = (Brush)Application.Current.Resources["SearchHighlightBackgroundBrush"];
+        }
+        catch
+        {
+            // 回退到硬编码颜色
+            CellBorder.BorderBrush = new SolidColorBrush(Colors.Orange);
+            CellBorder.BorderThickness = new Thickness(3);
+            CellBorder.Background = new SolidColorBrush(Color.FromArgb(50, 255, 165, 0));
+        }
+        
         PersonnelNameText.Foreground = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+        PersonnelNameText.FontWeight = Microsoft.UI.Text.FontWeights.Normal;
+        
+        // 清除阴影效果
+        CellBorder.Shadow = null;
+        CellBorder.Translation = new System.Numerics.Vector3(0, 0, 0);
+    }
+
+    /// <summary>
+    /// 应用焦点高亮样式（更明显的样式）
+    /// </summary>
+    private void ApplyFocusedHighlightStyle()
+    {
+        // 使用资源字典中定义的焦点高亮颜色
+        try
+        {
+            CellBorder.BorderBrush = (Brush)Application.Current.Resources["FocusedHighlightBrush"];
+            CellBorder.BorderThickness = (Thickness)Application.Current.Resources["FocusedHighlightBorderThickness"];
+            CellBorder.Background = (Brush)Application.Current.Resources["FocusedHighlightBackgroundBrush"];
+        }
+        catch
+        {
+            // 回退到硬编码颜色
+            CellBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(255, 255, 140, 0));
+            CellBorder.BorderThickness = new Thickness(4);
+            CellBorder.Background = new SolidColorBrush(Color.FromArgb(100, 255, 140, 0));
+        }
+        
+        PersonnelNameText.Foreground = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+        PersonnelNameText.FontWeight = Microsoft.UI.Text.FontWeights.Bold;
+        
+        // 添加阴影效果（如果支持）
+        try
+        {
+            CellBorder.Shadow = new Microsoft.UI.Xaml.Media.ThemeShadow();
+            CellBorder.Translation = new System.Numerics.Vector3(0, 0, 8);
+        }
+        catch
+        {
+            // 如果不支持阴影，静默忽略
+        }
     }
 
     /// <summary>

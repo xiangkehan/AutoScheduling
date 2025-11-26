@@ -21,6 +21,11 @@ public class PositionScheduleCell
     public DateTime Date { get; set; }
 
     /// <summary>
+    /// 班次ID
+    /// </summary>
+    public int? ShiftId { get; set; }
+
+    /// <summary>
     /// 人员ID
     /// </summary>
     public int? PersonnelId { get; set; }

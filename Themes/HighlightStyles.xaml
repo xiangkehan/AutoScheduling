@@ -1,0 +1,28 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- 搜索高亮颜色定义 -->
+    
+    <!-- 普通高亮颜色（橙色） -->
+    <Color x:Key="SearchHighlightColor">#FFA500</Color>
+    <Color x:Key="SearchHighlightBackgroundColor">#32FFA500</Color>
+    
+    <!-- 焦点高亮颜色（亮黄色 - 更突出） -->
+    <Color x:Key="FocusedHighlightColor">#FFD700</Color>
+    <Color x:Key="FocusedHighlightBackgroundColor">#B3FFD700</Color>
+    
+    <!-- 画刷资源 -->
+    <SolidColorBrush x:Key="SearchHighlightBrush" Color="{StaticResource SearchHighlightColor}"/>
+    <SolidColorBrush x:Key="SearchHighlightBackgroundBrush" Color="{StaticResource SearchHighlightBackgroundColor}"/>
+    <SolidColorBrush x:Key="FocusedHighlightBrush" Color="{StaticResource FocusedHighlightColor}"/>
+    <SolidColorBrush x:Key="FocusedHighlightBackgroundBrush" Color="{StaticResource FocusedHighlightBackgroundColor}"/>
+    
+    <!-- 高亮边框厚度 -->
+    <Thickness x:Key="SearchHighlightBorderThickness">2</Thickness>
+    <Thickness x:Key="FocusedHighlightBorderThickness">5</Thickness>
+    
+    <!-- 高亮动画持续时间 -->
+    <Duration x:Key="HighlightAnimationDuration">0:0:0.2</Duration>
+
+</ResourceDictionary>

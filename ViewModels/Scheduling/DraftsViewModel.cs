@@ -44,31 +44,17 @@ namespace AutoScheduling3.ViewModels.Scheduling
             IsLoading = true;
             try
             {
-                // 记录加载操作开始
-                System.Diagnostics.Debug.WriteLine("开始加载草稿列表");
-                
                 var draftsList = await _schedulingService.GetDraftsAsync();
                 Drafts = new ObservableCollection<ScheduleSummaryDto>(draftsList);
-                
-                // 记录加载操作成功
-                System.Diagnostics.Debug.WriteLine($"草稿列表加载成功，共 {draftsList.Count} 个草稿");
             }
             catch (Exception ex)
             {
-                // 记录加载失败错误
-                System.Diagnostics.Debug.WriteLine($"加载草稿列表失败: {ex.GetType().Name} - {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
-                
                 await _dialogService.ShowErrorAsync("加载草稿列表失败", $"无法加载草稿列表：{ex.Message}\n\n请检查网络连接或稍后重试。");
-                
-                // 确保 UI 显示空列表而不是保留旧数据
                 Drafts = new ObservableCollection<ScheduleSummaryDto>();
             }
             finally
             {
-                // 确保 UI 状态正确恢复
                 IsLoading = false;
-                System.Diagnostics.Debug.WriteLine("加载草稿列表操作结束，UI 状态已恢复");
             }
         }
 
@@ -94,36 +80,21 @@ namespace AutoScheduling3.ViewModels.Scheduling
             IsLoading = true;
             try
             {
-                // 记录确认操作开始
-                System.Diagnostics.Debug.WriteLine($"用户开始确认草稿: {scheduleId}");
-                
-                // 调用新的方法，确认草稿并清空其他草稿
                 await _schedulingService.ConfirmScheduleAndClearOthersAsync(scheduleId);
-                
-                // 记录确认操作成功
-                System.Diagnostics.Debug.WriteLine($"草稿 {scheduleId} 确认成功");
-                
                 await _dialogService.ShowSuccessAsync("排班已确认，草稿箱已清空");
                 await LoadDraftsAsync(); // 刷新草稿列表
             }
             catch (InvalidOperationException ex)
             {
-                // 处理业务逻辑错误（如草稿不存在、验证失败等）
-                System.Diagnostics.Debug.WriteLine($"确认草稿失败 - 业务逻辑错误: {ex.Message}");
                 await _dialogService.ShowErrorAsync("确认失败", $"无法确认该草稿：{ex.Message}");
             }
             catch (Exception ex)
             {
-                // 处理其他未预期的错误
-                System.Diagnostics.Debug.WriteLine($"确认草稿失败 - 系统错误: {ex.GetType().Name} - {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
                 await _dialogService.ShowErrorAsync("确认失败", $"系统错误：{ex.Message}\n\n请稍后重试或联系管理员。");
             }
             finally
             {
-                // 确保 UI 状态正确恢复
                 IsLoading = false;
-                System.Diagnostics.Debug.WriteLine($"确认草稿操作结束，UI 状态已恢复");
             }
         }
 
@@ -137,35 +108,21 @@ namespace AutoScheduling3.ViewModels.Scheduling
             IsLoading = true;
             try
             {
-                // 记录删除操作开始
-                System.Diagnostics.Debug.WriteLine($"用户开始删除草稿: {scheduleId}");
-                
                 await _schedulingService.DeleteDraftAsync(scheduleId);
-                
-                // 记录删除操作成功
-                System.Diagnostics.Debug.WriteLine($"草稿 {scheduleId} 删除成功");
-                
                 await _dialogService.ShowSuccessAsync("草稿已删除");
                 await LoadDraftsAsync(); // 刷新草稿列表
             }
             catch (InvalidOperationException ex)
             {
-                // 处理业务逻辑错误（如草稿不存在等）
-                System.Diagnostics.Debug.WriteLine($"删除草稿失败 - 业务逻辑错误: {ex.Message}");
                 await _dialogService.ShowErrorAsync("删除失败", $"无法删除该草稿：{ex.Message}");
             }
             catch (Exception ex)
             {
-                // 处理其他未预期的错误
-                System.Diagnostics.Debug.WriteLine($"删除草稿失败 - 系统错误: {ex.GetType().Name} - {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
                 await _dialogService.ShowErrorAsync("删除失败", $"系统错误：{ex.Message}\n\n请稍后重试或联系管理员。");
             }
             finally
             {
-                // 确保 UI 状态正确恢复
                 IsLoading = false;
-                System.Diagnostics.Debug.WriteLine("删除草稿操作结束，UI 状态已恢复");
             }
         }
     }

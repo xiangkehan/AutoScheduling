@@ -16,6 +16,11 @@ public class ScheduleGridCell
     public int ColumnIndex { get; set; }
 
     /// <summary>
+    /// 班次ID（如果已分配）
+    /// </summary>
+    public int? ShiftId { get; set; }
+
+    /// <summary>
     /// 人员ID（如果已分配）
     /// </summary>
     public int? PersonnelId { get; set; }

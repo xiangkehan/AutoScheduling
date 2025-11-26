@@ -33,6 +33,16 @@ namespace AutoScheduling3.Controls
                 new PropertyMetadata(null, OnHighlightedCellKeysChanged));
 
         /// <summary>
+        /// FocusedShiftId 依赖属性
+        /// </summary>
+        public static readonly DependencyProperty FocusedShiftIdProperty =
+            DependencyProperty.Register(
+                nameof(FocusedShiftId),
+                typeof(int?),
+                typeof(ScheduleGridControl),
+                new PropertyMetadata(null, OnFocusedShiftIdChanged));
+
+        /// <summary>
         /// 表格数据
         /// </summary>
         public ScheduleGridData? GridData
@@ -48,6 +58,15 @@ namespace AutoScheduling3.Controls
         {
             get => (HashSet<string>?)GetValue(HighlightedCellKeysProperty);
             set => SetValue(HighlightedCellKeysProperty, value);
+        }
+
+        /// <summary>
+        /// 当前焦点高亮的班次ID
+        /// </summary>
+        public int? FocusedShiftId
+        {
+            get => (int?)GetValue(FocusedShiftIdProperty);
+            set => SetValue(FocusedShiftIdProperty, value);
         }
 
         /// <summary>
@@ -85,6 +104,17 @@ namespace AutoScheduling3.Controls
         /// HighlightedCellKeys 属性变化回调
         /// </summary>
         private static void OnHighlightedCellKeysChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is ScheduleGridControl control)
+            {
+                control.UpdateCellHighlights();
+            }
+        }
+
+        /// <summary>
+        /// FocusedShiftId 属性变化回调
+        /// </summary>
+        private static void OnFocusedShiftIdChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is ScheduleGridControl control)
             {
@@ -380,13 +410,35 @@ namespace AutoScheduling3.Controls
             // 遍历所有单元格，更新高亮状态
             foreach (var child in GridBody.Children)
             {
-                if (child is CellModel cellControl)
+                if (child is CellModel cellControl && cellControl.CellData != null)
                 {
                     var row = Grid.GetRow(cellControl);
                     var col = Grid.GetColumn(cellControl) - 1; // -1 因为第一列是行头
 
-                    var cellKey = $"{row}_{col}";
-                    cellControl.IsHighlighted = highlightKeys.Contains(cellKey);
+                    // 检查是否高亮：支持多种键格式
+                    bool isHighlighted = false;
+                    
+                    // 1. 基于 ShiftId 的键格式：shift_{shiftId}_Grid
+                    if (cellControl.CellData.ShiftId.HasValue)
+                    {
+                        var shiftKey = $"shift_{cellControl.CellData.ShiftId.Value}_Grid";
+                        isHighlighted = highlightKeys.Contains(shiftKey);
+                    }
+                    
+                    // 2. 兼容旧的坐标格式（用于未分配冲突等特殊情况）
+                    if (!isHighlighted)
+                    {
+                        var coordKey = $"{row}_{col}";
+                        isHighlighted = highlightKeys.Contains(coordKey);
+                    }
+                    
+                    // 3. 未分配冲突的特殊格式（如果需要）
+                    // 这里可以根据需要添加更多格式支持
+
+                    var isFocused = FocusedShiftId.HasValue && cellControl.CellData.ShiftId == FocusedShiftId.Value;
+
+                    cellControl.IsHighlighted = isHighlighted;
+                    cellControl.IsFocusedHighlight = isFocused;
                 }
             }
         }

@@ -389,6 +389,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
             
             // 初始化冲突相关命令
             InitializeConflictCommands();
+            
+            // 初始化搜索相关命令
+            InitializeSearchCommands();
 
             PropertyChanged += (s, e) =>
             {
@@ -412,6 +415,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 {
                     SaveChangesCommand.NotifyCanExecuteChanged();
                     DiscardChangesCommand.NotifyCanExecuteChanged();
+                }
+                if (e.PropertyName == nameof(HasActiveSearch))
+                {
+                    OnPropertyChanged(nameof(IsSearchResultsTabVisible));
                 }
             };
         }
@@ -872,6 +879,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     {
                         RowIndex = row.RowIndex,
                         ColumnIndex = col.ColumnIndex,
+                        ShiftId = shift.Id,
                         PersonnelId = shift.PersonnelId,
                         PersonnelName = shift.PersonnelName,
                         IsAssigned = true
@@ -1013,6 +1021,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                                 PeriodIndex = periodIndex,
                                 DayOfWeek = dayOfWeek,
                                 Date = date,
+                                ShiftId = shift?.Id,
                                 PersonnelId = shift?.PersonnelId,
                                 PersonnelName = shift != null ? shift.PersonnelName : null,
                                 IsAssigned = shift != null,
@@ -1271,6 +1280,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
                         }
                         break;
                 }
+                
+                // 如果有活动搜索，重新映射高亮和坐标
+                await UpdateSearchResultsForViewChange();
             }
             catch (Exception ex)
             {
@@ -1345,8 +1357,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private async Task ApplyFiltersAsync()
         {
-            // TODO: 实现筛选逻辑
-            await Task.CompletedTask;
+            // 调用增强版的筛选方法（支持搜索功能）
+            await ApplyFiltersWithSearchAsync();
         }
 
         /// <summary>
@@ -1354,12 +1366,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private async Task ResetFiltersAsync()
         {
-            FilterStartDate = Schedule?.StartDate ?? DateTime.Now;
-            FilterEndDate = Schedule?.EndDate ?? DateTime.Now;
-            SelectedPositionIds.Clear();
-            PersonnelSearchText = string.Empty;
-            
-            await ApplyFiltersAsync();
+            // 调用增强版的重置方法（支持搜索功能）
+            await ResetFiltersWithSearchAsync();
         }
 
         /// <summary>
