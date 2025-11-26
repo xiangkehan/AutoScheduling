@@ -13,9 +13,33 @@ namespace AutoScheduling3.Models
         /// </summary>
         public int PersonalId { get; set; }
 
+        /// <summary>
+        /// 总分配次数（累积计数器）
+        /// </summary>
+        public int TotalAssignments { get; set; }
+
+        /// <summary>
+        /// 夜哨分配次数（时段 11, 0, 1, 2）
+        /// </summary>
+        public int NightShiftCount { get; set; }
+
+        /// <summary>
+        /// 日哨分配次数（时段 3-10）
+        /// </summary>
+        public int DayShiftCount { get; set; }
+
+        /// <summary>
+        /// 加权工作量得分（夜哨权重更高）
+        /// </summary>
+        public double WorkloadScore { get; set; }
+
         public PersonScoreState(int personalId)
         {
             PersonalId = personalId;
+            TotalAssignments = 0;
+            NightShiftCount = 0;
+            DayShiftCount = 0;
+            WorkloadScore = 0;
         }
 
         /// <summary>

@@ -29,6 +29,11 @@ namespace AutoScheduling3.SchedulingEngine.Core
         public double TimeSlotBalanceWeight { get; set; } = 1.0;
 
         /// <summary>
+        /// 工作量平衡得分权重
+        /// </summary>
+        public double WorkloadBalanceWeight { get; set; } = 2.0;
+
+        /// <summary>
         /// 最大休息间隔天数（用于归一化）
         /// </summary>
         public int MaxRestDays { get; set; } = 7;
@@ -138,6 +143,34 @@ namespace AutoScheduling3.SchedulingEngine.Core
         }
 
         /// <summary>
+        /// 计算工作量平衡得分
+        /// 基于人员当前工作量与全局平均工作量的对比
+        /// </summary>
+        /// <param name="personIdx">人员索引</param>
+        /// <returns>工作量平衡得分（0-1之间，工作量越少得分越高）</returns>
+        public double CalculateWorkloadBalanceScore(int personIdx)
+        {
+            int personId = _context.PersonIdxToId[personIdx];
+            if (!_context.PersonScoreStates.TryGetValue(personId, out var scoreState))
+                return 0.5;
+
+            double avgWorkload = _context.AverageWorkload;
+
+            // 如果还没有任何分配，所有人得分相同
+            if (avgWorkload < 0.01)
+                return 0.5;
+
+            // 计算工作量偏差（负数表示低于平均，正数表示高于平均）
+            double deviation = scoreState.WorkloadScore - avgWorkload;
+
+            // 工作量越少，得分越高
+            // 使用 sigmoid 函数进行归一化，使得得分在 0-1 之间
+            double normalizedScore = 1.0 / (1.0 + Math.Exp(deviation / 2.0));
+
+            return normalizedScore;
+        }
+
+        /// <summary>
         /// 计算综合得分 - 对应需求6.4
         /// 根据软约束得分选择最优人员分配
         /// </summary>
@@ -150,11 +183,13 @@ namespace AutoScheduling3.SchedulingEngine.Core
             double restScore = CalculateRestScore(personIdx, timeSlot, date);
             double holidayScore = CalculateHolidayBalanceScore(personIdx, date);
             double timeSlotScore = CalculateTimeSlotBalanceScore(personIdx, timeSlot, date);
+            double workloadScore = CalculateWorkloadBalanceScore(personIdx);
 
             // 加权计算总分
             double totalScore = (restScore * RestWeight) + 
                                (holidayScore * HolidayBalanceWeight) + 
-                               (timeSlotScore * TimeSlotBalanceWeight);
+                               (timeSlotScore * TimeSlotBalanceWeight) +
+                               (workloadScore * WorkloadBalanceWeight);
 
             return totalScore;
         }
@@ -215,15 +250,24 @@ namespace AutoScheduling3.SchedulingEngine.Core
             double restScore = CalculateRestScore(personIdx, timeSlot, date);
             double holidayScore = CalculateHolidayBalanceScore(personIdx, date);
             double timeSlotScore = CalculateTimeSlotBalanceScore(personIdx, timeSlot, date);
+            double workloadScore = CalculateWorkloadBalanceScore(personIdx);
             double totalScore = CalculateTotalScore(personIdx, timeSlot, date);
 
             int personId = _context.PersonIdxToId[personIdx];
             string personName = _context.Personals[personIdx].Name;
 
-            return $"人员{personName}(ID:{personId}) 时段{timeSlot} {date:yyyy-MM-dd}\n" +
+            // 获取工作量统计
+            string workloadStats = "";
+            if (_context.PersonScoreStates.TryGetValue(personId, out var state))
+            {
+                workloadStats = $" [总:{state.TotalAssignments} 夜:{state.NightShiftCount} 日:{state.DayShiftCount} 得分:{state.WorkloadScore:F1}]";
+            }
+
+            return $"人员{personName}(ID:{personId}) 时段{timeSlot} {date:yyyy-MM-dd}{workloadStats}\n" +
                    $"  充分休息得分: {restScore:F3} (权重: {RestWeight})\n" +
                    $"  休息日平衡得分: {holidayScore:F3} (权重: {HolidayBalanceWeight})\n" +
                    $"  时段平衡得分: {timeSlotScore:F3} (权重: {TimeSlotBalanceWeight})\n" +
+                   $"  工作量平衡得分: {workloadScore:F3} (权重: {WorkloadBalanceWeight})\n" +
                    $"  综合得分: {totalScore:F3}";
         }
 
@@ -255,11 +299,13 @@ namespace AutoScheduling3.SchedulingEngine.Core
         /// <param name="restWeight">充分休息权重</param>
         /// <param name="holidayWeight">休息日平衡权重</param>
         /// <param name="timeSlotWeight">时段平衡权重</param>
-        public void UpdateWeights(double restWeight, double holidayWeight, double timeSlotWeight)
+        /// <param name="workloadWeight">工作量平衡权重</param>
+        public void UpdateWeights(double restWeight, double holidayWeight, double timeSlotWeight, double workloadWeight = 2.0)
         {
             RestWeight = Math.Max(0, restWeight);
             HolidayBalanceWeight = Math.Max(0, holidayWeight);
             TimeSlotBalanceWeight = Math.Max(0, timeSlotWeight);
+            WorkloadBalanceWeight = Math.Max(0, workloadWeight);
         }
 
         /// <summary>
@@ -284,7 +330,8 @@ namespace AutoScheduling3.SchedulingEngine.Core
             return $"软约束评分配置:\n" +
                    $"  充分休息权重: {RestWeight} (最大间隔: {MaxRestDays}天)\n" +
                    $"  休息日平衡权重: {HolidayBalanceWeight} (最大间隔: {MaxHolidayDays}天)\n" +
-                   $"  时段平衡权重: {TimeSlotBalanceWeight} (最大间隔: {MaxTimeSlotDays}天)";
+                   $"  时段平衡权重: {TimeSlotBalanceWeight} (最大间隔: {MaxTimeSlotDays}天)\n" +
+                   $"  工作量平衡权重: {WorkloadBalanceWeight}";
         }
     }
 }

@@ -362,7 +362,22 @@ public class ConflictResolutionService : IConflictResolutionService
 
         // 解析方案数据
         dynamic data = option.ResolutionData;
-        List<int> shiftIds = ((IEnumerable<dynamic>)data.ShiftIds).Cast<int>().ToList();
+        
+        // 安全地获取 ShiftIds 列表
+        List<int> shiftIds;
+        if (data.ShiftIds is List<int> directList)
+        {
+            shiftIds = directList;
+        }
+        else if (data.ShiftIds is IEnumerable<int> enumerable)
+        {
+            shiftIds = enumerable.ToList();
+        }
+        else
+        {
+            throw new InvalidOperationException("ShiftIds 必须是 List<int> 或 IEnumerable<int> 类型");
+        }
+        
         int newPersonnelId = (int)data.NewPersonnelId;
         string newPersonnelName = (string)data.NewPersonnelName;
 

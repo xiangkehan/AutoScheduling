@@ -158,7 +158,8 @@ namespace AutoScheduling3.SchedulingEngine
             _softConstraintCalculator.UpdateWeights(
                 _config.RestWeight,
                 _config.HolidayWeight,
-                _config.TimeSlotWeight);
+                _config.TimeSlotWeight,
+                _config.WorkloadBalanceWeight);
 
             return Task.CompletedTask;
         }
@@ -621,6 +622,11 @@ public class GreedySchedulerConfig
     /// 时段平衡得分权重 - 对应需求6.3
     /// </summary>
     public double TimeSlotWeight { get; set; } = 1.0;
+
+    /// <summary>
+    /// 工作量平衡得分权重
+    /// </summary>
+    public double WorkloadBalanceWeight { get; set; } = 2.0;
 
     /// <summary>
     /// 是否使用优化的张量操作 - 对应需求7.2, 7.4

@@ -35,6 +35,9 @@ namespace AutoScheduling3.SchedulingEngine.Core
         // 人员评分状态
         public Dictionary<int, PersonScoreState> PersonScoreStates { get; set; } = new();
 
+        // 全局平均工作量
+        public double AverageWorkload { get; private set; }
+
         // 分配记录：[日期][时段][哨位索引] = 人员索引（-1表示未分配）
         public Dictionary<DateTime, int[,]> Assignments { get; set; } = new();
 
@@ -97,6 +100,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
                 {
                     // 计算历史班次的时间戳（可能为负数）
                     int timestamp = CalculateTimestamp(shift.StartTime.Date, shift.StartTime.Hour / 2);
+                    int periodIdx = shift.StartTime.Hour / 2;
 
                     // 添加到该人员的时间戳集合
                     PersonAssignmentTimestamps[shift.PersonnelId].Add(timestamp);
@@ -110,8 +114,29 @@ namespace AutoScheduling3.SchedulingEngine.Core
 
                     // 记录详细信息
                     PersonAssignmentDetails[shift.PersonnelId][timestamp] =
-                        (shift.StartTime.Date, shift.StartTime.Hour / 2, positionIdx);
+                        (shift.StartTime.Date, periodIdx, positionIdx);
+
+                    // 更新历史数据的累积计数器
+                    if (PersonScoreStates.TryGetValue(shift.PersonnelId, out var state))
+                    {
+                        state.TotalAssignments++;
+
+                        // 判断是否为夜哨
+                        if (periodIdx == 11 || periodIdx == 0 || periodIdx == 1 || periodIdx == 2)
+                        {
+                            state.NightShiftCount++;
+                            state.WorkloadScore += 1.5;
+                        }
+                        else
+                        {
+                            state.DayShiftCount++;
+                            state.WorkloadScore += 1.0;
+                        }
+                    }
                 }
+
+                // 初始化全局平均工作量
+                UpdateAverageWorkload();
             }
         }
 
@@ -160,6 +185,42 @@ namespace AutoScheduling3.SchedulingEngine.Core
 
             PersonAssignmentTimestamps[personId].Add(timestamp);
             PersonAssignmentDetails[personId][timestamp] = (date, periodIdx, positionIdx);
+
+            // 更新累积计数器
+            if (PersonScoreStates.TryGetValue(personId, out var state))
+            {
+                state.TotalAssignments++;
+
+                // 判断是否为夜哨（时段 11, 0, 1, 2）
+                if (periodIdx == 11 || periodIdx == 0 || periodIdx == 1 || periodIdx == 2)
+                {
+                    state.NightShiftCount++;
+                    state.WorkloadScore += 1.5; // 夜哨权重 1.5
+                }
+                else
+                {
+                    state.DayShiftCount++;
+                    state.WorkloadScore += 1.0; // 日哨权重 1.0
+                }
+            }
+
+            // 更新全局平均工作量
+            UpdateAverageWorkload();
+        }
+
+        /// <summary>
+        /// 更新全局平均工作量
+        /// </summary>
+        public void UpdateAverageWorkload()
+        {
+            if (PersonScoreStates.Count == 0)
+            {
+                AverageWorkload = 0;
+                return;
+            }
+
+            double totalWorkload = PersonScoreStates.Values.Sum(s => s.WorkloadScore);
+            AverageWorkload = totalWorkload / PersonScoreStates.Count;
         }
 
         /// <summary>
