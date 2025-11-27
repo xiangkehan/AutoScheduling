@@ -1,0 +1,109 @@
+<UserControl
+    x:Class="AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.Shared.ScheduleCell"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="using:AutoScheduling3.ViewModels.Scheduling"
+    xmlns:converters="using:AutoScheduling3.Converters"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=viewmodels:ScheduleCellViewModel}"
+    Width="120"
+    Height="60">
+
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+    </UserControl.Resources>
+
+    <Button x:Name="CellButton"
+            Width="120"
+            Height="60"
+            Padding="8,4"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            HorizontalContentAlignment="Stretch"
+            VerticalContentAlignment="Stretch"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="0,0,1,0"
+            CornerRadius="0"
+            Click="CellButton_Click"
+            PointerEntered="CellButton_PointerEntered"
+            PointerExited="CellButton_PointerExited">
+        <Button.Style>
+            <Style TargetType="Button">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+            </Style>
+        </Button.Style>
+
+        <Grid>
+            <!-- 背景层 - 选中状态 -->
+            <Border x:Name="SelectedBackground"
+                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                    Opacity="0.1"
+                    Visibility="{x:Bind Cell.IsSelected, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+            <!-- 背景层 - 高亮状态 -->
+            <Border x:Name="HighlightedBackground"
+                    Background="{ThemeResource SystemFillColorAttentionBrush}"
+                    Opacity="0.15"
+                    Visibility="{x:Bind Cell.IsHighlighted, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+            <!-- 内容层 -->
+            <Grid Padding="4">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- 冲突标记 -->
+                <StackPanel Grid.Row="0" 
+                            Orientation="Horizontal" 
+                            Spacing="4"
+                            HorizontalAlignment="Right">
+                    <!-- 硬约束冲突标记 -->
+                    <Border Background="{ThemeResource SystemFillColorCriticalBrush}"
+                            CornerRadius="2"
+                            Padding="4,2"
+                            Visibility="{x:Bind Cell.HasHardConflict, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                            ToolTipService.ToolTip="{x:Bind Cell.ConflictTooltip, Mode=OneWay}">
+                        <FontIcon Glyph="&#xE7BA;" 
+                                  FontSize="10"
+                                  Foreground="White"/>
+                    </Border>
+
+                    <!-- 软约束冲突标记 -->
+                    <Border Background="{ThemeResource SystemFillColorCautionBrush}"
+                            CornerRadius="2"
+                            Padding="4,2"
+                            Visibility="{x:Bind Cell.HasSoftConflict, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                            ToolTipService.ToolTip="{x:Bind Cell.ConflictTooltip, Mode=OneWay}">
+                        <FontIcon Glyph="&#xE7BA;" 
+                                  FontSize="10"
+                                  Foreground="White"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- 人员姓名 -->
+                <TextBlock Grid.Row="1"
+                           Text="{x:Bind Cell.PersonnelName, Mode=OneWay, FallbackValue='未分配'}"
+                           Style="{ThemeResource BodyTextBlockStyle}"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"
+                           Foreground="{x:Bind Cell.IsEmpty, Mode=OneWay, Converter={StaticResource BoolToColorConverter}, ConverterParameter='TextFillColorTertiaryBrush|TextFillColorPrimaryBrush'}"/>
+            </Grid>
+
+            <!-- 边框层 - 冲突边框 -->
+            <Border x:Name="ConflictBorder"
+                    BorderThickness="2"
+                    CornerRadius="0">
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="{x:Bind GetConflictBorderColor(Cell.HasHardConflict, Cell.HasSoftConflict), Mode=OneWay}"/>
+                </Border.BorderBrush>
+            </Border>
+        </Grid>
+    </Button>
+</UserControl>

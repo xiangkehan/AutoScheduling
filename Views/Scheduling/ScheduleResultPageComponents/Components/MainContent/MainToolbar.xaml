@@ -52,11 +52,11 @@
             <!-- 比较按钮 -->
             <Button Content="比较" 
                     Command="{x:Bind ViewModel.CompareSchedulesCommand}"
-                    Style="{ThemeResource ButtonStyle}"/>
+                    Style="{ThemeResource ResultToolbarButtonStyle}"/>
             <!-- 全屏按钮 -->
             <Button Content="全屏" 
                     Command="{x:Bind ViewModel.ToggleFullScreenCommand}"
-                    Style="{ThemeResource ButtonStyle}"/>
+                    Style="{ThemeResource ResultToolbarButtonStyle}"/>
         </StackPanel>
     </StackPanel>
 </UserControl>

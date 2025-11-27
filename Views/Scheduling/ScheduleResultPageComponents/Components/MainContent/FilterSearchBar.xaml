@@ -51,20 +51,20 @@
                             MaximumRowsOrColumns="3"
                             Margin="0,0,0,16">
                             <!-- 日期范围筛选 -->
-                            <Button Content="今天" Click="QuickFilterButton_Click" Tag="today" Style="{ThemeResource ButtonStyle}"/>
-                            <Button Content="本周" Click="QuickFilterButton_Click" Tag="week" Style="{ThemeResource ButtonStyle}"/>
-                            <Button Content="本月" Click="QuickFilterButton_Click" Tag="month" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="今天" Click="QuickFilterButton_Click" Tag="today"/>
+                            <Button Content="本周" Click="QuickFilterButton_Click" Tag="week"/>
+                            <Button Content="本月" Click="QuickFilterButton_Click" Tag="month"/>
                             <!-- 哨位筛选 -->
-                            <Button Content="所有哨位" Click="QuickFilterButton_Click" Tag="all_positions" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="所有哨位" Click="QuickFilterButton_Click" Tag="all_positions"/>
                             <!-- 人员筛选 -->
-                            <Button Content="所有人员" Click="QuickFilterButton_Click" Tag="all_personnel" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="所有人员" Click="QuickFilterButton_Click" Tag="all_personnel"/>
                             <!-- 时段类型筛选 -->
-                            <Button Content="日哨" Click="QuickFilterButton_Click" Tag="day_shift" Style="{ThemeResource ButtonStyle}"/>
-                            <Button Content="夜哨" Click="QuickFilterButton_Click" Tag="night_shift" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="日哨" Click="QuickFilterButton_Click" Tag="day_shift"/>
+                            <Button Content="夜哨" Click="QuickFilterButton_Click" Tag="night_shift"/>
                             <!-- 状态筛选 -->
-                            <Button Content="有冲突" Click="QuickFilterButton_Click" Tag="has_conflict" Style="{ThemeResource ButtonStyle}"/>
-                            <Button Content="已分配" Click="QuickFilterButton_Click" Tag="assigned" Style="{ThemeResource ButtonStyle}"/>
-                            <Button Content="未分配" Click="QuickFilterButton_Click" Tag="unassigned" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="有冲突" Click="QuickFilterButton_Click" Tag="has_conflict"/>
+                            <Button Content="已分配" Click="QuickFilterButton_Click" Tag="assigned"/>
+                            <Button Content="未分配" Click="QuickFilterButton_Click" Tag="unassigned"/>
                 </VariableSizedWrapGrid>
 
                         <!-- 操作按钮 -->
@@ -72,7 +72,7 @@
                                     Orientation="Horizontal" 
                                     Spacing="8" 
                                     HorizontalAlignment="Right">
-                            <Button Content="清除" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="清除"/>
                             <Button Content="应用" Style="{ThemeResource AccentButtonStyle}"/>
                         </StackPanel>
                     </Grid>

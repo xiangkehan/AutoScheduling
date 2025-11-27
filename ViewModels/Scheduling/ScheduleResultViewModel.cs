@@ -46,6 +46,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 if (SetProperty(ref _schedule, value))
                 {
                     OnPropertyChanged(nameof(GridData));
+                    // 转换数据到ScheduleGrid
+                    ConvertScheduleToGrid();
                 }
             }
         }

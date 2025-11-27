@@ -43,7 +43,7 @@
                         <local:ViewModeTemplateSelector>
                             <local:ViewModeTemplateSelector.GridViewTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="网格视图 - 待实现" />
+                                    <local:GridView />
                                 </DataTemplate>
                             </local:ViewModeTemplateSelector.GridViewTemplate>
                             <local:ViewModeTemplateSelector.ListViewTemplate>
