@@ -36,20 +36,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
         #region 右侧面板命令
 
         /// <summary>
-        /// 关闭详情面板命令
-        /// </summary>
-        [RelayCommand]
-        private void CloseDetailPanel()
-        {
-            IsRightPanelVisible = false;
-            SelectedItem = null;
-            DetailTitle = string.Empty;
-
-            // 清除选中状态
-            ClearAllSelections();
-        }
-
-        /// <summary>
         /// 解决冲突命令
         /// </summary>
         [RelayCommand]
@@ -88,6 +74,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 }
                 else
                 {
+                    // 调用 Layout.cs 中定义的 CloseDetailPanel 方法
                     CloseDetailPanel();
                 }
             }
@@ -96,15 +83,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 // TODO: 显示错误对话框
                 System.Diagnostics.Debug.WriteLine($"解决冲突失败: {ex.Message}");
             }
-        }
-
-        /// <summary>
-        /// 切换右侧面板显示/隐藏
-        /// </summary>
-        [RelayCommand]
-        private void ToggleRightPanel()
-        {
-            IsRightPanelVisible = !IsRightPanelVisible;
         }
 
         #endregion

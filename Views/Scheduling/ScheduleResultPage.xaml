@@ -8,6 +8,9 @@
     xmlns:controls="using:AutoScheduling3.Controls"
     xmlns:converters="using:AutoScheduling3.Converters"
     xmlns:dto="using:AutoScheduling3.DTOs"
+    xmlns:leftpanel="using:AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.LeftPanel"
+    xmlns:maincontent="using:AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.MainContent"
+    xmlns:rightpanel="using:AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.RightPanel"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     d:DataContext="{d:DesignInstance Type=viewmodels:ScheduleResultViewModel, IsDesignTimeCreatable=True}">
@@ -73,12 +76,7 @@
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     BorderThickness="0,0,1,0"
                     Visibility="{x:Bind ViewModel.IsLeftPanelVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <!-- 暂时注释以解决编译问题 -->
-                <!--<leftpanel:LeftNavigationPanel DataContext="{x:Bind ViewModel}"/>-->
-                <TextBlock Text="左侧面板（待集成）" 
-                           HorizontalAlignment="Center" 
-                           VerticalAlignment="Center"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <leftpanel:LeftNavigationPanel DataContext="{x:Bind ViewModel}"/>
             </Border>
 
             <!-- 左侧GridSplitter -->
@@ -1511,7 +1509,6 @@
         <TextBlock Text="未加载排班数据"
                    Visibility="{x:Bind ViewModel.Schedule, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter='invert', Mode=OneWay}"
                    HorizontalAlignment="Center" VerticalAlignment="Center" Style="{ThemeResource SubtitleTextBlockStyle}"/>
-            </Grid>
-        </Grid>
     </Grid>
+</Grid>
 </Page>

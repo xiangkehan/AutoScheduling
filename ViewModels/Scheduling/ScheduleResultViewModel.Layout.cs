@@ -66,38 +66,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
         }
 
-        private bool _isLeftPanelVisible = true;
-        /// <summary>
-        /// 左侧面板是否可见
-        /// </summary>
-        public bool IsLeftPanelVisible
-        {
-            get => _isLeftPanelVisible;
-            set
-            {
-                if (SetProperty(ref _isLeftPanelVisible, value))
-                {
-                    _ = SavePanelVisibilityAsync();
-                }
-            }
-        }
-
-        private bool _isRightPanelVisible = false;
-        /// <summary>
-        /// 右侧面板是否可见
-        /// </summary>
-        public bool IsRightPanelVisible
-        {
-            get => _isRightPanelVisible;
-            set
-            {
-                if (SetProperty(ref _isRightPanelVisible, value))
-                {
-                    _ = SavePanelVisibilityAsync();
-                }
-            }
-        }
-
         #endregion
 
         #region 布局命令
@@ -105,26 +73,28 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// <summary>
         /// 切换左侧面板可见性命令
         /// </summary>
-        public IRelayCommand ToggleLeftPanelCommand { get; private set; }
+        [RelayCommand]
+        private void ToggleLeftPanel()
+        {
+            IsLeftPanelVisible = !IsLeftPanelVisible;
+        }
 
         /// <summary>
         /// 切换右侧面板可见性命令
         /// </summary>
-        public IRelayCommand ToggleRightPanelCommand { get; private set; }
+        [RelayCommand]
+        private void ToggleRightPanel()
+        {
+            IsRightPanelVisible = !IsRightPanelVisible;
+        }
 
         /// <summary>
         /// 关闭详情面板命令
         /// </summary>
-        public IRelayCommand CloseDetailPanelCommand { get; private set; }
-
-        /// <summary>
-        /// 初始化布局相关命令
-        /// </summary>
-        private void InitializeLayoutCommands()
+        [RelayCommand]
+        private void CloseDetailPanel()
         {
-            ToggleLeftPanelCommand = new RelayCommand(() => IsLeftPanelVisible = !IsLeftPanelVisible);
-            ToggleRightPanelCommand = new RelayCommand(() => IsRightPanelVisible = !IsRightPanelVisible);
-            CloseDetailPanelCommand = new RelayCommand(() => IsRightPanelVisible = false);
+            IsRightPanelVisible = false;
         }
 
         #endregion

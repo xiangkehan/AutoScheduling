@@ -1,0 +1,62 @@
+<UserControl
+    x:Class="AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.MainContent.MainToolbar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:converters="using:AutoScheduling3.Converters"
+    xmlns:local="using:AutoScheduling3.Views.Scheduling.ScheduleResultPage.Components.MainContent"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <UserControl.Resources>
+        <converters:EnumToBoolConverter x:Key="EnumToBoolConverter"/>
+    </UserControl.Resources>
+
+    <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Stretch">
+        <!-- 视图模式切换器 -->
+        <StackPanel Orientation="Horizontal" 
+                    Spacing="8" 
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="4">
+            <!-- 网格视图 -->
+            <ToggleButton Content="网格" 
+                          IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter='Grid'}"
+                          Style="{ThemeResource ToggleButtonStyle}"/>
+            <!-- 列表视图 -->
+            <ToggleButton Content="列表" 
+                          IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter='List'}"
+                          Style="{ThemeResource ToggleButtonStyle}"/>
+            <!-- 按人员视图 -->
+            <ToggleButton Content="按人员" 
+                          IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter='ByPersonnel'}"
+                          Style="{ThemeResource ToggleButtonStyle}"/>
+            <!-- 按哨位视图 -->
+            <ToggleButton Content="按哨位" 
+                          IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter='ByPosition'}"
+                          Style="{ThemeResource ToggleButtonStyle}"/>
+        </StackPanel>
+
+        <!-- 占位符，将操作按钮推到右侧 -->
+        <Grid HorizontalAlignment="Stretch"/>
+
+        <!-- 操作按钮 -->
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <!-- 导出按钮 -->
+            <Button Content="导出" 
+                    Command="{x:Bind ViewModel.ExportExcelCommand}"
+                    Style="{ThemeResource AccentButtonStyle}"/>
+            <!-- 比较按钮 -->
+            <Button Content="比较" 
+                    Command="{x:Bind ViewModel.CompareSchedulesCommand}"
+                    Style="{ThemeResource ButtonStyle}"/>
+            <!-- 全屏按钮 -->
+            <Button Content="全屏" 
+                    Command="{x:Bind ViewModel.ToggleFullScreenCommand}"
+                    Style="{ThemeResource ButtonStyle}"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

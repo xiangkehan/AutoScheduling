@@ -46,8 +46,17 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// 选择统计指标命令
         /// </summary>
         [RelayCommand]
-        private async Task SelectStatisticAsync(StatisticType type)
+        private async Task SelectStatisticAsync(string statisticType)
         {
+            // 将字符串转换为StatisticType枚举
+            StatisticType type = statisticType switch
+            {
+                "HardConflict" => StatisticType.HardConflict,
+                "SoftConflict" => StatisticType.SoftConflict,
+                "Unassigned" => StatisticType.Unassigned,
+                _ => StatisticType.HardConflict
+            };
+
             // 更新筛选状态
             ConflictFilter = type switch
             {
@@ -72,29 +81,13 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             if (conflict == null) return;
 
-            // 清除其他冲突的选中状态
-            foreach (var item in ConflictList)
-            {
-                item.IsSelected = item == conflict;
-            }
-
-            // 在主内容区定位到冲突单元格
-            await ScrollToCellByConflictAsync(conflict);
-
             // 在右侧详情区显示冲突详情
             SelectedItem = conflict;
             DetailTitle = "冲突详情";
             IsRightPanelVisible = true;
         }
 
-        /// <summary>
-        /// 切换左侧面板显示/隐藏
-        /// </summary>
-        [RelayCommand]
-        private void ToggleLeftPanel()
-        {
-            IsLeftPanelVisible = !IsLeftPanelVisible;
-        }
+        
 
         #endregion
 
@@ -149,7 +142,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// <summary>
         /// 根据冲突滚动到单元格
         /// </summary>
-        private async Task ScrollToCellByConflictAsync(ConflictItemViewModel conflict)
+        private async Task ScrollToCellByConflictAsync(ConflictDto conflict)
         {
             // TODO: 实现滚动到单元格逻辑
             await Task.CompletedTask;

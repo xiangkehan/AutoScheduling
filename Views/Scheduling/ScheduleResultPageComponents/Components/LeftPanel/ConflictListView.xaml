@@ -1,0 +1,110 @@
+<UserControl
+    x:Class="AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.LeftPanel.ConflictListView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:converters="using:AutoScheduling3.Converters"
+    xmlns:dto="using:AutoScheduling3.DTOs"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:ConflictSubTypeToTextConverter x:Key="ConflictSubTypeToTextConverter"/>
+    </UserControl.Resources>
+
+    <StackPanel Spacing="12">
+        <!-- 标题和搜索 -->
+        <StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Stretch">
+                <TextBlock Text="冲突列表" 
+                           Style="{ThemeResource SubtitleTextBlockStyle}" 
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="({x:Bind ViewModel.FilteredConflicts.Count, Mode=OneWay})" 
+                           Style="{ThemeResource BodyTextBlockStyle}" 
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+            <!-- 搜索框 -->
+            <TextBox PlaceholderText="搜索冲突..." 
+                     Text="{x:Bind ViewModel.ConflictSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                     Margin="0,4,0,0" 
+                     Style="{ThemeResource TextBoxStyle}"/>
+        </StackPanel>
+
+        <!-- 冲突列表 -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" 
+                      HorizontalScrollBarVisibility="Disabled" 
+                      MaxHeight="400">
+            <ItemsRepeater ItemsSource="{x:Bind ViewModel.FilteredConflicts, Mode=OneWay}">
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="dto:ConflictDto">
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="12"
+                                Margin="0,0,0,8"
+                                PointerPressed="ConflictItem_PointerPressed"
+                                IsHitTestVisible="True">
+                            <StackPanel Spacing="8">
+                                <!-- 冲突类型和严重程度 -->
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Stretch">
+                                    <Border Background="{x:Bind IsHardConstraint, Converter={StaticResource BoolToColorConverter}, ConverterParameter='#FF3B3054|#FF4A148C'}"
+                                            CornerRadius="4"
+                                            Padding="6,2">
+                                        <TextBlock Text="{x:Bind IsHardConstraint, Converter={StaticResource BoolToTextConverter}, ConverterParameter='硬约束|软约束'}" 
+                                                   FontSize="10" 
+                                                   FontWeight="SemiBold" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                    <Border Background="{ThemeResource SystemFillColorCautionBrush}"
+                                            CornerRadius="4"
+                                            Padding="6,2">
+                                        <TextBlock Text="{x:Bind Severity, Mode=OneWay}" 
+                                                   FontSize="10" 
+                                                   FontWeight="SemiBold" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- 冲突描述 -->
+                                <TextBlock Text="{x:Bind Message, Mode=OneWay}" 
+                                           Style="{ThemeResource BodyTextBlockStyle}" 
+                                           TextWrapping="WrapWholeWords"/>
+
+                                <!-- 涉及信息 -->
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{x:Bind PersonnelName, Mode=OneWay}" 
+                                               FontSize="12" 
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Text="{x:Bind PositionName, Mode=OneWay}" 
+                                               FontSize="12" 
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="{x:Bind StartTime, Mode=OneWay}" 
+                                               FontSize="12" 
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+        </ScrollViewer>
+
+        <!-- 空状态 -->
+        <StackPanel HorizontalAlignment="Center" 
+                    VerticalAlignment="Center" 
+                    Spacing="8" 
+                    Visibility="{x:Bind ViewModel.FilteredConflicts.Count, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='invert'}">
+            <FontIcon Glyph="&#xE721;" 
+                      FontSize="48" 
+                      Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+            <TextBlock Text="未找到冲突" 
+                       Style="{ThemeResource BodyTextBlockStyle}" 
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                       HorizontalAlignment="Center"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>
