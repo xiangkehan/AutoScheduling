@@ -30,13 +30,19 @@ namespace AutoScheduling3.DTOs
         public List<int>? PositionIds { get; set; }
 
         /// <summary>
+        /// 搜索关键词
+        /// </summary>
+        public string? SearchKeyword { get; set; }
+
+        /// <summary>
         /// 是否有任何活动筛选
         /// </summary>
         public bool HasAnyFilter =>
             PersonnelId.HasValue ||
             StartDate.HasValue ||
             EndDate.HasValue ||
-            (PositionIds != null && PositionIds.Any());
+            (PositionIds != null && PositionIds.Any()) ||
+            !string.IsNullOrWhiteSpace(SearchKeyword);
 
         /// <summary>
         /// 获取筛选条件摘要
@@ -56,6 +62,9 @@ namespace AutoScheduling3.DTOs
             
             if (PositionIds != null && PositionIds.Any())
                 parts.Add($"哨位: {PositionIds.Count}个");
+
+            if (!string.IsNullOrWhiteSpace(SearchKeyword))
+                parts.Add($"关键词: {SearchKeyword}");
 
             return parts.Any() ? string.Join(", ", parts) : "无筛选条件";
         }

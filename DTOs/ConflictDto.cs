@@ -115,4 +115,10 @@ public class ConflictDto
     /// </summary>
     [JsonPropertyName("createdAt")]
     public DateTime CreatedAt { get; set; } = DateTime.Now;
+    
+    /// <summary>
+    /// 是否为硬约束
+    /// </summary>
+    [JsonIgnore]
+    public bool IsHardConstraint => Type == "hard";
 }

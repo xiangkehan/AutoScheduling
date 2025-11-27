@@ -1,0 +1,83 @@
+<UserControl
+    x:Class="AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.MainContent.FilterSearchBar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid>
+        <!-- 折叠/展开按钮 -->
+        <Button x:Name="ToggleButton" 
+                Content="筛选搜索" 
+                Click="ToggleButton_Click"
+                Style="{ThemeResource AccentButtonStyle}"
+                HorizontalAlignment="Left"
+                Margin="0,8,0,0">
+            <Button.Flyout>
+                <Flyout Placement="Bottom" LightDismissOverlayMode="On">
+                    <Grid Width="600" Height="Auto" Padding="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 标题 -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" 
+                                   Text="筛选和搜索" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold" 
+                                   Margin="0,0,0,16"/>
+
+                        <!-- 搜索框 -->
+                        <AutoSuggestBox x:Name="SearchBox" 
+                                        Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                        PlaceholderText="搜索人员、哨位、日期或关键词..." 
+                                        Margin="0,0,0,16"
+                                        QueryIcon="Find"/>
+
+                        <!-- 快速筛选按钮 -->
+                <VariableSizedWrapGrid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                            Orientation="Horizontal" 
+                            ItemWidth="120"
+                            ItemHeight="40"
+                            MaximumRowsOrColumns="3"
+                            Margin="0,0,0,16">
+                            <!-- 日期范围筛选 -->
+                            <Button Content="今天" Click="QuickFilterButton_Click" Tag="today" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="本周" Click="QuickFilterButton_Click" Tag="week" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="本月" Click="QuickFilterButton_Click" Tag="month" Style="{ThemeResource ButtonStyle}"/>
+                            <!-- 哨位筛选 -->
+                            <Button Content="所有哨位" Click="QuickFilterButton_Click" Tag="all_positions" Style="{ThemeResource ButtonStyle}"/>
+                            <!-- 人员筛选 -->
+                            <Button Content="所有人员" Click="QuickFilterButton_Click" Tag="all_personnel" Style="{ThemeResource ButtonStyle}"/>
+                            <!-- 时段类型筛选 -->
+                            <Button Content="日哨" Click="QuickFilterButton_Click" Tag="day_shift" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="夜哨" Click="QuickFilterButton_Click" Tag="night_shift" Style="{ThemeResource ButtonStyle}"/>
+                            <!-- 状态筛选 -->
+                            <Button Content="有冲突" Click="QuickFilterButton_Click" Tag="has_conflict" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="已分配" Click="QuickFilterButton_Click" Tag="assigned" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="未分配" Click="QuickFilterButton_Click" Tag="unassigned" Style="{ThemeResource ButtonStyle}"/>
+                </VariableSizedWrapGrid>
+
+                        <!-- 操作按钮 -->
+                        <StackPanel Grid.Row="3" Grid.Column="1"
+                                    Orientation="Horizontal" 
+                                    Spacing="8" 
+                                    HorizontalAlignment="Right">
+                            <Button Content="清除" Style="{ThemeResource ButtonStyle}"/>
+                            <Button Content="应用" Style="{ThemeResource AccentButtonStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                </Flyout>
+            </Button.Flyout>
+        </Button>
+    </Grid>
+</UserControl>

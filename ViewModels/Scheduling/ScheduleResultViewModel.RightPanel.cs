@@ -85,6 +85,41 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
         }
 
+        /// <summary>
+        /// 保存详情更改命令
+        /// </summary>
+        [RelayCommand]
+        private async Task SaveDetailChangesAsync()
+        {
+            try
+            {
+                // TODO: 实现保存详情更改的逻辑
+                // 根据 SelectedItem 的类型执行不同的保存操作
+                
+                // 标记为有未保存更改
+                HasUnsavedChanges = true;
+
+                // 关闭详情面板
+                CloseDetailPanel();
+
+                await Task.CompletedTask;
+            }
+            catch (System.Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"保存详情更改失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 取消详情更改命令
+        /// </summary>
+        [RelayCommand]
+        private void CancelDetailChanges()
+        {
+            // 取消更改，直接关闭面板
+            CloseDetailPanel();
+        }
+
         #endregion
 
         #region 右侧面板辅助方法

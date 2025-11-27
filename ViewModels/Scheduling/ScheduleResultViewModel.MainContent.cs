@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AutoScheduling3.DTOs;
+using AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.RightPanel;
 
 namespace AutoScheduling3.ViewModels.Scheduling
 {
@@ -119,6 +120,30 @@ namespace AutoScheduling3.ViewModels.Scheduling
             await ApplyFiltersAsync();
         }
 
+        /// <summary>
+        /// 保存班次编辑命令
+        /// </summary>
+        [RelayCommand]
+        private async Task SaveShiftEditAsync(ShiftEditData editData)
+        {
+            if (editData == null) return;
+            
+            // 1. 更新对应的班次数据
+            await UpdateShiftDataAsync(editData);
+            
+            // 2. 更新主内容区表格
+            await RefreshScheduleGridAsync();
+            
+            // 3. 更新左侧统计摘要
+            await UpdateStatisticsSummaryAsync();
+            
+            // 4. 标记为有未保存更改
+            HasUnsavedChanges = true;
+            
+            // 5. 关闭右侧详情面板
+            IsRightPanelVisible = false;
+        }
+
         #endregion
 
         #region 主内容区辅助方法
@@ -133,6 +158,75 @@ namespace AutoScheduling3.ViewModels.Scheduling
         private async Task HighlightConflictByCellAsync(ScheduleCellViewModel cell)
         {
             // TODO: 在冲突列表中找到对应的冲突并高亮
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 更新班次数据
+        /// </summary>
+        /// <param name="editData">编辑数据</param>
+        private async Task UpdateShiftDataAsync(ShiftEditData editData)
+        {
+            if (Schedule == null || Schedule.Shifts == null) return;
+            
+            // 根据日期、时段和哨位找到对应的班次
+            var shift = Schedule.Shifts.FirstOrDefault(s => 
+                s.StartTime.ToString("yyyy-MM-dd") == editData.Date &&
+                s.PositionName == editData.Position);
+            
+            if (shift != null)
+            {
+                // 更新人员
+                if (!string.IsNullOrWhiteSpace(editData.Personnel))
+                {
+                    // 这里需要根据人员名称找到对应的人员ID
+                    // 实际项目中应该从人员列表中查找
+                    shift.PersonnelName = editData.Personnel;
+                    // shift.PersonnelId = 找到的人员ID;
+                }
+                
+                // 更新时间段
+                if (!string.IsNullOrWhiteSpace(editData.StartTime) && !string.IsNullOrWhiteSpace(editData.EndTime))
+                {
+                    // 这里需要根据时间段更新StartTime和EndTime
+                    // 实际项目中应该解析时间段并更新
+                }
+                
+                // 更新备注
+                // 实际项目中应该更新班次的备注字段
+            }
+            
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 更新统计摘要
+        /// </summary>
+        private async Task UpdateStatisticsSummaryAsync()
+        {
+            // 重新计算统计数据
+            if (Schedule == null) return;
+            
+            // 计算硬约束冲突数量
+            var hardConflictCount = Schedule.Conflicts?.Count(c => c.IsHardConstraint) ?? 0;
+            
+            // 计算软约束冲突数量
+            var softConflictCount = Schedule.Conflicts?.Count(c => !c.IsHardConstraint) ?? 0;
+            
+            // 计算未分配班次数量
+            var unassignedCount = Schedule.Shifts?.Count(s => s.PersonnelId == 0 || string.IsNullOrWhiteSpace(s.PersonnelName)) ?? 0;
+            
+            // 更新统计摘要
+            StatisticsSummary = new StatisticsSummary
+            {
+                HardConflictCount = hardConflictCount,
+                SoftConflictCount = softConflictCount,
+                UnassignedCount = unassignedCount,
+                TotalShiftCount = Schedule.Shifts?.Count ?? 0,
+                AssignedShiftCount = Schedule.Shifts?.Count(s => s.PersonnelId > 0) ?? 0,
+                CoverageRate = 0.0 // TODO: 计算覆盖率
+            };
+            
             await Task.CompletedTask;
         }
 

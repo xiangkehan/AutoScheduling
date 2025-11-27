@@ -18,6 +18,23 @@ namespace AutoScheduling3.ViewModels.Scheduling
         #region 搜索相关属性
 
         /// <summary>
+        /// 搜索关键词
+        /// </summary>
+        private string _searchKeyword = string.Empty;
+        public string SearchKeyword
+        {
+            get => _searchKeyword;
+            set
+            {
+                if (SetProperty(ref _searchKeyword, value))
+                {
+                    // 搜索关键词变化时自动应用筛选
+                    _ = ApplyFiltersWithSearchAsync();
+                }
+            }
+        }
+
+        /// <summary>
         /// 搜索结果列表
         /// </summary>
         private ObservableCollection<SearchResultItem> _searchResults = new();
@@ -173,7 +190,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     PersonnelId = SelectedPersonnel?.Id,
                     StartDate = FilterStartDate != default ? FilterStartDate : null,
                     EndDate = FilterEndDate != default ? FilterEndDate : null,
-                    PositionIds = SelectedPositionIds.Any() ? SelectedPositionIds.ToList() : null
+                    PositionIds = SelectedPositionIds.Any() ? SelectedPositionIds.ToList() : null,
+                    SearchKeyword = SearchKeyword.Trim()
                 };
 
                 // 执行搜索
@@ -283,7 +301,44 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 query = query.Where(s => filters.PositionIds.Contains(s.PositionId));
             }
 
+            // 应用关键词搜索
+            if (!string.IsNullOrWhiteSpace(filters.SearchKeyword))
+            {
+                var keyword = filters.SearchKeyword.Trim().ToLower();
+                
+                query = query.Where(s => 
+                    // 人员姓名搜索
+                    s.PersonnelName.ToLower().Contains(keyword) ||
+                    // 哨位名称搜索
+                    s.PositionName.ToLower().Contains(keyword) ||
+                    // 日期搜索（格式：YYYY-MM-DD 或 MM-DD）
+                    s.StartTime.ToString("yyyy-MM-dd").Contains(keyword) ||
+                    s.StartTime.ToString("MM-dd").Contains(keyword) ||
+                    // 时段搜索（如："夜哨"、"日哨"）
+                    (keyword == "夜哨" && s.PeriodIndex >= 6) || // 假设6-11时段为夜哨
+                    (keyword == "日哨" && s.PeriodIndex < 6) || // 假设0-5时段为日哨
+                    // 手动指定搜索
+                    (keyword == "手动" && s.IsManualAssignment) ||
+                    // 冲突搜索（通过检查班次是否有冲突）
+                    (keyword == "冲突" && HasShiftConflict(s.Id))
+                );
+            }
+
             return query.OrderBy(s => s.StartTime).ThenBy(s => s.PeriodIndex).ToList();
+        }
+
+        /// <summary>
+        /// 检查班次是否有冲突
+        /// </summary>
+        /// <param name="shiftId">班次ID</param>
+        /// <returns>是否有冲突</returns>
+        private bool HasShiftConflict(int shiftId)
+        {
+            if (Schedule?.Conflicts == null) return false;
+            
+            // 检查该班次是否参与了任何冲突
+            // TODO: ConflictDto 需要添加 ShiftIds 属性或使用其他方式判断冲突
+            return false;
         }
 
         /// <summary>

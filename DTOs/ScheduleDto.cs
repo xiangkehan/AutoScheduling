@@ -109,6 +109,18 @@ public class ScheduleDto
     /// </summary>
     [JsonPropertyName("enabledManualAssignmentIds")]
     public List<int> EnabledManualAssignmentIds { get; set; } = new();
+    
+    /// <summary>
+    /// 人员数量
+    /// </summary>
+    [JsonIgnore]
+    public int PersonnelCount => PersonnelIds.Count;
+    
+    /// <summary>
+    /// 哨位数量
+    /// </summary>
+    [JsonIgnore]
+    public int PositionCount => PositionIds.Count;
 }
 
 /// <summary>

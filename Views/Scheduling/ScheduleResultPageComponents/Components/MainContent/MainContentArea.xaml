@@ -11,6 +11,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -23,12 +24,44 @@
             <local:MainToolbar DataContext="{x:Bind ViewModel}"/>
         </Border>
 
-        <!-- 内容区域 -->
+        <!-- 筛选搜索栏 -->
         <Border Grid.Row="1"
+                Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+                Padding="16,0,16,16">
+            <local:FilterSearchBar DataContext="{x:Bind ViewModel}"/>
+        </Border>
+
+        <!-- 内容区域 -->
+        <Border Grid.Row="2"
                 Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
                 Padding="16">
             <!-- 视图模式切换 -->
-            <ContentPresenter Content="{x:Bind ViewModel.CurrentView, Mode=OneWay}"/>
+            <ContentControl Content="{x:Bind ViewModel, Mode=OneWay}">
+                <ContentControl.ContentTemplateSelector>
+                    <local:ViewModeTemplateSelector>
+                        <local:ViewModeTemplateSelector.GridViewTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="网格视图 - 待实现" />
+                            </DataTemplate>
+                        </local:ViewModeTemplateSelector.GridViewTemplate>
+                        <local:ViewModeTemplateSelector.ListViewTemplate>
+                            <DataTemplate>
+                                <local:ListView />
+                            </DataTemplate>
+                        </local:ViewModeTemplateSelector.ListViewTemplate>
+                        <local:ViewModeTemplateSelector.PersonnelViewTemplate>
+                            <DataTemplate>
+                                <local:PersonnelView />
+                            </DataTemplate>
+                        </local:ViewModeTemplateSelector.PersonnelViewTemplate>
+                        <local:ViewModeTemplateSelector.PositionViewTemplate>
+                            <DataTemplate>
+                                <local:PositionView />
+                            </DataTemplate>
+                        </local:ViewModeTemplateSelector.PositionViewTemplate>
+                    </local:ViewModeTemplateSelector>
+                </ContentControl.ContentTemplateSelector>
+            </ContentControl>
         </Border>
     </Grid>
 </UserControl>

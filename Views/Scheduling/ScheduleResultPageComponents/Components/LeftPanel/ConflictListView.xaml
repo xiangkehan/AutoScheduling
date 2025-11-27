@@ -12,6 +12,8 @@
     <UserControl.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:ConflictSubTypeToTextConverter x:Key="ConflictSubTypeToTextConverter"/>
+        <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+        <converters:BoolToTextConverter x:Key="BoolToTextConverter"/>
     </UserControl.Resources>
 
     <StackPanel Spacing="12">

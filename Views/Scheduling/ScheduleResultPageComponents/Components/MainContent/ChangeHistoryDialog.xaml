@@ -1,0 +1,104 @@
+<ContentDialog
+    x:Class="AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.MainContent.ChangeHistoryDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.MainContent"
+    mc:Ignorable="d"
+    Title="更改历史"
+    PrimaryButtonText="保存所有更改"
+    SecondaryButtonText="放弃所有更改"
+    CloseButtonText="关闭"
+    DefaultButton="Primary">
+
+    <Grid Width="600" Height="400" Padding="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 更改统计 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="未保存的更改" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+            <TextBlock Text="{x:Bind ChangeCountText, Mode=OneWay}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
+        <!-- 更改列表 -->
+        <ScrollViewer Grid.Row="1" 
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Hidden">
+            <ItemsRepeater ItemsSource="{x:Bind ChangeItems, Mode=OneWay}">
+                <ItemsRepeater.Layout>
+                    <StackLayout Orientation="Vertical" Spacing="8"/>
+                </ItemsRepeater.Layout>
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="local:ChangeHistoryItem">
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                BorderThickness="1" 
+                                Padding="12" 
+                                CornerRadius="4">
+                            <StackPanel Spacing="8">
+                                <!-- 更改基本信息 -->
+                                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind Date, Mode=OneWay}" 
+                                               Style="{ThemeResource BodyTextBlockStyle}" 
+                                               Width="100"/>
+                                    <TextBlock Text="{x:Bind PositionName, Mode=OneWay}" 
+                                               Style="{ThemeResource BodyTextBlockStyle}" 
+                                               Width="150"/>
+                                    <TextBlock Text="{x:Bind ShiftTime, Mode=OneWay}" 
+                                               Style="{ThemeResource BodyTextBlockStyle}" 
+                                               Width="120"/>
+                                </StackPanel>
+
+                                <!-- 更改详情 -->
+                                <StackPanel Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="人员:" 
+                                                   Style="{ThemeResource BodyStrongTextBlockStyle}" 
+                                                   Width="60"/>
+                                        <TextBlock Text="{x:Bind OldPersonnelName, Mode=OneWay}" 
+                                                   Style="{ThemeResource BodyTextBlockStyle}" 
+                                                   TextDecorations="Strikethrough" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="→" 
+                                                   Style="{ThemeResource BodyTextBlockStyle}"/>
+                                        <TextBlock Text="{x:Bind NewPersonnelName, Mode=OneWay}" 
+                                                   Style="{ThemeResource BodyTextBlockStyle}" 
+                                                   FontWeight="SemiBold" 
+                                                   Foreground="{ThemeResource SystemAccentColor}"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" Visibility="{x:Bind HasRemarksChange, Mode=OneWay}">
+                                        <TextBlock Text="备注:" 
+                                                   Style="{ThemeResource BodyStrongTextBlockStyle}" 
+                                                   Width="60"/>
+                                        <TextBlock Text="{x:Bind OldRemarks, Mode=OneWay}" 
+                                                   Style="{ThemeResource BodyTextBlockStyle}" 
+                                                   TextDecorations="Strikethrough" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                                   TextWrapping="WrapWholeWords" 
+                                                   Width="400"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" Visibility="{x:Bind HasRemarksChange, Mode=OneWay}">
+                                        <TextBlock Text="" 
+                                                   Width="60"/>
+                                        <TextBlock Text="→" 
+                                                   Style="{ThemeResource BodyTextBlockStyle}"/>
+                                        <TextBlock Text="{x:Bind NewRemarks, Mode=OneWay}" 
+                                                   Style="{ThemeResource BodyTextBlockStyle}" 
+                                                   FontWeight="SemiBold" 
+                                                   Foreground="{ThemeResource SystemAccentColor}" 
+                                                   TextWrapping="WrapWholeWords" 
+                                                   Width="400"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+        </ScrollViewer>
+    </Grid>
+</ContentDialog>
