@@ -415,26 +415,35 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private async Task ResetFiltersWithSearchAsync()
         {
-            // 清除筛选条件
-            SelectedPersonnel = null;
-            PersonnelSearchText = string.Empty;
-            FilterStartDate = default;
-            FilterEndDate = default;
-            SelectedPositionIds.Clear();
+            try
+            {
+                IsLoading = true;
+                
+                // 清除筛选条件
+                SelectedPersonnel = null;
+                PersonnelSearchText = string.Empty;
+                FilterStartDate = default;
+                FilterEndDate = default;
+                SelectedPositionIds.Clear();
 
-            // 清除搜索结果
-            SearchResults.Clear();
-            HasActiveSearch = false;
-            FocusedShiftId = null;
-            CurrentHighlightIndex = 0;
+                // 清除搜索结果
+                SearchResults.Clear();
+                HasActiveSearch = false;
+                FocusedShiftId = null;
+                CurrentHighlightIndex = 0;
 
-            // 清除高亮
-            HighlightedCellKeys = new HashSet<string>();
+                // 清除高亮
+                HighlightedCellKeys = new HashSet<string>();
 
-            // 切换回冲突管理标签页
-            RightPaneTabIndex = 1;
+                // 切换回冲突管理标签页
+                RightPaneTabIndex = 1;
 
-            await Task.CompletedTask;
+                await Task.CompletedTask;
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
 
         #endregion

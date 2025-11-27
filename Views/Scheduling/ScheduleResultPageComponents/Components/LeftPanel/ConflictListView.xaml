@@ -35,10 +35,27 @@
                      Style="{ThemeResource TextBoxStyle}"/>
         </StackPanel>
 
+        <!-- 加载指示器 -->
+        <Grid Height="100" 
+              Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" 
+                        VerticalAlignment="Center" 
+                        Spacing="12">
+                <ProgressRing IsActive="True" 
+                              Width="40" 
+                              Height="40"/>
+                <TextBlock Text="加载中..." 
+                           Style="{ThemeResource BodyTextBlockStyle}" 
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
         <!-- 冲突列表 -->
         <ScrollViewer VerticalScrollBarVisibility="Auto" 
                       HorizontalScrollBarVisibility="Disabled" 
-                      MaxHeight="400">
+                      MaxHeight="400"
+                      Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='invert'}">
             <ItemsRepeater ItemsSource="{x:Bind ViewModel.FilteredConflicts, Mode=OneWay}">
                 <ItemsRepeater.ItemTemplate>
                     <DataTemplate x:DataType="dto:ConflictDto">
@@ -96,17 +113,20 @@
         </ScrollViewer>
 
         <!-- 空状态 -->
-        <StackPanel HorizontalAlignment="Center" 
-                    VerticalAlignment="Center" 
-                    Spacing="8" 
-                    Visibility="{x:Bind ViewModel.FilteredConflicts.Count, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='invert'}">
-            <FontIcon Glyph="&#xE721;" 
-                      FontSize="48" 
-                      Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-            <TextBlock Text="未找到冲突" 
-                       Style="{ThemeResource BodyTextBlockStyle}" 
-                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
-                       HorizontalAlignment="Center"/>
-        </StackPanel>
+        <Grid Height="100"
+              Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='invert'}">
+            <StackPanel HorizontalAlignment="Center" 
+                        VerticalAlignment="Center" 
+                        Spacing="8" 
+                        Visibility="{x:Bind ViewModel.FilteredConflicts.Count, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='invert'}">
+                <FontIcon Glyph="&#xE721;" 
+                          FontSize="48" 
+                          Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                <TextBlock Text="未找到冲突" 
+                           Style="{ThemeResource BodyTextBlockStyle}" 
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
     </StackPanel>
 </UserControl>

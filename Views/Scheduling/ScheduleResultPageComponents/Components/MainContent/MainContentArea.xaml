@@ -35,33 +35,61 @@
         <Border Grid.Row="2"
                 Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
                 Padding="16">
-            <!-- 视图模式切换 -->
-            <ContentControl Content="{x:Bind ViewModel, Mode=OneWay}">
-                <ContentControl.ContentTemplateSelector>
-                    <local:ViewModeTemplateSelector>
-                        <local:ViewModeTemplateSelector.GridViewTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="网格视图 - 待实现" />
-                            </DataTemplate>
-                        </local:ViewModeTemplateSelector.GridViewTemplate>
-                        <local:ViewModeTemplateSelector.ListViewTemplate>
-                            <DataTemplate>
-                                <local:ListView />
-                            </DataTemplate>
-                        </local:ViewModeTemplateSelector.ListViewTemplate>
-                        <local:ViewModeTemplateSelector.PersonnelViewTemplate>
-                            <DataTemplate>
-                                <local:PersonnelView />
-                            </DataTemplate>
-                        </local:ViewModeTemplateSelector.PersonnelViewTemplate>
-                        <local:ViewModeTemplateSelector.PositionViewTemplate>
-                            <DataTemplate>
-                                <local:PositionView />
-                            </DataTemplate>
-                        </local:ViewModeTemplateSelector.PositionViewTemplate>
-                    </local:ViewModeTemplateSelector>
-                </ContentControl.ContentTemplateSelector>
-            </ContentControl>
+            <Grid>
+                <!-- 视图模式切换 -->
+                <ContentControl Content="{x:Bind ViewModel, Mode=OneWay}">
+                    <ContentControl.ContentTemplateSelector>
+                        <local:ViewModeTemplateSelector>
+                            <local:ViewModeTemplateSelector.GridViewTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="网格视图 - 待实现" />
+                                </DataTemplate>
+                            </local:ViewModeTemplateSelector.GridViewTemplate>
+                            <local:ViewModeTemplateSelector.ListViewTemplate>
+                                <DataTemplate>
+                                    <local:ListView />
+                                </DataTemplate>
+                            </local:ViewModeTemplateSelector.ListViewTemplate>
+                            <local:ViewModeTemplateSelector.PersonnelViewTemplate>
+                                <DataTemplate>
+                                    <local:PersonnelView />
+                                </DataTemplate>
+                            </local:ViewModeTemplateSelector.PersonnelViewTemplate>
+                            <local:ViewModeTemplateSelector.PositionViewTemplate>
+                                <DataTemplate>
+                                    <local:PositionView />
+                                </DataTemplate>
+                            </local:ViewModeTemplateSelector.PositionViewTemplate>
+                        </local:ViewModeTemplateSelector>
+                    </ContentControl.ContentTemplateSelector>
+                </ContentControl>
+
+                <!-- 加载遮罩 -->
+                <Grid Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                      Background="{ThemeResource LayerFillColorDefaultBrush}"
+                      Opacity="0.9">
+                    <StackPanel HorizontalAlignment="Center" 
+                                VerticalAlignment="Center" 
+                                Spacing="16">
+                        <ProgressRing IsActive="True" 
+                                      Width="60" 
+                                      Height="60"/>
+                        <TextBlock Text="加载中..." 
+                                   Style="{ThemeResource SubtitleTextBlockStyle}" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
         </Border>
     </Grid>
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ms-appx:///Microsoft.UI.Xaml/DensityStyles/Compact.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
 </UserControl>

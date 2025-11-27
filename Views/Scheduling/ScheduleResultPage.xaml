@@ -321,18 +321,26 @@
                     <Grid Grid.Column="4"/>
 
                     <!-- Filter Actions -->
-                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
+                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
+                                      Width="20"
+                                      Height="20"
+                                      Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                      AutomationProperties.Name="筛选加载指示器"
+                                      AutomationProperties.HelpText="筛选操作正在进行中"/>
                         <Button Content="应用筛选" 
                                 Command="{x:Bind ViewModel.ApplyFiltersCommand}" 
                                 Style="{ThemeResource AccentButtonStyle}"
                                 AutomationProperties.Name="应用筛选按钮"
                                 AutomationProperties.HelpText="应用当前设置的筛选条件"
-                                ToolTipService.ToolTip="应用筛选 (Ctrl+F)"/>
+                                ToolTipService.ToolTip="应用筛选 (Ctrl+F)"
+                                Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='invert'}"/>
                         <Button Content="重置" 
                                 Command="{x:Bind ViewModel.ResetFiltersCommand}"
                                 AutomationProperties.Name="重置筛选按钮"
                                 AutomationProperties.HelpText="清除所有筛选条件并重新加载数据"
-                                ToolTipService.ToolTip="重置筛选"/>
+                                ToolTipService.ToolTip="重置筛选"
+                                Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='invert'}"/>
                     </StackPanel>
                 </Grid>
 

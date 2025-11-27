@@ -42,12 +42,29 @@
         <Border Grid.Row="1"
                 Background="{ThemeResource LayerFillColorDefaultBrush}"
                 Padding="16">
-            <!-- 详情模板选择器 -->
-            <ContentPresenter Content="{x:Bind ViewModel.SelectedItem, Mode=OneWay}">
-                <ContentPresenter.ContentTemplateSelector>
-                    <local:DetailTemplateSelector/>
-                </ContentPresenter.ContentTemplateSelector>
-            </ContentPresenter>
+            <Grid>
+                <!-- 详情模板选择器 -->
+                <ContentPresenter Content="{x:Bind ViewModel.SelectedItem, Mode=OneWay}"
+                                  Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='invert'}">
+                    <ContentPresenter.ContentTemplateSelector>
+                        <local:DetailTemplateSelector/>
+                    </ContentPresenter.ContentTemplateSelector>
+                </ContentPresenter>
+
+                <!-- 加载指示器 -->
+                <StackPanel HorizontalAlignment="Center" 
+                            VerticalAlignment="Center" 
+                            Spacing="16"
+                            Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <ProgressRing IsActive="True" 
+                                  Width="50" 
+                                  Height="50"/>
+                    <TextBlock Text="加载详情中..." 
+                               Style="{ThemeResource BodyTextBlockStyle}" 
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
         <!-- 操作按钮 -->
