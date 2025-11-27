@@ -5,6 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:local="using:AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.MainContent"
+    xmlns:converters="using:AutoScheduling3.Converters"
     mc:Ignorable="d"
     Background="Transparent">
 

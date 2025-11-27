@@ -1,3 +1,5 @@
+using System;
+
 namespace AutoScheduling3.DTOs
 {
     /// <summary>
@@ -26,8 +28,18 @@ namespace AutoScheduling3.DTOs
         public bool IsRightPanelVisible { get; set; } = false;
 
         /// <summary>
+        /// 左侧面板是否折叠（默认false）
+        /// </summary>
+        public bool IsLeftPanelCollapsed { get; set; } = false;
+
+        /// <summary>
         /// 偏好的视图模式（默认Grid）
         /// </summary>
         public string PreferredViewMode { get; set; } = "Grid";
+
+        /// <summary>
+        /// 最后更新时间
+        /// </summary>
+        public DateTime LastUpdated { get; set; } = DateTime.Now;
     }
 }

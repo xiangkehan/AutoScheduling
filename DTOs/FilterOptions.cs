@@ -82,5 +82,24 @@ namespace AutoScheduling3.DTOs
             ShowHardConflictsOnly = false;
             ShowSoftConflictsOnly = false;
         }
+
+        /// <summary>
+        /// 克隆筛选选项
+        /// </summary>
+        public FilterOptions Clone()
+        {
+            return new FilterOptions
+            {
+                SearchText = SearchText,
+                PersonnelIds = new List<int>(PersonnelIds),
+                PositionIds = new List<int>(PositionIds),
+                StartDate = StartDate,
+                EndDate = EndDate,
+                TimeSlotTypes = new List<string>(TimeSlotTypes),
+                StatusFilters = new List<string>(StatusFilters),
+                ShowHardConflictsOnly = ShowHardConflictsOnly,
+                ShowSoftConflictsOnly = ShowSoftConflictsOnly
+            };
+        }
     }
 }

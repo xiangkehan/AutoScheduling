@@ -123,6 +123,14 @@ namespace AutoScheduling3.Services
         }
 
         /// <summary>
+        /// 保存视图模式
+        /// </summary>
+        public async Task SaveViewModeAsync(string viewMode)
+        {
+            await SavePreferredViewModeAsync(viewMode);
+        }
+
+        /// <summary>
         /// 获取左侧面板宽度
         /// </summary>
         public async Task<double> GetLeftPanelWidthAsync()

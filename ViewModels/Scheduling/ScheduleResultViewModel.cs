@@ -338,7 +338,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
         public IAsyncRelayCommand<ConflictInfo> LocateConflictCommand { get; }
         public IAsyncRelayCommand<ConflictInfo> IgnoreConflictCommand { get; }
         public IAsyncRelayCommand<ConflictInfo> FixConflictCommand { get; }
-        public IAsyncRelayCommand ToggleFullScreenCommand { get; }
+        public IAsyncRelayCommand NavigateToFullScreenViewCommand { get; }
         public IAsyncRelayCommand CompareSchedulesCommand { get; }
 
         #endregion
@@ -399,7 +399,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             LocateConflictCommand = new AsyncRelayCommand<ConflictInfo>(LocateConflictAsync);
             IgnoreConflictCommand = new AsyncRelayCommand<ConflictInfo>(IgnoreConflictAsync);
             FixConflictCommand = new AsyncRelayCommand<ConflictInfo>(FixConflictAsync);
-            ToggleFullScreenCommand = new AsyncRelayCommand(ToggleFullScreenAsync);
+            NavigateToFullScreenViewCommand = new AsyncRelayCommand(NavigateToFullScreenViewAsync);
             CompareSchedulesCommand = new AsyncRelayCommand(CompareSchedulesAsync);
             
             // 初始化冲突相关命令
@@ -1296,6 +1296,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
                 // 保存当前视图的筛选条件和滚动位置
                 await SaveCurrentViewStateAsync();
+                
+                // 保存视图模式偏好
+                await SaveViewModePreferenceAsync(newMode);
 
                 switch (newMode)
                 {
@@ -1600,9 +1603,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         /// <summary>
-        /// 切换全屏
+        /// 导航到全屏视图页面
         /// </summary>
-        private async Task ToggleFullScreenAsync()
+        private async Task NavigateToFullScreenViewAsync()
         {
             try
             {

@@ -39,6 +39,11 @@ namespace AutoScheduling3.Services.Interfaces
         Task SavePreferredViewModeAsync(string viewMode);
 
         /// <summary>
+        /// 保存视图模式
+        /// </summary>
+        Task SaveViewModeAsync(string viewMode);
+
+        /// <summary>
         /// 获取左侧面板宽度
         /// </summary>
         Task<double> GetLeftPanelWidthAsync();
