@@ -1,143 +1,238 @@
+using System;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.UI.Xaml;
+using CommunityToolkit.Mvvm.Input;
+using AutoScheduling3.DTOs;
 
 namespace AutoScheduling3.ViewModels.Scheduling
 {
     /// <summary>
-    /// ScheduleResultViewModel - 布局相关逻辑
+    /// ScheduleResultViewModel - 布局相关功能
     /// </summary>
     public partial class ScheduleResultViewModel
     {
-        #region 布局属性
+        #region 新UI布局属性
 
+        private bool _useNewUI = true;
         /// <summary>
-        /// 左侧面板宽度
+        /// 是否使用新UI（Feature Flag）
         /// </summary>
-        [ObservableProperty]
-        private GridLength _leftPanelWidth = new GridLength(0.2, GridUnitType.Star);
-
-        /// <summary>
-        /// 右侧面板宽度
-        /// </summary>
-        [ObservableProperty]
-        private GridLength _rightPanelWidth = new GridLength(0.25, GridUnitType.Star);
-
-        /// <summary>
-        /// 当前布局模式
-        /// </summary>
-        [ObservableProperty]
-        private LayoutMode _currentLayoutMode = LayoutMode.Large;
-
-        /// <summary>
-        /// 是否使用新UI
-        /// </summary>
-        [ObservableProperty]
-        private bool _useNewUI = false;
+        public bool UseNewUI
+        {
+            get => _useNewUI;
+            set
+            {
+                if (SetProperty(ref _useNewUI, value))
+                {
+                    OnPropertyChanged(nameof(UseOldUI));
+                }
+            }
+        }
 
         /// <summary>
         /// 是否使用旧UI
         /// </summary>
         public bool UseOldUI => !UseNewUI;
 
-        #endregion
-
-        #region 布局方法
-
+        private Microsoft.UI.Xaml.GridLength _leftPanelWidth = new Microsoft.UI.Xaml.GridLength(300);
         /// <summary>
-        /// 当布局模式改变时
+        /// 左侧面板宽度
         /// </summary>
-        partial void OnCurrentLayoutModeChanged(LayoutMode value)
+        public Microsoft.UI.Xaml.GridLength LeftPanelWidth
         {
-            switch (value)
+            get => _leftPanelWidth;
+            set
             {
-                case LayoutMode.Large:
-                    LeftPanelWidth = new GridLength(0.2, GridUnitType.Star);
-                    RightPanelWidth = new GridLength(0.25, GridUnitType.Star);
-                    IsLeftPanelVisible = true;
-                    break;
-
-                case LayoutMode.Medium:
-                    LeftPanelWidth = new GridLength(0.2, GridUnitType.Star);
-                    RightPanelWidth = new GridLength(0.2, GridUnitType.Star);
-                    IsLeftPanelVisible = true;
-                    break;
-
-                case LayoutMode.Small:
-                    LeftPanelWidth = new GridLength(0.15, GridUnitType.Star);
-                    IsLeftPanelVisible = true;
-                    IsRightPanelVisible = false; // 默认隐藏右侧
-                    break;
-
-                case LayoutMode.Compact:
-                    IsLeftPanelVisible = false; // 折叠为图标模式
-                    IsRightPanelVisible = false;
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// 更新布局模式（根据窗口大小）
-        /// </summary>
-        public void UpdateLayoutMode(double windowWidth)
-        {
-            CurrentLayoutMode = windowWidth switch
-            {
-                >= 1920 => LayoutMode.Large,
-                >= 1366 => LayoutMode.Medium,
-                >= 1024 => LayoutMode.Small,
-                _ => LayoutMode.Compact
-            };
-        }
-
-        /// <summary>
-        /// 保存当前布局偏好
-        /// </summary>
-        public async System.Threading.Tasks.Task SaveLayoutPreferencesAsync()
-        {
-            try
-            {
-                var layoutService = ((App)Microsoft.UI.Xaml.Application.Current).ServiceProvider
-                    .GetService(typeof(Services.Interfaces.ILayoutPreferenceService)) 
-                    as Services.Interfaces.ILayoutPreferenceService;
-                
-                if (layoutService != null)
+                if (SetProperty(ref _leftPanelWidth, value))
                 {
-                    // 保存面板可见性
-                    await layoutService.SavePanelVisibilityAsync(IsLeftPanelVisible, IsRightPanelVisible);
+                    _ = SaveLeftPanelWidthAsync(value.Value);
                 }
             }
-            catch (System.Exception ex)
+        }
+
+        private Microsoft.UI.Xaml.GridLength _rightPanelWidth = new Microsoft.UI.Xaml.GridLength(350);
+        /// <summary>
+        /// 右侧面板宽度
+        /// </summary>
+        public Microsoft.UI.Xaml.GridLength RightPanelWidth
+        {
+            get => _rightPanelWidth;
+            set
             {
-                System.Diagnostics.Debug.WriteLine($"保存布局偏好失败: {ex.Message}");
+                if (SetProperty(ref _rightPanelWidth, value))
+                {
+                    _ = SaveRightPanelWidthAsync(value.Value);
+                }
+            }
+        }
+
+        private bool _isLeftPanelVisible = true;
+        /// <summary>
+        /// 左侧面板是否可见
+        /// </summary>
+        public bool IsLeftPanelVisible
+        {
+            get => _isLeftPanelVisible;
+            set
+            {
+                if (SetProperty(ref _isLeftPanelVisible, value))
+                {
+                    _ = SavePanelVisibilityAsync();
+                }
+            }
+        }
+
+        private bool _isRightPanelVisible = false;
+        /// <summary>
+        /// 右侧面板是否可见
+        /// </summary>
+        public bool IsRightPanelVisible
+        {
+            get => _isRightPanelVisible;
+            set
+            {
+                if (SetProperty(ref _isRightPanelVisible, value))
+                {
+                    _ = SavePanelVisibilityAsync();
+                }
             }
         }
 
         #endregion
-    }
 
-    /// <summary>
-    /// 布局模式枚举
-    /// </summary>
-    public enum LayoutMode
-    {
-        /// <summary>
-        /// 大屏幕（1920px+）
-        /// </summary>
-        Large,
+        #region 布局命令
 
         /// <summary>
-        /// 中等屏幕（1366px-1920px）
+        /// 切换左侧面板可见性命令
         /// </summary>
-        Medium,
+        public IRelayCommand ToggleLeftPanelCommand { get; private set; }
 
         /// <summary>
-        /// 小屏幕（1024px-1366px）
+        /// 切换右侧面板可见性命令
         /// </summary>
-        Small,
+        public IRelayCommand ToggleRightPanelCommand { get; private set; }
 
         /// <summary>
-        /// 紧凑模式（<1024px）
+        /// 关闭详情面板命令
         /// </summary>
-        Compact
+        public IRelayCommand CloseDetailPanelCommand { get; private set; }
+
+        /// <summary>
+        /// 初始化布局相关命令
+        /// </summary>
+        private void InitializeLayoutCommands()
+        {
+            ToggleLeftPanelCommand = new RelayCommand(() => IsLeftPanelVisible = !IsLeftPanelVisible);
+            ToggleRightPanelCommand = new RelayCommand(() => IsRightPanelVisible = !IsRightPanelVisible);
+            CloseDetailPanelCommand = new RelayCommand(() => IsRightPanelVisible = false);
+        }
+
+        #endregion
+
+        #region 布局偏好加载和保存
+
+        /// <summary>
+        /// 加载布局偏好
+        /// </summary>
+        public async Task LoadLayoutPreferencesAsync()
+        {
+            if (_layoutPreferenceService == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var preferences = await _layoutPreferenceService.LoadAsync();
+                
+                // 应用偏好设置（不触发保存）
+                _leftPanelWidth = new Microsoft.UI.Xaml.GridLength(preferences.LeftPanelWidth);
+                _rightPanelWidth = new Microsoft.UI.Xaml.GridLength(preferences.RightPanelWidth);
+                _isLeftPanelVisible = preferences.IsLeftPanelVisible;
+                _isRightPanelVisible = preferences.IsRightPanelVisible;
+
+                // 通知属性变化
+                OnPropertyChanged(nameof(LeftPanelWidth));
+                OnPropertyChanged(nameof(RightPanelWidth));
+                OnPropertyChanged(nameof(IsLeftPanelVisible));
+                OnPropertyChanged(nameof(IsRightPanelVisible));
+
+                // 如果有偏好的视图模式，应用它
+                if (!string.IsNullOrEmpty(preferences.PreferredViewMode) && 
+                    Enum.TryParse<ViewMode>(preferences.PreferredViewMode, out var viewMode))
+                {
+                    _currentViewMode = viewMode;
+                    OnPropertyChanged(nameof(CurrentViewMode));
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"加载布局偏好失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 保存左侧面板宽度
+        /// </summary>
+        private async Task SaveLeftPanelWidthAsync(double width)
+        {
+            if (_layoutPreferenceService == null)
+            {
+                return;
+            }
+
+            try
+            {
+                await _layoutPreferenceService.SaveLeftPanelWidthAsync(width);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"保存左侧面板宽度失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 保存右侧面板宽度
+        /// </summary>
+        private async Task SaveRightPanelWidthAsync(double width)
+        {
+            if (_layoutPreferenceService == null)
+            {
+                return;
+            }
+
+            try
+            {
+                await _layoutPreferenceService.SaveRightPanelWidthAsync(width);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"保存右侧面板宽度失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 保存面板可见性
+        /// </summary>
+        private async Task SavePanelVisibilityAsync()
+        {
+            if (_layoutPreferenceService == null)
+            {
+                return;
+            }
+
+            try
+            {
+                await _layoutPreferenceService.SavePanelVisibilityAsync(
+                    IsLeftPanelVisible, 
+                    IsRightPanelVisible);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"保存面板可见性失败: {ex.Message}");
+            }
+        }
+
+        #endregion
     }
 }

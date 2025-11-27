@@ -6,32 +6,36 @@ using Microsoft.UI.Input;
 namespace AutoScheduling3.Views.Scheduling
 {
     /// <summary>
-    /// ScheduleResultPage - GridSplitter拖拽处理
+    /// ScheduleResultPage - GridSplitter 拖拽处理
     /// </summary>
     public sealed partial class ScheduleResultPage : Page
     {
-        #region GridSplitter状态
+        #region GridSplitter 状态
 
         private bool _isLeftSplitterDragging = false;
         private bool _isRightSplitterDragging = false;
-        private double _dragStartX = 0;
+        private double _leftSplitterStartX = 0;
+        private double _rightSplitterStartX = 0;
         private double _leftPanelStartWidth = 0;
         private double _rightPanelStartWidth = 0;
 
         #endregion
 
-        #region GridSplitter事件处理
+        #region GridSplitter 事件处理
 
         /// <summary>
-        /// GridSplitter鼠标进入 - 显示调整大小光标
+        /// GridSplitter 鼠标进入 - 显示调整大小光标
         /// </summary>
         private void GridSplitter_PointerEntered(object sender, PointerRoutedEventArgs e)
         {
-            this.ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
+            if (sender is Border)
+            {
+                this.ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
+            }
         }
 
         /// <summary>
-        /// GridSplitter鼠标离开 - 恢复默认光标
+        /// GridSplitter 鼠标离开 - 恢复默认光标
         /// </summary>
         private void GridSplitter_PointerExited(object sender, PointerRoutedEventArgs e)
         {
@@ -42,20 +46,15 @@ namespace AutoScheduling3.Views.Scheduling
         }
 
         /// <summary>
-        /// 左侧GridSplitter按下
+        /// 左侧 GridSplitter 按下
         /// </summary>
         private void LeftGridSplitter_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             if (sender is Border splitter)
             {
                 _isLeftSplitterDragging = true;
-                _dragStartX = e.GetCurrentPoint(this).Position.X;
-                
-                // 获取当前左侧面板的实际宽度
-                if (LeftPanelColumn != null)
-                {
-                    _leftPanelStartWidth = LeftPanelColumn.ActualWidth;
-                }
+                _leftSplitterStartX = e.GetCurrentPoint(this).Position.X;
+                _leftPanelStartWidth = ViewModel.LeftPanelWidth.Value;
                 
                 splitter.CapturePointer(e.Pointer);
                 e.Handled = true;
@@ -63,29 +62,24 @@ namespace AutoScheduling3.Views.Scheduling
         }
 
         /// <summary>
-        /// 左侧GridSplitter移动
+        /// 左侧 GridSplitter 移动
         /// </summary>
         private void LeftGridSplitter_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
-            if (_isLeftSplitterDragging && LeftPanelColumn != null)
+            if (_isLeftSplitterDragging && sender is Border)
             {
                 var currentX = e.GetCurrentPoint(this).Position.X;
-                var delta = currentX - _dragStartX;
+                var deltaX = currentX - _leftSplitterStartX;
                 
-                // 计算新宽度
-                var newWidth = _leftPanelStartWidth + delta;
+                var newWidth = _leftPanelStartWidth + deltaX;
                 
-                // 应用最小和最大宽度限制
-                newWidth = System.Math.Max(200, System.Math.Min(500, newWidth));
+                // 限制宽度范围
+                const double minWidth = 200;
+                const double maxWidth = 500;
                 
-                // 更新列宽
-                LeftPanelColumn.Width = new GridLength(newWidth, GridUnitType.Pixel);
-                
-                // 保存到ViewModel（将在释放时保存到偏好设置）
-                if (this.ActualWidth > 0)
+                if (newWidth >= minWidth && newWidth <= maxWidth)
                 {
-                    var ratio = newWidth / this.ActualWidth;
-                    ViewModel.LeftPanelWidth = new GridLength(ratio, GridUnitType.Star);
+                    ViewModel.LeftPanelWidth = new Microsoft.UI.Xaml.GridLength(newWidth);
                 }
                 
                 e.Handled = true;
@@ -93,20 +87,15 @@ namespace AutoScheduling3.Views.Scheduling
         }
 
         /// <summary>
-        /// 右侧GridSplitter按下
+        /// 右侧 GridSplitter 按下
         /// </summary>
         private void RightGridSplitter_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             if (sender is Border splitter)
             {
                 _isRightSplitterDragging = true;
-                _dragStartX = e.GetCurrentPoint(this).Position.X;
-                
-                // 获取当前右侧面板的实际宽度
-                if (RightPanelColumn != null)
-                {
-                    _rightPanelStartWidth = RightPanelColumn.ActualWidth;
-                }
+                _rightSplitterStartX = e.GetCurrentPoint(this).Position.X;
+                _rightPanelStartWidth = ViewModel.RightPanelWidth.Value;
                 
                 splitter.CapturePointer(e.Pointer);
                 e.Handled = true;
@@ -114,29 +103,24 @@ namespace AutoScheduling3.Views.Scheduling
         }
 
         /// <summary>
-        /// 右侧GridSplitter移动
+        /// 右侧 GridSplitter 移动
         /// </summary>
         private void RightGridSplitter_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
-            if (_isRightSplitterDragging && RightPanelColumn != null)
+            if (_isRightSplitterDragging && sender is Border)
             {
                 var currentX = e.GetCurrentPoint(this).Position.X;
-                var delta = currentX - _dragStartX;
+                var deltaX = _rightSplitterStartX - currentX; // 注意：右侧是反向的
                 
-                // 计算新宽度（右侧面板向左拖动时delta为负，宽度增加）
-                var newWidth = _rightPanelStartWidth - delta;
+                var newWidth = _rightPanelStartWidth + deltaX;
                 
-                // 应用最小和最大宽度限制
-                newWidth = System.Math.Max(250, System.Math.Min(600, newWidth));
+                // 限制宽度范围
+                const double minWidth = 250;
+                const double maxWidth = 600;
                 
-                // 更新列宽
-                RightPanelColumn.Width = new GridLength(newWidth, GridUnitType.Pixel);
-                
-                // 保存到ViewModel（将在释放时保存到偏好设置）
-                if (this.ActualWidth > 0)
+                if (newWidth >= minWidth && newWidth <= maxWidth)
                 {
-                    var ratio = newWidth / this.ActualWidth;
-                    ViewModel.RightPanelWidth = new GridLength(ratio, GridUnitType.Star);
+                    ViewModel.RightPanelWidth = new Microsoft.UI.Xaml.GridLength(newWidth);
                 }
                 
                 e.Handled = true;
@@ -144,22 +128,16 @@ namespace AutoScheduling3.Views.Scheduling
         }
 
         /// <summary>
-        /// GridSplitter释放
+        /// GridSplitter 释放
         /// </summary>
         private void GridSplitter_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            if (_isLeftSplitterDragging || _isRightSplitterDragging)
+            if (sender is Border splitter)
             {
-                // 保存布局偏好
-                _ = SaveLayoutPreferencesAsync();
-                
                 _isLeftSplitterDragging = false;
                 _isRightSplitterDragging = false;
                 
-                if (sender is Border splitter)
-                {
-                    splitter.ReleasePointerCaptures();
-                }
+                splitter.ReleasePointerCaptures();
                 
                 // 恢复默认光标
                 this.ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.Arrow);
@@ -168,46 +146,47 @@ namespace AutoScheduling3.Views.Scheduling
             }
         }
 
-        /// <summary>
-        /// 保存布局偏好
-        /// </summary>
-        private async System.Threading.Tasks.Task SaveLayoutPreferencesAsync()
-        {
-            try
-            {
-                var layoutService = ((App)Application.Current).ServiceProvider
-                    .GetService(typeof(Services.Interfaces.ILayoutPreferenceService)) 
-                    as Services.Interfaces.ILayoutPreferenceService;
-                
-                if (layoutService != null && this.ActualWidth > 0)
-                {
-                    // 计算比例
-                    double leftRatio = LeftPanelColumn?.ActualWidth / this.ActualWidth ?? 0.2;
-                    double rightRatio = RightPanelColumn?.ActualWidth / this.ActualWidth ?? 0.25;
-                    
-                    // 保存宽度
-                    await layoutService.SaveLeftPanelWidthAsync(leftRatio);
-                    await layoutService.SaveRightPanelWidthAsync(rightRatio);
-                }
-            }
-            catch (System.Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"保存布局偏好失败: {ex.Message}");
-            }
-        }
-
         #endregion
 
         #region 窗口大小变化处理
 
         /// <summary>
-        /// 页面大小变化时更新布局模式
+        /// 页面大小变化时的处理（响应式布局）
         /// </summary>
         private void OnPageSizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (ViewModel != null)
+            // 根据窗口宽度调整布局
+            var width = e.NewSize.Width;
+            
+            // 小屏幕适配（<1024px）
+            if (width < 1024)
             {
-                ViewModel.UpdateLayoutMode(e.NewSize.Width);
+                // 自动隐藏右侧面板
+                if (ViewModel.IsRightPanelVisible)
+                {
+                    ViewModel.IsRightPanelVisible = false;
+                }
+                
+                // 缩小左侧面板
+                if (ViewModel.LeftPanelWidth.Value > 250)
+                {
+                    ViewModel.LeftPanelWidth = new Microsoft.UI.Xaml.GridLength(250);
+                }
+            }
+            // 中等屏幕（1024px-1366px）
+            else if (width < 1366)
+            {
+                // 默认隐藏右侧面板，按需显示
+                // 不自动改变，由用户控制
+            }
+            // 大屏幕（>=1366px）
+            else
+            {
+                // 恢复默认宽度
+                if (ViewModel.LeftPanelWidth.Value < 300)
+                {
+                    ViewModel.LeftPanelWidth = new Microsoft.UI.Xaml.GridLength(300);
+                }
             }
         }
 

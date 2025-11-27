@@ -8,7 +8,6 @@
     xmlns:controls="using:AutoScheduling3.Controls"
     xmlns:converters="using:AutoScheduling3.Converters"
     xmlns:dto="using:AutoScheduling3.DTOs"
-    xmlns:leftpanel="using:AutoScheduling3.Views.Scheduling.ScheduleResultPageComponents.Components.LeftPanel"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     d:DataContext="{d:DesignInstance Type=viewmodels:ScheduleResultViewModel, IsDesignTimeCreatable=True}">

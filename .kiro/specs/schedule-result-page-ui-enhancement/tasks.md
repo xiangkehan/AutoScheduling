@@ -4,27 +4,27 @@
 
 ### 1. 项目结构和基础设施
 
-- [ ] 1.1 创建新的目录结构
-  - 创建 `Views/Scheduling/ScheduleResultPage/Components/` 目录
-  - 创建子目录：`LeftPanel/`, `MainContent/`, `RightPanel/`, `Shared/`, `Selectors/`
-  - 创建 `ViewModels/Scheduling/ScheduleResultViewModel/` 目录
-  - 创建 `Services/LayoutPreferenceService.cs`
+- [x] 1.1 创建新的目录结构
+  - 创建 `Views/Scheduling/ScheduleResultPage/Components/` 目录 ✅
+  - 创建子目录：`LeftPanel/`, `MainContent/`, `RightPanel/`, `Shared/`, `Selectors/` ✅
+  - 创建 `ViewModels/Scheduling/ScheduleResultViewModel/` 目录 ✅ (已存在)
+  - 创建 `Services/LayoutPreferenceService.cs` ✅ (已存在)
   - _需求: 所有需求的基础_
 
-- [ ] 1.2 创建数据传输对象（DTOs）
-  - 创建 `DTOs/StatisticsSummary.cs`
-  - 创建 `DTOs/FilterOptions.cs`
-  - 创建 `DTOs/ConflictResolutionOption.cs`
-  - 创建 `DTOs/LayoutPreferences.cs`
+- [x] 1.2 创建数据传输对象（DTOs）
+  - 创建 `DTOs/StatisticsSummary.cs` ✅ (已存在)
+  - 创建 `DTOs/FilterOptions.cs` ✅ (已存在)
+  - 创建 `DTOs/ConflictResolutionOption.cs` ✅ (已存在)
+  - 创建 `DTOs/LayoutPreferences.cs` ✅ (已存在)
   - _需求: 1.1, 2.1, 3.1_
 
-- [ ] 1.3 创建ViewModel基础结构
-  - 创建 `ScheduleResultViewModel.cs`（主ViewModel，保留现有代码）
-  - 创建 `ScheduleResultViewModel.LeftPanel.cs`（Partial Class）
-  - 创建 `ScheduleResultViewModel.MainContent.cs`（Partial Class）
-  - 创建 `ScheduleResultViewModel.RightPanel.cs`（Partial Class）
-  - 创建 `ScheduleResultViewModel.Commands.cs`（Partial Class）
-  - 添加布局相关的ObservableProperty
+- [x] 1.3 创建ViewModel基础结构
+  - 创建 `ScheduleResultViewModel.cs`（主ViewModel，保留现有代码） ✅ (已存在)
+  - 创建 `ScheduleResultViewModel.LeftPanel.cs`（Partial Class） ✅ (已存在)
+  - 创建 `ScheduleResultViewModel.MainContent.cs`（Partial Class） ✅ (已存在)
+  - 创建 `ScheduleResultViewModel.RightPanel.cs`（Partial Class） ✅ (已存在)
+  - 创建 `ScheduleResultViewModel.Commands.cs`（Partial Class） ✅ (命令已在各partial class中定义)
+  - 添加布局相关的ObservableProperty ✅ (已在Layout.cs中实现)
   - _需求: 7.1_
 
 ### 2. 三栏布局框架

@@ -397,6 +397,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
             
             // 初始化搜索相关命令
             InitializeSearchCommands();
+            
+            // 初始化布局相关命令
+            InitializeLayoutCommands();
 
             PropertyChanged += (s, e) =>
             {

@@ -24,11 +24,11 @@ namespace AutoScheduling3.Views.Scheduling
             // 页面加载完成后附加光标行为
             this.Loaded += OnPageLoaded;
             
-            // 订阅窗口大小变化事件
+            // 订阅窗口大小变化事件（在 GridSplitter partial class 中处理）
             this.SizeChanged += OnPageSizeChanged;
             
             // 加载布局偏好
-            _ = LoadLayoutPreferencesAsync();
+            _ = ViewModel.LoadLayoutPreferencesAsync();
         }
 
         /// <summary>
@@ -87,43 +87,7 @@ namespace AutoScheduling3.Views.Scheduling
 
         #endregion
 
-        /// <summary>
-        /// 加载布局偏好
-        /// </summary>
-        private async System.Threading.Tasks.Task LoadLayoutPreferencesAsync()
-        {
-            try
-            {
-                var layoutService = ((App)Application.Current).ServiceProvider
-                    .GetService(typeof(Services.Interfaces.ILayoutPreferenceService)) 
-                    as Services.Interfaces.ILayoutPreferenceService;
-                
-                if (layoutService != null)
-                {
-                    // 加载左侧面板宽度
-                    var leftWidth = await layoutService.GetLeftPanelWidthAsync();
-                    if (leftWidth > 0)
-                    {
-                        ViewModel.LeftPanelWidth = new GridLength(leftWidth, GridUnitType.Star);
-                    }
-                    
-                    // 加载右侧面板宽度
-                    var rightWidth = await layoutService.GetRightPanelWidthAsync();
-                    if (rightWidth > 0)
-                    {
-                        ViewModel.RightPanelWidth = new GridLength(rightWidth, GridUnitType.Star);
-                    }
-                    
-                    // 加载面板可见性
-                    ViewModel.IsLeftPanelVisible = await layoutService.GetLeftPanelVisibilityAsync();
-                    ViewModel.IsRightPanelVisible = await layoutService.GetRightPanelVisibilityAsync();
-                }
-            }
-            catch (System.Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"加载布局偏好失败: {ex.Message}");
-            }
-        }
+
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
@@ -496,38 +460,6 @@ namespace AutoScheduling3.Views.Scheduling
                 {
                     _ = ViewModel.SelectSearchResultCommand.ExecuteAsync(item);
                 }
-            }
-        }
-
-        #endregion
-
-        #region 布局偏好加载
-
-        /// <summary>
-        /// 加载布局偏好
-        /// </summary>
-        private async System.Threading.Tasks.Task LoadLayoutPreferencesAsync()
-        {
-            try
-            {
-                var layoutService = ((App)Application.Current).ServiceProvider
-                    .GetService(typeof(Services.Interfaces.ILayoutPreferenceService)) 
-                    as Services.Interfaces.ILayoutPreferenceService;
-                
-                if (layoutService != null)
-                {
-                    var preferences = await layoutService.LoadAsync();
-                    
-                    // 应用偏好设置
-                    ViewModel.LeftPanelWidth = new GridLength(preferences.LeftPanelWidth, GridUnitType.Star);
-                    ViewModel.RightPanelWidth = new GridLength(preferences.RightPanelWidth, GridUnitType.Star);
-                    ViewModel.IsLeftPanelVisible = preferences.IsLeftPanelVisible;
-                    ViewModel.IsRightPanelVisible = preferences.IsRightPanelVisible;
-                }
-            }
-            catch (System.Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"加载布局偏好失败: {ex.Message}");
             }
         }
 
