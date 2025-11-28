@@ -17,31 +17,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 工具栏区域 -->
-        <StackPanel x:Name="ToolbarPanel" 
-                    Grid.Row="0" 
-                    Orientation="Horizontal" 
-                    HorizontalAlignment="Right"
-                    Spacing="8"
-                    Margin="0,0,0,8"
-                    AutomationProperties.Name="表格工具栏">
-            
-            <Button x:Name="ExportButton"
-                    Content="导出"
-                    ToolTipService.ToolTip="导出表格（开发中）"
-                    IsEnabled="False"
-                    Click="ExportButton_Click"
-                    AutomationProperties.Name="导出表格"
-                    AutomationProperties.HelpText="此功能正在开发中"/>
-            
-            <Button x:Name="FullScreenButton"
-                    Content="&#xE740;"
-                    FontFamily="Segoe MDL2 Assets"
-                    ToolTipService.ToolTip="全屏查看"
-                    Click="FullScreenButton_Click"
-                    AutomationProperties.Name="全屏查看表格"
-                    AutomationProperties.HelpText="在全屏模式下查看排班表格"/>
-        </StackPanel>
+
 
         <!-- 表头区域 -->
         <Border x:Name="HeaderBorder" 

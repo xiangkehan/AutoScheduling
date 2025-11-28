@@ -80,9 +80,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         /// <summary>
-        /// 右侧面板当前激活的标签页索引（0=搜索结果，1=冲突管理）
+        /// 右侧面板当前激活的标签页索引（0=搜索筛选，1=搜索结果，2=冲突管理）
         /// </summary>
-        private int _rightPaneTabIndex = 1; // 默认显示冲突管理
+        private int _rightPaneTabIndex = 2; // 默认显示冲突管理
         public int RightPaneTabIndex
         {
             get => _rightPaneTabIndex;
@@ -225,7 +225,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 if (HasActiveSearch)
                 {
                     // 切换到搜索结果标签页
-                    RightPaneTabIndex = 0;
+                    RightPaneTabIndex = 1;
                     
                     // 滚动到第一个结果
                     CurrentHighlightIndex = 0;
@@ -377,7 +377,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             HighlightedCellKeys = new HashSet<string>();
 
             // 切换回冲突管理标签页
-            RightPaneTabIndex = 1;
+            RightPaneTabIndex = 2;
 
             await Task.CompletedTask;
         }

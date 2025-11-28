@@ -91,103 +91,6 @@
                     </TextBlock>
                 </StackPanel>
 
-                <!-- Filter Toolbar -->
-                <Grid x:Name="FilterToolbar"
-                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                      BorderThickness="1" 
-                      CornerRadius="8" 
-                      Padding="16"
-                      AutomationProperties.Name="筛选工具栏"
-                      AutomationProperties.LandmarkType="Search">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Date Range Filter -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,0,16,0">
-                        <TextBlock Text="日期:" 
-                                   VerticalAlignment="Center"
-                                   AutomationProperties.Name="日期筛选标签"/>
-                        <CalendarDatePicker x:Name="FilterStartDatePicker"
-                                            PlaceholderText="开始日期"
-                                            DateChanged="FilterStartDatePicker_DateChanged"
-                                            AutomationProperties.Name="筛选开始日期"
-                                            AutomationProperties.HelpText="选择筛选的开始日期"/>
-                        <TextBlock Text="至" VerticalAlignment="Center"/>
-                        <CalendarDatePicker x:Name="FilterEndDatePicker"
-                                            PlaceholderText="结束日期"
-                                            DateChanged="FilterEndDatePicker_DateChanged"
-                                            AutomationProperties.Name="筛选结束日期"
-                                            AutomationProperties.HelpText="选择筛选的结束日期"/>
-                    </StackPanel>
-
-                    <!-- Position Filter -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,16,0">
-                        <TextBlock Text="哨位:" 
-                                   VerticalAlignment="Center"
-                                   AutomationProperties.Name="哨位筛选标签"/>
-                        <ComboBox x:Name="PositionFilterComboBox"
-                                  MinWidth="150"
-                                  ItemsSource="{x:Bind ViewModel.SelectedPositionIds}"
-                                  IsEditable="False"
-                                  PlaceholderText="选择哨位"
-                                  AutomationProperties.Name="哨位筛选下拉框"
-                                  AutomationProperties.HelpText="选择要筛选的哨位，可多选"/>
-                    </StackPanel>
-
-                    <!-- Personnel Search -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" Margin="0,0,16,0">
-                        <TextBlock Text="人员:" 
-                                   VerticalAlignment="Center"
-                                   AutomationProperties.Name="人员搜索标签"/>
-                        <AutoSuggestBox x:Name="PersonnelSearchBox"
-                                        Text="{x:Bind ViewModel.PersonnelSearchText, Mode=TwoWay}"
-                                        ItemsSource="{x:Bind ViewModel.PersonnelSuggestions, Mode=OneWay}"
-                                        PlaceholderText="搜索或选择人员"
-                                        MinWidth="200"
-                                        QueryIcon="Find"
-                                        TextChanged="PersonnelSearchBox_TextChanged"
-                                        GotFocus="PersonnelSearchBox_GotFocus"
-                                        SuggestionChosen="PersonnelSearchBox_SuggestionChosen"
-                                        QuerySubmitted="PersonnelSearchBox_QuerySubmitted"
-                                        AutomationProperties.Name="人员搜索框"
-                                        AutomationProperties.HelpText="输入人员姓名进行模糊搜索，支持拼音首字母，或从下拉列表选择"
-                                        ToolTipService.ToolTip="支持模糊搜索和拼音首字母匹配，点击展开显示所有人员">
-                            <AutoSuggestBox.ItemTemplate>
-                                <DataTemplate x:DataType="dto:PersonnelDto">
-                                    <TextBlock Text="{x:Bind Name}" 
-                                              Padding="8,4"
-                                              VerticalAlignment="Center"/>
-                                </DataTemplate>
-                            </AutoSuggestBox.ItemTemplate>
-                        </AutoSuggestBox>
-                    </StackPanel>
-
-                    <!-- Spacer -->
-                    <Grid Grid.Column="4"/>
-
-                    <!-- Filter Actions -->
-                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
-                        <Button Content="应用筛选" 
-                                Command="{x:Bind ViewModel.ApplyFiltersCommand}" 
-                                Style="{ThemeResource AccentButtonStyle}"
-                                AutomationProperties.Name="应用筛选按钮"
-                                AutomationProperties.HelpText="应用当前设置的筛选条件"
-                                ToolTipService.ToolTip="应用筛选 (Ctrl+F)"/>
-                        <Button Content="重置" 
-                                Command="{x:Bind ViewModel.ResetFiltersCommand}"
-                                AutomationProperties.Name="重置筛选按钮"
-                                AutomationProperties.HelpText="清除所有筛选条件并重新加载数据"
-                                ToolTipService.ToolTip="重置筛选"/>
-                    </StackPanel>
-                </Grid>
-
                 <!-- View Mode and Actions Toolbar -->
                 <CommandBar Background="Transparent" 
                             DefaultLabelPosition="Right" 
@@ -248,6 +151,12 @@
                                   AutomationProperties.Name="比较排班"
                                   AutomationProperties.HelpText="与历史排班方案进行比较"
                                   ToolTipService.ToolTip="比较排班"/>
+                    <AppBarToggleButton Icon="Find" 
+                                        Label="搜索" 
+                                        IsChecked="{x:Bind ViewModel.IsSearchPaneOpen, Mode=TwoWay}"
+                                        AutomationProperties.Name="搜索面板开关"
+                                        AutomationProperties.HelpText="显示或隐藏搜索筛选面板"
+                                        ToolTipService.ToolTip="搜索筛选 (Ctrl+F)"/>
                     <AppBarToggleButton Icon="Flag" 
                                         Label="冲突" 
                                         IsChecked="{x:Bind ViewModel.IsConflictPaneOpen, Mode=TwoWay}"
@@ -269,7 +178,7 @@
                           Padding="12"
                           AutomationProperties.Name="右侧面板"
                           AutomationProperties.LandmarkType="Custom">
-                        <!-- TabView for Search Results and Conflict Management -->
+                        <!-- TabView for Search Filter, Search Results and Conflict Management -->
                         <TabView x:Name="RightPaneTabView"
                                  SelectedIndex="{x:Bind ViewModel.RightPaneTabIndex, Mode=TwoWay}"
                                  TabWidthMode="Equal"
@@ -278,8 +187,120 @@
                                  IsAddTabButtonVisible="False"
                                  AutomationProperties.Name="右侧面板标签页">
                             
-                            <!-- Search Results Tab -->
                             <TabView.TabItems>
+                                <!-- Search Filter Tab -->
+                                <TabViewItem Header="搜索筛选"
+                                             IsClosable="False"
+                                             Visibility="{x:Bind ViewModel.IsSearchPaneOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                             AutomationProperties.Name="搜索筛选标签页">
+                                    <Grid Padding="0,12,0,0">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Header -->
+                                        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,12">
+                                            <TextBlock Text="搜索筛选" 
+                                                       Style="{ThemeResource SubtitleTextBlockStyle}"
+                                                       AutomationProperties.Name="搜索筛选标题"
+                                                       AutomationProperties.HeadingLevel="Level2"/>
+                                            <TextBlock Text="设置筛选条件以快速定位班次" 
+                                                       FontSize="12"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </StackPanel>
+
+                                        <!-- Filter Controls -->
+                                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                                            <StackPanel Spacing="16">
+                                                <!-- Date Range Filter -->
+                                                <StackPanel Spacing="8">
+                                                    <TextBlock Text="日期范围" 
+                                                               FontWeight="SemiBold"
+                                                               AutomationProperties.Name="日期范围筛选标签"/>
+                                                    <CalendarDatePicker x:Name="FilterStartDatePicker"
+                                                                        Header="开始日期"
+                                                                        PlaceholderText="选择开始日期"
+                                                                        DateChanged="FilterStartDatePicker_DateChanged"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        AutomationProperties.Name="筛选开始日期"
+                                                                        AutomationProperties.HelpText="选择筛选的开始日期"/>
+                                                    <CalendarDatePicker x:Name="FilterEndDatePicker"
+                                                                        Header="结束日期"
+                                                                        PlaceholderText="选择结束日期"
+                                                                        DateChanged="FilterEndDatePicker_DateChanged"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        AutomationProperties.Name="筛选结束日期"
+                                                                        AutomationProperties.HelpText="选择筛选的结束日期"/>
+                                                </StackPanel>
+
+                                                <!-- Position Filter -->
+                                                <StackPanel Spacing="8">
+                                                    <TextBlock Text="哨位" 
+                                                               FontWeight="SemiBold"
+                                                               AutomationProperties.Name="哨位筛选标签"/>
+                                                    <ComboBox x:Name="PositionFilterComboBox"
+                                                              Header="选择哨位"
+                                                              ItemsSource="{x:Bind ViewModel.SelectedPositionIds}"
+                                                              IsEditable="False"
+                                                              PlaceholderText="全部哨位"
+                                                              HorizontalAlignment="Stretch"
+                                                              AutomationProperties.Name="哨位筛选下拉框"
+                                                              AutomationProperties.HelpText="选择要筛选的哨位，可多选"/>
+                                                </StackPanel>
+
+                                                <!-- Personnel Search -->
+                                                <StackPanel Spacing="8">
+                                                    <TextBlock Text="人员" 
+                                                               FontWeight="SemiBold"
+                                                               AutomationProperties.Name="人员搜索标签"/>
+                                                    <AutoSuggestBox x:Name="PersonnelSearchBox"
+                                                                    Header="搜索人员"
+                                                                    Text="{x:Bind ViewModel.PersonnelSearchText, Mode=TwoWay}"
+                                                                    ItemsSource="{x:Bind ViewModel.PersonnelSuggestions, Mode=OneWay}"
+                                                                    PlaceholderText="输入姓名或拼音首字母"
+                                                                    QueryIcon="Find"
+                                                                    TextChanged="PersonnelSearchBox_TextChanged"
+                                                                    GotFocus="PersonnelSearchBox_GotFocus"
+                                                                    SuggestionChosen="PersonnelSearchBox_SuggestionChosen"
+                                                                    QuerySubmitted="PersonnelSearchBox_QuerySubmitted"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    AutomationProperties.Name="人员搜索框"
+                                                                    AutomationProperties.HelpText="输入人员姓名进行模糊搜索，支持拼音首字母，或从下拉列表选择"
+                                                                    ToolTipService.ToolTip="支持模糊搜索和拼音首字母匹配">
+                                                        <AutoSuggestBox.ItemTemplate>
+                                                            <DataTemplate x:DataType="dto:PersonnelDto">
+                                                                <TextBlock Text="{x:Bind Name}" 
+                                                                          Padding="8,4"
+                                                                          VerticalAlignment="Center"/>
+                                                            </DataTemplate>
+                                                        </AutoSuggestBox.ItemTemplate>
+                                                    </AutoSuggestBox>
+                                                </StackPanel>
+
+                                                <!-- Filter Actions -->
+                                                <StackPanel Spacing="8" Margin="0,16,0,0">
+                                                    <Button Content="应用筛选" 
+                                                            Command="{x:Bind ViewModel.ApplyFiltersCommand}" 
+                                                            Style="{ThemeResource AccentButtonStyle}"
+                                                            HorizontalAlignment="Stretch"
+                                                            AutomationProperties.Name="应用筛选按钮"
+                                                            AutomationProperties.HelpText="应用当前设置的筛选条件"
+                                                            ToolTipService.ToolTip="应用筛选 (Ctrl+F)"/>
+                                                    <Button Content="重置筛选" 
+                                                            Command="{x:Bind ViewModel.ResetFiltersCommand}"
+                                                            HorizontalAlignment="Stretch"
+                                                            AutomationProperties.Name="重置筛选按钮"
+                                                            AutomationProperties.HelpText="清除所有筛选条件并重新加载数据"
+                                                            ToolTipService.ToolTip="重置筛选"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </ScrollViewer>
+                                    </Grid>
+                                </TabViewItem>
+
+                                <!-- Search Results Tab -->
                                 <TabViewItem Header="搜索结果"
                                              IsClosable="False"
                                              Visibility="{x:Bind ViewModel.IsSearchResultsTabVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
@@ -509,132 +530,304 @@
                                 <TabViewItem Header="冲突管理"
                                              IsClosable="False"
                                              AutomationProperties.Name="冲突管理标签页">
-                                    <Grid Padding="0,12,0,0">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                  Padding="0,12,0,0">
+                                        <StackPanel Spacing="12">
+                                            <!-- Conflict Panel Header -->
+                                            <StackPanel Spacing="8" Margin="0,0,0,0">
+                                                <TextBlock Text="冲突管理" 
+                                                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                                                           AutomationProperties.Name="冲突管理标题"
+                                                           AutomationProperties.HeadingLevel="Level2"/>
+                                            </StackPanel>
 
-                                        <!-- Conflict Panel Header -->
-                                        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,12">
-                                            <TextBlock Text="冲突管理" 
-                                                       Style="{ThemeResource SubtitleTextBlockStyle}"
-                                                       AutomationProperties.Name="冲突管理标题"
-                                                       AutomationProperties.HeadingLevel="Level2"/>
-                                        </StackPanel>
+                                            <!-- Conflict Statistics Cards and Detailed Statistics -->
+                                            <StackPanel Spacing="8" Margin="0,0,0,0">
+                            <!-- Conflict Statistics Cards -->
+                            <Grid AutomationProperties.Name="冲突统计卡片">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-                        <!-- Conflict Statistics Cards -->
-                        <Grid Grid.Row="1" Margin="0,0,0,12" AutomationProperties.Name="冲突统计卡片">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                                <!-- Hard Constraint Conflicts Card -->
+                                <Border Grid.Row="0" Grid.Column="0"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                        BorderBrush="{ThemeResource SystemFillColorCriticalBrush}" 
+                                        BorderThickness="1.5" 
+                                        CornerRadius="6" 
+                                        Padding="8,6"
+                                        Margin="0,0,3,3"
+                                        AutomationProperties.Name="硬约束冲突统计卡片">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="⚠ 硬约束" 
+                                                   FontSize="11" 
+                                                   Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                   FontWeight="SemiBold"
+                                                   AutomationProperties.Name="硬约束冲突标签"/>
+                                        <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.HardConflictCount, Mode=OneWay, FallbackValue=0}" 
+                                                   FontSize="20" 
+                                                   FontWeight="Bold"
+                                                   Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                   AutomationProperties.Name="硬约束冲突数量"
+                                                   AutomationProperties.LiveSetting="Polite"/>
+                                    </StackPanel>
+                                </Border>
 
-                            <!-- Hard Constraint Conflicts Card -->
-                            <Border Grid.Row="0" Grid.Column="0"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                    BorderBrush="{ThemeResource SystemFillColorCriticalBrush}" 
-                                    BorderThickness="2" 
-                                    CornerRadius="8" 
-                                    Padding="12"
-                                    Margin="0,0,4,4"
-                                    AutomationProperties.Name="硬约束冲突统计卡片">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="⚠ 硬约束冲突" 
-                                               FontSize="12" 
-                                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                               FontWeight="SemiBold"
-                                               AutomationProperties.Name="硬约束冲突标签"/>
-                                    <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.HardConflictCount, Mode=OneWay, FallbackValue=0}" 
-                                               FontSize="24" 
-                                               FontWeight="Bold"
-                                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                               AutomationProperties.Name="硬约束冲突数量"
-                                               AutomationProperties.LiveSetting="Polite"/>
+                                <!-- Soft Constraint Conflicts Card -->
+                                <Border Grid.Row="0" Grid.Column="1"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                        BorderBrush="{ThemeResource SystemFillColorCautionBrush}" 
+                                        BorderThickness="1.5" 
+                                        CornerRadius="6" 
+                                        Padding="8,6"
+                                        Margin="3,0,0,3"
+                                        AutomationProperties.Name="软约束冲突统计卡片">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="⚠ 软约束" 
+                                                   FontSize="11" 
+                                                   Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                                   FontWeight="SemiBold"
+                                                   AutomationProperties.Name="软约束冲突标签"/>
+                                        <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.SoftConflictCount, Mode=OneWay, FallbackValue=0}" 
+                                                   FontSize="20" 
+                                                   FontWeight="Bold"
+                                                   Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                                   AutomationProperties.Name="软约束冲突数量"
+                                                   AutomationProperties.LiveSetting="Polite"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Unassigned Slots Card -->
+                                <Border Grid.Row="1" Grid.Column="0"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" 
+                                        CornerRadius="6" 
+                                        Padding="8,6"
+                                        Margin="0,3,3,0"
+                                        AutomationProperties.Name="未分配时段统计卡片">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="ℹ 未分配" 
+                                                   FontSize="11" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   FontWeight="SemiBold"
+                                                   AutomationProperties.Name="未分配时段标签"/>
+                                        <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.UnassignedSlotCount, Mode=OneWay, FallbackValue=0}" 
+                                                   FontSize="20" 
+                                                   FontWeight="Bold"
+                                                   AutomationProperties.Name="未分配时段数量"
+                                                   AutomationProperties.LiveSetting="Polite"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Ignored Conflicts Card -->
+                                <Border Grid.Row="1" Grid.Column="1"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" 
+                                        CornerRadius="6" 
+                                        Padding="8,6"
+                                        Margin="3,3,0,0"
+                                        AutomationProperties.Name="已忽略冲突统计卡片">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="✓ 已忽略" 
+                                                   FontSize="11" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   FontWeight="SemiBold"
+                                                   AutomationProperties.Name="已忽略冲突标签"/>
+                                        <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.IgnoredConflictCount, Mode=OneWay, FallbackValue=0}" 
+                                                   FontSize="20" 
+                                                   FontWeight="Bold"
+                                                   AutomationProperties.Name="已忽略冲突数量"
+                                                   AutomationProperties.LiveSetting="Polite"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- Statistics Panel -->
+                            <StackPanel Spacing="12">
+                                <!-- Statistics Title -->
+                                <TextBlock Text="统计信息" 
+                                           FontWeight="SemiBold"
+                                           FontSize="14"
+                                           Margin="0,4,0,8"
+                                           AutomationProperties.Name="统计信息标题"
+                                           AutomationProperties.HeadingLevel="Level2"/>
+                                
+                                <StackPanel Spacing="12">
+                                    <!-- Summary Stats -->
+                                    <Grid AutomationProperties.Name="统计摘要">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border x:Name="TotalAssignmentsCard"
+                                                Grid.Column="0" 
+                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                                BorderThickness="1" 
+                                                CornerRadius="8" 
+                                                Padding="12"
+                                                AutomationProperties.Name="总分配数统计卡片"
+                                                PointerEntered="StatCard_PointerEntered"
+                                                PointerExited="StatCard_PointerExited">
+                                            <StackPanel>
+                                                <TextBlock Text="总分配数" 
+                                                           FontSize="12" 
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           AutomationProperties.Name="总分配数标签"/>
+                                                <TextBlock Text="{x:Bind ViewModel.Statistics.TotalAssignments, Mode=OneWay, FallbackValue=0}" 
+                                                           FontSize="24" 
+                                                           FontWeight="Bold"
+                                                           AutomationProperties.Name="总分配数值"
+                                                           AutomationProperties.LiveSetting="Polite"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border x:Name="PersonnelCountCard"
+                                                Grid.Column="1" 
+                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                                BorderThickness="1" 
+                                                CornerRadius="8" 
+                                                Padding="12"
+                                                AutomationProperties.Name="参与人员数统计卡片"
+                                                PointerEntered="StatCard_PointerEntered"
+                                                PointerExited="StatCard_PointerExited">
+                                            <StackPanel>
+                                                <TextBlock Text="参与人员数" 
+                                                           FontSize="12" 
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           AutomationProperties.Name="参与人员数标签"/>
+                                                <TextBlock Text="{x:Bind ViewModel.PersonnelWorkloads.Count, Mode=OneWay, FallbackValue=0}" 
+                                                           FontSize="24" 
+                                                           FontWeight="Bold"
+                                                           AutomationProperties.Name="参与人员数值"
+                                                           AutomationProperties.LiveSetting="Polite"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border x:Name="PositionCountCard"
+                                                Grid.Column="2" 
+                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                                BorderThickness="1" 
+                                                CornerRadius="8" 
+                                                Padding="12"
+                                                AutomationProperties.Name="参与哨位数统计卡片"
+                                                PointerEntered="StatCard_PointerEntered"
+                                                PointerExited="StatCard_PointerExited">
+                                            <StackPanel>
+                                                <TextBlock Text="参与哨位数" 
+                                                           FontSize="12" 
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           AutomationProperties.Name="参与哨位数标签"/>
+                                                <TextBlock Text="{x:Bind ViewModel.PositionCoverages.Count, Mode=OneWay, FallbackValue=0}" 
+                                                           FontSize="24" 
+                                                           FontWeight="Bold"
+                                                           AutomationProperties.Name="参与哨位数值"
+                                                           AutomationProperties.LiveSetting="Polite"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Personnel Workload Table -->
+                                    <StackPanel>
+                                        <Grid Margin="0,8,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Text="人员工作量" 
+                                                       FontWeight="SemiBold" 
+                                                       VerticalAlignment="Center"
+                                                       AutomationProperties.Name="人员工作量统计标题"
+                                                       AutomationProperties.HeadingLevel="Level3"/>
+                                            <ComboBox Grid.Column="1"
+                                                      SelectedIndex="{x:Bind ViewModel.PersonnelWorkloadSortOrderIndex, Mode=TwoWay}"
+                                                      MinWidth="100"
+                                                      AutomationProperties.Name="工作量排序方式"
+                                                      AutomationProperties.HelpText="选择按工作量升序或降序排列">
+                                                <ComboBoxItem Content="降序"/>
+                                                <ComboBoxItem Content="升序"/>
+                                            </ComboBox>
+                                        </Grid>
+                                        <ListView ItemsSource="{x:Bind ViewModel.PersonnelWorkloads, Mode=OneWay}" 
+                                                  MaxHeight="200" 
+                                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                  AutomationProperties.Name="人员工作量统计表"
+                                                  AutomationProperties.LandmarkType="Custom">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding PersonnelName}" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding TotalShifts}" Margin="16,0" VerticalAlignment="Center"/>
+                                                        <ProgressBar Grid.Column="2" Width="100" Value="{Binding TotalShifts}" Maximum="20" Margin="8,0"/>
+                                                        <TextBlock Grid.Column="3"
+                                                                   Text="{Binding DayNightSummary}"
+                                                                   Margin="16,0,0,0"
+                                                                   VerticalAlignment="Center"
+                                                                   FontSize="12"
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                    </StackPanel>
+
+                                    <!-- Position Coverage Table -->
+                                    <StackPanel>
+                                        <TextBlock Text="哨位覆盖率" 
+                                                   FontWeight="SemiBold" 
+                                                   Margin="0,8,0,4"
+                                                   AutomationProperties.Name="哨位覆盖率统计标题"
+                                                   AutomationProperties.HeadingLevel="Level3"/>
+                                        <ListView ItemsSource="{x:Bind ViewModel.PositionCoverages, Mode=OneWay}" 
+                                                  MaxHeight="200" 
+                                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                  AutomationProperties.Name="哨位覆盖率统计表"
+                                                  AutomationProperties.LandmarkType="Custom">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding PositionName}" VerticalAlignment="Center"/>
+                                                        <ProgressBar Grid.Column="1" Width="100" Value="{Binding CoverageRate}" Maximum="1" Margin="8,0"/>
+                                                        <TextBlock Grid.Column="2"
+                                                                   Text="{Binding CoverageRateDisplay}"
+                                                                   Margin="16,0,0,0"
+                                                                   VerticalAlignment="Center"
+                                                                   FontSize="12"
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                    </StackPanel>
                                 </StackPanel>
-                            </Border>
+                            </StackPanel>
+                        </StackPanel>
 
-                            <!-- Soft Constraint Conflicts Card -->
-                            <Border Grid.Row="0" Grid.Column="1"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                    BorderBrush="{ThemeResource SystemFillColorCautionBrush}" 
-                                    BorderThickness="2" 
-                                    CornerRadius="8" 
-                                    Padding="12"
-                                    Margin="4,0,0,4"
-                                    AutomationProperties.Name="软约束冲突统计卡片">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="⚠ 软约束冲突" 
-                                               FontSize="12" 
-                                               Foreground="{ThemeResource SystemFillColorCautionBrush}"
-                                               FontWeight="SemiBold"
-                                               AutomationProperties.Name="软约束冲突标签"/>
-                                    <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.SoftConflictCount, Mode=OneWay, FallbackValue=0}" 
-                                               FontSize="24" 
-                                               FontWeight="Bold"
-                                               Foreground="{ThemeResource SystemFillColorCautionBrush}"
-                                               AutomationProperties.Name="软约束冲突数量"
-                                               AutomationProperties.LiveSetting="Polite"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Unassigned Slots Card -->
-                            <Border Grid.Row="1" Grid.Column="0"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                                    BorderThickness="1" 
-                                    CornerRadius="8" 
-                                    Padding="12"
-                                    Margin="0,4,4,0"
-                                    AutomationProperties.Name="未分配时段统计卡片">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="ℹ 未分配时段" 
-                                               FontSize="12" 
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                               FontWeight="SemiBold"
-                                               AutomationProperties.Name="未分配时段标签"/>
-                                    <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.UnassignedSlotCount, Mode=OneWay, FallbackValue=0}" 
-                                               FontSize="24" 
-                                               FontWeight="Bold"
-                                               AutomationProperties.Name="未分配时段数量"
-                                               AutomationProperties.LiveSetting="Polite"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Ignored Conflicts Card -->
-                            <Border Grid.Row="1" Grid.Column="1"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                                    BorderThickness="1" 
-                                    CornerRadius="8" 
-                                    Padding="12"
-                                    Margin="4,4,0,0"
-                                    AutomationProperties.Name="已忽略冲突统计卡片">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="✓ 已忽略" 
-                                               FontSize="12" 
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                               FontWeight="SemiBold"
-                                               AutomationProperties.Name="已忽略冲突标签"/>
-                                    <TextBlock Text="{x:Bind ViewModel.ConflictStatistics.IgnoredConflictCount, Mode=OneWay, FallbackValue=0}" 
-                                               FontSize="24" 
-                                               FontWeight="Bold"
-                                               AutomationProperties.Name="已忽略冲突数量"
-                                               AutomationProperties.LiveSetting="Polite"/>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-
-                        <!-- Filter and Sort Controls -->
-                        <StackPanel Grid.Row="2" Spacing="8" Margin="0,0,0,12" AutomationProperties.Name="筛选和排序控件">
+                                            <!-- Filter and Sort Controls -->
+                                            <StackPanel Spacing="8" Margin="0,0,0,0" AutomationProperties.Name="筛选和排序控件">
                             <!-- Type and Severity Filters -->
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -707,173 +900,16 @@
                             </Grid>
                         </StackPanel>
 
-                        <!-- Statistics Panel (Collapsible) -->
-                        <Expander Grid.Row="3"
-                                  Header="统计信息"
-                                  IsExpanded="False"
-                                  Margin="0,0,0,12"
-                                  AutomationProperties.Name="统计信息面板"
-                                  AutomationProperties.HeadingLevel="Level2">
-                            <StackPanel Spacing="12" Margin="0,8,0,0">
-                                <!-- Summary Stats -->
-                                <Grid AutomationProperties.Name="统计摘要">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <Border x:Name="TotalAssignmentsCard"
-                                            Grid.Column="0" 
-                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                                            BorderThickness="1" 
-                                            CornerRadius="8" 
-                                            Padding="12"
-                                            AutomationProperties.Name="总分配数统计卡片"
-                                            PointerEntered="StatCard_PointerEntered"
-                                            PointerExited="StatCard_PointerExited">
-                                        <StackPanel>
-                                            <TextBlock Text="总分配数" 
-                                                       FontSize="12" 
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                       AutomationProperties.Name="总分配数标签"/>
-                                            <TextBlock Text="{x:Bind ViewModel.Statistics.TotalAssignments, Mode=OneWay, FallbackValue=0}" 
-                                                       FontSize="24" 
-                                                       FontWeight="Bold"
-                                                       AutomationProperties.Name="总分配数值"
-                                                       AutomationProperties.LiveSetting="Polite"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border x:Name="PersonnelCountCard"
-                                            Grid.Column="1" 
-                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                                            BorderThickness="1" 
-                                            CornerRadius="8" 
-                                            Padding="12"
-                                            AutomationProperties.Name="参与人员数统计卡片"
-                                            PointerEntered="StatCard_PointerEntered"
-                                            PointerExited="StatCard_PointerExited">
-                                        <StackPanel>
-                                            <TextBlock Text="参与人员数" 
-                                                       FontSize="12" 
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                       AutomationProperties.Name="参与人员数标签"/>
-                                            <TextBlock Text="{x:Bind ViewModel.PersonnelWorkloads.Count, Mode=OneWay, FallbackValue=0}" 
-                                                       FontSize="24" 
-                                                       FontWeight="Bold"
-                                                       AutomationProperties.Name="参与人员数值"
-                                                       AutomationProperties.LiveSetting="Polite"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border x:Name="PositionCountCard"
-                                            Grid.Column="2" 
-                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                                            BorderThickness="1" 
-                                            CornerRadius="8" 
-                                            Padding="12"
-                                            AutomationProperties.Name="参与哨位数统计卡片"
-                                            PointerEntered="StatCard_PointerEntered"
-                                            PointerExited="StatCard_PointerExited">
-                                        <StackPanel>
-                                            <TextBlock Text="参与哨位数" 
-                                                       FontSize="12" 
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                       AutomationProperties.Name="参与哨位数标签"/>
-                                            <TextBlock Text="{x:Bind ViewModel.PositionCoverages.Count, Mode=OneWay, FallbackValue=0}" 
-                                                       FontSize="24" 
-                                                       FontWeight="Bold"
-                                                       AutomationProperties.Name="参与哨位数值"
-                                                       AutomationProperties.LiveSetting="Polite"/>
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
-
-                                <!-- Personnel Workload Table -->
-                                <StackPanel>
-                                    <TextBlock Text="人员工作量" 
-                                               FontWeight="SemiBold" 
-                                               Margin="0,8,0,4"
-                                               AutomationProperties.Name="人员工作量统计标题"
-                                               AutomationProperties.HeadingLevel="Level3"/>
-                                    <ListView ItemsSource="{x:Bind ViewModel.PersonnelWorkloads, Mode=OneWay}" 
-                                              MaxHeight="200" 
-                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                              AutomationProperties.Name="人员工作量统计表"
-                                              AutomationProperties.LandmarkType="Custom">
-                                        <ListView.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0" Text="{Binding PersonnelName}" VerticalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="1" Text="{Binding TotalShifts}" Margin="16,0" VerticalAlignment="Center"/>
-                                                    <ProgressBar Grid.Column="2" Width="100" Value="{Binding TotalShifts}" Maximum="20" Margin="8,0"/>
-                                                    <TextBlock Grid.Column="3"
-                                                               Text="{Binding DayNightSummary}"
-                                                               Margin="16,0,0,0"
-                                                               VerticalAlignment="Center"
-                                                               FontSize="12"
-                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ListView.ItemTemplate>
-                                    </ListView>
-                                </StackPanel>
-
-                                <!-- Position Coverage Table -->
-                                <StackPanel>
-                                    <TextBlock Text="哨位覆盖率" 
-                                               FontWeight="SemiBold" 
-                                               Margin="0,8,0,4"
-                                               AutomationProperties.Name="哨位覆盖率统计标题"
-                                               AutomationProperties.HeadingLevel="Level3"/>
-                                    <ListView ItemsSource="{x:Bind ViewModel.PositionCoverages, Mode=OneWay}" 
-                                              MaxHeight="200" 
-                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                              AutomationProperties.Name="哨位覆盖率统计表"
-                                              AutomationProperties.LandmarkType="Custom">
-                                        <ListView.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0" Text="{Binding PositionName}" VerticalAlignment="Center"/>
-                                                    <ProgressBar Grid.Column="1" Width="100" Value="{Binding CoverageRate}" Maximum="1" Margin="8,0"/>
-                                                    <TextBlock Grid.Column="2"
-                                                               Text="{Binding CoverageRateDisplay}"
-                                                               Margin="16,0,0,0"
-                                                               VerticalAlignment="Center"
-                                                               FontSize="12"
-                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ListView.ItemTemplate>
-                                    </ListView>
-                                </StackPanel>
-                            </StackPanel>
-                        </Expander>
-
-                        <!-- Conflict List with Grouping -->
-                        <ScrollViewer Grid.Row="4" 
-                                      Margin="0,0,0,0"
-                                      AutomationProperties.Name="冲突列表区域">
-                            <ItemsControl x:Name="ConflictListView"
-                                          ItemsSource="{x:Bind ViewModel.FilteredConflicts, Mode=OneWay}"
-                                          AutomationProperties.Name="冲突列表"
-                                          AutomationProperties.LandmarkType="Custom"
-                                          AutomationProperties.LiveSetting="Polite">
+                                            <!-- Conflict List with Grouping -->
+                                            <ScrollViewer MaxHeight="400"
+                                                          VerticalScrollBarVisibility="Auto"
+                                                          Margin="0,0,0,0"
+                                                          AutomationProperties.Name="冲突列表区域">
+                                                <ItemsControl x:Name="ConflictListView"
+                                                              ItemsSource="{x:Bind ViewModel.FilteredConflicts, Mode=OneWay}"
+                                                              AutomationProperties.Name="冲突列表"
+                                                              AutomationProperties.LandmarkType="Custom"
+                                                              AutomationProperties.LiveSetting="Polite">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="dto:ConflictDto">
                                         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -1006,39 +1042,25 @@
                                                 </Border>
                                             </StackPanel>
                                         </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                                                    </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
 
-                        <!-- Bottom Action Buttons -->
-                        <StackPanel Grid.Row="5" 
-                                    Orientation="Vertical" 
-                                    Spacing="8" 
-                                    Margin="0,12,0,0"
-                                    AutomationProperties.Name="冲突操作按钮">
-                            <Button Content="全部忽略软约束"
-                                    Command="{x:Bind ViewModel.IgnoreAllSoftConflictsCommand}"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.Name="全部忽略软约束冲突"
-                                    AutomationProperties.HelpText="将所有软约束冲突标记为已忽略"
-                                    ToolTipService.ToolTip="忽略所有软约束冲突"/>
-
-                            <Button Content="导出冲突报告"
-                                    Command="{x:Bind ViewModel.ExportConflictReportCommand}"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.Name="导出冲突报告"
-                                    AutomationProperties.HelpText="导出冲突报告为Excel或PDF文件"
-                                    ToolTipService.ToolTip="导出冲突报告"/>
-
-                            <Button Content="冲突趋势"
-                                    Command="{x:Bind ViewModel.ShowConflictTrendCommand}"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.Name="查看冲突趋势"
-                                    AutomationProperties.HelpText="查看冲突趋势分析和统计"
-                                    ToolTipService.ToolTip="查看冲突趋势"/>
-                        </StackPanel>
-                                    </Grid>
+                                            <!-- Bottom Action Buttons -->
+                                            <StackPanel Orientation="Vertical" 
+                                                        Spacing="8" 
+                                                        Margin="0,0,0,0"
+                                                        AutomationProperties.Name="冲突操作按钮">
+                                                <Button Content="全部忽略软约束"
+                                                        Command="{x:Bind ViewModel.IgnoreAllSoftConflictsCommand}"
+                                                        HorizontalAlignment="Stretch"
+                                                        AutomationProperties.Name="全部忽略软约束冲突"
+                                                        AutomationProperties.HelpText="将所有软约束冲突标记为已忽略"
+                                                        ToolTipService.ToolTip="忽略所有软约束冲突"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </ScrollViewer>
                                 </TabViewItem>
                             </TabView.TabItems>
                         </TabView>
@@ -1076,7 +1098,6 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
                                         <!-- Date -->
@@ -1101,21 +1122,7 @@
                                             </StackPanel>
                                         </StackPanel>
 
-                                        <!-- Actions -->
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                                            <Button Content="详情" 
-                                                    Tag="{x:Bind}"
-                                                    Click="ViewShiftDetailsButton_Click"
-                                                    AutomationProperties.Name="查看班次详情"
-                                                    AutomationProperties.HelpText="查看此班次的详细信息"
-                                                    ToolTipService.ToolTip="查看详情"/>
-                                            <Button Content="编辑" 
-                                                    Tag="{x:Bind}"
-                                                    Click="EditShiftButton_Click"
-                                                    AutomationProperties.Name="编辑班次分配"
-                                                    AutomationProperties.HelpText="修改此班次的人员分配"
-                                                    ToolTipService.ToolTip="编辑分配"/>
-                                        </StackPanel>
+
                                     </Grid>
                                 </DataTemplate>
                             </ListView.ItemTemplate>

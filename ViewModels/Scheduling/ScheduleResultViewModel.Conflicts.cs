@@ -17,7 +17,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
         #region 冲突相关依赖注入
 
         private IConflictDetectionService? _conflictDetectionService;
-        private IConflictReportService? _conflictReportService;
         private IConflictResolutionService? _conflictResolutionService;
 
         #endregion
@@ -178,16 +177,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
         public IAsyncRelayCommand? IgnoreAllSoftConflictsCommand { get; private set; }
 
         /// <summary>
-        /// 导出冲突报告命令
-        /// </summary>
-        public IAsyncRelayCommand? ExportConflictReportCommand { get; private set; }
-
-        /// <summary>
-        /// 显示冲突趋势命令
-        /// </summary>
-        public IAsyncRelayCommand? ShowConflictTrendCommand { get; private set; }
-
-        /// <summary>
         /// 清除高亮命令
         /// </summary>
         public IRelayCommand? ClearHighlightsCommand { get; private set; }
@@ -207,8 +196,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
             UnignoreConflictCommand = new AsyncRelayCommand<ConflictDto>(UnignoreConflictAsync);
             FixConflictInGridCommand = new AsyncRelayCommand<ConflictDto>(FixConflictInGridAsync);
             IgnoreAllSoftConflictsCommand = new AsyncRelayCommand(IgnoreAllSoftConflictsAsync);
-            ExportConflictReportCommand = new AsyncRelayCommand(ExportConflictReportAsync);
-            ShowConflictTrendCommand = new AsyncRelayCommand(ShowConflictTrendAsync);
             ClearHighlightsCommand = new RelayCommand(ClearHighlights);
         }
 
@@ -743,53 +730,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
             catch (Exception ex)
             {
                 await _dialogService.ShowErrorAsync("修复冲突失败", ex);
-            }
-        }
-
-        #endregion
-
-        #region 冲突报告
-
-        /// <summary>
-        /// 导出冲突报告
-        /// </summary>
-        private async Task ExportConflictReportAsync()
-        {
-            if (Schedule == null || _conflictReportService == null) return;
-
-            try
-            {
-                // TODO: 显示格式选择对话框
-                await _dialogService.ShowWarningAsync("功能开发中", "冲突报告导出功能正在开发中");
-            }
-            catch (Exception ex)
-            {
-                await _dialogService.ShowErrorAsync("导出冲突报告失败", ex);
-            }
-        }
-
-        /// <summary>
-        /// 显示冲突趋势
-        /// </summary>
-        private async Task ShowConflictTrendAsync()
-        {
-            if (Schedule == null || _conflictReportService == null) return;
-
-            try
-            {
-                // 创建并显示趋势对话框
-                var dialog = new Views.Scheduling.ConflictTrendDialog(_conflictReportService);
-                dialog.XamlRoot = App.MainWindow.Content.XamlRoot;
-                
-                // 初始化对话框数据
-                await dialog.InitializeAsync(Schedule.Id, AllConflicts.ToList());
-                
-                // 显示对话框
-                await dialog.ShowAsync();
-            }
-            catch (Exception ex)
-            {
-                await _dialogService.ShowErrorAsync("显示冲突趋势失败", ex);
             }
         }
 
