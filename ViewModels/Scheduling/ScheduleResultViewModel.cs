@@ -125,6 +125,13 @@ namespace AutoScheduling3.ViewModels.Scheduling
             set => SetProperty(ref _hasUnsavedChanges, value);
         }
 
+        private string _hintText = string.Empty;
+        public string HintText
+        {
+            get => _hintText;
+            set => SetProperty(ref _hintText, value);
+        }
+
         #endregion
 
         #region Position View 数据
@@ -503,7 +510,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
             {
                 var personnel = await _personnelService.GetAllAsync();
                 AllPersonnel = new ObservableCollection<PersonnelDto>(personnel);
-                PersonnelSuggestions = new ObservableCollection<PersonnelDto>(personnel);
+                
+                // 只显示在排班结果中有哨位分配的人员
+                var personnelWithShifts = GetPersonnelWithShifts();
+                PersonnelSuggestions = new ObservableCollection<PersonnelDto>(personnelWithShifts);
             }
             catch (Exception ex)
             {
@@ -512,14 +522,39 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         /// <summary>
-        /// 更新人员搜索建议（使用模糊匹配）
+        /// 获取在排班结果中有哨位分配的人员列表
+        /// </summary>
+        private List<PersonnelDto> GetPersonnelWithShifts()
+        {
+            if (Schedule?.Shifts == null || !Schedule.Shifts.Any())
+            {
+                return new List<PersonnelDto>();
+            }
+
+            // 获取所有有班次的人员ID
+            var personnelIdsWithShifts = Schedule.Shifts
+                .Select(s => s.PersonnelId)
+                .Distinct()
+                .ToHashSet();
+
+            // 从AllPersonnel中筛选出有班次的人员
+            return AllPersonnel
+                .Where(p => personnelIdsWithShifts.Contains(p.Id))
+                .ToList();
+        }
+
+        /// <summary>
+        /// 更新人员搜索建议（使用模糊匹配，仅显示有哨位分配的人员）
         /// </summary>
         public async void UpdatePersonnelSuggestions(string searchText)
         {
             try
             {
+                // 获取有哨位分配的人员
+                var personnelWithShifts = GetPersonnelWithShifts();
+                
                 // 使用PersonnelSearchHelper进行模糊搜索
-                var searchResults = await _searchHelper.SearchAsync(searchText, AllPersonnel);
+                var searchResults = await _searchHelper.SearchAsync(searchText, personnelWithShifts);
                 PersonnelSuggestions = new ObservableCollection<PersonnelDto>(searchResults);
             }
             catch (Exception ex)
@@ -527,13 +562,14 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 System.Diagnostics.Debug.WriteLine($"ScheduleResultViewModel: 搜索失败: {ex.Message}");
                 
                 // 降级到简单搜索
+                var personnelWithShifts = GetPersonnelWithShifts();
                 if (string.IsNullOrWhiteSpace(searchText))
                 {
-                    PersonnelSuggestions = new ObservableCollection<PersonnelDto>(AllPersonnel);
+                    PersonnelSuggestions = new ObservableCollection<PersonnelDto>(personnelWithShifts);
                 }
                 else
                 {
-                    var filtered = AllPersonnel
+                    var filtered = personnelWithShifts
                         .Where(p => p.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
                         .ToList();
                     PersonnelSuggestions = new ObservableCollection<PersonnelDto>(filtered);

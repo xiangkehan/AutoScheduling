@@ -570,21 +570,23 @@
                                                   MaxHeight="200" 
                                                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                                                   AutomationProperties.Name="人员工作量统计表"
-                                                  AutomationProperties.LandmarkType="Custom">
+                                                  AutomationProperties.LandmarkType="Custom"
+                                                  DoubleTapped="PersonnelWorkloadListView_DoubleTapped">
                                             <ListView.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid>
+                                                <DataTemplate x:DataType="dto:PersonnelWorkload">
+                                                    <Grid PointerEntered="PersonnelWorkloadItem_PointerEntered"
+                                                          PointerExited="PersonnelWorkloadItem_PointerExited">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="*"/>
                                                             <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
-                                                        <TextBlock Grid.Column="0" Text="{Binding PersonnelName}" VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="1" Text="{Binding TotalShifts}" Margin="16,0" VerticalAlignment="Center"/>
-                                                        <ProgressBar Grid.Column="2" Width="100" Value="{Binding TotalShifts}" Maximum="20" Margin="8,0"/>
+                                                        <TextBlock Grid.Column="0" Text="{x:Bind PersonnelName}" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind TotalShifts}" Margin="16,0" VerticalAlignment="Center"/>
+                                                        <ProgressBar Grid.Column="2" Width="100" Value="{x:Bind TotalShifts}" Maximum="20" Margin="8,0"/>
                                                         <TextBlock Grid.Column="3"
-                                                                   Text="{Binding DayNightSummary}"
+                                                                   Text="{x:Bind DayNightSummary}"
                                                                    Margin="16,0,0,0"
                                                                    VerticalAlignment="Center"
                                                                    FontSize="12"
@@ -606,19 +608,21 @@
                                                   MaxHeight="200" 
                                                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                                                   AutomationProperties.Name="哨位覆盖率统计表"
-                                                  AutomationProperties.LandmarkType="Custom">
+                                                  AutomationProperties.LandmarkType="Custom"
+                                                  DoubleTapped="PositionCoverageListView_DoubleTapped">
                                             <ListView.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid>
+                                                <DataTemplate x:DataType="dto:PositionCoverage">
+                                                    <Grid PointerEntered="PositionCoverageItem_PointerEntered"
+                                                          PointerExited="PositionCoverageItem_PointerExited">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="*"/>
                                                             <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
-                                                        <TextBlock Grid.Column="0" Text="{Binding PositionName}" VerticalAlignment="Center"/>
-                                                        <ProgressBar Grid.Column="1" Width="100" Value="{Binding CoverageRate}" Maximum="1" Margin="8,0"/>
+                                                        <TextBlock Grid.Column="0" Text="{x:Bind PositionName}" VerticalAlignment="Center"/>
+                                                        <ProgressBar Grid.Column="1" Width="100" Value="{x:Bind CoverageRate}" Maximum="1" Margin="8,0"/>
                                                         <TextBlock Grid.Column="2"
-                                                                   Text="{Binding CoverageRateDisplay}"
+                                                                   Text="{x:Bind CoverageRateDisplay}"
                                                                    Margin="16,0,0,0"
                                                                    VerticalAlignment="Center"
                                                                    FontSize="12"
@@ -1118,14 +1122,29 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Unsaved Changes Warning -->
-                <TextBlock Grid.Column="0"
-                           Text="您有未保存的更改"
-                           Foreground="{ThemeResource WarningBrush}"
-                           VerticalAlignment="Center"
-                           Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                           AutomationProperties.Name="未保存更改警告"
-                           AutomationProperties.LiveSetting="Assertive"/>
+                <!-- Left Side: Hints and Warnings -->
+                <StackPanel Grid.Column="0" Orientation="Vertical" Spacing="4" VerticalAlignment="Center">
+                    <!-- Unsaved Changes Warning -->
+                    <TextBlock Text="您有未保存的更改"
+                               Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                               Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                               AutomationProperties.Name="未保存更改警告"
+                               AutomationProperties.LiveSetting="Assertive"/>
+                    
+                    <!-- Hint Text -->
+                    <TextBlock Text="{x:Bind ViewModel.HintText, Mode=OneWay}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               FontSize="12"
+                               Visibility="{x:Bind ViewModel.HintText, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"
+                               AutomationProperties.Name="操作提示"
+                               AutomationProperties.LiveSetting="Polite">
+                        <TextBlock.Transitions>
+                            <TransitionCollection>
+                                <EntranceThemeTransition/>
+                            </TransitionCollection>
+                        </TextBlock.Transitions>
+                    </TextBlock>
+                </StackPanel>
 
                 <!-- Action Buttons -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">

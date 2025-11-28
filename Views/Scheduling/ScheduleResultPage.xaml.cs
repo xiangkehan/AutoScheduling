@@ -456,5 +456,150 @@ namespace AutoScheduling3.Views.Scheduling
         }
 
         #endregion
+
+        #region 人员工作量处理
+
+        /// <summary>
+        /// 人员工作量列表双击处理 - 高亮显示该人员的所有哨位
+        /// </summary>
+        private void PersonnelWorkloadListView_DoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
+        {
+            if (sender is ListView listView && listView.SelectedItem is PersonnelWorkload workload)
+            {
+                // 复用搜索功能，高亮显示该人员的所有哨位
+                HighlightPersonnelShifts(workload);
+            }
+        }
+
+        /// <summary>
+        /// 高亮显示指定人员的所有哨位
+        /// </summary>
+        private void HighlightPersonnelShifts(PersonnelWorkload workload)
+        {
+            // 从AllPersonnel中查找对应的人员
+            var personnel = ViewModel.AllPersonnel.FirstOrDefault(p => p.Id == workload.PersonnelId);
+            if (personnel == null)
+            {
+                return;
+            }
+
+            // 设置选中的人员
+            ViewModel.SelectedPersonnel = personnel;
+            ViewModel.PersonnelSearchText = personnel.Name;
+
+            // 清除其他筛选条件
+            ViewModel.FilterStartDate = default;
+            ViewModel.FilterEndDate = default;
+            ViewModel.SelectedPositionIds.Clear();
+
+            // 应用筛选（触发搜索和高亮）
+            if (ViewModel.ApplyFiltersCommand?.CanExecute(null) == true)
+            {
+                _ = ViewModel.ApplyFiltersCommand.ExecuteAsync(null);
+            }
+
+            // 切换到搜索筛选标签页并打开右侧面板
+            ViewModel.IsSearchPaneOpen = true;
+            ViewModel.RightPaneTabIndex = 0; // 搜索筛选标签页
+        }
+
+        /// <summary>
+        /// 人员工作量列表项鼠标进入时显示提示
+        /// </summary>
+        private void PersonnelWorkloadItem_PointerEntered(object sender, PointerRoutedEventArgs e)
+        {
+            if (sender is Grid grid && grid.DataContext is PersonnelWorkload workload)
+            {
+                ViewModel.HintText = $"💡 双击 \"{workload.PersonnelName}\" 可高亮显示该人员的所有哨位";
+            }
+        }
+
+        /// <summary>
+        /// 人员工作量列表项鼠标离开时清除提示
+        /// </summary>
+        private void PersonnelWorkloadItem_PointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            ViewModel.HintText = string.Empty;
+        }
+
+        #endregion
+
+        #region 哨位覆盖率处理
+
+        /// <summary>
+        /// 哨位覆盖率列表双击处理 - 切换到哨位视图
+        /// </summary>
+        private void PositionCoverageListView_DoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
+        {
+            if (sender is ListView listView && listView.SelectedItem is PositionCoverage coverage)
+            {
+                // 切换到哨位视图并选择对应的哨位
+                OpenPositionView(coverage);
+            }
+        }
+
+        /// <summary>
+        /// 打开哨位视图并选择指定哨位
+        /// </summary>
+        private void OpenPositionView(PositionCoverage coverage)
+        {
+            // 从PositionSchedules中查找对应的哨位
+            var positionSchedule = ViewModel.PositionSchedules.FirstOrDefault(p => p.PositionId == coverage.PositionId);
+            if (positionSchedule == null)
+            {
+                // 如果还没有构建哨位视图数据，先切换视图模式触发数据构建
+                ViewModel.CurrentViewMode = ViewMode.ByPosition;
+                
+                // 等待数据构建完成后再选择
+                // 注意：这里使用异步方式，避免阻塞UI
+                _ = System.Threading.Tasks.Task.Run(async () =>
+                {
+                    // 等待一小段时间让数据构建完成
+                    await System.Threading.Tasks.Task.Delay(100);
+                    
+                    // 在UI线程上执行选择操作
+                    DispatcherQueue.TryEnqueue(() =>
+                    {
+                        positionSchedule = ViewModel.PositionSchedules.FirstOrDefault(p => p.PositionId == coverage.PositionId);
+                        if (positionSchedule != null && ViewModel.SelectPositionCommand?.CanExecute(positionSchedule) == true)
+                        {
+                            _ = ViewModel.SelectPositionCommand.ExecuteAsync(positionSchedule);
+                        }
+                    });
+                });
+            }
+            else
+            {
+                // 切换到哨位视图
+                ViewModel.CurrentViewMode = ViewMode.ByPosition;
+                
+                // 选择对应的哨位
+                if (ViewModel.SelectPositionCommand?.CanExecute(positionSchedule) == true)
+                {
+                    _ = ViewModel.SelectPositionCommand.ExecuteAsync(positionSchedule);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 哨位覆盖率列表项鼠标进入时显示提示
+        /// </summary>
+        private void PositionCoverageItem_PointerEntered(object sender, PointerRoutedEventArgs e)
+        {
+            if (sender is Grid grid && grid.DataContext is PositionCoverage coverage)
+            {
+                ViewModel.HintText = $"💡 双击 \"{coverage.PositionName}\" 可切换到该哨位的详细视图";
+            }
+        }
+
+        /// <summary>
+        /// 哨位覆盖率列表项鼠标离开时清除提示
+        /// </summary>
+        private void PositionCoverageItem_PointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            ViewModel.HintText = string.Empty;
+        }
+
+        #endregion
     }
 }
