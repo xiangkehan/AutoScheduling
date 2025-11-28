@@ -18,38 +18,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 工具栏区域 -->
-        <StackPanel x:Name="ToolbarPanel"
-                    Grid.Row="0"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Spacing="8"
-                    Margin="0,0,0,8"
-                    AutomationProperties.Name="表格工具栏">
 
-            <Button x:Name="ExportButton"
-                    Content="导出"
-                    ToolTipService.ToolTip="导出当前人员的排班表"
-                    Click="ExportButton_Click"
-                    AutomationProperties.Name="导出人员排班表"
-                    AutomationProperties.HelpText="导出当前人员的排班表为Excel或CSV文件"/>
-
-            <Button x:Name="PrintButton"
-                    Content="&#xE749;"
-                    FontFamily="Segoe MDL2 Assets"
-                    ToolTipService.ToolTip="打印"
-                    Click="PrintButton_Click"
-                    AutomationProperties.Name="打印人员排班表"
-                    AutomationProperties.HelpText="打印当前人员的排班表"/>
-
-            <Button x:Name="FullScreenButton"
-                    Content="&#xE740;"
-                    FontFamily="Segoe MDL2 Assets"
-                    ToolTipService.ToolTip="全屏查看"
-                    Click="FullScreenButton_Click"
-                    AutomationProperties.Name="全屏查看"
-                    AutomationProperties.HelpText="在全屏模式下查看人员排班表"/>
-        </StackPanel>
 
         <!-- 人员信息区域 -->
         <Grid Grid.Row="1" Margin="0,0,0,12">

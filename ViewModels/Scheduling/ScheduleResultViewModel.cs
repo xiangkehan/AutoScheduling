@@ -95,6 +95,28 @@ namespace AutoScheduling3.ViewModels.Scheduling
             set => SetProperty(ref _isConflictPaneOpen, value);
         }
 
+        private bool _isSearchPaneOpen;
+        public bool IsSearchPaneOpen
+        {
+            get => _isSearchPaneOpen;
+            set
+            {
+                if (SetProperty(ref _isSearchPaneOpen, value))
+                {
+                    // 当搜索面板打开时，自动切换到搜索筛选标签页并打开右侧面板
+                    if (value)
+                    {
+                        RightPaneTabIndex = 0; // 搜索筛选标签页
+                        // 确保右侧面板打开（如果冲突面板也打开，保持打开状态）
+                        if (!IsConflictPaneOpen)
+                        {
+                            IsConflictPaneOpen = true;
+                        }
+                    }
+                }
+            }
+        }
+
         private bool _hasUnsavedChanges;
         public bool HasUnsavedChanges
         {
