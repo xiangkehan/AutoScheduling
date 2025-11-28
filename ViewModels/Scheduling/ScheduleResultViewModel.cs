@@ -45,6 +45,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 if (SetProperty(ref _schedule, value))
                 {
                     OnPropertyChanged(nameof(GridData));
+                    _ = BuildStatisticsAsync();
                 }
             }
         }
@@ -230,6 +231,24 @@ namespace AutoScheduling3.ViewModels.Scheduling
             get => _personnelWorkloads;
             set => SetProperty(ref _personnelWorkloads, value);
         }
+
+        private int _personnelWorkloadSortOrderIndex = 0; // 0 = 降序, 1 = 升序
+        public int PersonnelWorkloadSortOrderIndex
+        {
+            get => _personnelWorkloadSortOrderIndex;
+            set
+            {
+                if (SetProperty(ref _personnelWorkloadSortOrderIndex, value))
+                {
+                    SortPersonnelWorkloads();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 是否按升序排序（true=升序，false=降序）
+        /// </summary>
+        private bool IsAscendingSort => PersonnelWorkloadSortOrderIndex == 1;
 
         private ObservableCollection<PositionCoverage> _positionCoverages = new();
         public ObservableCollection<PositionCoverage> PositionCoverages
@@ -1200,7 +1219,26 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 });
             }
 
-            PersonnelWorkloads = new ObservableCollection<PersonnelWorkload>(workloads);
+            // 应用排序
+            var sortedWorkloads = IsAscendingSort
+                ? workloads.OrderBy(w => w.TotalShifts).ToList()
+                : workloads.OrderByDescending(w => w.TotalShifts).ToList();
+
+            PersonnelWorkloads = new ObservableCollection<PersonnelWorkload>(sortedWorkloads);
+        }
+
+        /// <summary>
+        /// 对人员工作量进行排序
+        /// </summary>
+        private void SortPersonnelWorkloads()
+        {
+            if (PersonnelWorkloads == null || !PersonnelWorkloads.Any()) return;
+
+            var sorted = IsAscendingSort
+                ? PersonnelWorkloads.OrderBy(w => w.TotalShifts).ToList()
+                : PersonnelWorkloads.OrderByDescending(w => w.TotalShifts).ToList();
+
+            PersonnelWorkloads = new ObservableCollection<PersonnelWorkload>(sorted);
         }
 
         /// <summary>
