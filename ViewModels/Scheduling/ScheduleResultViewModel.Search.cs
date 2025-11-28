@@ -80,9 +80,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         /// <summary>
-        /// 右侧面板当前激活的标签页索引（0=搜索筛选，1=搜索结果，2=冲突管理）
+        /// 右侧面板当前激活的标签页索引（0=搜索筛选，1=冲突管理）
         /// </summary>
-        private int _rightPaneTabIndex = 2; // 默认显示冲突管理
+        private int _rightPaneTabIndex = 1; // 默认显示冲突管理
         public int RightPaneTabIndex
         {
             get => _rightPaneTabIndex;
@@ -224,9 +224,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 
                 if (HasActiveSearch)
                 {
-                    // 切换到搜索结果标签页
-                    RightPaneTabIndex = 1;
-                    
                     // 滚动到第一个结果
                     CurrentHighlightIndex = 0;
                     await ScrollToHighlightAsync(0);
@@ -377,7 +374,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             HighlightedCellKeys = new HashSet<string>();
 
             // 切换回冲突管理标签页
-            RightPaneTabIndex = 2;
+            RightPaneTabIndex = 1;
 
             await Task.CompletedTask;
         }
@@ -394,6 +391,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
             if (!CanNavigateToPreviousHighlight()) return;
 
             CurrentHighlightIndex--;
+            
+            // 仅滚动和高亮，不触发完整的选择逻辑
             _ = ScrollToHighlightAsync(CurrentHighlightIndex);
             
             // 通知命令状态变化
@@ -409,6 +408,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
             if (!CanNavigateToNextHighlight()) return;
 
             CurrentHighlightIndex++;
+            
+            // 仅滚动和高亮，不触发完整的选择逻辑
             _ = ScrollToHighlightAsync(CurrentHighlightIndex);
             
             // 通知命令状态变化

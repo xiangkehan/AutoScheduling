@@ -294,235 +294,41 @@
                                                             AutomationProperties.Name="重置筛选按钮"
                                                             AutomationProperties.HelpText="清除所有筛选条件并重新加载数据"
                                                             ToolTipService.ToolTip="重置筛选"/>
+                                                    
+                                                    <!-- Navigation Buttons -->
+                                                    <Grid ColumnSpacing="8" Margin="0,8,0,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        
+                                                        <Button Grid.Column="0"
+                                                                Command="{x:Bind ViewModel.NavigateToPreviousHighlightCommand}"
+                                                                HorizontalAlignment="Stretch"
+                                                                AutomationProperties.Name="上一个结果"
+                                                                AutomationProperties.HelpText="跳转到上一个搜索结果"
+                                                                ToolTipService.ToolTip="上一个">
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <FontIcon Glyph="&#xE76B;" FontSize="14"/>
+                                                                <TextBlock Text="上一个"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        
+                                                        <Button Grid.Column="1"
+                                                                Command="{x:Bind ViewModel.NavigateToNextHighlightCommand}"
+                                                                HorizontalAlignment="Stretch"
+                                                                AutomationProperties.Name="下一个结果"
+                                                                AutomationProperties.HelpText="跳转到下一个搜索结果"
+                                                                ToolTipService.ToolTip="下一个">
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <TextBlock Text="下一个"/>
+                                                                <FontIcon Glyph="&#xE76C;" FontSize="14"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </Grid>
                                                 </StackPanel>
                                             </StackPanel>
                                         </ScrollViewer>
-                                    </Grid>
-                                </TabViewItem>
-
-                                <!-- Search Results Tab -->
-                                <TabViewItem Header="搜索结果"
-                                             IsClosable="False"
-                                             Visibility="{x:Bind ViewModel.IsSearchResultsTabVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                             AutomationProperties.Name="搜索结果标签页">
-                                    <Grid Padding="0,12,0,0">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-
-                                        <!-- Filter Summary and Result Count -->
-                                        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,12">
-                                            <TextBlock Text="搜索结果" 
-                                                       Style="{ThemeResource SubtitleTextBlockStyle}"
-                                                       AutomationProperties.Name="搜索结果标题"
-                                                       AutomationProperties.HeadingLevel="Level2"/>
-                                            
-                                            <!-- Result Count -->
-                                            <TextBlock FontSize="14" 
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                       AutomationProperties.Name="搜索结果数量"
-                                                       AutomationProperties.LiveSetting="Polite"
-                                                       Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='invert'}">
-                                                <Run Text="共"/>
-                                                <Run Text="{x:Bind ViewModel.SearchResults.Count, Mode=OneWay}" FontWeight="SemiBold"/>
-                                                <Run Text="个班次"/>
-                                            </TextBlock>
-                                        </StackPanel>
-
-                                        <!-- Loading Indicator -->
-                                        <StackPanel Grid.Row="2"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center"
-                                                    Spacing="12"
-                                                    Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                    AutomationProperties.Name="加载中指示器">
-                                            <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
-                                                          Width="48"
-                                                          Height="48"/>
-                                            <TextBlock Text="正在搜索..."
-                                                       Style="{ThemeResource BodyTextBlockStyle}"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                       HorizontalAlignment="Center"/>
-                                        </StackPanel>
-
-                                        <!-- Search Results List (使用 ListView 启用虚拟化) -->
-                                        <ListView Grid.Row="2"
-                                                  ItemsSource="{x:Bind ViewModel.SearchResults, Mode=OneWay}"
-                                                  SelectionMode="Single"
-                                                  SelectedItem="{x:Bind ViewModel.SelectedSearchResult, Mode=TwoWay}"
-                                                  Margin="0,0,0,12"
-                                                  Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='invert'}"
-                                                  AutomationProperties.Name="搜索结果列表"
-                                                  AutomationProperties.LandmarkType="Custom"
-                                                  AutomationProperties.LiveSetting="Polite">
-                                            <ListView.ItemContainerStyle>
-                                                <Style TargetType="ListViewItem">
-                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                                    <Setter Property="Padding" Value="0"/>
-                                                    <Setter Property="Margin" Value="0"/>
-                                                </Style>
-                                            </ListView.ItemContainerStyle>
-                                            <ListView.ItemTemplate>
-                                                    <DataTemplate x:DataType="dto:SearchResultItem">
-                                                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="8"
-                                                                Padding="12"
-                                                                Margin="0,0,0,8"
-                                                                AutomationProperties.Name="{x:Bind DisplayText}">
-                                                            <StackPanel Spacing="8">
-                                                                <!-- Date and Time Header -->
-                                                                <Grid>
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="Auto"/>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                    </Grid.ColumnDefinitions>
-
-                                                                    <!-- Night/Day Icon -->
-                                                                    <FontIcon Grid.Column="0"
-                                                                              Glyph="{x:Bind IsNightShift, Converter={StaticResource BoolToGlyphConverter}, ConverterParameter='🌙|☀'}"
-                                                                              FontSize="16"
-                                                                              Margin="0,0,8,0"
-                                                                              VerticalAlignment="Top"
-                                                                              Foreground="{x:Bind IsNightShift, Converter={StaticResource BoolToColorConverter}, ConverterParameter='#FFB366|#FFD700'}"/>
-
-                                                                    <!-- Date and Time Info -->
-                                                                    <StackPanel Grid.Column="1" Spacing="2">
-                                                                        <TextBlock FontWeight="SemiBold"
-                                                                                   TextWrapping="Wrap"
-                                                                                   AutomationProperties.Name="日期和时段">
-                                                                            <Run Text="{x:Bind Date, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
-                                                                            <Run Text="{x:Bind DayOfWeek}"/>
-                                                                            <Run Text="{x:Bind PeriodName}"/>
-                                                                        </TextBlock>
-                                                                    </StackPanel>
-                                                                </Grid>
-
-                                                                <!-- Position and Personnel Info -->
-                                                                <Grid>
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                    </Grid.ColumnDefinitions>
-
-                                                                    <!-- Position -->
-                                                                    <StackPanel Grid.Column="0" Spacing="2">
-                                                                        <TextBlock Text="哨位" 
-                                                                                   FontSize="10" 
-                                                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                                                                        <TextBlock Text="{x:Bind PositionName}" 
-                                                                                   FontSize="12"
-                                                                                   FontWeight="SemiBold"/>
-                                                                    </StackPanel>
-
-                                                                    <!-- Personnel -->
-                                                                    <StackPanel Grid.Column="1" Spacing="2">
-                                                                        <TextBlock Text="人员" 
-                                                                                   FontSize="10" 
-                                                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                                                                        <TextBlock Text="{x:Bind PersonnelName}" 
-                                                                                   FontSize="12"
-                                                                                   FontWeight="SemiBold"/>
-                                                                    </StackPanel>
-                                                                </Grid>
-
-                                                                <!-- Tags (Manual Assignment, Conflict) -->
-                                                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                    <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                                                            CornerRadius="4"
-                                                                            Padding="6,2"
-                                                                            Visibility="{x:Bind IsManualAssignment, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                        <TextBlock Text="✋ 手动"
-                                                                                   FontSize="10"
-                                                                                   Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
-                                                                                   FontWeight="SemiBold"/>
-                                                                    </Border>
-                                                                    <Border Background="{ThemeResource SystemFillColorCriticalBrush}"
-                                                                            CornerRadius="4"
-                                                                            Padding="6,2"
-                                                                            Visibility="{x:Bind HasConflict, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                        <TextBlock Text="⚠ 冲突"
-                                                                                   FontSize="10"
-                                                                                   Foreground="White"
-                                                                                   FontWeight="SemiBold"/>
-                                                                    </Border>
-                                                                </StackPanel>
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </DataTemplate>
-                                            </ListView.ItemTemplate>
-                                        </ListView>
-
-                                        <!-- Navigation Buttons -->
-                                        <Grid Grid.Row="3" 
-                                              Padding="0,8,0,0"
-                                              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                              BorderThickness="0,1,0,0"
-                                              AutomationProperties.Name="导航按钮区域">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- Previous Button -->
-                                            <Button Grid.Column="0"
-                                                    Content="◀ 上一个"
-                                                    Command="{x:Bind ViewModel.NavigateToPreviousHighlightCommand}"
-                                                    HorizontalAlignment="Stretch"
-                                                    Margin="0,8,4,0"
-                                                    AutomationProperties.Name="上一个搜索结果"
-                                                    AutomationProperties.HelpText="跳转到上一个搜索结果"
-                                                    ToolTipService.ToolTip="上一个"/>
-
-                                            <!-- Current Position Indicator -->
-                                            <TextBlock Grid.Column="1"
-                                                       VerticalAlignment="Center"
-                                                       HorizontalAlignment="Center"
-                                                       Margin="8,8,8,0"
-                                                       FontSize="14"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                       AutomationProperties.Name="当前位置指示器"
-                                                       AutomationProperties.LiveSetting="Polite">
-                                                <Run Text="{x:Bind ViewModel.CurrentHighlightIndex, Mode=OneWay, Converter={StaticResource AddOneConverter}}"/>
-                                                <Run Text="/"/>
-                                                <Run Text="{x:Bind ViewModel.SearchResults.Count, Mode=OneWay}"/>
-                                            </TextBlock>
-
-                                            <!-- Next Button -->
-                                            <Button Grid.Column="2"
-                                                    Content="下一个 ▶"
-                                                    Command="{x:Bind ViewModel.NavigateToNextHighlightCommand}"
-                                                    HorizontalAlignment="Stretch"
-                                                    Margin="4,8,0,0"
-                                                    AutomationProperties.Name="下一个搜索结果"
-                                                    AutomationProperties.HelpText="跳转到下一个搜索结果"
-                                                    ToolTipService.ToolTip="下一个"/>
-                                        </Grid>
-
-                                        <!-- Empty State -->
-                                        <StackPanel Grid.Row="2"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center"
-                                                    Spacing="12"
-                                                    Visibility="{x:Bind ViewModel.SearchResults.Count, Mode=OneWay, Converter={StaticResource ZeroToVisibilityConverter}}"
-                                                    AutomationProperties.Name="空状态提示">
-                                            <FontIcon Glyph="&#xE721;" 
-                                                      FontSize="48" 
-                                                      Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                                            <TextBlock Text="未找到匹配的班次"
-                                                       Style="{ThemeResource BodyTextBlockStyle}"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                       HorizontalAlignment="Center"/>
-                                            <TextBlock Text="请尝试调整筛选条件"
-                                                       FontSize="12"
-                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                                       HorizontalAlignment="Center"/>
-                                        </StackPanel>
                                     </Grid>
                                 </TabViewItem>
 

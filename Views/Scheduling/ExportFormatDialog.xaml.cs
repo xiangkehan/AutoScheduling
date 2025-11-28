@@ -61,6 +61,10 @@ public sealed partial class ExportFormatDialog : ContentDialog
     /// </summary>
     private void FormatRadioButton_Checked(object sender, RoutedEventArgs e)
     {
+        // 如果控件还未初始化完成，直接返回
+        if (PdfNoticeBar == null)
+            return;
+
         // 更新选中的格式
         if (ExcelRadioButton.IsChecked == true)
         {
