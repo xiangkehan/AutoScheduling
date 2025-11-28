@@ -32,10 +32,7 @@
                        AutomationProperties.HeadingLevel="Level1"/>
 
             <!-- 外观设置 -->
-            <Border Style="{StaticResource EnhancedCardStyle}">
-                <Border.RenderTransform>
-                    <CompositeTransform/>
-                </Border.RenderTransform>
+            <ContentControl Style="{StaticResource EnhancedCardStyle}">
                 <StackPanel Spacing="16">
                     <TextBlock Text="外观" 
                                Style="{StaticResource SubtitleTextStyle}"
@@ -72,10 +69,10 @@
                                    FontSize="12"/>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </ContentControl>
 
             <!-- 动画设置 -->
-            <Border Style="{StaticResource EnhancedCardStyle}">
+            <ContentControl Style="{StaticResource EnhancedCardStyle}">
                 <StackPanel Spacing="16">
                     <TextBlock Text="动画与交互" 
                                Style="{StaticResource SubtitleTextStyle}"
@@ -131,10 +128,10 @@
                         </Grid>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </ContentControl>
 
             <!-- 无障碍设置 -->
-            <Border Style="{StaticResource EnhancedCardStyle}">
+            <ContentControl Style="{StaticResource EnhancedCardStyle}">
                 <StackPanel Spacing="16">
                     <TextBlock Text="无障碍" 
                                Style="{StaticResource SubtitleTextStyle}"
@@ -188,10 +185,10 @@
                                    FontSize="12"/>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </ContentControl>
 
             <!-- 性能设置 -->
-            <Border Style="{StaticResource EnhancedCardStyle}">
+            <ContentControl Style="{StaticResource EnhancedCardStyle}">
                 <StackPanel Spacing="16">
                     <TextBlock Text="性能" 
                                Style="{StaticResource SubtitleTextStyle}"
@@ -213,10 +210,10 @@
                                    FontSize="12"/>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </ContentControl>
 
             <!-- 重置设置 -->
-            <Border Style="{StaticResource EnhancedCardStyle}">
+            <ContentControl Style="{StaticResource EnhancedCardStyle}">
                 <StackPanel Spacing="16">
                     <TextBlock Text="重置" 
                                Style="{StaticResource SubtitleTextStyle}"
@@ -234,13 +231,10 @@
                                Foreground="{ThemeResource TextSecondaryBrush}"
                                FontSize="12"/>
                 </StackPanel>
-            </Border>
+            </ContentControl>
 
             <!-- 数据导入导出 -->
-            <Border Style="{StaticResource EnhancedCardStyle}">
-                <Border.RenderTransform>
-                    <CompositeTransform/>
-                </Border.RenderTransform>
+            <ContentControl Style="{StaticResource EnhancedCardStyle}">
                 <StackPanel Spacing="16">
                     <StackPanel Spacing="8">
                         <TextBlock Text="数据导入导出" 
@@ -288,13 +282,10 @@
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </ContentControl>
 
             <!-- 数据管理 -->
-            <Border Style="{StaticResource EnhancedCardStyle}">
-                <Border.RenderTransform>
-                    <CompositeTransform/>
-                </Border.RenderTransform>
+            <ContentControl Style="{StaticResource EnhancedCardStyle}">
                 <StackPanel Spacing="16">
                     <StackPanel Spacing="8">
                         <TextBlock Text="数据管理" 
@@ -328,13 +319,10 @@
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </ContentControl>
 
             <!-- 存储文件路径 -->
-            <Border Style="{StaticResource EnhancedCardStyle}">
-                <Border.RenderTransform>
-                    <CompositeTransform/>
-                </Border.RenderTransform>
+            <ContentControl Style="{StaticResource EnhancedCardStyle}">
                 <StackPanel Spacing="16">
                     <StackPanel Spacing="8">
                         <TextBlock Text="存储文件路径" 
@@ -495,7 +483,7 @@
                         </Button.Content>
                     </Button>
                 </StackPanel>
-            </Border>
+            </ContentControl>
 
         </StackPanel>
     </ScrollViewer>
