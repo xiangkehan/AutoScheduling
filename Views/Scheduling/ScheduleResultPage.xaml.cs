@@ -498,9 +498,8 @@ namespace AutoScheduling3.Views.Scheduling
                 _ = ViewModel.ApplyFiltersCommand.ExecuteAsync(null);
             }
 
-            // 切换到搜索筛选标签页并打开右侧面板
+            // 打开搜索面板
             ViewModel.IsSearchPaneOpen = true;
-            ViewModel.RightPaneTabIndex = 0; // 搜索筛选标签页
         }
 
         /// <summary>
@@ -523,6 +522,8 @@ namespace AutoScheduling3.Views.Scheduling
         }
 
         #endregion
+
+
 
         #region 哨位覆盖率处理
 

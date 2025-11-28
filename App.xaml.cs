@@ -73,6 +73,9 @@ namespace AutoScheduling3
         {
             InitializeComponent();
             
+            // 设置应用程序语言为中文
+            Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = "zh-CN";
+            
             // 设置 EPPlus 8+ 的非商业许可证（需要提供个人或组织名称）
             ExcelPackage.License.SetNonCommercialOrganization("AutoScheduling3");
             

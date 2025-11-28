@@ -168,7 +168,7 @@
 
             <!-- Main Content and Conflict Pane -->
             <SplitView Grid.Row="1"
-                       IsPaneOpen="{x:Bind ViewModel.IsConflictPaneOpen, Mode=TwoWay}"
+                       IsPaneOpen="{x:Bind ViewModel.IsRightPaneOpen, Mode=TwoWay}"
                        PanePlacement="Right"
                        DisplayMode="Inline"
                        OpenPaneLength="360">
@@ -178,21 +178,11 @@
                           Padding="12"
                           AutomationProperties.Name="右侧面板"
                           AutomationProperties.LandmarkType="Custom">
-                        <!-- TabView for Search Filter, Search Results and Conflict Management -->
-                        <TabView x:Name="RightPaneTabView"
-                                 SelectedIndex="{x:Bind ViewModel.RightPaneTabIndex, Mode=TwoWay}"
-                                 TabWidthMode="Equal"
-                                 CanDragTabs="False"
-                                 CanReorderTabs="False"
-                                 IsAddTabButtonVisible="False"
-                                 AutomationProperties.Name="右侧面板标签页">
-                            
-                            <TabView.TabItems>
-                                <!-- Search Filter Tab -->
-                                <TabViewItem Header="搜索筛选"
-                                             IsClosable="False"
-                                             Visibility="{x:Bind ViewModel.IsSearchPaneOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                             AutomationProperties.Name="搜索筛选标签页">
+                        <!-- 右侧面板内容区域 -->
+                        <Grid AutomationProperties.Name="右侧面板内容">
+                            <!-- 搜索筛选面板 -->
+                            <Grid Visibility="{x:Bind ViewModel.IsSearchPaneOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                  AutomationProperties.Name="搜索筛选面板">
                                     <Grid Padding="0,12,0,0">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
@@ -330,12 +320,11 @@
                                             </StackPanel>
                                         </ScrollViewer>
                                     </Grid>
-                                </TabViewItem>
+                            </Grid>
 
-                                <!-- Conflict Management Tab -->
-                                <TabViewItem Header="冲突管理"
-                                             IsClosable="False"
-                                             AutomationProperties.Name="冲突管理标签页">
+                            <!-- 冲突管理面板 -->
+                            <Grid Visibility="{x:Bind ViewModel.IsConflictPaneOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                  AutomationProperties.Name="冲突管理面板">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto"
                                                   Padding="0,12,0,0">
                                         <StackPanel Spacing="12">
@@ -871,9 +860,8 @@
                                             </StackPanel>
                                         </StackPanel>
                                     </ScrollViewer>
-                                </TabViewItem>
-                            </TabView.TabItems>
-                        </TabView>
+                            </Grid>
+                        </Grid>
                     </Grid>
                 </SplitView.Pane>
                 <SplitView.Content>

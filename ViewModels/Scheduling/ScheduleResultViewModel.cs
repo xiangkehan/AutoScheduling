@@ -93,7 +93,24 @@ namespace AutoScheduling3.ViewModels.Scheduling
         public bool IsConflictPaneOpen
         {
             get => _isConflictPaneOpen;
-            set => SetProperty(ref _isConflictPaneOpen, value);
+            set
+            {
+                if (SetProperty(ref _isConflictPaneOpen, value))
+                {
+                    // 当冲突面板打开时，关闭搜索面板（互斥显示）
+                    if (value)
+                    {
+                        // 关闭搜索面板（避免同时显示两个面板）
+                        if (_isSearchPaneOpen)
+                        {
+                            _isSearchPaneOpen = false;
+                            OnPropertyChanged(nameof(IsSearchPaneOpen));
+                        }
+                    }
+                    // 更新右侧面板的打开状态
+                    UpdateRightPaneOpenState();
+                }
+            }
         }
 
         private bool _isSearchPaneOpen;
@@ -104,18 +121,36 @@ namespace AutoScheduling3.ViewModels.Scheduling
             {
                 if (SetProperty(ref _isSearchPaneOpen, value))
                 {
-                    // 当搜索面板打开时，自动切换到搜索筛选标签页并打开右侧面板
+                    // 当搜索面板打开时，关闭冲突面板（互斥显示）
                     if (value)
                     {
-                        RightPaneTabIndex = 0; // 搜索筛选标签页
-                        // 确保右侧面板打开（如果冲突面板也打开，保持打开状态）
-                        if (!IsConflictPaneOpen)
+                        // 关闭冲突面板（避免同时显示两个面板）
+                        if (_isConflictPaneOpen)
                         {
-                            IsConflictPaneOpen = true;
+                            _isConflictPaneOpen = false;
+                            OnPropertyChanged(nameof(IsConflictPaneOpen));
                         }
                     }
+                    // 更新右侧面板的打开状态
+                    UpdateRightPaneOpenState();
                 }
             }
+        }
+
+        /// <summary>
+        /// 根据搜索和冲突面板的状态更新右侧面板的打开状态
+        /// </summary>
+        private void UpdateRightPaneOpenState()
+        {
+            // 只要搜索或冲突任一面板打开，就打开右侧面板
+            IsRightPaneOpen = IsSearchPaneOpen || IsConflictPaneOpen;
+        }
+
+        private bool _isRightPaneOpen = true;
+        public bool IsRightPaneOpen
+        {
+            get => _isRightPaneOpen;
+            set => SetProperty(ref _isRightPaneOpen, value);
         }
 
         private bool _hasUnsavedChanges;

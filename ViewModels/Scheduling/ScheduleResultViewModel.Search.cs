@@ -79,15 +79,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             }
         }
 
-        /// <summary>
-        /// 右侧面板当前激活的标签页索引（0=搜索筛选，1=冲突管理）
-        /// </summary>
-        private int _rightPaneTabIndex = 1; // 默认显示冲突管理
-        public int RightPaneTabIndex
-        {
-            get => _rightPaneTabIndex;
-            set => SetProperty(ref _rightPaneTabIndex, value);
-        }
+
 
         /// <summary>
         /// 搜索结果标签页是否可见
@@ -372,9 +364,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
             // 清除高亮
             HighlightedCellKeys = new HashSet<string>();
-
-            // 切换回冲突管理标签页
-            RightPaneTabIndex = 1;
 
             await Task.CompletedTask;
         }
