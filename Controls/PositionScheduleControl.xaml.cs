@@ -112,6 +112,21 @@ namespace AutoScheduling3.Controls
         public PositionScheduleControl()
         {
             InitializeComponent();
+            
+            // 监听主题变化
+            this.ActualThemeChanged += OnActualThemeChanged;
+        }
+
+        /// <summary>
+        /// 主题变化时重新构建表格以更新颜色
+        /// </summary>
+        private void OnActualThemeChanged(FrameworkElement sender, object args)
+        {
+            // 重新构建当前显示的周视图
+            if (ScheduleData != null && ScheduleData.Weeks.Count > 0)
+            {
+                BuildWeeklyGrid(ScheduleData.Weeks[ScheduleData.CurrentWeekIndex]);
+            }
         }
 
         /// <summary>
@@ -379,10 +394,10 @@ namespace AutoScheduling3.Controls
             // 根据单元格状态应用不同样式
             if (isHighlighted)
             {
-                // 高亮单元格：橙色边框 + 半透明橙色背景（与网格视图一致）
-                border.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Orange);
+                // 高亮单元格：深橙色边框 + 金黄色背景（更明显）
+                border.BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 140, 0)); // 深橙色
                 border.BorderThickness = new Thickness(3);
-                border.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(50, 255, 165, 0)); // 半透明橙色
+                border.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(80, 255, 215, 0)); // 半透明金黄色
             }
             else if (cellData != null)
             {
@@ -408,10 +423,32 @@ namespace AutoScheduling3.Controls
                 VerticalAlignment = VerticalAlignment.Center,
                 TextWrapping = TextWrapping.Wrap,
                 TextAlignment = TextAlignment.Center,
-                Foreground = cellData?.IsAssigned == true
-                    ? (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"]
-                    : (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"]
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                FontSize = 13
             };
+
+            // 根据单元格状态和当前主题设置文本颜色
+            var isDarkTheme = this.ActualTheme == ElementTheme.Dark;
+            
+            if (cellData?.IsAssigned == true)
+            {
+                // 已分配：根据主题使用对比度高的颜色
+                textBlock.Foreground = new SolidColorBrush(
+                    isDarkTheme 
+                        ? Windows.UI.Color.FromArgb(255, 255, 255, 255)  // 深色模式：白色
+                        : Windows.UI.Color.FromArgb(255, 0, 0, 0)        // 浅色模式：黑色
+                );
+                textBlock.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+            }
+            else
+            {
+                // 未分配：使用灰色
+                textBlock.Foreground = new SolidColorBrush(
+                    isDarkTheme
+                        ? Windows.UI.Color.FromArgb(255, 150, 150, 150)  // 深色模式：浅灰
+                        : Windows.UI.Color.FromArgb(255, 120, 120, 120)  // 浅色模式：深灰
+                );
+            }
 
             border.Child = textBlock;
 
@@ -576,7 +613,7 @@ namespace AutoScheduling3.Controls
                     // 更新样式（焦点高亮优先级最高）
                     if (isFocused)
                     {
-                        // 焦点高亮：使用资源字典中的颜色
+                        // 焦点高亮：使用更明显的颜色
                         try
                         {
                             border.BorderBrush = (Brush)Application.Current.Resources["FocusedHighlightBrush"];
@@ -585,10 +622,10 @@ namespace AutoScheduling3.Controls
                         }
                         catch
                         {
-                            // 回退到硬编码颜色
-                            border.BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 140, 0));
+                            // 回退到更明显的硬编码颜色
+                            border.BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 69, 0)); // 橙红色
                             border.BorderThickness = new Thickness(4);
-                            border.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(100, 255, 140, 0));
+                            border.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(120, 255, 165, 0)); // 更明显的橙色背景
                         }
                         
                         // 更新文本样式
@@ -599,7 +636,7 @@ namespace AutoScheduling3.Controls
                     }
                     else if (isHighlighted)
                     {
-                        // 普通高亮：使用资源字典中的颜色
+                        // 普通高亮：使用更明显的颜色
                         try
                         {
                             border.BorderBrush = (Brush)Application.Current.Resources["SearchHighlightBrush"];
@@ -608,16 +645,16 @@ namespace AutoScheduling3.Controls
                         }
                         catch
                         {
-                            // 回退到硬编码颜色
-                            border.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Orange);
+                            // 回退到更明显的硬编码颜色
+                            border.BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 140, 0)); // 深橙色
                             border.BorderThickness = new Thickness(3);
-                            border.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(50, 255, 165, 0));
+                            border.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(80, 255, 215, 0)); // 半透明金黄色
                         }
                         
-                        // 恢复文本样式
+                        // 更新文本样式
                         if (border.Child is TextBlock textBlock)
                         {
-                            textBlock.FontWeight = Microsoft.UI.Text.FontWeights.Normal;
+                            textBlock.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
                         }
                     }
                     else

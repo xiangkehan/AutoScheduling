@@ -98,6 +98,24 @@ public sealed partial class CellModel : UserControl
     public CellModel()
     {
         this.InitializeComponent();
+        
+        // 监听主题变化
+        this.ActualThemeChanged += OnActualThemeChanged;
+    }
+
+    /// <summary>
+    /// 主题变化时重新应用样式
+    /// </summary>
+    private void OnActualThemeChanged(FrameworkElement sender, object args)
+    {
+        // 重新应用当前单元格的样式
+        UpdateCellAppearance();
+        
+        // 如果有高亮状态，也需要更新
+        if (IsHighlighted || IsFocusedHighlight)
+        {
+            UpdateHighlightState();
+        }
     }
 
     /// <summary>
@@ -193,7 +211,9 @@ public sealed partial class CellModel : UserControl
     /// </summary>
     private void ApplyHighlightStyle()
     {
-        // 使用资源字典中定义的高亮颜色
+        var isDarkTheme = this.ActualTheme == ElementTheme.Dark;
+        
+        // 使用更明显的高亮颜色（深橙色边框 + 黄色背景）
         try
         {
             CellBorder.BorderBrush = (Brush)Application.Current.Resources["SearchHighlightBrush"];
@@ -202,14 +222,19 @@ public sealed partial class CellModel : UserControl
         }
         catch
         {
-            // 回退到硬编码颜色
-            CellBorder.BorderBrush = new SolidColorBrush(Colors.Orange);
+            // 回退到更明显的硬编码颜色
+            CellBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(255, 255, 140, 0)); // 深橙色
             CellBorder.BorderThickness = new Thickness(3);
-            CellBorder.Background = new SolidColorBrush(Color.FromArgb(50, 255, 165, 0));
+            CellBorder.Background = new SolidColorBrush(Color.FromArgb(80, 255, 215, 0)); // 半透明金黄色
         }
         
-        PersonnelNameText.Foreground = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
-        PersonnelNameText.FontWeight = Microsoft.UI.Text.FontWeights.Normal;
+        // 高亮时使用高对比度文本
+        PersonnelNameText.Foreground = new SolidColorBrush(
+            isDarkTheme 
+                ? Windows.UI.Color.FromArgb(255, 255, 255, 255)  // 深色模式：白色
+                : Windows.UI.Color.FromArgb(255, 0, 0, 0)        // 浅色模式：黑色
+        );
+        PersonnelNameText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
         
         // 清除阴影效果
         CellBorder.Shadow = null;
@@ -221,7 +246,9 @@ public sealed partial class CellModel : UserControl
     /// </summary>
     private void ApplyFocusedHighlightStyle()
     {
-        // 使用资源字典中定义的焦点高亮颜色
+        var isDarkTheme = this.ActualTheme == ElementTheme.Dark;
+        
+        // 使用更明显的焦点高亮颜色
         try
         {
             CellBorder.BorderBrush = (Brush)Application.Current.Resources["FocusedHighlightBrush"];
@@ -230,13 +257,18 @@ public sealed partial class CellModel : UserControl
         }
         catch
         {
-            // 回退到硬编码颜色
-            CellBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(255, 255, 140, 0));
+            // 回退到更明显的硬编码颜色
+            CellBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(255, 255, 69, 0)); // 橙红色
             CellBorder.BorderThickness = new Thickness(4);
-            CellBorder.Background = new SolidColorBrush(Color.FromArgb(100, 255, 140, 0));
+            CellBorder.Background = new SolidColorBrush(Color.FromArgb(120, 255, 165, 0)); // 更明显的橙色背景
         }
         
-        PersonnelNameText.Foreground = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+        // 焦点高亮时使用高对比度文本
+        PersonnelNameText.Foreground = new SolidColorBrush(
+            isDarkTheme 
+                ? Windows.UI.Color.FromArgb(255, 255, 255, 255)  // 深色模式：白色
+                : Windows.UI.Color.FromArgb(255, 0, 0, 0)        // 浅色模式：黑色
+        );
         PersonnelNameText.FontWeight = Microsoft.UI.Text.FontWeights.Bold;
         
         // 添加阴影效果（如果支持）
@@ -320,10 +352,18 @@ public sealed partial class CellModel : UserControl
     /// </summary>
     private void ApplyNormalStyle()
     {
+        var isDarkTheme = this.ActualTheme == ElementTheme.Dark;
+        
         CellBorder.BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
         CellBorder.BorderThickness = new Thickness(1);
         CellBorder.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
-        PersonnelNameText.Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+        
+        // 未分配单元格：使用灰色文本
+        PersonnelNameText.Foreground = new SolidColorBrush(
+            isDarkTheme
+                ? Windows.UI.Color.FromArgb(255, 150, 150, 150)  // 深色模式：浅灰
+                : Windows.UI.Color.FromArgb(255, 120, 120, 120)  // 浅色模式：深灰
+        );
     }
 
     /// <summary>
@@ -331,10 +371,19 @@ public sealed partial class CellModel : UserControl
     /// </summary>
     private void ApplyAssignedStyle()
     {
+        var isDarkTheme = this.ActualTheme == ElementTheme.Dark;
+        
         CellBorder.BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
         CellBorder.BorderThickness = new Thickness(1);
         CellBorder.Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
-        PersonnelNameText.Foreground = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+        
+        // 已分配单元格：使用高对比度文本
+        PersonnelNameText.Foreground = new SolidColorBrush(
+            isDarkTheme 
+                ? Windows.UI.Color.FromArgb(255, 255, 255, 255)  // 深色模式：白色
+                : Windows.UI.Color.FromArgb(255, 0, 0, 0)        // 浅色模式：黑色
+        );
+        PersonnelNameText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
     }
 
     /// <summary>
@@ -342,10 +391,18 @@ public sealed partial class CellModel : UserControl
     /// </summary>
     private void ApplyManualAssignmentStyle()
     {
+        var isDarkTheme = this.ActualTheme == ElementTheme.Dark;
+        
         CellBorder.BorderBrush = new SolidColorBrush((Color)Application.Current.Resources["SystemAccentColor"]);
         CellBorder.BorderThickness = new Thickness(2);
         CellBorder.Background = (Brush)Application.Current.Resources["AccentFillColorTertiaryBrush"];
-        PersonnelNameText.Foreground = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+        
+        // 使用高对比度文本
+        PersonnelNameText.Foreground = new SolidColorBrush(
+            isDarkTheme 
+                ? Windows.UI.Color.FromArgb(255, 255, 255, 255)  // 深色模式：白色
+                : Windows.UI.Color.FromArgb(255, 0, 0, 0)        // 浅色模式：黑色
+        );
     }
 
     /// <summary>
@@ -353,6 +410,8 @@ public sealed partial class CellModel : UserControl
     /// </summary>
     private void ApplyConflictStyle()
     {
+        var isDarkTheme = this.ActualTheme == ElementTheme.Dark;
+        
         CellBorder.BorderBrush = new SolidColorBrush((Color)Application.Current.Resources["SystemErrorTextColor"]);
         CellBorder.BorderThickness = new Thickness(2);
         
@@ -366,7 +425,12 @@ public sealed partial class CellModel : UserControl
             CellBorder.Background = new SolidColorBrush(global::Windows.UI.Color.FromArgb(30, 255, 0, 0));
         }
         
-        PersonnelNameText.Foreground = new SolidColorBrush((Color)Application.Current.Resources["SystemErrorTextColor"]);
+        // 冲突文本使用红色
+        PersonnelNameText.Foreground = new SolidColorBrush(
+            isDarkTheme
+                ? Windows.UI.Color.FromArgb(255, 255, 100, 100)  // 深色模式：浅红色
+                : Windows.UI.Color.FromArgb(255, 200, 0, 0)      // 浅色模式：深红色
+        );
     }
 
     /// <summary>
