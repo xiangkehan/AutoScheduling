@@ -17,7 +17,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
         #region 冲突相关依赖注入
 
         private IConflictDetectionService? _conflictDetectionService;
-        private IConflictReportService? _conflictReportService;
         private IConflictResolutionService? _conflictResolutionService;
 
         #endregion

@@ -78,5 +78,5 @@ dotnet build -r win-arm64
 ### EPPlus
 
 - **License Context**: EPPlus 许可证上下文已在应用程序启动时（`App.xaml.cs`）全局设置为 `NonCommercial`
-- **重要**: 不要在其他服务（如 `ConflictReportService`）的构造函数中重复设置 `ExcelPackage.LicenseContext`
+- **重要**: 不要在其他服务的构造函数中重复设置 `ExcelPackage.LicenseContext`
 - **原因**: 全局设置一次即可，重复设置是冗余的且不符合最佳实践

@@ -389,7 +389,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
             IPositionService positionService,
             IScheduleGridExporter gridExporter,
             IConflictDetectionService? conflictDetectionService = null,
-            IConflictReportService? conflictReportService = null,
             IConflictResolutionService? conflictResolutionService = null)
         {
             _schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
@@ -401,7 +400,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
             
             // 冲突管理服务（可选）
             _conflictDetectionService = conflictDetectionService;
-            _conflictReportService = conflictReportService;
             _conflictResolutionService = conflictResolutionService;
 
             // 初始化命令
