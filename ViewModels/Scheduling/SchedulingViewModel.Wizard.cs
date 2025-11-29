@@ -19,15 +19,15 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private void NextStep()
         {
-            if (CurrentStep < 5 && CanGoNext())
+            if (CurrentStep < 6 && CanGoNext())
             {
                 System.Diagnostics.Debug.WriteLine($"=== NextStep: 从步骤 {CurrentStep} 前进 ===");
                 
-                // 如果模板已应用，并且在第1步，直接跳到第5步
+                // 如果模板已应用，并且在第1步，直接跳到第6步（摘要）
                 if (TemplateApplied && CurrentStep == 1)
                 {
-                    CurrentStep = 5;
-                    BuildSummarySections(); // Build summary when jumping to step 5
+                    CurrentStep = 6;
+                    BuildSummarySections(); // Build summary when jumping to step 6
                 }
                 else
                 {
@@ -41,7 +41,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 {
                     _ = LoadConstraintsAsync();
                 }
-                if (CurrentStep == 5)
+                if (CurrentStep == 6)
                 {
                     BuildSummarySections();
                 }
@@ -73,7 +73,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             if (CurrentStep > 1)
             {
                 // 如果模板已应用，防止回退到人员/岗位/约束步骤，只能回到第1步
-                if (TemplateApplied && CurrentStep > 1 && CurrentStep <= 5)
+                if (TemplateApplied && CurrentStep > 1 && CurrentStep <= 6)
                 {
                     CurrentStep = 1;
                 }
@@ -94,7 +94,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
             2 => ValidateStep2(out _),
             3 => ValidateStep3(out _),
             4 => true, // Constraints step is always navigable if reached
-            5 => false, // Cannot go next from summary
+            5 => true, // Algorithm config step is always navigable if reached
+            6 => false, // Cannot go next from summary
             _ => false
         };
 
@@ -152,16 +153,16 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// </summary>
         private bool CanExecuteScheduling()
         {
-            var step5 = CurrentStep == 5;
+            var step6 = CurrentStep == 6;
             var notExecuting = !IsExecuting;
             var step1Valid = ValidateStep1(out var step1Error);
             var step2Valid = ValidateStep2(out var step2Error);
             var step3Valid = ValidateStep3(out var step3Error);
             
-            var canExecute = step5 && notExecuting && step1Valid && step2Valid && step3Valid;
+            var canExecute = step6 && notExecuting && step1Valid && step2Valid && step3Valid;
             
-            // 只在步骤5且验证失败时输出调试信息
-            if (step5 && !canExecute)
+            // 只在步骤6且验证失败时输出调试信息
+            if (step6 && !canExecute)
             {
                 System.Diagnostics.Debug.WriteLine($"=== 开始排班按钮被禁用 ===");
                 if (IsExecuting)
@@ -196,11 +197,15 @@ namespace AutoScheduling3.ViewModels.Scheduling
             
             try
             {
+                // 保存算法配置
+                await AlgorithmConfigViewModel.SaveConfigAsync();
+                
                 // 在后台线程构建请求，避免UI冻结
                 var request = await Task.Run(() => BuildSchedulingRequest());
                 
                 System.Diagnostics.Debug.WriteLine($"准备导航到排班进度页面: {request.Title}");
                 System.Diagnostics.Debug.WriteLine($"人员数: {request.PersonnelIds.Count}, 哨位数: {request.PositionIds.Count}");
+                System.Diagnostics.Debug.WriteLine($"排班模式: {request.SchedulingMode}");
                 
                 // 验证请求数据的有效性
                 if (request.PersonnelIds == null || !request.PersonnelIds.Any())
@@ -256,7 +261,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 HolidayConfigId = UseActiveHolidayConfig ? null : SelectedHolidayConfigId,
                 EnabledFixedRuleIds = FixedPositionRules.Where(r => r.IsEnabled).Select(r => r.Id).ToList(),
                 EnabledManualAssignmentIds = enabledManualAssignmentIds,
-                TemporaryManualAssignments = temporaryManualAssignments
+                TemporaryManualAssignments = temporaryManualAssignments,
+                SchedulingMode = AlgorithmConfigViewModel.SelectedMode
             };
         }
 

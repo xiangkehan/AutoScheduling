@@ -176,6 +176,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<SchedulingViewModel>();
         services.AddTransient<ScheduleResultViewModel>();
         services.AddTransient<SchedulingProgressViewModel>();
+        services.AddTransient<AlgorithmConfigViewModel>();
 
         // 历史ViewModels
         services.AddTransient<HistoryViewModel>();

@@ -310,6 +310,11 @@ public class SchedulingRequestDto
     public List<ManualAssignmentRequestItem>? TemporaryManualAssignments { get; set; }
     
     public int? HolidayConfigId { get; set; }
+
+    /// <summary>
+    /// 排班模式（默认混合模式）
+    /// </summary>
+    public SchedulingMode SchedulingMode { get; set; } = SchedulingMode.Hybrid;
 }
 
 /// <summary>

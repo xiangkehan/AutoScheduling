@@ -8,6 +8,7 @@
     xmlns:converters="using:AutoScheduling3.Converters"
     xmlns:dto="using:AutoScheduling3.DTOs"
     xmlns:models="using:AutoScheduling3.Models.Constraints"
+    xmlns:local="using:AutoScheduling3.Views.Scheduling"
     mc:Ignorable="d"
     x:Name="Root"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
@@ -549,10 +550,24 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Step 5: Summary -->
+                <!-- Step 5: Algorithm Configuration -->
                 <Grid Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=5, Mode=OneWay}">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="步骤 5: 确认参数并执行" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                        <TextBlock Text="步骤 5: 算法配置" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                        <ContentControl Content="{x:Bind ViewModel.AlgorithmConfigViewModel, Mode=OneTime}">
+                            <ContentControl.ContentTemplate>
+                                <DataTemplate>
+                                    <local:AlgorithmConfigStep/>
+                                </DataTemplate>
+                            </ContentControl.ContentTemplate>
+                        </ContentControl>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Step 6: Summary -->
+                <Grid Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=6, Mode=OneWay}">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="步骤 6: 确认参数并执行" Style="{ThemeResource SubtitleTextBlockStyle}"/>
                         <ItemsRepeater ItemsSource="{x:Bind ViewModel.SummarySections, Mode=OneWay}">
                             <ItemsRepeater.ItemTemplate>
                                 <DataTemplate x:DataType="viewmodels:SummarySection">
@@ -589,11 +604,11 @@
                 <Button Content="上一步" Command="{x:Bind ViewModel.PreviousStepCommand}"
                         Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='&gt;1', Mode=OneWay}"/>
                 <Button Content="下一步" Command="{x:Bind ViewModel.NextStepCommand}" Style="{ThemeResource AccentButtonStyle}"
-                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='&lt;5', Mode=OneWay}"/>
+                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter='&lt;6', Mode=OneWay}"/>
                 <Button Content="保存为模板" Command="{x:Bind ViewModel.SaveAsTemplateCommand}"
-                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=5, Mode=OneWay}"/>
+                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=6, Mode=OneWay}"/>
                 <Button Content="开始排班" Command="{x:Bind ViewModel.ExecuteSchedulingCommand}" Style="{ThemeResource AccentButtonStyle}"
-                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=5, Mode=OneWay}">
+                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=6, Mode=OneWay}">
                     <Button.Flyout>
                         <Flyout>
                             <StackPanel Spacing="8">

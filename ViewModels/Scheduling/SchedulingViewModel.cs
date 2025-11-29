@@ -50,6 +50,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
         // 哨位人员管理器
         private readonly PositionPersonnelManager _positionPersonnelManager;
 
+        // 算法配置视图模型
+        public AlgorithmConfigViewModel AlgorithmConfigViewModel { get; }
+
         #endregion
 
         #region 缓存
@@ -75,7 +78,8 @@ namespace AutoScheduling3.ViewModels.Scheduling
             ITemplateService templateService,
             ISchedulingDraftService? draftService,
             DialogService dialogService,
-            NavigationService navigationService)
+            NavigationService navigationService,
+            AlgorithmConfigViewModel algorithmConfigViewModel)
         {
             // 依赖注入
             _schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
@@ -85,6 +89,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             _draftService = draftService;
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
             _navigation_service = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+            AlgorithmConfigViewModel = algorithmConfigViewModel ?? throw new ArgumentNullException(nameof(algorithmConfigViewModel));
             
             // 初始化管理器
             _manualAssignmentManager = new ManualAssignmentManager();
@@ -184,10 +189,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
             IsLoadingInitial = true;
             try
             {
-                // 并行加载人员和哨位数据
+                // 并行加载人员、哨位数据和算法配置
                 var personnelTask = _personnelService.GetAllAsync();
                 var positionTask = _positionService.GetAllAsync();
-                await Task.WhenAll(personnelTask, positionTask);
+                var configTask = AlgorithmConfigViewModel.LoadConfigAsync();
+                await Task.WhenAll(personnelTask, positionTask, configTask);
                 
                 // 设置可用列表
                 AvailablePersonnels = new ObservableCollection<PersonnelDto>(personnelTask.Result);
