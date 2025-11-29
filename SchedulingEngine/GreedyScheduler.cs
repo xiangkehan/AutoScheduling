@@ -610,8 +610,9 @@ public class GreedySchedulerConfig
 {
     /// <summary>
     /// 充分休息得分权重 - 对应需求6.1
+    /// 提高权重以减少休息时间不足的问题
     /// </summary>
-    public double RestWeight { get; set; } = 1.0;
+    public double RestWeight { get; set; } = 3.0;
 
     /// <summary>
     /// 休息日平衡得分权重 - 对应需求6.2

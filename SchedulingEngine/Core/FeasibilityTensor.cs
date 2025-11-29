@@ -201,6 +201,9 @@ namespace AutoScheduling3.SchedulingEngine.Core
             {
                 _tensor[x, periodIdx, personIdx] = false;
             }
+            
+            // 同步到二进制张量
+            SyncBinaryTensorForPersonPeriod(personIdx, periodIdx);
         }
 
         /// <summary>
@@ -215,6 +218,31 @@ namespace AutoScheduling3.SchedulingEngine.Core
                     _tensor[positionIdx, periodIdx, z] = false;
                 }
             }
+            
+            // 同步到二进制张量
+            SyncBinaryTensorForSlot(positionIdx, periodIdx);
+        }
+        
+        /// <summary>
+        /// 同步指定哨位和时段的二进制张量
+        /// </summary>
+        private void SyncBinaryTensorForSlot(int positionIdx, int periodIdx)
+        {
+            for (int slice = 0; slice < _binarySlices; slice++)
+            {
+                ulong value = 0;
+                int startPerson = slice * 64;
+                int endPerson = Math.Min(startPerson + 64, _personCount);
+
+                for (int z = startPerson; z < endPerson; z++)
+                {
+                    if (_tensor[positionIdx, periodIdx, z])
+                    {
+                        value |= (1UL << (z - startPerson));
+                    }
+                }
+                _binaryTensor[positionIdx, periodIdx, slice] = value;
+            }
         }
 
         /// <summary>
@@ -227,6 +255,32 @@ namespace AutoScheduling3.SchedulingEngine.Core
                 if (x != assignedPositionIdx)
                 {
                     _tensor[x, periodIdx, personIdx] = false;
+                }
+            }
+            
+            // 同步到二进制张量
+            SyncBinaryTensorForPersonPeriod(personIdx, periodIdx);
+        }
+        
+        /// <summary>
+        /// 同步指定人员和时段的二进制张量
+        /// </summary>
+        private void SyncBinaryTensorForPersonPeriod(int personIdx, int periodIdx)
+        {
+            int slice = personIdx / 64;
+            int bitPosition = personIdx % 64;
+            
+            for (int x = 0; x < _positionCount; x++)
+            {
+                if (_tensor[x, periodIdx, personIdx])
+                {
+                    // 设置为可行（位为1）
+                    _binaryTensor[x, periodIdx, slice] |= (1UL << bitPosition);
+                }
+                else
+                {
+                    // 设置为不可行（位为0）
+                    _binaryTensor[x, periodIdx, slice] &= ~(1UL << bitPosition);
                 }
             }
         }

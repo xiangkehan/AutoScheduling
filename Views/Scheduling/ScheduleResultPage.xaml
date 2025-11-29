@@ -316,6 +316,16 @@
                                                             </StackPanel>
                                                         </Button>
                                                     </Grid>
+                                                    
+                                                    <!-- Search Result Count -->
+                                                    <TextBlock Text="{x:Bind ViewModel.SearchResultCountText, Mode=OneWay}"
+                                                               HorizontalAlignment="Center"
+                                                               Margin="0,8,0,0"
+                                                               FontSize="13"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                               Visibility="{x:Bind ViewModel.HasActiveSearch, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                               AutomationProperties.Name="搜索结果计数"
+                                                               AutomationProperties.LiveSetting="Polite"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </ScrollViewer>
