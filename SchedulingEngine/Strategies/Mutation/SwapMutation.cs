@@ -143,7 +143,7 @@ public class SwapMutation : IMutationStrategy
         int originalPersonIdx = individual.Genes[date][periodIdx, positionIdx];
 
         // 获取该时段的可行人员 - 对应需求5.3
-        var feasiblePersons = _feasibilityTensor.GetFeasiblePersons(date, periodIdx, positionIdx);
+        var feasiblePersons = _feasibilityTensor.GetFeasiblePersons(positionIdx, periodIdx);
 
         if (feasiblePersons == null || feasiblePersons.Length == 0)
         {
