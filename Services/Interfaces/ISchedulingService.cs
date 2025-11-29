@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoScheduling3.Models.Constraints; // 新增约束模型引用
+using AutoScheduling3.SchedulingEngine.Config; // 遗传算法配置
 
 namespace AutoScheduling3.Services.Interfaces;
 
@@ -23,8 +24,9 @@ public interface ISchedulingService
  /// <param name="request">排班请求</param>
  /// <param name="progress">进度报告回调</param>
  /// <param name="cancellationToken">取消令牌</param>
+ /// <param name="mode">排班模式（仅贪心或混合模式）</param>
  /// <returns>排班结果</returns>
- Task<SchedulingResult> ExecuteSchedulingAsync(SchedulingRequestDto request, IProgress<SchedulingProgressReport>? progress = null, CancellationToken cancellationToken = default);
+ Task<SchedulingResult> ExecuteSchedulingAsync(SchedulingRequestDto request, IProgress<SchedulingProgressReport>? progress = null, CancellationToken cancellationToken = default, SchedulingMode mode = SchedulingMode.GreedyOnly);
 
  /// <summary>
  /// 获取草稿列表
@@ -113,4 +115,21 @@ public interface ISchedulingService
  /// <param name="id">要确认的草稿ID</param>
  /// <param name="clearOtherDrafts">是否清空其他草稿，默认为true</param>
  Task ConfirmScheduleAndClearOthersAsync(int id, bool clearOtherDrafts = true);
+
+ // === 新增：遗传算法配置管理方法 ===
+
+ /// <summary>
+ /// 获取遗传算法调度器配置
+ /// </summary>
+ Task<GeneticSchedulerConfig> GetGeneticSchedulerConfigAsync();
+
+ /// <summary>
+ /// 保存遗传算法调度器配置
+ /// </summary>
+ Task SaveGeneticSchedulerConfigAsync(GeneticSchedulerConfig config);
+
+ /// <summary>
+ /// 重置遗传算法调度器配置为默认值
+ /// </summary>
+ Task ResetGeneticSchedulerConfigAsync();
 }

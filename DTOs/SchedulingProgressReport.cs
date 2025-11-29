@@ -69,4 +69,9 @@ public class SchedulingProgressReport
     /// 错误消息
     /// </summary>
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// 遗传算法进度信息（仅在使用遗传算法时有值）
+    /// </summary>
+    public GeneticProgressInfo? GeneticProgressInfo { get; set; }
 }

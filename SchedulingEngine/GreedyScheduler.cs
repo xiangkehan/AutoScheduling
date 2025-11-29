@@ -536,14 +536,20 @@ namespace AutoScheduling3.SchedulingEngine
                             int personalId = _context.PersonIdxToId[personIdx];
                             var startTime = date.AddHours(periodIdx * 2);
                             var endTime = startTime.AddHours(2);
+                            
+                            // 判断是否为夜哨
+                            bool isNightShift = periodIdx == 11 || periodIdx == 0 || periodIdx == 1 || periodIdx == 2;
+                            
                             schedule.Results.Add(new SingleShift
                             {
                                 PositionId = positionId,
-                                PersonnelId = personalId, // 修正属性名
+                                PersonnelId = personalId,
                                 StartTime = DateTime.SpecifyKind(startTime, DateTimeKind.Utc),
                                 EndTime = DateTime.SpecifyKind(endTime, DateTimeKind.Utc),
                                 ScheduleId = schedule.Id,
-                                DayIndex = (date.Date - _context.StartDate.Date).Days
+                                DayIndex = (date.Date - _context.StartDate.Date).Days,
+                                TimeSlotIndex = periodIdx,
+                                IsNightShift = isNightShift
                             });
                         }
                     }

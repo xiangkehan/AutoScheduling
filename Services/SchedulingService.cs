@@ -9,11 +9,14 @@ using AutoScheduling3.Data;
 using AutoScheduling3.History;
 using AutoScheduling3.SchedulingEngine;
 using AutoScheduling3.SchedulingEngine.Core;
+using AutoScheduling3.SchedulingEngine.Config;
+using AutoScheduling3.SchedulingEngine.Strategies.Selection;
+using AutoScheduling3.SchedulingEngine.Strategies.Crossover;
+using AutoScheduling3.SchedulingEngine.Strategies.Mutation;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.DTOs;
 using System.Text;
 using AutoScheduling3.Data.Interfaces;
-using AutoScheduling3.SchedulingEngine.Core;
 
 namespace AutoScheduling3.Services;
 
@@ -24,14 +27,27 @@ public class SchedulingService : ISchedulingService
     private readonly ISkillRepository _skillRepo;
     private readonly IConstraintRepository _constraintRepo;
     private readonly IHistoryManagement _historyMgmt;
+    private readonly GeneticSchedulerConfig _geneticConfig;
+    private readonly string _configFilePath;
 
-    public SchedulingService(IPersonalRepository personalRepo, IPositionRepository positionRepo, ISkillRepository skillRepo, IConstraintRepository constraintRepo, IHistoryManagement historyMgmt)
+    public SchedulingService(
+        IPersonalRepository personalRepo, 
+        IPositionRepository positionRepo, 
+        ISkillRepository skillRepo, 
+        IConstraintRepository constraintRepo, 
+        IHistoryManagement historyMgmt,
+        GeneticSchedulerConfig geneticConfig)
     {
         _personalRepo = personalRepo;
         _positionRepo = positionRepo;
         _skillRepo = skillRepo;
         _constraintRepo = constraintRepo;
         _historyMgmt = historyMgmt;
+        _geneticConfig = geneticConfig;
+        
+        // 配置文件路径：存储在应用数据目录
+        var localFolder = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
+        _configFilePath = System.IO.Path.Combine(localFolder, "genetic_scheduler_config.json");
     }
 
     /// <summary>
@@ -69,7 +85,7 @@ public class SchedulingService : ISchedulingService
         return result.Schedule!;
     }
 
-    public async Task<SchedulingResult> ExecuteSchedulingAsync(SchedulingRequestDto request, IProgress<SchedulingProgressReport>? progress = null, CancellationToken cancellationToken = default)
+    public async Task<SchedulingResult> ExecuteSchedulingAsync(SchedulingRequestDto request, IProgress<SchedulingProgressReport>? progress = null, CancellationToken cancellationToken = default, SchedulingMode mode = SchedulingMode.GreedyOnly)
     {
         var startTime = DateTime.UtcNow;
         var executionTimer = System.Diagnostics.Stopwatch.StartNew();
@@ -236,9 +252,29 @@ public class SchedulingService : ISchedulingService
             cancellationToken.ThrowIfCancellationRequested();
             
             System.Diagnostics.Debug.WriteLine("步骤9: 执行排班算法");
-            // 执行算法，传递进度报告和取消令牌 - 对应需求1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 7.1, 7.2, 7.3
-            var scheduler = new GreedyScheduler(context);
-            var modelSchedule = await scheduler.ExecuteAsync(progress, cancellationToken);
+            System.Diagnostics.Debug.WriteLine($"排班模式: {mode}");
+            
+            // 根据模式选择执行路径 - 对应需求1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 7.1, 7.2, 7.3
+            Schedule modelSchedule;
+            if (mode == SchedulingMode.Hybrid)
+            {
+                // 混合模式：先贪心后遗传
+                System.Diagnostics.Debug.WriteLine("使用混合模式（贪心 + 遗传算法）");
+                
+                // 创建调度器
+                var greedyScheduler = new GreedyScheduler(context);
+                var geneticScheduler = CreateGeneticScheduler(context);
+                var hybridScheduler = new HybridScheduler(greedyScheduler, geneticScheduler);
+                
+                modelSchedule = await hybridScheduler.ExecuteAsync(progress, cancellationToken);
+            }
+            else
+            {
+                // 仅贪心模式
+                System.Diagnostics.Debug.WriteLine("使用贪心模式");
+                var scheduler = new GreedyScheduler(context);
+                modelSchedule = await scheduler.ExecuteAsync(progress, cancellationToken);
+            }
             
             // 保存部分进度信息，用于错误处理 - 对应需求4.1, 4.2, 4.3, 4.4, 4.5
             partialSchedule = modelSchedule;
@@ -1738,6 +1774,170 @@ public class SchedulingService : ISchedulingService
         }
 
         return gridData;
+    }
+
+    #endregion
+
+    #region 遗传算法调度器创建 - 对应需求9.1
+
+    /// <summary>
+    /// 创建遗传算法调度器 - 对应需求9.1
+    /// </summary>
+    private GeneticScheduler CreateGeneticScheduler(SchedulingContext context)
+    {
+        // 创建适应度评估器
+        var fitnessEvaluator = new FitnessEvaluator(context);
+        
+        // 根据配置创建选择策略
+        ISelectionStrategy selectionStrategy = _geneticConfig.SelectionStrategy switch
+        {
+            SelectionStrategyType.Tournament => new TournamentSelection(_geneticConfig.TournamentSize),
+            SelectionStrategyType.RouletteWheel => new RouletteWheelSelection(),
+            _ => new TournamentSelection(_geneticConfig.TournamentSize)
+        };
+        
+        // 根据配置创建交叉策略
+        ICrossoverStrategy crossoverStrategy = _geneticConfig.CrossoverStrategy switch
+        {
+            CrossoverStrategyType.Uniform => new UniformCrossover(context),
+            CrossoverStrategyType.SinglePoint => new SinglePointCrossover(context),
+            _ => new UniformCrossover(context)
+        };
+        
+        // 根据配置创建变异策略
+        IMutationStrategy mutationStrategy = _geneticConfig.MutationStrategy switch
+        {
+            MutationStrategyType.Swap => new SwapMutation(context),
+            _ => new SwapMutation(context)
+        };
+        
+        // 创建遗传算法调度器
+        return new GeneticScheduler(
+            context,
+            _geneticConfig,
+            fitnessEvaluator,
+            selectionStrategy,
+            crossoverStrategy,
+            mutationStrategy);
+    }
+
+    #endregion
+
+    #region 遗传算法配置管理 - 对应需求7.1, 7.2, 7.3, 7.4, 7.5
+
+    /// <summary>
+    /// 获取遗传算法调度器配置 - 对应需求7.1, 7.2
+    /// </summary>
+    public async Task<GeneticSchedulerConfig> GetGeneticSchedulerConfigAsync()
+    {
+        try
+        {
+            // 如果配置文件存在，从文件加载
+            if (System.IO.File.Exists(_configFilePath))
+            {
+                System.Diagnostics.Debug.WriteLine($"从文件加载遗传算法配置: {_configFilePath}");
+                var config = await GeneticSchedulerConfig.LoadFromFileAsync(_configFilePath);
+                
+                // 更新内存中的配置
+                _geneticConfig.PopulationSize = config.PopulationSize;
+                _geneticConfig.MaxGenerations = config.MaxGenerations;
+                _geneticConfig.CrossoverRate = config.CrossoverRate;
+                _geneticConfig.MutationRate = config.MutationRate;
+                _geneticConfig.EliteCount = config.EliteCount;
+                _geneticConfig.TournamentSize = config.TournamentSize;
+                _geneticConfig.SelectionStrategy = config.SelectionStrategy;
+                _geneticConfig.CrossoverStrategy = config.CrossoverStrategy;
+                _geneticConfig.MutationStrategy = config.MutationStrategy;
+                _geneticConfig.HardConstraintWeight = config.HardConstraintWeight;
+                _geneticConfig.SoftConstraintWeight = config.SoftConstraintWeight;
+                _geneticConfig.UnassignedPenaltyWeight = config.UnassignedPenaltyWeight;
+                
+                return config;
+            }
+            else
+            {
+                // 配置文件不存在，返回默认配置
+                System.Diagnostics.Debug.WriteLine("配置文件不存在，返回默认配置");
+                return GeneticSchedulerConfig.GetDefault();
+            }
+        }
+        catch (Exception ex)
+        {
+            // 加载失败，返回默认配置
+            System.Diagnostics.Debug.WriteLine($"加载遗传算法配置失败: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine("返回默认配置");
+            return GeneticSchedulerConfig.GetDefault();
+        }
+    }
+
+    /// <summary>
+    /// 保存遗传算法调度器配置 - 对应需求7.1, 7.2, 7.3
+    /// </summary>
+    public async Task SaveGeneticSchedulerConfigAsync(GeneticSchedulerConfig config)
+    {
+        if (config == null)
+            throw new ArgumentNullException(nameof(config));
+
+        try
+        {
+            // 验证配置参数
+            config.Validate();
+            
+            // 保存到文件
+            System.Diagnostics.Debug.WriteLine($"保存遗传算法配置到文件: {_configFilePath}");
+            await config.SaveToFileAsync(_configFilePath);
+            
+            // 更新内存中的配置
+            _geneticConfig.PopulationSize = config.PopulationSize;
+            _geneticConfig.MaxGenerations = config.MaxGenerations;
+            _geneticConfig.CrossoverRate = config.CrossoverRate;
+            _geneticConfig.MutationRate = config.MutationRate;
+            _geneticConfig.EliteCount = config.EliteCount;
+            _geneticConfig.TournamentSize = config.TournamentSize;
+            _geneticConfig.SelectionStrategy = config.SelectionStrategy;
+            _geneticConfig.CrossoverStrategy = config.CrossoverStrategy;
+            _geneticConfig.MutationStrategy = config.MutationStrategy;
+            _geneticConfig.HardConstraintWeight = config.HardConstraintWeight;
+            _geneticConfig.SoftConstraintWeight = config.SoftConstraintWeight;
+            _geneticConfig.UnassignedPenaltyWeight = config.UnassignedPenaltyWeight;
+            
+            System.Diagnostics.Debug.WriteLine("遗传算法配置保存成功");
+        }
+        catch (ArgumentException ex)
+        {
+            // 配置验证失败
+            System.Diagnostics.Debug.WriteLine($"配置验证失败: {ex.Message}");
+            throw new ArgumentException($"配置参数无效: {ex.Message}", ex);
+        }
+        catch (Exception ex)
+        {
+            // 保存失败
+            System.Diagnostics.Debug.WriteLine($"保存遗传算法配置失败: {ex.Message}");
+            throw new InvalidOperationException($"保存配置失败: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// 重置遗传算法调度器配置为默认值 - 对应需求7.4
+    /// </summary>
+    public async Task ResetGeneticSchedulerConfigAsync()
+    {
+        try
+        {
+            // 获取默认配置
+            var defaultConfig = GeneticSchedulerConfig.GetDefault();
+            
+            // 保存默认配置到文件
+            System.Diagnostics.Debug.WriteLine("重置遗传算法配置为默认值");
+            await SaveGeneticSchedulerConfigAsync(defaultConfig);
+            
+            System.Diagnostics.Debug.WriteLine("遗传算法配置已重置为默认值");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"重置遗传算法配置失败: {ex.Message}");
+            throw new InvalidOperationException($"重置配置失败: {ex.Message}", ex);
+        }
     }
 
     #endregion

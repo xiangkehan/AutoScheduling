@@ -84,7 +84,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConstraintService, ConstraintService>();
         services.AddSingleton<ITemplateService, TemplateService>();
         services.AddSingleton<IHistoryService, HistoryService>();
-        services.AddSingleton<ISchedulingService, SchedulingService>();
         services.AddSingleton<IStoragePathService, StoragePathService>();
         services.AddSingleton<ISchedulingDraftService, SchedulingDraftService>();
         services.AddSingleton<IScheduleGridExporter, ScheduleGridExporter>();
@@ -92,6 +91,13 @@ public static class ServiceCollectionExtensions
         // 注册冲突管理服务
         services.AddSingleton<IConflictDetectionService, ConflictDetectionService>();
         services.AddSingleton<IConflictResolutionService, ConflictResolutionService>();
+
+        // 注册遗传算法配置（单例）
+        services.AddSingleton<AutoScheduling3.SchedulingEngine.Config.GeneticSchedulerConfig>(sp => 
+            AutoScheduling3.SchedulingEngine.Config.GeneticSchedulerConfig.GetDefault());
+        
+        // 注册 SchedulingService
+        services.AddSingleton<ISchedulingService, SchedulingService>();
 
         // 注册数据导入导出相关服务
         // Register data validation service

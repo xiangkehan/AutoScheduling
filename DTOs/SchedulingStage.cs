@@ -51,6 +51,11 @@ public enum SchedulingStage
     Finalizing,
 
     /// <summary>
+    /// 遗传算法优化
+    /// </summary>
+    GeneticOptimizing,
+
+    /// <summary>
     /// 完成
     /// </summary>
     Completed,
