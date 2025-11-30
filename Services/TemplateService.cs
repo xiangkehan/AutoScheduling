@@ -22,19 +22,22 @@ public class TemplateService : ITemplateService
     private readonly IPositionRepository _positionRepository;
     private readonly ISchedulingService _schedulingService;
     private readonly TemplateMapper _mapper;
+    private readonly TemplateConfigCache _cache;
 
     public TemplateService(
         ITemplateRepository templateRepository,
         IPersonalRepository personnelRepository,
         IPositionRepository positionRepository,
         ISchedulingService schedulingService,
-        TemplateMapper mapper)
+        TemplateMapper mapper,
+        TemplateConfigCache cache)
     {
         _templateRepository = templateRepository ?? throw new ArgumentNullException(nameof(templateRepository));
         _personnelRepository = personnelRepository ?? throw new ArgumentNullException(nameof(personnelRepository));
         _positionRepository = positionRepository ?? throw new ArgumentNullException(nameof(positionRepository));
         _schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     /// <summary>
@@ -47,15 +50,31 @@ public class TemplateService : ITemplateService
     }
 
     /// <summary>
-    /// 根据ID获取模板
+    /// 根据ID获取模板（带缓存）
+    /// 性能优化：使用缓存减少数据库查询
     /// </summary>
     public async Task<SchedulingTemplateDto?> GetByIdAsync(int id)
     {
         if (id <= 0)
             throw new ArgumentException("无效的模板ID", nameof(id));
 
+        // 尝试从缓存获取
+        if (_cache.TryGet(id, out var cachedTemplate))
+        {
+            return cachedTemplate;
+        }
+
+        // 缓存未命中，从数据库加载
         var template = await _templateRepository.GetByIdAsync(id);
-        return template != null ? _mapper.ToDto(template) : null;
+        if (template != null)
+        {
+            var dto = _mapper.ToDto(template);
+            // 添加到缓存
+            _cache.Set(id, dto);
+            return dto;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -79,7 +98,12 @@ public class TemplateService : ITemplateService
         var id = await _templateRepository.CreateAsync(model);
 
         model.Id = id;
-        return _mapper.ToDto(model);
+        var result = _mapper.ToDto(model);
+        
+        // 添加到缓存
+        _cache.Set(id, result);
+        
+        return result;
     }
 
     /// <summary>
@@ -108,6 +132,9 @@ public class TemplateService : ITemplateService
 
         _mapper.UpdateModel(existingTemplate, dto);
         await _templateRepository.UpdateAsync(existingTemplate);
+        
+        // 更新后移除缓存，下次访问时重新加载
+        _cache.Remove(id);
     }
 
     /// <summary>
@@ -123,6 +150,9 @@ public class TemplateService : ITemplateService
             throw new ArgumentException($"模板 ID {id} 不存在", nameof(id));
 
         await _templateRepository.DeleteAsync(id);
+        
+        // 删除后移除缓存
+        _cache.Remove(id);
     }
 
     /// <summary>
@@ -211,8 +241,9 @@ public class TemplateService : ITemplateService
 
     /// <summary>
     /// 使用模板创建排班
+    /// 性能优化：使用优化的序列化器解析配置
     /// </summary>
-    public async Task<ScheduleDto> UseTemplateAsync(UseTemplateDto dto)
+    public async Task<ScheduleDto> UseTemplateAsync(UseTemplateDto dto, SchedulingMode? overrideMode = null, GeneticAlgorithmConfigDto? overrideGeneticConfig = null)
     {
         ValidateUseTemplateDto(dto);
 
@@ -229,6 +260,32 @@ public class TemplateService : ITemplateService
             throw new InvalidOperationException($"模板验证失败: {string.Join("; ", errorMessages)}");
         }
 
+        // 从模板的 StrategyConfig 中加载算法配置
+        TemplateAlgorithmConfig? algorithmConfig = null;
+        if (!string.IsNullOrWhiteSpace(template.StrategyConfig))
+        {
+            algorithmConfig = Helpers.OptimizedConfigSerializer.Deserialize<TemplateAlgorithmConfig>(template.StrategyConfig);
+        }
+
+        // 确定使用的排班模式（优先使用覆盖值）
+        var schedulingMode = overrideMode ?? algorithmConfig?.SchedulingMode ?? SchedulingMode.GreedyOnly;
+
+        // 确定使用的遗传算法配置（优先使用覆盖值）
+        SchedulingEngine.Config.GeneticSchedulerConfig? geneticConfig = null;
+        if (schedulingMode == SchedulingMode.Hybrid)
+        {
+            var configDto = overrideGeneticConfig ?? algorithmConfig?.GeneticConfig;
+            if (configDto != null)
+            {
+                geneticConfig = ConvertToGeneticSchedulerConfig(configDto);
+            }
+            else
+            {
+                // 使用默认配置
+                geneticConfig = SchedulingEngine.Config.GeneticSchedulerConfig.GetDefault();
+            }
+        }
+
         // 构建排班请求
         var schedulingRequest = new SchedulingRequestDto
         {
@@ -243,8 +300,17 @@ public class TemplateService : ITemplateService
             EnabledManualAssignmentIds = new List<int>(template.EnabledManualAssignmentIds)
         };
 
+        // 设置排班请求的模式
+        schedulingRequest.SchedulingMode = schedulingMode;
+
+        // 如果有遗传算法配置，先保存它（临时保存，用于本次排班）
+        if (geneticConfig != null)
+        {
+            await _schedulingService.SaveGeneticSchedulerConfigAsync(geneticConfig);
+        }
+
         // 执行排班
-        var result = await _schedulingService.ExecuteSchedulingAsync(schedulingRequest, null, System.Threading.CancellationToken.None);
+        var result = await _schedulingService.ExecuteSchedulingAsync(schedulingRequest, null, System.Threading.CancellationToken.None, schedulingMode);
         if (!result.IsSuccess || result.Schedule == null)
         {
             throw new InvalidOperationException($"使用模板排班失败: {result.ErrorMessage}");
@@ -254,6 +320,25 @@ public class TemplateService : ITemplateService
         await _templateRepository.UpdateUsageAsync(dto.TemplateId);
 
         return result.Schedule;
+    }
+
+    /// <summary>
+    /// 将 GeneticAlgorithmConfigDto 转换为 GeneticSchedulerConfig
+    /// </summary>
+    private SchedulingEngine.Config.GeneticSchedulerConfig ConvertToGeneticSchedulerConfig(GeneticAlgorithmConfigDto dto)
+    {
+        return new SchedulingEngine.Config.GeneticSchedulerConfig
+        {
+            PopulationSize = dto.PopulationSize,
+            MaxGenerations = dto.MaxGenerations,
+            CrossoverRate = dto.CrossoverRate,
+            MutationRate = dto.MutationRate,
+            EliteCount = dto.EliteCount,
+            SelectionStrategy = dto.SelectionStrategy,
+            CrossoverStrategy = dto.CrossoverStrategy,
+            MutationStrategy = dto.MutationStrategy,
+            TournamentSize = dto.TournamentSize
+        };
     }
 
     /// <summary>

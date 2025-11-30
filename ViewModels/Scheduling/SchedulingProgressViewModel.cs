@@ -30,6 +30,7 @@ public partial class SchedulingProgressViewModel : ObservableObject
     private readonly IScheduleGridExporter _gridExporter;
     private readonly DialogService _dialogService;
     private readonly IHistoryManagement _historyManagement;
+    private readonly ThrottledAutoSaver? _autoSaver;
 
     #endregion
 
@@ -39,6 +40,8 @@ public partial class SchedulingProgressViewModel : ObservableObject
     private Stopwatch? _stopwatch;
     private DispatcherQueueTimer? _elapsedTimeTimer;
     private readonly DispatcherQueue _dispatcherQueue;
+    private SchedulingRequestDto? _currentRequest;
+    private SchedulingProgressReport? _latestProgressReport;
 
     #endregion
 
@@ -175,6 +178,18 @@ public partial class SchedulingProgressViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _isGridFullScreen;
+
+    /// <summary>
+    /// 上次自动保存时间
+    /// </summary>
+    [ObservableProperty]
+    private string _lastAutoSaveTime = "从未保存";
+
+    /// <summary>
+    /// 是否正在保存草稿
+    /// </summary>
+    [ObservableProperty]
+    private bool _isSavingDraft;
 
     #endregion
 

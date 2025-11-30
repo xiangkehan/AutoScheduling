@@ -109,6 +109,30 @@ public class ScheduleDto
     /// </summary>
     [JsonPropertyName("enabledManualAssignmentIds")]
     public List<int> EnabledManualAssignmentIds { get; set; } = new();
+
+    /// <summary>
+    /// 进度百分比（0-100），用于标识部分完成的排班
+    /// </summary>
+    [JsonPropertyName("progressPercentage")]
+    public double? ProgressPercentage { get; set; }
+
+    /// <summary>
+    /// 当前阶段，用于标识排班执行到哪个阶段
+    /// </summary>
+    [JsonPropertyName("currentStage")]
+    public string? CurrentStage { get; set; }
+
+    /// <summary>
+    /// 是否为部分结果（未完成的排班）
+    /// </summary>
+    [JsonPropertyName("isPartialResult")]
+    public bool IsPartialResult { get; set; }
+
+    /// <summary>
+    /// 排班模式（仅贪心或混合模式）
+    /// </summary>
+    [JsonPropertyName("schedulingMode")]
+    public SchedulingMode SchedulingMode { get; set; } = SchedulingMode.GreedyOnly;
 }
 
 /// <summary>

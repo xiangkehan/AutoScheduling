@@ -132,4 +132,20 @@ public interface ISchedulingService
  /// 重置遗传算法调度器配置为默认值
  /// </summary>
  Task ResetGeneticSchedulerConfigAsync();
+
+ // === 新增：排班进度草稿保存方法 ===
+
+ /// <summary>
+ /// 保存排班进度为草稿（增量保存，只保存必要状态）
+ /// </summary>
+ /// <param name="scheduleDto">当前排班DTO</param>
+ /// <param name="progressReport">当前进度报告</param>
+ Task SaveProgressAsDraftAsync(ScheduleDto scheduleDto, SchedulingProgressReport progressReport);
+
+ /// <summary>
+ /// 获取草稿的完成进度
+ /// </summary>
+ /// <param name="draftId">草稿ID</param>
+ /// <returns>进度百分比（0-100），如果草稿不存在或不是部分结果则返回null</returns>
+ Task<double?> GetDraftProgressAsync(int draftId);
 }

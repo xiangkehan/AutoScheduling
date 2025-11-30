@@ -82,7 +82,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPositionService, PositionService>();
         services.AddSingleton<ISkillService, SkillService>();
         services.AddSingleton<IConstraintService, ConstraintService>();
+        
+        // 注册模板配置缓存（单例）
+        services.AddSingleton<TemplateConfigCache>();
         services.AddSingleton<ITemplateService, TemplateService>();
+        
         services.AddSingleton<IHistoryService, HistoryService>();
         services.AddSingleton<IStoragePathService, StoragePathService>();
         services.AddSingleton<ISchedulingDraftService, SchedulingDraftService>();

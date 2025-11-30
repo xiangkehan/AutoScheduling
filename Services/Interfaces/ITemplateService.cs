@@ -52,5 +52,8 @@ public interface ITemplateService
     /// <summary>
     /// 使用模板创建排班
     /// </summary>
-    Task<ScheduleDto> UseTemplateAsync(UseTemplateDto dto);
+    /// <param name="dto">使用模板DTO</param>
+    /// <param name="overrideMode">可选：覆盖模板中的排班模式</param>
+    /// <param name="overrideGeneticConfig">可选：覆盖模板中的遗传算法配置</param>
+    Task<ScheduleDto> UseTemplateAsync(UseTemplateDto dto, SchedulingMode? overrideMode = null, GeneticAlgorithmConfigDto? overrideGeneticConfig = null);
 }

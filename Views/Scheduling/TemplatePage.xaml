@@ -139,6 +139,35 @@
                                 </StackPanel>
                             </Expander>
 
+                            <Expander Header="算法配置" IsExpanded="False">
+                                <StackPanel Spacing="12">
+                                    <ComboBox Header="排班模式" ItemsSource="{Binding AvailableSchedulingModes}" SelectedItem="{Binding SelectedSchedulingMode, Mode=TwoWay}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <StackPanel Spacing="8" Visibility="{Binding SelectedSchedulingMode, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Hybrid}">
+                                        <TextBlock Text="遗传算法参数" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
+                                        
+                                        <NumberBox Header="种群大小" Value="{Binding PopulationSize, Mode=TwoWay}" Minimum="10" Maximum="200" SpinButtonPlacementMode="Inline"/>
+                                        <NumberBox Header="最大代数" Value="{Binding MaxGenerations, Mode=TwoWay}" Minimum="10" Maximum="500" SpinButtonPlacementMode="Inline"/>
+                                        <NumberBox Header="交叉率" Value="{Binding CrossoverRate, Mode=TwoWay}" Minimum="0" Maximum="1" SmallChange="0.1" LargeChange="0.2" SpinButtonPlacementMode="Inline"/>
+                                        <NumberBox Header="变异率" Value="{Binding MutationRate, Mode=TwoWay}" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" SpinButtonPlacementMode="Inline"/>
+                                        <NumberBox Header="精英保留数量" Value="{Binding EliteCount, Mode=TwoWay}" Minimum="0" Maximum="10" SpinButtonPlacementMode="Inline"/>
+                                        
+                                        <ComboBox Header="选择策略" ItemsSource="{Binding AvailableSelectionStrategies}" SelectedItem="{Binding SelectionStrategy, Mode=TwoWay}"/>
+                                        <ComboBox Header="交叉策略" ItemsSource="{Binding AvailableCrossoverStrategies}" SelectedItem="{Binding CrossoverStrategy, Mode=TwoWay}"/>
+                                        <ComboBox Header="变异策略" ItemsSource="{Binding AvailableMutationStrategies}" SelectedItem="{Binding MutationStrategy, Mode=TwoWay}"/>
+                                        
+                                        <NumberBox Header="锦标赛大小" Value="{Binding TournamentSize, Mode=TwoWay}" Minimum="2" Maximum="20" SpinButtonPlacementMode="Inline" 
+                                                   Visibility="{Binding SelectionStrategy, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Tournament}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Expander>
+
                             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,16,0,0">
                                 <Button Content="保存" Style="{ThemeResource AccentButtonStyle}" Command="{Binding SaveTemplateCommand}"/>
                                 <Button Content="删除" Command="{Binding DeleteTemplateCommand}" IsEnabled="{Binding SelectedTemplate.IsDefault, Converter={StaticResource InvertedBooleanConverter}}"/>
