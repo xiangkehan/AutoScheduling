@@ -1503,6 +1503,463 @@ public class GeneticConfigValidator
 }
 ```
 
+### 5. 模板和草稿功能的性能优化
+
+#### 5.1 模板配置缓存
+
+**问题**: 频繁从数据库加载模板配置影响性能
+
+**优化策略**:
+```csharp
+public class TemplateConfigCache
+{
+    private readonly ConcurrentDictionary<int, SchedulingTemplate> _cache = new();
+    private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(10);
+    
+    public async Task<SchedulingTemplate> GetTemplateAsync(int templateId)
+    {
+        if (_cache.TryGetValue(templateId, out var cached))
+        {
+            return cached;
+        }
+        
+        var template = await _repository.GetByIdAsync(templateId);
+        _cache.TryAdd(templateId, template);
+        
+        // 设置过期清理
+        _ = Task.Delay(_cacheExpiration).ContinueWith(_ => 
+            _cache.TryRemove(templateId, out _));
+        
+        return template;
+    }
+}
+```
+
+**优势**:
+- 减少数据库查询
+- 提高模板使用响应速度
+- 预期提升：50-70% 模板加载速度
+
+#### 5.2 草稿状态增量保存
+
+**问题**: 保存完整的算法状态（包括整个种群）占用大量存储和时间
+
+**优化策略**:
+```csharp
+public class IncrementalDraftSaver
+{
+    // 只保存必要的状态信息
+    public async Task SaveMinimalStateAsync(Schedule draft)
+    {
+        var minimalState = new MinimalGeneticState
+        {
+            CurrentGeneration = _currentGeneration,
+            BestIndividualGenes = _population.BestIndividual.Genes, // 只保存最优个体
+            BestFitness = _population.BestIndividual.Fitness,
+            RandomSeed = _random.Next(), // 保存随机种子以便重现
+            FitnessHistory = _fitnessHistory.TakeLast(10).ToList() // 只保存最近10代
+        };
+        
+        draft.AlgorithmState = JsonSerializer.Serialize(minimalState);
+        await _repository.SaveDraftAsync(draft);
+    }
+}
+```
+
+**优势**:
+- 减少存储空间占用（从几MB降至几KB）
+- 加快保存速度
+- 预期提升：80-90% 保存速度
+
+#### 5.3 草稿恢复优化
+
+**问题**: 从草稿恢复时需要重建完整的算法状态
+
+**优化策略**:
+```csharp
+public class OptimizedDraftResumer
+{
+    public async Task<Schedule> ResumeOptimizedAsync(int draftId)
+    {
+        var draft = await GetDraftAsync(draftId);
+        var state = JsonSerializer.Deserialize<MinimalGeneticState>(draft.AlgorithmState);
+        
+        // 策略1: 如果进度 < 30%，重新开始可能更快
+        if (draft.ProgressPercentage < 30)
+        {
+            return await RestartWithBestSolutionAsync(state.BestIndividualGenes);
+        }
+        
+        // 策略2: 如果进度 >= 30%，从最优解重建种群
+        var population = new Population();
+        population.Add(Individual.FromGenes(state.BestIndividualGenes));
+        
+        // 使用最优解的变体快速重建种群
+        for (int i = 1; i < _config.PopulationSize; i++)
+        {
+            var variant = CreateVariant(state.BestIndividualGenes, 
+                perturbationLevel: 0.1 + (i * 0.01));
+            population.Add(variant);
+        }
+        
+        // 从保存的代数继续
+        return await ContinueFromGenerationAsync(
+            state.CurrentGeneration, population);
+    }
+}
+```
+
+**优势**:
+- 智能决策：低进度重启，高进度恢复
+- 快速重建种群
+- 预期提升：40-60% 恢复速度
+
+#### 5.4 自动保存节流优化
+
+**问题**: 频繁的自动保存影响算法执行性能
+
+**优化策略**:
+```csharp
+public class ThrottledAutoSaver
+{
+    private readonly TimeSpan _minSaveInterval = TimeSpan.FromMinutes(2);
+    private readonly double _minProgressDelta = 5.0; // 至少进度变化5%才保存
+    private DateTime _lastSave = DateTime.MinValue;
+    private double _lastSavedProgress = 0;
+    
+    public async Task<bool> TryAutoSaveAsync(
+        Schedule draft, 
+        double currentProgress)
+    {
+        var now = DateTime.UtcNow;
+        var timeSinceLastSave = now - _lastSave;
+        var progressDelta = currentProgress - _lastSavedProgress;
+        
+        // 条件1: 时间间隔足够 AND 进度有显著变化
+        // 条件2: 或者达到关键进度点（25%, 50%, 75%）
+        var shouldSave = 
+            (timeSinceLastSave >= _minSaveInterval && progressDelta >= _minProgressDelta) ||
+            IsKeyProgressPoint(currentProgress, _lastSavedProgress);
+        
+        if (!shouldSave)
+            return false;
+        
+        // 异步保存，不阻塞主线程
+        _ = Task.Run(async () =>
+        {
+            await SaveMinimalStateAsync(draft);
+            _lastSave = now;
+            _lastSavedProgress = currentProgress;
+        });
+        
+        return true;
+    }
+    
+    private bool IsKeyProgressPoint(double current, double last)
+    {
+        var keyPoints = new[] { 25.0, 50.0, 75.0 };
+        return keyPoints.Any(p => last < p && current >= p);
+    }
+}
+```
+
+**优势**:
+- 减少不必要的保存操作
+- 异步保存不阻塞算法执行
+- 在关键进度点确保保存
+- 预期影响：< 2% 性能开销
+
+#### 5.5 模板配置序列化优化
+
+**问题**: JSON 序列化/反序列化影响性能
+
+**优化策略**:
+```csharp
+public class OptimizedConfigSerializer
+{
+    // 使用 System.Text.Json 的高性能选项
+    private static readonly JsonSerializerOptions _options = new()
+    {
+        WriteIndented = false, // 不格式化，减小体积
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter() } // 枚举转字符串
+    };
+    
+    // 使用源生成器进一步提升性能（.NET 6+）
+    [JsonSerializable(typeof(GeneticSchedulerConfig))]
+    [JsonSerializable(typeof(TemplateGeneticConfig))]
+    internal partial class ConfigJsonContext : JsonSerializerContext { }
+    
+    public string Serialize<T>(T config)
+    {
+        return JsonSerializer.Serialize(config, _options);
+    }
+    
+    public T Deserialize<T>(string json)
+    {
+        return JsonSerializer.Deserialize<T>(json, _options);
+    }
+}
+```
+
+**优势**:
+- 使用高性能序列化选项
+- 减小JSON体积
+- 预期提升：30-40% 序列化速度
+
+#### 5.6 草稿列表分页加载
+
+**问题**: 加载大量草稿影响UI响应速度
+
+**优化策略**:
+```csharp
+public class PaginatedDraftLoader
+{
+    private const int PageSize = 20;
+    
+    public async Task<PagedResult<ScheduleSummaryDto>> GetDraftsPagedAsync(
+        int pageIndex = 0,
+        DraftFilter? filter = null)
+    {
+        // 只加载当前页的草稿
+        var query = _repository.GetDraftsQuery()
+            .OrderByDescending(d => d.UpdatedAt)
+            .Skip(pageIndex * PageSize)
+            .Take(PageSize);
+        
+        // 应用过滤器
+        if (filter?.ShowOnlyResumable == true)
+            query = query.Where(d => d.IsResumable);
+        
+        if (filter?.Mode.HasValue == true)
+            query = query.Where(d => d.Mode == filter.Mode.Value);
+        
+        var drafts = await query.ToListAsync();
+        var total = await _repository.GetDraftsCountAsync(filter);
+        
+        return new PagedResult<ScheduleSummaryDto>
+        {
+            Items = drafts.Select(MapToDto).ToList(),
+            TotalCount = total,
+            PageIndex = pageIndex,
+            PageSize = PageSize
+        };
+    }
+}
+```
+
+**优势**:
+- 按需加载，减少内存占用
+- 提高UI响应速度
+- 支持过滤，减少不必要的数据传输
+- 预期提升：70-90% 列表加载速度（当草稿数量 > 50）
+
+#### 5.7 配置验证缓存
+
+**问题**: 重复验证相同的配置浪费CPU
+
+**优化策略**:
+```csharp
+public class CachedConfigValidator
+{
+    private readonly ConcurrentDictionary<string, ValidationResult> _validationCache = new();
+    
+    public ValidationResult Validate(GeneticSchedulerConfig config)
+    {
+        // 使用配置的哈希作为缓存键
+        var configHash = ComputeConfigHash(config);
+        
+        if (_validationCache.TryGetValue(configHash, out var cached))
+            return cached;
+        
+        var result = PerformValidation(config);
+        _validationCache.TryAdd(configHash, result);
+        
+        return result;
+    }
+    
+    private string ComputeConfigHash(GeneticSchedulerConfig config)
+    {
+        var json = JsonSerializer.Serialize(config);
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(json));
+        return Convert.ToBase64String(hash);
+    }
+}
+```
+
+**优势**:
+- 避免重复验证
+- 特别适用于使用模板时
+- 预期提升：90%+ 验证速度（缓存命中时）
+
+### 6. 综合性能优化总结
+
+#### 6.1 各功能模块的性能优化覆盖
+
+| 功能模块 | 优化策略 | 预期提升 | 任务关联 |
+|---------|---------|---------|---------|
+| **遗传算法核心** | 并行化、缓存、早期终止 | 6-12倍 | 任务1-11, 22 |
+| **模板加载** | 配置缓存 | 50-70% | 任务24 |
+| **模板序列化** | 优化序列化选项 | 30-40% | 任务24 |
+| **草稿保存** | 增量保存、节流 | 80-90% | 任务25 |
+| **草稿恢复** | 智能恢复策略 | 40-60% | 任务26 |
+| **草稿列表** | 分页加载 | 70-90% | 任务27 |
+| **配置验证** | 验证缓存 | 90%+ | 任务28 |
+
+#### 6.2 整体性能目标
+
+**基准场景**: 50人员 × 10哨位 × 7天，种群50，代数100
+
+| 操作 | 基础实现 | 优化后 | 提升倍数 |
+|-----|---------|--------|---------|
+| 遗传算法执行 | 30-60秒 | 3-8秒 | 10-20x |
+| 模板加载使用 | 2-3秒 | 0.5-1秒 | 3-4x |
+| 草稿保存 | 1-2秒 | 0.1-0.2秒 | 8-10x |
+| 草稿恢复 | 5-10秒 | 2-4秒 | 2-3x |
+| 草稿列表加载 | 3-5秒 | 0.3-0.5秒 | 8-10x |
+
+#### 6.3 性能优化实施优先级
+
+**任务22（高优先级）** - 遗传算法核心优化:
+1. ✅ 适应度评估并行化
+2. ✅ 适应度缓存
+3. ✅ 早期终止条件
+4. ✅ 智能种群初始化
+5. ✅ 性能监控
+
+**任务24-28（中优先级）** - 模板草稿优化:
+1. ✅ 模板配置缓存（任务24）
+2. ✅ 草稿增量保存（任务25）
+3. ✅ 自动保存节流（任务25）
+4. ✅ 智能恢复策略（任务26）
+5. ✅ 草稿列表分页（任务27）
+6. ✅ 配置验证缓存（任务28）
+
+**未来优化（低优先级）**:
+1. 内存优化（对象池、紧凑编码）
+2. 自适应参数调整
+3. 分布式执行
+
+#### 6.4 性能监控指标
+
+```csharp
+public class PerformanceMetrics
+{
+    // 遗传算法指标
+    public TimeSpan GeneticAlgorithmDuration { get; set; }
+    public TimeSpan FitnessEvaluationDuration { get; set; }
+    public TimeSpan SelectionDuration { get; set; }
+    public TimeSpan CrossoverDuration { get; set; }
+    public TimeSpan MutationDuration { get; set; }
+    public int TotalGenerations { get; set; }
+    public int EarlyTerminationGeneration { get; set; }
+    
+    // 模板草稿指标
+    public TimeSpan TemplateLoadDuration { get; set; }
+    public TimeSpan DraftSaveDuration { get; set; }
+    public TimeSpan DraftResumeDuration { get; set; }
+    public int AutoSaveCount { get; set; }
+    public int CacheHitCount { get; set; }
+    public int CacheMissCount { get; set; }
+    
+    // 计算缓存命中率
+    public double CacheHitRate => 
+        CacheHitCount + CacheMissCount > 0 
+            ? (double)CacheHitCount / (CacheHitCount + CacheMissCount) 
+            : 0;
+}
+```
+
+## 性能优化实施路线图
+
+### 阶段1: 核心算法优化（任务22 - 高优先级）
+
+**目标**: 将遗传算法执行时间从 30-60秒 降至 3-8秒
+
+**实施步骤**:
+1. 实现适应度评估并行化（预期提升 2-4倍）
+2. 实现适应度缓存机制（预期减少 30-40% 计算）
+3. 实现早期终止条件（预期节省 30-50% 时间）
+4. 实现智能种群初始化（预期减少 20-30% 迭代）
+5. 添加性能监控和分析
+
+**验证方法**:
+- 使用标准测试场景（50人员 × 10哨位 × 7天）
+- 记录优化前后的执行时间
+- 确保解的质量不降低
+
+### 阶段2: 模板功能优化（任务24 - 中优先级）
+
+**目标**: 将模板加载时间从 2-3秒 降至 0.5-1秒
+
+**实施步骤**:
+1. 实现模板配置缓存（10分钟过期）
+2. 优化配置序列化（使用高性能选项）
+3. 实现配置验证缓存
+
+**验证方法**:
+- 测试重复使用同一模板的场景
+- 记录缓存命中率
+- 确保配置正确加载
+
+### 阶段3: 草稿功能优化（任务25-27 - 中优先级）
+
+**目标**: 
+- 草稿保存: 从 1-2秒 降至 0.1-0.2秒
+- 草稿恢复: 从 5-10秒 降至 2-4秒
+- 草稿列表: 从 3-5秒 降至 0.3-0.5秒
+
+**实施步骤**:
+1. 实现草稿增量保存（只保存必要状态）
+2. 实现自动保存节流（避免频繁保存）
+3. 实现智能恢复策略（低进度重启）
+4. 实现草稿列表分页加载
+
+**验证方法**:
+- 测试大量草稿场景（100+ 草稿）
+- 测试中断和恢复流程
+- 记录保存和加载时间
+
+### 阶段4: 配置验证优化（任务28 - 低优先级）
+
+**目标**: 将验证时间降至几乎为零（缓存命中时）
+
+**实施步骤**:
+1. 实现验证结果缓存
+2. 使用配置哈希作为缓存键
+
+**验证方法**:
+- 测试重复验证相同配置
+- 记录缓存命中率
+
+### 性能优化检查清单
+
+在实施每个优化时，确保：
+
+- [ ] 优化不影响功能正确性
+- [ ] 添加性能监控代码
+- [ ] 记录优化前后的性能数据
+- [ ] 在不同规模的问题上测试
+- [ ] 考虑内存占用的变化
+- [ ] 添加配置开关（可选启用/禁用优化）
+- [ ] 更新文档说明优化效果
+
+### 性能测试场景
+
+**小规模**: 20人员 × 5哨位 × 3天
+- 基准时间: 5-10秒
+- 优化目标: 1-2秒
+
+**中规模**: 50人员 × 10哨位 × 7天
+- 基准时间: 30-60秒
+- 优化目标: 3-8秒
+
+**大规模**: 100人员 × 20哨位 × 14天
+- 基准时间: 5-10分钟
+- 优化目标: 30-60秒
+
 ## 未来扩展
 
 ### 1. 自适应参数

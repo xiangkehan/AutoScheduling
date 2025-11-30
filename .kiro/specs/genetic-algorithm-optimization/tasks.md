@@ -269,22 +269,13 @@
   - 支持通过配置启用/禁用详细日志
   - _需求: 6.2_
 
-- [ ] 22. 性能优化（高优先级优化）
-  - 实现适应度评估的并行化（使用 Parallel.ForEach）
-  - 实现适应度缓存机制（避免重复计算）
-  - 实现早期终止条件（连续20代改进小于0.1%则终止）
-  - 添加性能监控（记录各阶段耗时）
-  - 实现智能种群初始化（30%局部扰动 + 30%中等扰动 + 40%随机）
-  - 预期性能提升：6-12倍（从30-60秒降至5-10秒）
-  - _参考设计文档"实现注意事项 > 性能优化"部分_
-
-- [ ] 23. 最终检查点 - 确保所有测试通过
-  - 确保所有测试通过，如有问题请询问用户
+- [ ] 22. 检查点 - 确保核心功能测试通过
+  - 确保所有核心功能测试通过，如有问题请询问用户
 
 
 ## 模板和草稿功能更新
 
-- [ ] 24. 更新模板功能以支持遗传算法配置
+- [ ] 24. 更新模板功能以支持遗传算法配置（含性能优化）
   - 修改 Models/SchedulingTemplate.cs
   - 在 StrategyConfig JSON 中添加遗传算法配置字段
   - 添加 SchedulingMode 字段（GreedyOnly 或 Hybrid）
@@ -294,25 +285,30 @@
   - 修改 Services/TemplateService.cs
   - 实现模板创建时保存遗传算法配置
   - 实现使用模板时加载遗传算法配置
+  - **性能优化**: 实现模板配置缓存（ConcurrentDictionary，10分钟过期）
+  - **性能优化**: 使用优化的 JsonSerializerOptions 序列化配置
   - 修改 ViewModels/Scheduling/TemplateViewModel.cs
   - 添加算法配置相关属性
   - 实现保存模板时包含算法配置
   - 修改 Views/Scheduling/TemplatePage.xaml
   - 添加算法配置选项到模板编辑界面
   - _需求: 7.1, 7.2_
+  - _性能目标: 模板加载提升 3-4倍_
 
-- [ ] 25. 实现排班进度中断时保存草稿功能
+- [ ] 25. 实现排班进度中断时保存草稿功能（含性能优化）
   - 修改 ViewModels/Scheduling/SchedulingProgressViewModel.cs
   - 添加 SaveProgressAsDraftCommand 命令
   - 实现在排班执行过程中保存当前进度为草稿
-  - 添加自动保存机制（每完成一定进度自动保存）
+  - **性能优化**: 实现自动保存节流（2分钟间隔 + 5%进度变化阈值）
+  - **性能优化**: 异步保存，不阻塞主线程
   - 修改 Views/Scheduling/SchedulingProgressPage.xaml
   - 添加"保存草稿"按钮到进度界面
-  - 添加自动保存状态提示
+  - 添加自动保存状态提示（显示上次保存时间）
   - 修改 Services/Interfaces/ISchedulingService.cs
   - 添加 SaveProgressAsDraftAsync 方法
   - 添加 GetDraftProgressAsync 方法（获取草稿的完成进度）
   - 修改 Services/SchedulingService.cs
+  - **性能优化**: 实现增量保存（只保存最优个体和必要状态，不保存整个种群）
   - 实现保存部分完成的排班结果为草稿
   - 保存当前算法状态（已完成的天数、当前代数等）
   - 实现从草稿恢复排班进度
@@ -323,8 +319,9 @@
   - 添加 CurrentStage 字段
   - 添加 IsPartialResult 字段（标识是否为部分结果）
   - _需求: 6.4（取消操作相关）_
+  - _性能目标: 草稿保存提升 8-10倍（从1-2秒降至0.1-0.2秒）_
 
-- [ ] 26. 实现从草稿恢复排班功能
+- [ ] 26. 实现从草稿恢复排班功能（含性能优化）
   - 修改 ViewModels/Scheduling/SchedulingViewModel.cs
   - 添加检测未完成草稿的逻辑
   - 添加"继续上次排班"选项
@@ -333,32 +330,42 @@
   - 添加"继续"和"重新开始"按钮
   - 修改 Services/SchedulingService.cs
   - 实现从草稿恢复排班上下文
+  - **性能优化**: 实现智能恢复策略（进度<30%重启，>=30%恢复）
+  - **性能优化**: 使用最优解的变体快速重建种群
   - 实现继续执行排班算法
   - 确保遗传算法可以从中断点继续（保存种群状态）
   - 修改 SchedulingEngine/GeneticScheduler.cs
   - 添加 ResumeFromStateAsync 方法
   - 实现保存和恢复种群状态
+  - 实现从最优解快速重建种群
   - 修改 SchedulingEngine/HybridScheduler.cs
   - 支持从部分完成的贪心解继续执行
   - _需求: 6.4（取消后恢复）_
+  - _性能目标: 草稿恢复提升 2-3倍（从5-10秒降至2-4秒）_
 
-- [ ] 27. 更新草稿列表页面显示算法信息
+- [ ] 27. 更新草稿列表页面显示算法信息（含性能优化）
   - 修改 ViewModels/Scheduling/DraftsViewModel.cs（如果存在）
   - 添加显示使用的算法模式（仅贪心/混合）
   - 添加显示完成进度
   - 添加显示是否可恢复
+  - **性能优化**: 实现分页加载（每页20条）
+  - **性能优化**: 实现过滤功能（只显示可恢复、按模式过滤）
+  - **性能优化**: 使用虚拟化列表控件（VirtualizingStackPanel）
   - 修改 Views/Scheduling/DraftsPage.xaml
   - 更新草稿列表项模板
   - 显示算法模式标签
   - 显示进度条
   - 添加"继续排班"按钮（针对未完成的草稿）
+  - 添加分页控件（上一页、下一页、页码）
+  - 添加过滤选项
   - 修改 DTOs/ScheduleSummaryDto.cs
   - 添加 SchedulingMode 字段
   - 添加 ProgressPercentage 字段
   - 添加 IsResumable 字段
   - _需求: 1.5（模式显示）_
+  - _性能目标: 草稿列表加载提升 8-10倍（当草稿数量>50时）_
 
-- [ ] 28. 添加模板和草稿的算法配置验证
+- [ ] 28. 添加模板和草稿的算法配置验证（含性能优化）
   - 创建 Validators/GeneticConfigValidator.cs
   - 实现遗传算法配置参数验证
   - 验证种群大小范围（10-200）
@@ -366,6 +373,8 @@
   - 验证交叉率范围（0.0-1.0）
   - 验证变异率范围（0.0-1.0）
   - 验证精英保留数量（0-10）
+  - **性能优化**: 实现验证结果缓存（使用配置哈希作为键）
+  - **性能优化**: 避免重复验证相同的配置
   - 修改 Services/TemplateService.cs
   - 在保存模板时验证算法配置
   - 在使用模板时验证配置有效性
@@ -373,8 +382,9 @@
   - 在保存草稿时验证算法配置
   - 在恢复草稿时验证配置兼容性
   - _需求: 2.1, 2.2, 2.3, 2.4, 2.5_
+  - _性能目标: 验证速度提升 90%+（缓存命中时）_
 
-- [ ] 29. 最终检查点 - 模板和草稿功能测试
+- [ ] 29. 检查点 - 模板和草稿功能测试
   - 测试创建包含遗传算法配置的模板
   - 测试使用模板创建排班（验证算法配置正确应用）
   - 测试排班过程中保存草稿
@@ -382,3 +392,157 @@
   - 测试草稿列表显示算法信息
   - 测试配置验证功能
   - 确保所有测试通过，如有问题请询问用户
+
+## 性能优化任务
+
+- [ ] 30. 实现适应度评估并行化
+  - 修改 SchedulingEngine/Core/FitnessEvaluator.cs
+  - 使用 Parallel.ForEach 并行评估种群中所有个体的适应度
+  - 确保 FitnessEvaluator 是线程安全的
+  - 使用 ThreadLocal<Random> 避免随机数生成器竞争
+  - 控制并行度以避免过度线程切换
+  - 添加性能监控（记录并行化前后的耗时）
+  - _预期提升: 2-4倍（取决于CPU核心数）_
+  - _参考设计文档"实现注意事项 > 性能优化 > 1.1"_
+
+- [ ] 31. 实现适应度缓存机制
+  - 修改 SchedulingEngine/Core/Individual.cs
+  - 添加 _cachedFitness 私有字段和 _isDirty 标志
+  - 实现 Fitness 属性的缓存逻辑
+  - 添加 MarkDirty() 方法，在基因改变时调用
+  - 确保交叉和变异操作后正确标记为脏
+  - 添加缓存命中率统计
+  - _预期减少: 30-40% 适应度计算次数_
+  - _参考设计文档"实现注意事项 > 性能优化 > 1.2"_
+
+- [ ] 32. 实现早期终止条件
+  - 修改 SchedulingEngine/GeneticScheduler.cs
+  - 添加 ShouldTerminateEarly 方法
+  - 实现连续N代（默认20代）无显著改进的检测
+  - 设置改进阈值（默认0.1%）
+  - 记录最优适应度历史
+  - 在主循环中检查早期终止条件
+  - 在进度报告中显示早期终止信息
+  - _预期节省: 30-50% 执行时间（已收敛场景）_
+  - _参考设计文档"实现注意事项 > 性能优化 > 1.3"_
+
+- [ ] 33. 实现智能种群初始化
+  - 修改 SchedulingEngine/Core/Population.cs
+  - 实现 InitializePopulationSmart 方法
+  - 30% 个体：贪心解的局部扰动（扰动级别0.1）
+  - 30% 个体：贪心解的中等扰动（扰动级别0.3）
+  - 40% 个体：完全随机生成
+  - 实现 CreateVariant 方法（从现有解创建变体）
+  - 确保初始种群多样性
+  - _预期减少: 20-30% 迭代次数_
+  - _参考设计文档"实现注意事项 > 性能优化 > 1.6"_
+
+- [ ] 34. 添加性能监控系统
+  - 创建 SchedulingEngine/Core/PerformanceMonitor.cs
+  - 实现 PerformanceMetrics 类（记录各阶段耗时）
+  - 实现 RecordPhase 方法（记录单个阶段）
+  - 实现 PrintReport 方法（输出性能报告）
+  - 在 GeneticScheduler 中集成性能监控
+  - 记录以下阶段：
+    - 适应度评估总时间
+    - 选择操作时间
+    - 交叉操作时间
+    - 变异操作时间
+    - 种群更新时间
+  - 在配置中添加 EnablePerformanceMonitoring 开关
+  - _参考设计文档"实现注意事项 > 性能优化 > 1.9"_
+
+- [ ] 35. 实现模板配置缓存
+  - 创建 Services/TemplateConfigCache.cs
+  - 使用 ConcurrentDictionary 存储缓存
+  - 设置缓存过期时间（默认10分钟）
+  - 实现 GetTemplateAsync 方法（带缓存）
+  - 实现自动过期清理机制
+  - 在 TemplateService 中集成缓存
+  - 添加缓存命中率统计
+  - _预期提升: 50-70% 模板加载速度_
+  - _参考设计文档"模板和草稿功能集成 > 5.1"_
+
+- [ ] 36. 实现配置序列化优化
+  - 创建 Helpers/OptimizedConfigSerializer.cs
+  - 配置高性能 JsonSerializerOptions
+  - 设置 WriteIndented = false（减小体积）
+  - 设置 DefaultIgnoreCondition = WhenWritingNull
+  - 使用 JsonStringEnumConverter 处理枚举
+  - 在 TemplateService 和 SchedulingService 中使用优化的序列化器
+  - _预期提升: 30-40% 序列化速度_
+  - _参考设计文档"模板和草稿功能集成 > 5.5"_
+
+- [ ] 37. 实现草稿增量保存
+  - 创建 Services/IncrementalDraftSaver.cs
+  - 定义 MinimalGeneticState 类（只包含必要状态）
+  - 只保存最优个体的基因
+  - 保存随机种子以便重现
+  - 只保存最近10代的适应度历史
+  - 实现 SaveMinimalStateAsync 方法
+  - 在 SchedulingService 中集成增量保存
+  - _预期提升: 80-90% 保存速度_
+  - _参考设计文档"模板和草稿功能集成 > 5.2"_
+
+- [ ] 38. 实现自动保存节流
+  - 创建 Services/ThrottledAutoSaver.cs
+  - 设置最小保存间隔（默认2分钟）
+  - 设置最小进度变化阈值（默认5%）
+  - 实现 TryAutoSaveAsync 方法
+  - 检测关键进度点（25%, 50%, 75%）
+  - 使用异步保存，不阻塞主线程
+  - 在 SchedulingProgressViewModel 中集成节流器
+  - _预期影响: < 2% 性能开销_
+  - _参考设计文档"模板和草稿功能集成 > 5.4"_
+
+- [ ] 39. 实现智能草稿恢复策略
+  - 创建 Services/OptimizedDraftResumer.cs
+  - 实现进度判断逻辑（< 30% 重启，>= 30% 恢复）
+  - 实现 RestartWithBestSolutionAsync 方法
+  - 实现从最优解快速重建种群
+  - 实现 ContinueFromGenerationAsync 方法
+  - 在 SchedulingService 中集成智能恢复
+  - _预期提升: 40-60% 恢复速度_
+  - _参考设计文档"模板和草稿功能集成 > 5.3"_
+
+- [ ] 40. 实现草稿列表分页加载
+  - 创建 Services/PaginatedDraftLoader.cs
+  - 设置每页大小（默认20条）
+  - 实现 GetDraftsPagedAsync 方法
+  - 实现过滤功能（按模式、可恢复状态）
+  - 修改 DraftsViewModel 支持分页
+  - 修改 DraftsPage.xaml 添加分页控件
+  - 使用 VirtualizingStackPanel 优化列表渲染
+  - _预期提升: 70-90% 列表加载速度（当草稿数量>50）_
+  - _参考设计文档"模板和草稿功能集成 > 5.6"_
+
+- [ ] 41. 实现配置验证缓存
+  - 创建 Validators/CachedConfigValidator.cs
+  - 使用 ConcurrentDictionary 存储验证结果
+  - 实现 ComputeConfigHash 方法（使用SHA256）
+  - 实现带缓存的 Validate 方法
+  - 在 TemplateService 和 SchedulingService 中使用缓存验证器
+  - 添加缓存命中率统计
+  - _预期提升: 90%+ 验证速度（缓存命中时）_
+  - _参考设计文档"模板和草稿功能集成 > 5.7"_
+
+- [ ] 42. 性能优化验证和基准测试
+  - 创建性能测试场景（小/中/大规模）
+  - 小规模: 20人员 × 5哨位 × 3天
+  - 中规模: 50人员 × 10哨位 × 7天
+  - 大规模: 100人员 × 20哨位 × 14天
+  - 记录优化前后的性能数据
+  - 验证各项优化的实际效果
+  - 确保优化不影响功能正确性
+  - 生成性能报告
+  - _参考设计文档"性能优化实施路线图"_
+
+- [ ] 43. 最终检查点 - 性能优化完成
+  - 确保所有性能优化测试通过
+  - 验证性能目标达成：
+    - 遗传算法：6-12倍提升
+    - 模板加载：3-4倍提升
+    - 草稿保存：8-10倍提升
+    - 草稿恢复：2-3倍提升
+    - 草稿列表：8-10倍提升
+  - 如有问题请询问用户
