@@ -1217,6 +1217,292 @@ public class PerformanceMonitor
 └─────────────────────────────────────────────────────────┘
 ```
 
+## 模板和草稿功能集成
+
+### 1. 模板功能更新
+
+**目标**: 使排班模板能够保存和复用遗传算法配置
+
+#### 1.1 模板数据模型扩展
+
+```csharp
+public class SchedulingTemplate
+{
+    // 现有字段...
+    
+    // 新增：算法模式
+    public SchedulingMode AlgorithmMode { get; set; } = SchedulingMode.GreedyOnly;
+    
+    // 新增：遗传算法配置（JSON格式）
+    public string GeneticAlgorithmConfig { get; set; } = string.Empty;
+}
+```
+
+#### 1.2 模板配置序列化
+
+```csharp
+public class TemplateGeneticConfig
+{
+    public int PopulationSize { get; set; } = 50;
+    public int MaxGenerations { get; set; } = 100;
+    public double CrossoverRate { get; set; } = 0.8;
+    public double MutationRate { get; set; } = 0.1;
+    public int EliteCount { get; set; } = 2;
+    public SelectionStrategyType SelectionStrategy { get; set; }
+    public CrossoverStrategyType CrossoverStrategy { get; set; }
+    public MutationStrategyType MutationStrategy { get; set; }
+}
+```
+
+#### 1.3 使用模板创建排班
+
+```csharp
+public async Task<ScheduleDto> UseTemplateAsync(UseTemplateDto dto)
+{
+    var template = await GetByIdAsync(dto.TemplateId);
+    
+    // 加载算法配置
+    var geneticConfig = string.IsNullOrEmpty(template.GeneticAlgorithmConfig)
+        ? GeneticSchedulerConfig.GetDefault()
+        : JsonSerializer.Deserialize<GeneticSchedulerConfig>(template.GeneticAlgorithmConfig);
+    
+    // 创建排班请求
+    var request = new SchedulingRequestDto
+    {
+        Mode = template.AlgorithmMode,
+        GeneticConfig = geneticConfig,
+        // ... 其他配置
+    };
+    
+    return await _schedulingService.ExecuteSchedulingAsync(request);
+}
+```
+
+### 2. 草稿进度保存功能
+
+**目标**: 允许用户在排班执行过程中保存进度，并在需要时恢复
+
+#### 2.1 草稿数据模型扩展
+
+```csharp
+public class Schedule
+{
+    // 现有字段...
+    
+    // 新增：进度相关字段
+    public double ProgressPercentage { get; set; } = 0;
+    public string CurrentStage { get; set; } = string.Empty;
+    public bool IsPartialResult { get; set; } = false;
+    public bool IsResumable { get; set; } = false;
+    
+    // 新增：算法状态（JSON格式）
+    public string AlgorithmState { get; set; } = string.Empty;
+}
+```
+
+#### 2.2 算法状态序列化
+
+```csharp
+public class GeneticAlgorithmState
+{
+    public int CurrentGeneration { get; set; }
+    public List<Individual> CurrentPopulation { get; set; }
+    public Individual BestIndividual { get; set; }
+    public List<double> FitnessHistory { get; set; }
+    public DateTime SavedAt { get; set; }
+}
+
+public class GreedyAlgorithmState
+{
+    public int CompletedDays { get; set; }
+    public DateTime CurrentDate { get; set; }
+    public Dictionary<DateTime, int[,]> CompletedAssignments { get; set; }
+}
+```
+
+#### 2.3 保存进度为草稿
+
+```csharp
+public async Task SaveProgressAsDraftAsync(
+    Schedule partialSchedule,
+    object algorithmState,
+    CancellationToken cancellationToken)
+{
+    // 序列化算法状态
+    partialSchedule.AlgorithmState = JsonSerializer.Serialize(algorithmState);
+    partialSchedule.IsPartialResult = true;
+    partialSchedule.IsResumable = true;
+    
+    // 保存到数据库
+    await _scheduleRepository.SaveDraftAsync(partialSchedule);
+}
+```
+
+#### 2.4 从草稿恢复排班
+
+```csharp
+public async Task<Schedule> ResumeFromDraftAsync(
+    int draftId,
+    IProgress<SchedulingProgressReport>? progress,
+    CancellationToken cancellationToken)
+{
+    var draft = await GetScheduleByIdAsync(draftId);
+    
+    if (!draft.IsResumable)
+        throw new InvalidOperationException("此草稿无法恢复");
+    
+    // 反序列化算法状态
+    if (draft.Mode == SchedulingMode.Hybrid)
+    {
+        var state = JsonSerializer.Deserialize<GeneticAlgorithmState>(
+            draft.AlgorithmState);
+        
+        // 恢复遗传算法执行
+        return await _geneticScheduler.ResumeFromStateAsync(
+            state, progress, cancellationToken);
+    }
+    else
+    {
+        var state = JsonSerializer.Deserialize<GreedyAlgorithmState>(
+            draft.AlgorithmState);
+        
+        // 恢复贪心算法执行
+        return await _greedyScheduler.ResumeFromStateAsync(
+            state, progress, cancellationToken);
+    }
+}
+```
+
+#### 2.5 自动保存机制
+
+```csharp
+public class AutoSaveManager
+{
+    private readonly TimeSpan _autoSaveInterval = TimeSpan.FromMinutes(2);
+    private DateTime _lastAutoSave = DateTime.MinValue;
+    
+    public async Task CheckAndAutoSave(
+        Schedule currentSchedule,
+        object algorithmState,
+        double progressPercentage)
+    {
+        var now = DateTime.UtcNow;
+        
+        // 每2分钟或每完成10%自动保存
+        if ((now - _lastAutoSave) >= _autoSaveInterval || 
+            progressPercentage % 10 < 0.1)
+        {
+            await SaveProgressAsDraftAsync(currentSchedule, algorithmState);
+            _lastAutoSave = now;
+        }
+    }
+}
+```
+
+### 3. UI 更新
+
+#### 3.1 模板编辑界面
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  编辑模板                                                │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  模板名称: [___________________________]                │
+│  描述:     [___________________________]                │
+│                                                          │
+│  ┌─ 算法配置 ────────────────────────────┐              │
+│  │                                        │              │
+│  │  排班模式:  ○ 仅贪心算法              │              │
+│  │            ● 混合模式（贪心+遗传）     │              │
+│  │                                        │              │
+│  │  [遗传算法参数配置...]                 │              │
+│  │                                        │              │
+│  └────────────────────────────────────────┘              │
+│                                                          │
+│  [保存模板]  [取消]                                      │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### 3.2 排班进度界面（带保存草稿）
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  排班进度                                                │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  当前阶段: 遗传算法优化 (第 45/100 代)                  │
+│                                                          │
+│  [████████████████░░░░░░░░░░] 65%                       │
+│                                                          │
+│  最优适应度: 8542.3                                      │
+│  平均适应度: 7231.8                                      │
+│                                                          │
+│  ⓘ 自动保存: 2分钟前                                    │
+│                                                          │
+│  [保存草稿]  [取消排班]                                  │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### 3.3 草稿列表界面
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  草稿列表                                                │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌────────────────────────────────────────────┐         │
+│  │ 2024-01-15 排班草稿                        │         │
+│  │ 模式: 混合模式 | 进度: 65% | 可恢复       │         │
+│  │ [████████████████░░░░░░░░░░]              │         │
+│  │ [继续排班]  [查看]  [删除]                │         │
+│  └────────────────────────────────────────────┘         │
+│                                                          │
+│  ┌────────────────────────────────────────────┐         │
+│  │ 2024-01-14 排班草稿                        │         │
+│  │ 模式: 仅贪心 | 进度: 100% | 已完成        │         │
+│  │ [████████████████████████████]            │         │
+│  │ [查看]  [确认]  [删除]                    │         │
+│  └────────────────────────────────────────────┘         │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 4. 配置验证
+
+```csharp
+public class GeneticConfigValidator
+{
+    public ValidationResult Validate(GeneticSchedulerConfig config)
+    {
+        var errors = new List<string>();
+        
+        if (config.PopulationSize < 10 || config.PopulationSize > 200)
+            errors.Add("种群大小必须在 10-200 之间");
+        
+        if (config.MaxGenerations < 10 || config.MaxGenerations > 500)
+            errors.Add("最大代数必须在 10-500 之间");
+        
+        if (config.CrossoverRate < 0 || config.CrossoverRate > 1)
+            errors.Add("交叉率必须在 0.0-1.0 之间");
+        
+        if (config.MutationRate < 0 || config.MutationRate > 1)
+            errors.Add("变异率必须在 0.0-1.0 之间");
+        
+        if (config.EliteCount < 0 || config.EliteCount > 10)
+            errors.Add("精英保留数量必须在 0-10 之间");
+        
+        return new ValidationResult
+        {
+            IsValid = errors.Count == 0,
+            Errors = errors
+        };
+    }
+}
+```
+
 ## 未来扩展
 
 ### 1. 自适应参数
