@@ -102,6 +102,15 @@
                             <Run Text="{x:Bind ViewModel.ProgressPercentage, Mode=OneWay}"/>
                             <Run Text="%"/>
                         </TextBlock>
+                        <!-- 自动保存状态提示 -->
+                        <TextBlock HorizontalAlignment="Right"
+                                   FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Visibility="{x:Bind ViewModel.IsExecuting, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                   AutomationProperties.Name="上次自动保存时间">
+                            <Run Text="上次保存:"/>
+                            <Run Text="{x:Bind ViewModel.LastAutoSaveTime, Mode=OneWay}"/>
+                        </TextBlock>
                     </StackPanel>
                 </Grid>
             </StackPanel>
@@ -556,6 +565,17 @@
                                 Spacing="12"
                                 HorizontalAlignment="Right">
                         
+                        <!-- 执行中：保存草稿按钮 -->
+                        <Button Content="保存草稿"
+                                Command="{x:Bind ViewModel.SaveProgressAsDraftCommand}"
+                                Visibility="{x:Bind ViewModel.IsExecuting, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                AutomationProperties.Name="保存排班进度为草稿"
+                                ToolTipService.ToolTip="保存当前排班进度为草稿，稍后可继续 (Ctrl+D)">
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Key="D" Modifiers="Control"/>
+                            </Button.KeyboardAccelerators>
+                        </Button>
+
                         <!-- 执行中：取消按钮 -->
                         <Button Content="取消排班"
                                 Command="{x:Bind ViewModel.CancelSchedulingCommand}"

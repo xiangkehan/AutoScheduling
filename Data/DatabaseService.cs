@@ -1022,6 +1022,51 @@ CREATE INDEX IF NOT EXISTS idx_manual_assignments_enabled ON ManualAssignments(I
                 _logger.Log("EnabledManualAssignmentIds column already exists, skipping");
             }
 
+            // 添加进度相关字段（用于草稿保存）
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "ProgressPercentage"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN ProgressPercentage REAL";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added ProgressPercentage column");
+            }
+            else
+            {
+                _logger.Log("ProgressPercentage column already exists, skipping");
+            }
+
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "CurrentStage"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN CurrentStage TEXT";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added CurrentStage column");
+            }
+            else
+            {
+                _logger.Log("CurrentStage column already exists, skipping");
+            }
+
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "IsPartialResult"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN IsPartialResult INTEGER NOT NULL DEFAULT 0";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added IsPartialResult column");
+            }
+            else
+            {
+                _logger.Log("IsPartialResult column already exists, skipping");
+            }
+
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "SchedulingMode"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN SchedulingMode INTEGER NOT NULL DEFAULT 0";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added SchedulingMode column");
+            }
+            else
+            {
+                _logger.Log("SchedulingMode column already exists, skipping");
+            }
+
             _logger.Log("Version 2 migration completed successfully");
         }
 

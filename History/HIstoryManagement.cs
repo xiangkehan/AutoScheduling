@@ -347,5 +347,51 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
             if (item.Schedule == null) return null;
             return item;
         }
+
+        /// <summary>
+        /// 更新缓冲区中的排班表（用于保存进度草稿）
+        /// </summary>
+        public async Task UpdateBufferScheduleAsync(Schedule schedule)
+        {
+            if (schedule == null)
+            {
+                throw new ArgumentNullException(nameof(schedule));
+            }
+
+            // 更新排班表
+            await _schedulingRepo.UpdateAsync(schedule);
+
+            // 更新缓冲区记录的时间戳
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE BufferSchedules SET CreateTime = @createTime WHERE ScheduleId = @scheduleId";
+            cmd.Parameters.AddWithValue("@createTime", DateTime.UtcNow.Ticks);
+            cmd.Parameters.AddWithValue("@scheduleId", schedule.Id);
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
+        /// 从缓冲区获取排班表（用于恢复进度草稿）
+        /// </summary>
+        public async Task<Schedule?> GetBufferScheduleAsync(int bufferId)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT ScheduleId FROM BufferSchedules WHERE Id = @bufferId";
+            cmd.Parameters.AddWithValue("@bufferId", bufferId);
+            
+            var result = await cmd.ExecuteScalarAsync();
+            if (result == null)
+            {
+                return null;
+            }
+
+            int scheduleId = Convert.ToInt32(result);
+            return await _schedulingRepo.GetByIdAsync(scheduleId);
+        }
     }
 }

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using AutoScheduling3.Models;
 namespace AutoScheduling3.History;
 /// <summary>
-/// 历史管理接口
+/// 锟斤拷史锟斤拷锟斤拷锟接匡拷
 /// </summary>
 public interface IHistoryManagement 
 { 
@@ -16,5 +16,7 @@ public interface IHistoryManagement
     Task ClearBufferAsync(); Task DeleteHistoryScheduleAsync(int scheduleId); 
     Task DeleteBufferScheduleAsync(int bufferId); 
     Task<Schedule?> GetLastConfirmedScheduleAsync(); 
-    Task<(Schedule Schedule, DateTime ConfirmTime)?> GetHistoryScheduleByScheduleIdAsync(int scheduleId); 
+    Task<(Schedule Schedule, DateTime ConfirmTime)?> GetHistoryScheduleByScheduleIdAsync(int scheduleId);
+    Task UpdateBufferScheduleAsync(Schedule schedule);
+    Task<Schedule?> GetBufferScheduleAsync(int bufferId);
 }
