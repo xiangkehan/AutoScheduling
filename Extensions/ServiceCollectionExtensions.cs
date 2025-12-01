@@ -159,6 +159,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<NavigationService>();
         services.AddSingleton<Helpers.DialogService>();
         services.AddSingleton<IThemeService, ThemeService>();
+        
+        // 注册分页草稿加载器
+        services.AddSingleton<PaginatedDraftLoader>();
 
         return services;
     }

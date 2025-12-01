@@ -14,6 +14,8 @@
         <converters:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+        <converters:EnumToBoolConverter x:Key="EnumToBoolConverter"/>
+        <converters:AddOneConverter x:Key="AddOneConverter"/>
     </Page.Resources>
 
     <Grid>
@@ -23,8 +25,70 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="24,24,24,12">
-            <TextBlock Text="草稿箱" Style="{ThemeResource TitleTextBlockStyle}"/>
-            <TextBlock Text="查看、确认或删除未完成的排班草稿" Style="{ThemeResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="草稿箱" Style="{ThemeResource TitleTextBlockStyle}"/>
+                    <TextBlock Text="查看、确认或删除未完成的排班草稿" Style="{ThemeResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Margin="0,4,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        <Run Text="共"/>
+                        <Run Text="{x:Bind ViewModel.TotalCount, Mode=OneWay}"/>
+                        <Run Text="个草稿"/>
+                    </TextBlock>
+                </StackPanel>
+
+                <Button Grid.Column="1" 
+                        Content="过滤选项" 
+                        Command="{x:Bind ViewModel.ToggleFiltersCommand}"
+                        VerticalAlignment="Center">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE71C;" FontSize="16"/>
+                            <TextBlock Text="过滤"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+            </Grid>
+
+            <!-- 过滤面板 -->
+            <Border Margin="0,12,0,0" 
+                    Padding="16" 
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Visibility="{x:Bind ViewModel.ShowFilters, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="过滤条件" Style="{ThemeResource SubtitleTextBlockStyle}"/>
+                    
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="排班模式" Style="{ThemeResource CaptionTextBlockStyle}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <RadioButton Content="全部" 
+                                        IsChecked="{x:Bind ViewModel.FilterMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=null}"/>
+                            <RadioButton Content="仅贪心" 
+                                        IsChecked="{x:Bind ViewModel.FilterMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=GreedyOnly}"/>
+                            <RadioButton Content="混合模式" 
+                                        IsChecked="{x:Bind ViewModel.FilterMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Hybrid}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <CheckBox Content="只显示可恢复的草稿" 
+                             IsChecked="{x:Bind ViewModel.FilterResumableOnly, Mode=TwoWay}"/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="应用" 
+                               Style="{ThemeResource AccentButtonStyle}"
+                               Command="{x:Bind ViewModel.ApplyFiltersCommand}"/>
+                        <Button Content="清除" 
+                               Command="{x:Bind ViewModel.ClearFiltersCommand}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </StackPanel>
 
         <Grid Grid.Row="1" Padding="24,0,24,24">
@@ -34,63 +98,196 @@
                          VerticalAlignment="Center"/>
 
             <!-- 草稿列表 -->
-            <ListView ItemsSource="{x:Bind ViewModel.Drafts, Mode=OneWay}"
-                      Visibility="{x:Bind ViewModel.Drafts.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=True}">
-                <ListView.HeaderTemplate>
-                    <DataTemplate>
-                        <Grid Padding="12" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="3*"/>
-                                <ColumnDefinition Width="2*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="2*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="排班表名称" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="1" Text="日期范围" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="2" Text="人员数" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                            <TextBlock Grid.Column="3" Text="哨位数" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                            <TextBlock Grid.Column="4" Text="操作" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Right"/>
-                        </Grid>
-                    </DataTemplate>
-                </ListView.HeaderTemplate>
-                <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="dto:ScheduleSummaryDto">
-                        <Grid Padding="12" HorizontalAlignment="Stretch">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="3*"/>
-                                <ColumnDefinition Width="2*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="2*"/>
-                            </Grid.ColumnDefinitions>
+            <ScrollViewer Visibility="{x:Bind ViewModel.Drafts.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=True}">
+                <StackPanel Spacing="12">
+                    <!-- 列表头 -->
+                    <Grid Padding="12" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="8,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="1.5*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="2.5*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="排班表名称" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="日期范围" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="2" Text="算法模式" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="3" Text="人员数" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="4" Text="哨位数" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="5" Text="操作" Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                    </Grid>
 
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
-                                <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}">
-                                    <Run Text="创建于:"/>
-                                    <Run Text="{x:Bind CreatedAt, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd HH:mm'}"/>
-                                </TextBlock>
+                    <!-- 使用虚拟化列表 -->
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.Drafts, Mode=OneWay}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="dto:ScheduleSummaryDto">
+                                <Border Padding="12" 
+                                       Margin="0,0,0,8"
+                                       Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                       BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                       BorderThickness="1"
+                                       CornerRadius="8">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- 主要信息行 -->
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="3*"/>
+                                                <ColumnDefinition Width="2*"/>
+                                                <ColumnDefinition Width="1.5*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="2.5*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
+                                                <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{ThemeResource CaptionTextBlockStyle}">
+                                                    <Run Text="创建于:"/>
+                                                    <Run Text="{x:Bind CreatedAt, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd HH:mm'}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Style="{ThemeResource BodyTextBlockStyle}">
+                                                <Run Text="{x:Bind StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
+                                                <Run Text="至"/>
+                                                <Run Text="{x:Bind EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
+                                            </TextBlock>
+
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <!-- 算法模式标签 -->
+                                                <Border Padding="8,4" 
+                                                       Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                       CornerRadius="4"
+                                                       HorizontalAlignment="Left">
+                                                    <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" FontWeight="SemiBold">
+                                                        <Run Text="{x:Bind SchedulingMode}"/>
+                                                    </TextBlock>
+                                                </Border>
+                                                <!-- 可恢复标签 -->
+                                                <Border Padding="6,2" 
+                                                       Margin="0,4,0,0"
+                                                       Background="{ThemeResource SystemFillColorSuccessBrush}"
+                                                       CornerRadius="4"
+                                                       HorizontalAlignment="Left"
+                                                       Visibility="{x:Bind IsResumable, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="可恢复" 
+                                                              Style="{ThemeResource CaptionTextBlockStyle}" 
+                                                              FontSize="10"
+                                                              Foreground="White"/>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Column="3" Text="{x:Bind PersonnelCount}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="4" Text="{x:Bind PositionCount}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                                            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                                <Button Content="查看" Command="{Binding DataContext.ViewDraftCommand, ElementName=PageRoot}" CommandParameter="{x:Bind Id}"/>
+                                                <!-- 继续排班按钮（仅对可恢复的草稿显示） -->
+                                                <Button Content="继续排班" 
+                                                       Style="{ThemeResource AccentButtonStyle}"
+                                                       Command="{Binding DataContext.ResumeDraftCommand, ElementName=PageRoot}" 
+                                                       CommandParameter="{x:Bind Id}"
+                                                       Visibility="{x:Bind IsResumable, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                <!-- 确认按钮（对已完成的草稿显示） -->
+                                                <Button Content="确认" 
+                                                       Style="{ThemeResource AccentButtonStyle}" 
+                                                       Command="{Binding DataContext.ConfirmDraftCommand, ElementName=PageRoot}" 
+                                                       CommandParameter="{x:Bind Id}"
+                                                       Visibility="{x:Bind IsResumable, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                <AppBarButton Icon="Delete" Label="删除" Command="{Binding DataContext.DeleteDraftCommand, ElementName=PageRoot}" CommandParameter="{x:Bind Id}"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- 进度条（仅对未完成的草稿显示） -->
+                                        <StackPanel Grid.Row="1" 
+                                                   Margin="0,8,0,0"
+                                                   Visibility="{x:Bind IsResumable, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" 
+                                                          Text="完成进度:" 
+                                                          Style="{ThemeResource CaptionTextBlockStyle}"
+                                                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                          VerticalAlignment="Center"
+                                                          Margin="0,0,8,0"/>
+                                                <ProgressBar Grid.Column="1" 
+                                                            Value="{x:Bind ProgressPercentage}" 
+                                                            Maximum="100"
+                                                            VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="2" 
+                                                          Margin="8,0,0,0"
+                                                          VerticalAlignment="Center"
+                                                          Style="{ThemeResource CaptionTextBlockStyle}">
+                                                    <Run Text="{x:Bind ProgressPercentage}"/>
+                                                    <Run Text="%"/>
+                                                </TextBlock>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- 分页控件 -->
+                    <Grid Margin="0,12,0,0" 
+                         Visibility="{x:Bind ViewModel.TotalPages, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=True}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" 
+                               HorizontalAlignment="Left"
+                               Command="{x:Bind ViewModel.PreviousPageCommand}"
+                               IsEnabled="{x:Bind ViewModel.HasPreviousPage, Mode=OneWay}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE76B;" FontSize="14"/>
+                                <TextBlock Text="上一页"/>
                             </StackPanel>
+                        </Button>
 
-                            <TextBlock Grid.Column="1" VerticalAlignment="Center">
-                                <Run Text="{x:Bind StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
-                                <Run Text="至"/>
-                                <Run Text="{x:Bind EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter='yyyy-MM-dd'}"/>
+                        <StackPanel Grid.Column="1" 
+                                   Orientation="Horizontal" 
+                                   Spacing="8"
+                                   HorizontalAlignment="Center">
+                            <TextBlock VerticalAlignment="Center" Style="{ThemeResource BodyTextBlockStyle}">
+                                <Run Text="第"/>
+                                <Run Text="{x:Bind ViewModel.CurrentPageIndex, Mode=OneWay, Converter={StaticResource AddOneConverter}}"/>
+                                <Run Text="/"/>
+                                <Run Text="{x:Bind ViewModel.TotalPages, Mode=OneWay}"/>
+                                <Run Text="页"/>
                             </TextBlock>
+                        </StackPanel>
 
-                            <TextBlock Grid.Column="2" Text="{x:Bind PersonnelCount}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                            <TextBlock Grid.Column="3" Text="{x:Bind PositionCount}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-
-                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                                <Button Content="查看" Command="{Binding DataContext.ViewDraftCommand, ElementName=PageRoot}" CommandParameter="{x:Bind Id}"/>
-                                <Button Content="确认" Style="{ThemeResource AccentButtonStyle}" Command="{Binding DataContext.ConfirmDraftCommand, ElementName=PageRoot}" CommandParameter="{x:Bind Id}"/>
-                                <AppBarButton Icon="Delete" Label="删除" Command="{Binding DataContext.DeleteDraftCommand, ElementName=PageRoot}" CommandParameter="{x:Bind Id}"/>
+                        <Button Grid.Column="2" 
+                               HorizontalAlignment="Right"
+                               Command="{x:Bind ViewModel.NextPageCommand}"
+                               IsEnabled="{x:Bind ViewModel.HasNextPage, Mode=OneWay}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="下一页"/>
+                                <FontIcon Glyph="&#xE76C;" FontSize="14"/>
                             </StackPanel>
-                        </Grid>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
 
             <!-- 空状态展示 -->
             <controls:EmptyState 
