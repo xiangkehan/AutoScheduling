@@ -273,6 +273,25 @@ public class ScheduleSummaryDto
     /// </summary>
     [JsonPropertyName("confirmedAt")]
     public DateTime? ConfirmedAt { get; set; }
+
+    /// <summary>
+    /// 排班模式（仅贪心或混合）
+    /// </summary>
+    [JsonPropertyName("schedulingMode")]
+    public SchedulingMode SchedulingMode { get; set; }
+
+    /// <summary>
+    /// 进度百分比（0-100）
+    /// </summary>
+    [Range(0, 100, ErrorMessage = "进度百分比必须在0-100之间")]
+    [JsonPropertyName("progressPercentage")]
+    public double ProgressPercentage { get; set; }
+
+    /// <summary>
+    /// 是否可恢复（未完成的草稿）
+    /// </summary>
+    [JsonPropertyName("isResumable")]
+    public bool IsResumable { get; set; }
 }
 
 /// <summary>

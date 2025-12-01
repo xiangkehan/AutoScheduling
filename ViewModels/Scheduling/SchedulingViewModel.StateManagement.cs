@@ -280,5 +280,157 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         #endregion
+
+        #region 未完成草稿检测和恢复
+
+        /// <summary>
+        /// 检测是否有未完成的排班草稿
+        /// </summary>
+        public async Task<List<ScheduleSummaryDto>> DetectIncompleteDraftsAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("=== 检测未完成的排班草稿 ===");
+
+                // 获取所有草稿
+                var drafts = await _schedulingService.GetDraftsAsync();
+                
+                // 筛选出未完成的草稿（IsPartialResult = true 且 ProgressPercentage < 100）
+                var incompleteDrafts = new List<ScheduleSummaryDto>();
+                
+                foreach (var draft in drafts)
+                {
+                    var progress = await _schedulingService.GetDraftProgressAsync(draft.Id);
+                    
+                    if (progress.HasValue && progress.Value < 100)
+                    {
+                        // 添加进度信息到摘要
+                        draft.ProgressPercentage = progress.Value;
+                        draft.IsResumable = true;
+                        incompleteDrafts.Add(draft);
+                        
+                        System.Diagnostics.Debug.WriteLine($"发现未完成草稿: {draft.Title}, 进度: {progress.Value:F1}%");
+                    }
+                }
+
+                System.Diagnostics.Debug.WriteLine($"共发现 {incompleteDrafts.Count} 个未完成的草稿");
+                return incompleteDrafts;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"检测未完成草稿失败: {ex.Message}");
+                return new List<ScheduleSummaryDto>();
+            }
+        }
+
+        /// <summary>
+        /// 从草稿恢复排班
+        /// </summary>
+        public async Task<bool> ResumeSchedulingFromDraftAsync(int draftId)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"=== 开始从草稿恢复排班 (ID: {draftId}) ===");
+
+                // 获取草稿详情
+                var draftSchedule = await _schedulingService.GetScheduleByIdAsync(draftId);
+                if (draftSchedule == null)
+                {
+                    await _dialogService.ShowErrorAsync("恢复失败", new InvalidOperationException("未找到指定的草稿"));
+                    return false;
+                }
+
+                // 检查是否为未完成的草稿
+                if (!draftSchedule.IsPartialResult)
+                {
+                    await _dialogService.ShowErrorAsync("恢复失败", new InvalidOperationException("该草稿已完成，无需恢复"));
+                    return false;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"草稿标题: {draftSchedule.Title}");
+                System.Diagnostics.Debug.WriteLine($"草稿进度: {draftSchedule.ProgressPercentage:F1}%");
+                System.Diagnostics.Debug.WriteLine($"排班模式: {draftSchedule.SchedulingMode}");
+
+                // 恢复排班参数
+                ScheduleTitle = draftSchedule.Title;
+                StartDate = new DateTimeOffset(draftSchedule.StartDate);
+                EndDate = new DateTimeOffset(draftSchedule.EndDate);
+
+                // 加载基础数据（如果还没有加载）
+                if (AvailablePersonnels.Count == 0 || AvailablePositions.Count == 0)
+                {
+                    await LoadInitialDataAsync();
+                }
+
+                // 恢复选中的人员和哨位
+                var selectedPers = AvailablePersonnels.Where(p => draftSchedule.PersonnelIds.Contains(p.Id)).ToList();
+                var selectedPos = AvailablePositions.Where(p => draftSchedule.PositionIds.Contains(p.Id)).ToList();
+                
+                SelectedPersonnels = new ObservableCollection<PersonnelDto>(selectedPers);
+                SelectedPositions = new ObservableCollection<PositionDto>(selectedPos);
+
+                // 恢复算法配置（如果有）
+                if (draftSchedule.SchedulingMode == SchedulingMode.Hybrid)
+                {
+                    // 恢复遗传算法配置
+                    await AlgorithmConfigViewModel.LoadConfigAsync();
+                }
+
+                System.Diagnostics.Debug.WriteLine("草稿参数恢复成功，准备继续排班");
+
+                // 直接跳转到执行排班
+                // 注意：这里不调用 ExecuteSchedulingAsync，而是让用户在UI上点击"继续排班"按钮
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"从草稿恢复排班失败: {ex.Message}");
+                await _dialogService.ShowErrorAsync("恢复失败", ex);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 继续未完成的排班
+        /// </summary>
+        private async Task ContinueIncompleteDraftAsync(ScheduleSummaryDto? draft)
+        {
+            if (draft == null) return;
+
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"=== 继续未完成的排班 (ID: {draft.Id}) ===");
+
+                // 恢复排班参数
+                var success = await ResumeSchedulingFromDraftAsync(draft.Id);
+                
+                if (success)
+                {
+                    // 隐藏提示
+                    ShowIncompleteDraftPrompt = false;
+                    
+                    // 提示用户
+                    await _dialogService.ShowInfoAsync(
+                        "恢复成功",
+                        $"已恢复排班 \"{draft.Title}\"，进度: {draft.ProgressPercentage:F1}%\n\n请点击\"开始排班\"继续执行。");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"继续未完成排班失败: {ex.Message}");
+                await _dialogService.ShowErrorAsync("继续排班失败", ex);
+            }
+        }
+
+        /// <summary>
+        /// 忽略未完成草稿提示
+        /// </summary>
+        private void DismissIncompleteDraftPrompt()
+        {
+            ShowIncompleteDraftPrompt = false;
+            System.Diagnostics.Debug.WriteLine("用户选择忽略未完成草稿提示");
+        }
+
+        #endregion
     }
 }

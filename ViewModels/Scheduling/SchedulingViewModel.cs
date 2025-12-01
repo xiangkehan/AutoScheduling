@@ -141,6 +141,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
             SubmitManualAddPersonnelCommand = new AsyncRelayCommand(SubmitManualAddPersonnelAsync);
             CancelManualAddPersonnelCommand = new RelayCommand(CancelManualAddPersonnel);
             RemoveManualPersonnelCommand = new RelayCommand<int>(RemoveManualPersonnel);
+
+            // 未完成草稿命令
+            ContinueIncompleteDraftCommand = new AsyncRelayCommand<ScheduleSummaryDto>(ContinueIncompleteDraftAsync);
+            DismissIncompleteDraftPromptCommand = new RelayCommand(DismissIncompleteDraftPrompt);
         }
 
         /// <summary>
@@ -207,6 +211,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 {
                     ScheduleTitle = $"排班_{DateTime.Now:yyyyMMdd}";
                 }
+
+                // 检测未完成的草稿
+                await DetectAndPromptIncompleteDraftsAsync();
             }
             catch (Exception ex)
             {
@@ -215,6 +222,34 @@ namespace AutoScheduling3.ViewModels.Scheduling
             finally
             {
                 IsLoadingInitial = false;
+            }
+        }
+
+        /// <summary>
+        /// 检测并提示未完成的草稿
+        /// </summary>
+        private async Task DetectAndPromptIncompleteDraftsAsync()
+        {
+            try
+            {
+                var incompleteDrafts = await DetectIncompleteDraftsAsync();
+                
+                if (incompleteDrafts.Count > 0)
+                {
+                    IncompleteDrafts = new ObservableCollection<ScheduleSummaryDto>(incompleteDrafts);
+                    ShowIncompleteDraftPrompt = true;
+                    
+                    System.Diagnostics.Debug.WriteLine($"发现 {incompleteDrafts.Count} 个未完成的草稿，显示提示");
+                }
+                else
+                {
+                    ShowIncompleteDraftPrompt = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"检测未完成草稿失败: {ex.Message}");
+                ShowIncompleteDraftPrompt = false;
             }
         }
 

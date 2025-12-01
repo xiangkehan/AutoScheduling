@@ -412,5 +412,27 @@ namespace AutoScheduling3.ViewModels.Scheduling
         }
 
         #endregion
+
+        #region 未完成草稿相关属性
+
+        /// <summary>
+        /// 未完成的草稿列表
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<ScheduleSummaryDto> _incompleteDrafts = new();
+
+        /// <summary>
+        /// 是否显示未完成草稿提示
+        /// </summary>
+        [ObservableProperty]
+        private bool _showIncompleteDraftPrompt;
+
+        /// <summary>
+        /// 选中的未完成草稿
+        /// </summary>
+        [ObservableProperty]
+        private ScheduleSummaryDto? _selectedIncompleteDraft;
+
+        #endregion
     }
 }
