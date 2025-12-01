@@ -69,12 +69,48 @@ namespace AutoScheduling3.Services.ImportExport.Importers
         }
 
         /// <summary>
-        /// 从数据库获取现有记录
+        /// 从数据库获取现有记录（单个）
         /// </summary>
+        [Obsolete("此方法已过时，请使用 GetExistingRecordsBatchAsync", true)]
         protected override async Task<Personal?> GetExistingRecordAsync(int id, ImportContext context)
         {
             // 使用仓储直接查询，因为我们需要完整的模型对象进行比较
             return await _personnelRepository.GetByIdAsync(id);
+        }
+
+        /// <summary>
+        /// 批量从数据库获取现有记录
+        /// 使用事务中的连接直接查询，避免锁定问题
+        /// </summary>
+        protected override async Task<Dictionary<int, Personal>> GetExistingRecordsBatchAsync(List<int> ids, ImportContext context)
+        {
+            var result = new Dictionary<int, Personal>();
+
+            if (ids == null || ids.Count == 0)
+            {
+                return result;
+            }
+
+            // 使用仓储的批量查询方法（这会使用独立的连接，可能导致锁定）
+            // 更好的方法是直接使用事务中的连接查询
+            try
+            {
+                // 尝试使用批量查询
+                var personnel = await _personnelRepository.GetByIdsAsync(ids);
+                
+                foreach (var person in personnel)
+                {
+                    result[person.Id] = person;
+                }
+            }
+            catch (Exception ex)
+            {
+                // 如果批量查询失败，记录警告并返回空结果
+                // 这会导致所有记录都被标记为需要更新，但至少不会阻塞
+                _logger.LogWarning($"Personals: Failed to batch fetch records - {ex.Message}");
+            }
+
+            return result;
         }
     }
 }

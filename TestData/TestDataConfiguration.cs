@@ -46,6 +46,32 @@ public class TestDataConfiguration
     public int RandomSeed { get; set; } = 42;
 
     /// <summary>
+    /// 每个哨位的最小可用人员数量
+    /// </summary>
+    public int MinPersonnelPerPosition { get; set; } = 3;
+
+    /// <summary>
+    /// 人员可用率（0.0-1.0），默认 85%
+    /// </summary>
+    public double PersonnelAvailabilityRate { get; set; } = 0.85;
+
+    /// <summary>
+    /// 人员退役率（0.0-1.0），默认 10%
+    /// </summary>
+    public double PersonnelRetirementRate { get; set; } = 0.10;
+
+    /// <summary>
+    /// 多技能人员比例（0.0-1.0），默认 35%
+    /// 该值越低，哨位之间共享的人员越少
+    /// </summary>
+    public double MultiSkilledPersonnelRate { get; set; } = 0.35;
+
+    /// <summary>
+    /// 无技能模式（开启后生成的哨位都没有技能要求，人员也都没有技能）
+    /// </summary>
+    public bool NoSkillMode { get; set; } = false;
+
+    /// <summary>
     /// 创建默认配置（中等规模）
     /// </summary>
     public static TestDataConfiguration CreateDefault()
@@ -55,6 +81,10 @@ public class TestDataConfiguration
             SkillCount = 8,
             PersonnelCount = 15,
             PositionCount = 10,
+            MinPersonnelPerPosition = 3,
+            PersonnelAvailabilityRate = 0.85,
+            PersonnelRetirementRate = 0.10,
+            MultiSkilledPersonnelRate = 0.35,
             TemplateCount = 3,
             FixedAssignmentCount = 5,
             ManualAssignmentCount = 8,
@@ -73,6 +103,10 @@ public class TestDataConfiguration
             SkillCount = 5,
             PersonnelCount = 8,
             PositionCount = 6,
+            MinPersonnelPerPosition = 2,
+            PersonnelAvailabilityRate = 0.85,
+            PersonnelRetirementRate = 0.10,
+            MultiSkilledPersonnelRate = 0.30,
             TemplateCount = 2,
             FixedAssignmentCount = 3,
             ManualAssignmentCount = 5,
@@ -91,10 +125,58 @@ public class TestDataConfiguration
             SkillCount = 15,
             PersonnelCount = 30,
             PositionCount = 20,
+            MinPersonnelPerPosition = 3,
+            PersonnelAvailabilityRate = 0.85,
+            PersonnelRetirementRate = 0.10,
+            MultiSkilledPersonnelRate = 0.40,
             TemplateCount = 5,
             FixedAssignmentCount = 10,
             ManualAssignmentCount = 15,
             HolidayConfigCount = 3,
+            RandomSeed = 42
+        };
+    }
+
+    /// <summary>
+    /// 创建小型演练配置（高可用率，低退役率）
+    /// </summary>
+    public static TestDataConfiguration CreateDrillScenario()
+    {
+        return new TestDataConfiguration
+        {
+            SkillCount = 5,
+            PersonnelCount = 12,
+            PositionCount = 6,
+            MinPersonnelPerPosition = 3,
+            PersonnelAvailabilityRate = 0.95,  // 95% 可用
+            PersonnelRetirementRate = 0.05,    // 5% 退役
+            MultiSkilledPersonnelRate = 0.25,  // 较低的多技能比例
+            TemplateCount = 2,
+            FixedAssignmentCount = 3,
+            ManualAssignmentCount = 5,
+            HolidayConfigCount = 1,
+            RandomSeed = 42
+        };
+    }
+
+    /// <summary>
+    /// 创建大型实战配置（较低可用率，较高退役率）
+    /// </summary>
+    public static TestDataConfiguration CreateCombatScenario()
+    {
+        return new TestDataConfiguration
+        {
+            SkillCount = 12,
+            PersonnelCount = 40,
+            PositionCount = 15,
+            MinPersonnelPerPosition = 4,
+            PersonnelAvailabilityRate = 0.75,  // 75% 可用
+            PersonnelRetirementRate = 0.15,    // 15% 退役
+            MultiSkilledPersonnelRate = 0.30,  // 较低的多技能比例
+            TemplateCount = 4,
+            FixedAssignmentCount = 8,
+            ManualAssignmentCount = 12,
+            HolidayConfigCount = 2,
             RandomSeed = 42
         };
     }
@@ -128,6 +210,18 @@ public class TestDataConfiguration
 
         if (HolidayConfigCount < 1)
             errors.Add("节假日配置数量至少需要1个，当前值: " + HolidayConfigCount);
+
+        if (MinPersonnelPerPosition < 1)
+            errors.Add("每个哨位的最小可用人员数量至少需要1个，当前值: " + MinPersonnelPerPosition);
+
+        if (PersonnelAvailabilityRate < 0.0 || PersonnelAvailabilityRate > 1.0)
+            errors.Add($"人员可用率必须在 0.0-1.0 之间，当前值: {PersonnelAvailabilityRate}");
+
+        if (PersonnelRetirementRate < 0.0 || PersonnelRetirementRate > 1.0)
+            errors.Add($"人员退役率必须在 0.0-1.0 之间，当前值: {PersonnelRetirementRate}");
+
+        if (MultiSkilledPersonnelRate < 0.0 || MultiSkilledPersonnelRate > 1.0)
+            errors.Add($"多技能人员比例必须在 0.0-1.0 之间，当前值: {MultiSkilledPersonnelRate}");
 
         // 验证最大值
         if (SkillCount > 50)
@@ -177,6 +271,34 @@ public class TestDataConfiguration
             errors.Add($"手动指定数量({ManualAssignmentCount})不应超过哨位数量({PositionCount})乘以时段数(12)");
         }
 
+        if (MinPersonnelPerPosition > PersonnelCount)
+        {
+            errors.Add($"每个哨位的最小可用人员数量({MinPersonnelPerPosition})不能超过人员总数({PersonnelCount})");
+        }
+
+        if (PersonnelAvailabilityRate + PersonnelRetirementRate > 1.0)
+        {
+            errors.Add($"人员可用率({PersonnelAvailabilityRate})和退役率({PersonnelRetirementRate})之和不能超过 1.0");
+        }
+
+        // 警告：如果人员数量不足以满足所有哨位的需求
+        int totalRequiredPersonnel = PositionCount * MinPersonnelPerPosition;
+        if (PersonnelCount < totalRequiredPersonnel)
+        {
+            errors.Add($"人员数量({PersonnelCount})可能不足以满足所有哨位的需求。" +
+                $"建议至少 {totalRequiredPersonnel} 个人员（{PositionCount}个哨位 × {MinPersonnelPerPosition}人/哨位）");
+        }
+
+        // 考虑可用率和退役率
+        double effectiveRate = PersonnelAvailabilityRate * (1.0 - PersonnelRetirementRate);
+        int effectivePersonnel = (int)(PersonnelCount * effectiveRate);
+        if (effectivePersonnel < totalRequiredPersonnel)
+        {
+            errors.Add($"考虑到可用率({PersonnelAvailabilityRate:P0})和退役率({PersonnelRetirementRate:P0})，" +
+                $"有效人员数量约为 {effectivePersonnel}，可能不足以满足所有哨位的需求。" +
+                $"建议增加人员数量或降低 MinPersonnelPerPosition");
+        }
+
         // 如果有错误，抛出异常
         if (errors.Count > 0)
         {
@@ -214,6 +336,18 @@ public class TestDataConfiguration
 
         if (HolidayConfigCount < 1)
             errors.Add("节假日配置数量至少需要1个，当前值: " + HolidayConfigCount);
+
+        if (MinPersonnelPerPosition < 1)
+            errors.Add("每个哨位的最小可用人员数量至少需要1个，当前值: " + MinPersonnelPerPosition);
+
+        if (PersonnelAvailabilityRate < 0.0 || PersonnelAvailabilityRate > 1.0)
+            errors.Add($"人员可用率必须在 0.0-1.0 之间，当前值: {PersonnelAvailabilityRate}");
+
+        if (PersonnelRetirementRate < 0.0 || PersonnelRetirementRate > 1.0)
+            errors.Add($"人员退役率必须在 0.0-1.0 之间，当前值: {PersonnelRetirementRate}");
+
+        if (MultiSkilledPersonnelRate < 0.0 || MultiSkilledPersonnelRate > 1.0)
+            errors.Add($"多技能人员比例必须在 0.0-1.0 之间，当前值: {MultiSkilledPersonnelRate}");
 
         // 验证最大值
         if (SkillCount > 50)
@@ -265,6 +399,34 @@ public class TestDataConfiguration
             warnings.Add($"手动指定数量({ManualAssignmentCount})不应超过哨位数量({PositionCount})乘以时段数(12)");
         }
 
+        if (MinPersonnelPerPosition > PersonnelCount)
+        {
+            errors.Add($"每个哨位的最小可用人员数量({MinPersonnelPerPosition})不能超过人员总数({PersonnelCount})");
+        }
+
+        if (PersonnelAvailabilityRate + PersonnelRetirementRate > 1.0)
+        {
+            errors.Add($"人员可用率({PersonnelAvailabilityRate})和退役率({PersonnelRetirementRate})之和不能超过 1.0");
+        }
+
+        // 警告：如果人员数量不足以满足所有哨位的需求
+        int totalRequiredPersonnel = PositionCount * MinPersonnelPerPosition;
+        if (PersonnelCount < totalRequiredPersonnel)
+        {
+            warnings.Add($"人员数量({PersonnelCount})可能不足以满足所有哨位的需求。" +
+                $"建议至少 {totalRequiredPersonnel} 个人员（{PositionCount}个哨位 × {MinPersonnelPerPosition}人/哨位）");
+        }
+
+        // 考虑可用率和退役率
+        double effectiveRate = PersonnelAvailabilityRate * (1.0 - PersonnelRetirementRate);
+        int effectivePersonnel = (int)(PersonnelCount * effectiveRate);
+        if (effectivePersonnel < totalRequiredPersonnel)
+        {
+            warnings.Add($"考虑到可用率({PersonnelAvailabilityRate:P0})和退役率({PersonnelRetirementRate:P0})，" +
+                $"有效人员数量约为 {effectivePersonnel}，可能不足以满足所有哨位的需求。" +
+                $"建议增加人员数量或降低 MinPersonnelPerPosition");
+        }
+
         return new ValidationResult
         {
             IsValid = errors.Count == 0,
@@ -298,6 +460,16 @@ public class ValidationResult
     /// 是否有警告
     /// </summary>
     public bool HasWarnings => Warnings.Count > 0;
+
+    /// <summary>
+    /// 解构方法，支持元组解构语法
+    /// </summary>
+    public void Deconstruct(out bool isValid, out List<string> errors, out List<string> warnings)
+    {
+        isValid = IsValid;
+        errors = Errors;
+        warnings = Warnings;
+    }
 
     /// <summary>
     /// 获取所有消息的格式化字符串

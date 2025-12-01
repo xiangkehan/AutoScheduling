@@ -143,7 +143,10 @@ namespace AutoScheduling3.Services.ImportExport.Importers
         }
 
         /// <summary>
-        /// 处理 Replace 策略：插入新记录，更新现有记录（仅更新变化的）
+        /// 处理 Replace 策略：插入新记录，直接更新所有现有记录（不比较）
+        /// 
+        /// 注意：为了避免在事务中读取数据导致锁定，Replace 策略直接更新所有现有记录，
+        /// 不进行变化检测。这样可以显著提高性能并避免数据库锁定问题。
         /// </summary>
         private async Task ProcessReplaceStrategyAsync(
             List<TDto> toInsert,
@@ -166,26 +169,19 @@ namespace AutoScheduling3.Services.ImportExport.Importers
                 tableStats.Inserted = inserted;
             }
 
-            // 批量更新现有记录（仅更新变化的）
+            // 直接批量更新所有现有记录（不进行变化检测以避免锁定）
             if (toUpdate.Count > 0)
             {
-                _logger.Log($"{tableName}: Checking {toUpdate.Count} records for updates");
-                var recordsToUpdate = await FilterUnchangedRecordsAsync(toUpdate, context);
-
-                if (recordsToUpdate.Count > 0)
-                {
-                    _logger.Log($"{tableName}: Updating {recordsToUpdate.Count} changed records");
-                    var updated = await _batchImporter.BatchUpdateAsync(
-                        recordsToUpdate,
-                        context.Connection,
-                        context.Transaction,
-                        tableName,
-                        MapToFields,
-                        GetRecordId);
-                    tableStats.Updated = updated;
-                }
-
-                tableStats.Unchanged = toUpdate.Count - recordsToUpdate.Count;
+                _logger.Log($"{tableName}: Updating {toUpdate.Count} existing records (Replace strategy - no change detection)");
+                var updated = await _batchImporter.BatchUpdateAsync(
+                    toUpdate,
+                    context.Connection,
+                    context.Transaction,
+                    tableName,
+                    MapToFields,
+                    GetRecordId);
+                tableStats.Updated = updated;
+                tableStats.Unchanged = 0; // Replace 策略不检测未变化的记录
             }
         }
 
@@ -243,21 +239,36 @@ namespace AutoScheduling3.Services.ImportExport.Importers
             ImportContext context)
         {
             var recordsToUpdate = new List<TDto>();
+            var tableName = GetTableName();
+
+            // 批量获取所有需要比较的现有记录，避免逐个查询导致锁定
+            var idsToFetch = records.Select(GetRecordId).ToList();
+            var existingRecords = await GetExistingRecordsBatchAsync(idsToFetch, context);
 
             foreach (var record in records)
             {
                 try
                 {
-                    var existing = await GetExistingRecordAsync(GetRecordId(record), context);
-
-                    if (existing != null && !CompareRecords(record, existing))
+                    var recordId = GetRecordId(record);
+                    
+                    // 从批量获取的结果中查找对应的记录
+                    if (existingRecords.TryGetValue(recordId, out var existing))
                     {
+                        if (!CompareRecords(record, existing))
+                        {
+                            recordsToUpdate.Add(record);
+                        }
+                    }
+                    else
+                    {
+                        // 如果找不到现有记录，保守地包含该记录进行更新
+                        _logger.LogWarning($"{tableName}: Record {recordId} not found in batch fetch, including for update");
                         recordsToUpdate.Add(record);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning($"{GetTableName()}: Failed to compare record {GetRecordId(record)} - {ex.Message}");
+                    _logger.LogWarning($"{tableName}: Failed to compare record {GetRecordId(record)} - {ex.Message}");
                     // 如果比较失败，保守地包含该记录进行更新
                     recordsToUpdate.Add(record);
                 }
@@ -311,9 +322,19 @@ namespace AutoScheduling3.Services.ImportExport.Importers
         protected abstract Dictionary<string, object> MapToFields(TDto record);
 
         /// <summary>
-        /// 从数据库获取现有记录
+        /// 从数据库获取现有记录（单个）
         /// </summary>
+        [Obsolete("此方法已过时，请使用 GetExistingRecordsBatchAsync 进行批量获取以避免锁定问题", true)]
         protected abstract Task<TModel?> GetExistingRecordAsync(int id, ImportContext context);
+
+        /// <summary>
+        /// 批量从数据库获取现有记录
+        /// 使用批量查询避免在事务中逐个查询导致表锁定
+        /// </summary>
+        /// <param name="ids">要获取的记录 ID 列表</param>
+        /// <param name="context">导入上下文</param>
+        /// <returns>ID 到模型对象的字典</returns>
+        protected abstract Task<Dictionary<int, TModel>> GetExistingRecordsBatchAsync(List<int> ids, ImportContext context);
 
         #endregion
     }

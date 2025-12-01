@@ -9,7 +9,7 @@
 
   <Identity
     Name="df320800-dd28-4e8e-af2f-4ea8d6ff9b57"
-    Publisher="CN=xjh20"
+    Publisher="CN=xiangkehan"
     Version="1.0.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="df320800-dd28-4e8e-af2f-4ea8d6ff9b57" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>

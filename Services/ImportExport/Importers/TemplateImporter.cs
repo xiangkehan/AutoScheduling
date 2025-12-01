@@ -67,12 +67,41 @@ namespace AutoScheduling3.Services.ImportExport.Importers
         }
 
         /// <summary>
-        /// 从数据库获取现有记录
+        /// 从数据库获取现有记录（单个）
         /// </summary>
+        [Obsolete("此方法已过时，请使用 GetExistingRecordsBatchAsync", true)]
         protected override async Task<SchedulingTemplate?> GetExistingRecordAsync(int id, ImportContext context)
         {
             // 使用仓储直接查询，因为我们需要完整的模型对象进行比较
             return await _templateRepository.GetByIdAsync(id);
+        }
+
+        /// <summary>
+        /// 批量从数据库获取现有记录
+        /// 使用一次性查询获取所有记录，避免逐个查询导致锁定
+        /// </summary>
+        protected override async Task<Dictionary<int, SchedulingTemplate>> GetExistingRecordsBatchAsync(List<int> ids, ImportContext context)
+        {
+            var result = new Dictionary<int, SchedulingTemplate>();
+
+            if (ids == null || ids.Count == 0)
+            {
+                return result;
+            }
+
+            // 使用仓储的批量查询方法
+            var allTemplates = await _templateRepository.GetAllAsync();
+            
+            // 过滤出需要的记录
+            foreach (var template in allTemplates)
+            {
+                if (ids.Contains(template.Id))
+                {
+                    result[template.Id] = template;
+                }
+            }
+
+            return result;
         }
     }
 }

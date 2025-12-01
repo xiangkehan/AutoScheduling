@@ -125,13 +125,7 @@ namespace AutoScheduling3.SchedulingEngine
                 // 执行贪心分配算法 - 对应需求7.5
                 await PerformGreedyAssignmentsAsync(date, progress, cancellationToken);
 
-                // 报告更新评分阶段
-                ReportProgress(progress, SchedulingStage.UpdatingScores, 
-                    $"正在更新第 {day + 1}/{totalDays} 天的评分状态...", 
-                    10 + (day * 80 / totalDays) * 0.9, date);
-
-                // 更新评分状态
-                UpdateDailyScoreStates(date);
+                // 注意：不再需要更新评分状态，因为现在是动态计算
             }
 
             // 报告完成阶段
@@ -164,7 +158,8 @@ namespace AutoScheduling3.SchedulingEngine
             _softConstraintCalculator.UpdateWeights(
                 _config.RestWeight,
                 _config.HolidayWeight,
-                _config.TimeSlotWeight);
+                _config.TimeSlotWeight,
+                _config.WorkloadBalanceWeight);
 
             return Task.CompletedTask;
         }
@@ -327,16 +322,7 @@ namespace AutoScheduling3.SchedulingEngine
             }
         }
 
-        /// <summary>
-        /// 更新每日评分状态
-        /// </summary>
-        private void UpdateDailyScoreStates(DateTime date)
-        {
-            if (_scoreCalculator == null) return;
 
-            // 时段与休息日间隔增量：在一天完成后调用
-            _scoreCalculator.IncrementHolidayIntervalsIfNeeded(date);
-        }
 
         /// <summary>
         /// 记录分配日志
@@ -480,8 +466,7 @@ namespace AutoScheduling3.SchedulingEngine
             // 更新MRV策略的候选计数
             _mrvStrategy.UpdateCandidateCountsAfterAssignment(positionIdx, periodIdx, personIdx);
 
-            // 更新人员评分状态
-            _scoreCalculator.UpdatePersonScoreState(personIdx, periodIdx, date);
+            // 注意：不再需要更新人员评分状态，因为现在是动态计算
 
             // 异步操作：记录分配日志（如果启用）
             if (_config.EnableAssignmentLogging)
@@ -637,6 +622,11 @@ public class GreedySchedulerConfig
     /// 时段平衡得分权重 - 对应需求6.3
     /// </summary>
     public double TimeSlotWeight { get; set; } = 1.0;
+
+    /// <summary>
+    /// 工作量平衡得分权重
+    /// </summary>
+    public double WorkloadBalanceWeight { get; set; } = 2.0;
 
     /// <summary>
     /// 是否使用优化的张量操作 - 对应需求7.2, 7.4

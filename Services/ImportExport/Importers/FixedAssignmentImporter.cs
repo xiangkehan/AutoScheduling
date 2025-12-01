@@ -67,13 +67,42 @@ namespace AutoScheduling3.Services.ImportExport.Importers
         }
 
         /// <summary>
-        /// 从数据库获取现有记录
+        /// 从数据库获取现有记录（单个）
         /// </summary>
+        [Obsolete("此方法已过时，请使用 GetExistingRecordsBatchAsync", true)]
         protected override async Task<FixedPositionRule?> GetExistingRecordAsync(int id, ImportContext context)
         {
             // 获取所有固定分配规则并查找匹配的 ID
             var allRules = await _constraintRepository.GetAllFixedPositionRulesAsync(enabledOnly: false);
             return allRules.Find(r => r.Id == id);
+        }
+
+        /// <summary>
+        /// 批量从数据库获取现有记录
+        /// 使用一次性查询获取所有记录，避免逐个查询导致锁定
+        /// </summary>
+        protected override async Task<Dictionary<int, FixedPositionRule>> GetExistingRecordsBatchAsync(List<int> ids, ImportContext context)
+        {
+            var result = new Dictionary<int, FixedPositionRule>();
+
+            if (ids == null || ids.Count == 0)
+            {
+                return result;
+            }
+
+            // 获取所有固定分配规则
+            var allRules = await _constraintRepository.GetAllFixedPositionRulesAsync(enabledOnly: false);
+            
+            // 过滤出需要的记录
+            foreach (var rule in allRules)
+            {
+                if (ids.Contains(rule.Id))
+                {
+                    result[rule.Id] = rule;
+                }
+            }
+
+            return result;
         }
     }
 }

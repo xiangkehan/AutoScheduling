@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(git add .)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(gh pr list:*)",
+      "Bash(find:*)",
+      "Bash(mv:*)",
+      "Bash(mv \"NO_SKILL_MODE_IMPLEMENTATION.md\" \".kiro/specs/improve-test-data-generator/\")"
     ],
     "deny": [],
     "ask": []

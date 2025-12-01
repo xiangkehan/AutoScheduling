@@ -63,6 +63,26 @@ namespace AutoScheduling3.Models
         /// </summary>
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+        /// <summary>
+        /// 休息日配置ID（可选）
+        /// </summary>
+        public int? HolidayConfigId { get; set; }
+
+        /// <summary>
+        /// 是否使用活动的休息日配置
+        /// </summary>
+        public bool UseActiveHolidayConfig { get; set; } = true;
+
+        /// <summary>
+        /// 启用的定岗规则ID列表
+        /// </summary>
+        public List<int> EnabledFixedRuleIds { get; set; } = new List<int>();
+
+        /// <summary>
+        /// 启用的手动指定ID列表
+        /// </summary>
+        public List<int> EnabledManualAssignmentIds { get; set; } = new List<int>();
+
         public override string ToString() => $"Schedule[{Id}] {Header} Results={Results.Count}";
     }
 }

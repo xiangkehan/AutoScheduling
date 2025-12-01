@@ -39,13 +39,25 @@ namespace AutoScheduling3.Data
 
             var cmd = conn.CreateCommand();
             cmd.Transaction = tx;
-            cmd.CommandText = "INSERT INTO Schedules (Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, CreatedAt, UpdatedAt) VALUES (@header, @pIds, @posIds, @startDate, @endDate, @isConfirmed, @createdAt, @updatedAt); SELECT last_insert_rowid();";
+            cmd.CommandText = @"INSERT INTO Schedules 
+                (Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, 
+                 HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds, 
+                 CreatedAt, UpdatedAt) 
+                VALUES 
+                (@header, @pIds, @posIds, @startDate, @endDate, @isConfirmed, 
+                 @holidayConfigId, @useActiveHolidayConfig, @enabledFixedRuleIds, @enabledManualAssignmentIds, 
+                 @createdAt, @updatedAt); 
+                SELECT last_insert_rowid();";
             cmd.Parameters.AddWithValue("@header", schedule.Header ?? string.Empty);
             cmd.Parameters.AddWithValue("@pIds", JsonSerializer.Serialize(schedule.PersonnelIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@posIds", JsonSerializer.Serialize(schedule.PositionIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@startDate", schedule.StartDate.ToString("o"));
             cmd.Parameters.AddWithValue("@endDate", schedule.EndDate.ToString("o"));
             cmd.Parameters.AddWithValue("@isConfirmed", schedule.IsConfirmed ? 1 : 0);
+            cmd.Parameters.AddWithValue("@holidayConfigId", schedule.HolidayConfigId.HasValue ? (object)schedule.HolidayConfigId.Value : DBNull.Value);
+            cmd.Parameters.AddWithValue("@useActiveHolidayConfig", schedule.UseActiveHolidayConfig ? 1 : 0);
+            cmd.Parameters.AddWithValue("@enabledFixedRuleIds", JsonSerializer.Serialize(schedule.EnabledFixedRuleIds, _jsonOptions));
+            cmd.Parameters.AddWithValue("@enabledManualAssignmentIds", JsonSerializer.Serialize(schedule.EnabledManualAssignmentIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@createdAt", schedule.CreatedAt.ToString("o"));
             cmd.Parameters.AddWithValue("@updatedAt", schedule.UpdatedAt.ToString("o"));
             var newIdObj = await cmd.ExecuteScalarAsync();
@@ -68,7 +80,10 @@ namespace AutoScheduling3.Data
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, CreatedAt, UpdatedAt FROM Schedules WHERE Id=@id";
+            cmd.CommandText = @"SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, 
+                                HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds, 
+                                CreatedAt, UpdatedAt 
+                                FROM Schedules WHERE Id=@id";
             cmd.Parameters.AddWithValue("@id", id);
             using var reader = await cmd.ExecuteReaderAsync();
             if (!await reader.ReadAsync()) return null;
@@ -82,8 +97,12 @@ namespace AutoScheduling3.Data
                 StartDate = DateTime.Parse(reader.GetString(4)),
                 EndDate = DateTime.Parse(reader.GetString(5)),
                 IsConfirmed = reader.GetInt32(6) == 1,
-                CreatedAt = DateTime.Parse(reader.GetString(7)),
-                UpdatedAt = DateTime.Parse(reader.GetString(8))
+                HolidayConfigId = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                UseActiveHolidayConfig = reader.IsDBNull(8) ? true : reader.GetInt32(8) == 1,
+                EnabledFixedRuleIds = reader.IsDBNull(9) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(9)) ?? new List<int>(),
+                EnabledManualAssignmentIds = reader.IsDBNull(10) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(10)) ?? new List<int>(),
+                CreatedAt = DateTime.Parse(reader.GetString(11)),
+                UpdatedAt = DateTime.Parse(reader.GetString(12))
             };
 
             schedule.Results = await GetShiftsByScheduleAsync(conn, id);
@@ -97,7 +116,10 @@ namespace AutoScheduling3.Data
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, CreatedAt, UpdatedAt FROM Schedules ORDER BY Id";
+            cmd.CommandText = @"SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, 
+                                HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds, 
+                                CreatedAt, UpdatedAt 
+                                FROM Schedules ORDER BY Id";
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
@@ -110,8 +132,12 @@ namespace AutoScheduling3.Data
                     StartDate = DateTime.Parse(reader.GetString(4)),
                     EndDate = DateTime.Parse(reader.GetString(5)),
                     IsConfirmed = reader.GetInt32(6) == 1,
-                    CreatedAt = DateTime.Parse(reader.GetString(7)),
-                    UpdatedAt = DateTime.Parse(reader.GetString(8))
+                    HolidayConfigId = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                    UseActiveHolidayConfig = reader.IsDBNull(8) ? true : reader.GetInt32(8) == 1,
+                    EnabledFixedRuleIds = reader.IsDBNull(9) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(9)) ?? new List<int>(),
+                    EnabledManualAssignmentIds = reader.IsDBNull(10) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(10)) ?? new List<int>(),
+                    CreatedAt = DateTime.Parse(reader.GetString(11)),
+                    UpdatedAt = DateTime.Parse(reader.GetString(12))
                 };
                 schedule.Results = await GetShiftsByScheduleAsync(conn, schedule.Id);
                 list.Add(schedule);
@@ -127,13 +153,23 @@ namespace AutoScheduling3.Data
 
             var cmd = conn.CreateCommand();
             cmd.Transaction = tx;
-            cmd.CommandText = "UPDATE Schedules SET Header=@header, PersonnelIds=@pIds, PositionIds=@posIds, StartDate=@startDate, EndDate=@endDate, IsConfirmed=@isConfirmed, UpdatedAt=@updatedAt WHERE Id=@id";
+            cmd.CommandText = @"UPDATE Schedules SET 
+                Header=@header, PersonnelIds=@pIds, PositionIds=@posIds, 
+                StartDate=@startDate, EndDate=@endDate, IsConfirmed=@isConfirmed, 
+                HolidayConfigId=@holidayConfigId, UseActiveHolidayConfig=@useActiveHolidayConfig, 
+                EnabledFixedRuleIds=@enabledFixedRuleIds, EnabledManualAssignmentIds=@enabledManualAssignmentIds, 
+                UpdatedAt=@updatedAt 
+                WHERE Id=@id";
             cmd.Parameters.AddWithValue("@header", schedule.Header ?? string.Empty);
             cmd.Parameters.AddWithValue("@pIds", JsonSerializer.Serialize(schedule.PersonnelIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@posIds", JsonSerializer.Serialize(schedule.PositionIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@startDate", schedule.StartDate.ToString("o"));
             cmd.Parameters.AddWithValue("@endDate", schedule.EndDate.ToString("o"));
             cmd.Parameters.AddWithValue("@isConfirmed", schedule.IsConfirmed ? 1 : 0);
+            cmd.Parameters.AddWithValue("@holidayConfigId", schedule.HolidayConfigId.HasValue ? (object)schedule.HolidayConfigId.Value : DBNull.Value);
+            cmd.Parameters.AddWithValue("@useActiveHolidayConfig", schedule.UseActiveHolidayConfig ? 1 : 0);
+            cmd.Parameters.AddWithValue("@enabledFixedRuleIds", JsonSerializer.Serialize(schedule.EnabledFixedRuleIds, _jsonOptions));
+            cmd.Parameters.AddWithValue("@enabledManualAssignmentIds", JsonSerializer.Serialize(schedule.EnabledManualAssignmentIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@updatedAt", DateTime.UtcNow.ToString("o"));
             cmd.Parameters.AddWithValue("@id", schedule.Id);
             await cmd.ExecuteNonQueryAsync();
@@ -308,7 +344,10 @@ namespace AutoScheduling3.Data
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, CreatedAt, UpdatedAt FROM Schedules WHERE IsConfirmed = 0 ORDER BY CreatedAt DESC";
+            cmd.CommandText = @"SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, 
+                                HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds, 
+                                CreatedAt, UpdatedAt 
+                                FROM Schedules WHERE IsConfirmed = 0 ORDER BY CreatedAt DESC";
 
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -322,8 +361,12 @@ namespace AutoScheduling3.Data
                     StartDate = DateTime.Parse(reader.GetString(4)),
                     EndDate = DateTime.Parse(reader.GetString(5)),
                     IsConfirmed = reader.GetInt32(6) == 1,
-                    CreatedAt = DateTime.Parse(reader.GetString(7)),
-                    UpdatedAt = DateTime.Parse(reader.GetString(8))
+                    HolidayConfigId = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                    UseActiveHolidayConfig = reader.IsDBNull(8) ? true : reader.GetInt32(8) == 1,
+                    EnabledFixedRuleIds = reader.IsDBNull(9) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(9)) ?? new List<int>(),
+                    EnabledManualAssignmentIds = reader.IsDBNull(10) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(10)) ?? new List<int>(),
+                    CreatedAt = DateTime.Parse(reader.GetString(11)),
+                    UpdatedAt = DateTime.Parse(reader.GetString(12))
                 };
                 schedule.Results = await GetShiftsByScheduleAsync(conn, schedule.Id);
                 list.Add(schedule);
@@ -338,7 +381,10 @@ namespace AutoScheduling3.Data
             await conn.OpenAsync();
 
             var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, CreatedAt, UpdatedAt FROM Schedules WHERE IsConfirmed = 1 ORDER BY CreatedAt DESC";
+            cmd.CommandText = @"SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, 
+                                HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds, 
+                                CreatedAt, UpdatedAt 
+                                FROM Schedules WHERE IsConfirmed = 1 ORDER BY CreatedAt DESC";
 
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -352,8 +398,12 @@ namespace AutoScheduling3.Data
                     StartDate = DateTime.Parse(reader.GetString(4)),
                     EndDate = DateTime.Parse(reader.GetString(5)),
                     IsConfirmed = reader.GetInt32(6) == 1,
-                    CreatedAt = DateTime.Parse(reader.GetString(7)),
-                    UpdatedAt = DateTime.Parse(reader.GetString(8))
+                    HolidayConfigId = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                    UseActiveHolidayConfig = reader.IsDBNull(8) ? true : reader.GetInt32(8) == 1,
+                    EnabledFixedRuleIds = reader.IsDBNull(9) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(9)) ?? new List<int>(),
+                    EnabledManualAssignmentIds = reader.IsDBNull(10) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(10)) ?? new List<int>(),
+                    CreatedAt = DateTime.Parse(reader.GetString(11)),
+                    UpdatedAt = DateTime.Parse(reader.GetString(12))
                 };
                 schedule.Results = await GetShiftsByScheduleAsync(conn, schedule.Id);
                 list.Add(schedule);

@@ -1,0 +1,167 @@
+<ContentDialog
+    x:Class="AutoScheduling3.Views.Scheduling.CompareSchedulesDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="选择要比较的排班"
+    PrimaryButtonText="确定"
+    SecondaryButtonText="取消"
+    DefaultButton="Primary"
+    PrimaryButtonClick="ContentDialog_PrimaryButtonClick"
+    Opened="ContentDialog_Opened"
+    AutomationProperties.Name="选择要比较的排班对话框"
+    AutomationProperties.HelpText="从历史排班列表中选择一个排班与当前排班进行比较">
+    
+    <!-- 键盘快捷键 -->
+    <ContentDialog.KeyboardAccelerators>
+        <!-- Esc: 取消对话框 -->
+        <KeyboardAccelerator Key="Escape" Invoked="EscapeAccelerator_Invoked"/>
+    </ContentDialog.KeyboardAccelerators>
+
+    <StackPanel Spacing="16" MinWidth="500">
+        <!-- 说明 -->
+        <TextBlock Text="选择一个历史排班与当前排班进行比较"
+                   TextWrapping="Wrap"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                   AutomationProperties.Name="对话框说明"/>
+
+        <!-- 搜索框 -->
+        <AutoSuggestBox x:Name="SearchBox"
+                        PlaceholderText="搜索排班名称..."
+                        QueryIcon="Find"
+                        TextChanged="SearchBox_TextChanged"
+                        AutomationProperties.Name="搜索排班"
+                        AutomationProperties.HelpText="输入排班名称进行搜索筛选"
+                        ToolTipService.ToolTip="搜索排班"/>
+
+        <!-- 历史排班列表 -->
+        <StackPanel Spacing="8">
+            <TextBlock Text="历史排班列表"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       AutomationProperties.Name="历史排班列表标题"
+                       AutomationProperties.HeadingLevel="Level2"/>
+
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    MaxHeight="400">
+                <ListView x:Name="ScheduleListView"
+                          SelectionMode="Single"
+                          SelectionChanged="ScheduleListView_SelectionChanged"
+                          AutomationProperties.Name="历史排班列表"
+                          AutomationProperties.HelpText="选择要与当前排班进行比较的历史排班"
+                          AutomationProperties.LandmarkType="Custom">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="12"
+                                  ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 排班信息 -->
+                                <StackPanel Grid.Column="0"
+                                            Spacing="4">
+                                    <TextBlock Text="{Binding Name}"
+                                               FontWeight="Medium"
+                                               FontSize="14"/>
+                                    
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="16">
+                                        <!-- 日期范围 -->
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="4">
+                                            <FontIcon Glyph="&#xE787;"
+                                                      FontSize="12"
+                                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding DateRange}"
+                                                       FontSize="12"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </StackPanel>
+
+                                        <!-- 创建时间 -->
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="4">
+                                            <FontIcon Glyph="&#xE121;"
+                                                      FontSize="12"
+                                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding CreatedTime}"
+                                                       FontSize="12"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- 统计信息 -->
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="12">
+                                        <TextBlock FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                            <Run Text="人员: "/>
+                                            <Run Text="{Binding PersonnelCount}"/>
+                                        </TextBlock>
+                                        <TextBlock FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                            <Run Text="哨位: "/>
+                                            <Run Text="{Binding PositionCount}"/>
+                                        </TextBlock>
+                                        <TextBlock FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                            <Run Text="班次: "/>
+                                            <Run Text="{Binding ShiftCount}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- 评分 -->
+                                <StackPanel Grid.Column="1"
+                                            Spacing="2"
+                                            HorizontalAlignment="Right">
+                                    <TextBlock Text="评分"
+                                               FontSize="10"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Score}"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                               HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Border>
+
+            <!-- 空状态 -->
+            <StackPanel x:Name="EmptyStatePanel"
+                        Spacing="8"
+                        Padding="32"
+                        HorizontalAlignment="Center"
+                        Visibility="Collapsed"
+                        AutomationProperties.Name="空状态提示"
+                        AutomationProperties.LiveSetting="Polite">
+                <FontIcon Glyph="&#xE7C3;"
+                          FontSize="48"
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                          HorizontalAlignment="Center"/>
+                <TextBlock Text="没有找到历史排班"
+                           FontSize="14"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- 验证错误提示 -->
+        <InfoBar x:Name="ValidationErrorBar"
+                 Severity="Error"
+                 IsOpen="False"
+                 IsClosable="True"
+                 AutomationProperties.Name="验证错误提示"
+                 AutomationProperties.LiveSetting="Assertive"/>
+    </StackPanel>
+</ContentDialog>

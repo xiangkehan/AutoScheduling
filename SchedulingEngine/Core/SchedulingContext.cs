@@ -35,8 +35,18 @@ namespace AutoScheduling3.SchedulingEngine.Core
         // 人员评分状态
         public Dictionary<int, PersonScoreState> PersonScoreStates { get; set; } = new();
 
+        // 全局平均工作量
+        public double AverageWorkload { get; private set; }
+
         // 分配记录：[日期][时段][哨位索引] = 人员索引（-1表示未分配）
         public Dictionary<DateTime, int[,]> Assignments { get; set; } = new();
+
+        // 人员分配索引：personId -> 已分配班次的时间戳集合（有序）
+        // 时间戳 = (date - StartDate).Days * 12 + periodIdx
+        public Dictionary<int, SortedSet<int>> PersonAssignmentTimestamps { get; set; } = new();
+
+        // 时间戳到班次详情的映射：personId -> timestamp -> (date, period, positionIdx)
+        public Dictionary<int, Dictionary<int, (DateTime date, int period, int positionIdx)>> PersonAssignmentDetails { get; set; } = new();
 
         /// <summary>
         /// 初始化序号映射
@@ -65,41 +75,77 @@ namespace AutoScheduling3.SchedulingEngine.Core
         {
             foreach (var person in Personals)
             {
-                var state = new PersonScoreState(
-                    person.Id,
-                    person.RecentShiftIntervalCount,
-                    person.RecentHolidayShiftIntervalCount,
-                    person.RecentPeriodShiftIntervals
-                );
+                var state = new PersonScoreState(person.Id);
                 PersonScoreStates[person.Id] = state;
             }
-            IntegrateHistoryIntoScoreStates();
+            InitializePersonAssignmentIndex();
         }
 
         /// <summary>
-        /// 根据最近一次已确认排班整合历史信息（设置最后分配日期与时段）
+        /// 初始化人员分配索引（包含历史排班数据）
         /// </summary>
-        private void IntegrateHistoryIntoScoreStates()
+        private void InitializePersonAssignmentIndex()
         {
-            if (LastConfirmedSchedule == null) return;
-            // 找到每个人员最近的一个班次
-            var lastByPerson = new Dictionary<int, SingleShift>();
-            foreach (var shift in LastConfirmedSchedule.Results)
+            // 为每个人员初始化空索引
+            foreach (var person in Personals)
             {
-                if (!lastByPerson.TryGetValue(shift.PersonnelId, out var existing) || shift.StartTime > existing.StartTime)
-                {
-                    lastByPerson[shift.PersonnelId] = shift;
-                }
+                PersonAssignmentTimestamps[person.Id] = new SortedSet<int>();
+                PersonAssignmentDetails[person.Id] = new Dictionary<int, (DateTime, int, int)>();
             }
-            foreach (var kvp in lastByPerson)
+
+            // 从历史排班中加载数据
+            if (LastConfirmedSchedule != null)
             {
-                if (PersonScoreStates.TryGetValue(kvp.Key, out var state))
+                foreach (var shift in LastConfirmedSchedule.Results)
                 {
-                    var lastShift = kvp.Value;
-                    state.LastAssignedDate = lastShift.StartTime.Date;
-                    state.LastAssignedPeriod = lastShift.StartTime.Hour / 2; //2小时一个时段
+                    // 计算历史班次的时间戳（可能为负数）
+                    int timestamp = CalculateTimestamp(shift.StartTime.Date, shift.StartTime.Hour / 2);
+                    int periodIdx = shift.StartTime.Hour / 2;
+
+                    // 添加到该人员的时间戳集合
+                    PersonAssignmentTimestamps[shift.PersonnelId].Add(timestamp);
+
+                    // 尝试获取哨位索引（历史哨位可能已被删除）
+                    int positionIdx = -1;
+                    if (PositionIdToIdx.TryGetValue(shift.PositionId, out int idx))
+                    {
+                        positionIdx = idx;
+                    }
+
+                    // 记录详细信息
+                    PersonAssignmentDetails[shift.PersonnelId][timestamp] =
+                        (shift.StartTime.Date, periodIdx, positionIdx);
+
+                    // 更新历史数据的累积计数器
+                    if (PersonScoreStates.TryGetValue(shift.PersonnelId, out var state))
+                    {
+                        state.TotalAssignments++;
+
+                        // 判断是否为夜哨
+                        if (periodIdx == 11 || periodIdx == 0 || periodIdx == 1 || periodIdx == 2)
+                        {
+                            state.NightShiftCount++;
+                            state.WorkloadScore += 1.5;
+                        }
+                        else
+                        {
+                            state.DayShiftCount++;
+                            state.WorkloadScore += 1.0;
+                        }
+                    }
                 }
+
+                // 初始化全局平均工作量
+                UpdateAverageWorkload();
             }
+        }
+
+        /// <summary>
+        /// 计算时间戳（以时段为单位，以 StartDate 为基准）
+        /// </summary>
+        public int CalculateTimestamp(DateTime date, int periodIdx)
+        {
+            return (date.Date - StartDate.Date).Days * 12 + periodIdx;
         }
 
         /// <summary>
@@ -132,6 +178,49 @@ namespace AutoScheduling3.SchedulingEngine.Core
             {
                 Assignments[date.Date][periodIdx, positionIdx] = personIdx;
             }
+
+            // 更新人员分配索引
+            int personId = PersonIdxToId[personIdx];
+            int timestamp = CalculateTimestamp(date, periodIdx);
+
+            PersonAssignmentTimestamps[personId].Add(timestamp);
+            PersonAssignmentDetails[personId][timestamp] = (date, periodIdx, positionIdx);
+
+            // 更新累积计数器
+            if (PersonScoreStates.TryGetValue(personId, out var state))
+            {
+                state.TotalAssignments++;
+
+                // 判断是否为夜哨（时段 11, 0, 1, 2）
+                if (periodIdx == 11 || periodIdx == 0 || periodIdx == 1 || periodIdx == 2)
+                {
+                    state.NightShiftCount++;
+                    state.WorkloadScore += 1.5; // 夜哨权重 1.5
+                }
+                else
+                {
+                    state.DayShiftCount++;
+                    state.WorkloadScore += 1.0; // 日哨权重 1.0
+                }
+            }
+
+            // 更新全局平均工作量
+            UpdateAverageWorkload();
+        }
+
+        /// <summary>
+        /// 更新全局平均工作量
+        /// </summary>
+        public void UpdateAverageWorkload()
+        {
+            if (PersonScoreStates.Count == 0)
+            {
+                AverageWorkload = 0;
+                return;
+            }
+
+            double totalWorkload = PersonScoreStates.Values.Sum(s => s.WorkloadScore);
+            AverageWorkload = totalWorkload / PersonScoreStates.Count;
         }
 
         /// <summary>

@@ -29,4 +29,9 @@ public class PositionCoverage
     /// 覆盖率 (0-1)
     /// </summary>
     public double CoverageRate { get; set; }
+
+    /// <summary>
+    /// 覆盖率展示文本
+    /// </summary>
+    public string CoverageRateDisplay => CoverageRate.ToString("P0");
 }

@@ -1,0 +1,541 @@
+<UserControl
+    x:Class="AutoScheduling3.Controls.PersonnelScheduleControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:AutoScheduling3.Controls"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    AutomationProperties.Name="人员排班视图控件">
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <!-- 工具栏区域 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 人员信息区域 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 内容区域（工作量统计 + 列表/日历） -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+
+
+        <!-- 人员信息区域 -->
+        <Grid Grid.Row="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 人员姓名 -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                <FontIcon Glyph="&#xE77B;" FontSize="20"/>
+                <StackPanel>
+                    <TextBlock x:Name="PersonnelNameText"
+                               Text="未选择"
+                               FontWeight="SemiBold"
+                               FontSize="16"
+                               AutomationProperties.Name="当前选中人员姓名"/>
+                    <TextBlock Text="人员排班视图"
+                               FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               AutomationProperties.Name="视图模式说明"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- 周次选择器 -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="周次:"
+                           VerticalAlignment="Center"
+                           AutomationProperties.Name="周次选择标签"/>
+                <ComboBox x:Name="WeekComboBox"
+                          MinWidth="200"
+                          SelectionChanged="WeekComboBox_SelectionChanged"
+                          AutomationProperties.Name="周次选择下拉框"
+                          AutomationProperties.HelpText="选择要查看的周次"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 内容区域 -->
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <!-- 工作量统计卡片 -->
+                <RowDefinition Height="Auto"/>
+                <!-- 视图切换标签 -->
+                <RowDefinition Height="Auto"/>
+                <!-- 列表/日历视图 -->
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 工作量统计卡片 -->
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 总班次数卡片 -->
+                <Border Grid.Column="0"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16"
+                        Margin="0,0,6,0"
+                        AutomationProperties.Name="总班次数统计卡片">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8DC;" FontSize="20" Foreground="{ThemeResource InfoBrush}"/>
+                            <TextBlock Text="总班次" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="TotalShiftsText"
+                                   Text="0"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   Margin="0,8,0,4"
+                                   AutomationProperties.Name="总班次数值"/>
+                        <ProgressBar x:Name="TotalShiftsProgress"
+                                     Value="0"
+                                     Maximum="100"
+                                     Height="4"
+                                     Foreground="{ThemeResource InfoBrush}"
+                                     AutomationProperties.Name="总班次进度条"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 日哨数卡片 -->
+                <Border Grid.Column="1"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16"
+                        Margin="6,0,6,0"
+                        AutomationProperties.Name="日哨数统计卡片">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE706;" FontSize="20" Foreground="{ThemeResource AccentBrush}"/>
+                            <TextBlock Text="日哨" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="DayShiftsText"
+                                   Text="0"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   Margin="0,8,0,4"
+                                   AutomationProperties.Name="日哨数"/>
+                        <ProgressBar x:Name="DayShiftsProgress"
+                                     Value="0"
+                                     Maximum="100"
+                                     Height="4"
+                                     Foreground="{ThemeResource AccentBrush}"
+                                     AutomationProperties.Name="日哨进度条"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 夜哨数卡片 -->
+                <Border Grid.Column="2"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16"
+                        Margin="6,0,6,0"
+                        AutomationProperties.Name="夜哨数统计卡片">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE945;" FontSize="20" Foreground="{ThemeResource WarningBrush}"/>
+                            <TextBlock Text="夜哨" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="NightShiftsText"
+                                   Text="0"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   Margin="0,8,0,4"
+                                   AutomationProperties.Name="夜哨数"/>
+                        <ProgressBar x:Name="NightShiftsProgressBar"
+                                     Value="0"
+                                     Maximum="100"
+                                     Height="4"
+                                     Foreground="{ThemeResource WarningBrush}"
+                                     AutomationProperties.Name="夜哨进度条"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 工作时长卡片 -->
+                <Border Grid.Column="3"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16"
+                        Margin="6,0,0,0"
+                        AutomationProperties.Name="工作时长统计卡片">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE916;" FontSize="20" Foreground="{ThemeResource SuccessBrush}"/>
+                            <TextBlock Text="工作时长" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="WorkHoursText"
+                                   Text="0 小时"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   Margin="0,8,0,4"
+                                   AutomationProperties.Name="工作时长值"/>
+                        <ProgressBar x:Name="WorkHoursProgress"
+                                     Value="0"
+                                     Maximum="100"
+                                     Height="4"
+                                     Foreground="{ThemeResource SuccessBrush}"
+                                     AutomationProperties.Name="工作时长进度条"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- 视图切换标签 -->
+            <StackPanel Grid.Row="1"
+                        Orientation="Horizontal"
+                        Spacing="4"
+                        Margin="0,0,0,8"
+                        AutomationProperties.Name="视图模式切换标签">
+                <RadioButton x:Name="ListViewRadioButton"
+                             Content="班次列表"
+                             Tag="List"
+                             IsChecked="True"
+                             Checked="ViewModeRadioButton_Checked"
+                             AutomationProperties.Name="班次列表视图"/>
+                <RadioButton x:Name="CalendarViewRadioButton"
+                             Content="日历视图"
+                             Tag="Calendar"
+                             IsChecked="False"
+                             Checked="ViewModeRadioButton_Checked"
+                             AutomationProperties.Name="日历视图"/>
+            </StackPanel>
+
+            <!-- 列表/日历视图容器 -->
+            <ContentControl Grid.Row="2"
+                            x:Name="ViewContentControl"
+                            AutomationProperties.Name="视图内容区域">
+                <Grid>
+                    <!-- 班次列表视图 -->
+                    <ListView x:Name="ShiftsListView"
+                              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                              BorderThickness="1"
+                              CornerRadius="8"
+                              AutomationProperties.Name="班次列表">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="local:PersonnelShiftItem">
+                                <Grid Padding="12" AutomationProperties.Name="班次列表项">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 日期和星期 -->
+                                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                        <TextBlock Text="{x:Bind DateString}"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="14"
+                                                   AutomationProperties.Name="班次日期"/>
+                                        <TextBlock Text="{x:Bind DayOfWeek}"
+                                                   FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   AutomationProperties.Name="星期"/>
+                                    </StackPanel>
+
+                                    <!-- 时段和哨位信息 -->
+                                    <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Text="{x:Bind TimeSlot}"
+                                                       FontSize="14"
+                                                       AutomationProperties.Name="时段"/>
+                                            <!-- 夜哨标记 -->
+                                            <Border Background="{ThemeResource WarningBrush}"
+                                                    CornerRadius="4"
+                                                    Padding="4,2"
+                                                    Visibility="{x:Bind IsNightShift, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    AutomationProperties.Name="夜哨标记">
+                                                <TextBlock Text="夜哨"
+                                                           FontSize="10"
+                                                           Foreground="White"
+                                                           AutomationProperties.Name="夜哨标签"/>
+                                            </Border>
+                                            <!-- 手动指定标记 -->
+                                            <Border Background="{ThemeResource AccentBrush}"
+                                                    CornerRadius="4"
+                                                    Padding="4,2"
+                                                    Visibility="{x:Bind IsManualAssignment, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    AutomationProperties.Name="手动指定标记">
+                                                <TextBlock Text="手动"
+                                                           FontSize="10"
+                                                           Foreground="White"
+                                                           AutomationProperties.Name="手动指定标签"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="{x:Bind PositionName}"
+                                                   FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   Margin="0,4,0,0"
+                                                   AutomationProperties.Name="哨位名称"/>
+                                    </StackPanel>
+
+                                    <!-- 备注 -->
+                                    <TextBlock Grid.Column="2"
+                                               Text="{x:Bind Remarks}"
+                                               FontSize="12"
+                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                               VerticalAlignment="Center"
+                                               MaxWidth="200"
+                                               TextWrapping="Wrap"
+                                               Visibility="{x:Bind HasRemarks, Converter={StaticResource BoolToVisibilityConverter}}"
+                                               AutomationProperties.Name="备注信息"/>
+
+                                    <!-- 操作按钮 -->
+                                    <StackPanel Grid.Column="3"
+                                                Orientation="Horizontal"
+                                                Spacing="4">
+                                        <Button Content="详情"
+                                                FontSize="12"
+                                                Style="{StaticResource ButtonRevealStyle}"
+                                                Click="ViewShiftDetailsButton_Click"
+                                                AutomationProperties.Name="查看班次详情按钮"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <!-- 日历视图容器 -->
+                    <Grid x:Name="CalendarViewContainer"
+                          Visibility="Collapsed"
+                          AutomationProperties.Name="日历视图区域">
+                        <Grid.RowDefinitions>
+                            <!-- 日历头部 -->
+                            <RowDefinition Height="Auto"/>
+                            <!-- 日历网格 -->
+                            <RowDefinition Height="*"/>
+                            <!-- 选中日期的班次列表 -->
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- 日历头部（当前月份） -->
+                        <StackPanel Grid.Row="0"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    Spacing="12"
+                                    Margin="0,0,0,12"
+                                    AutomationProperties.Name="日历头部">
+                            <Button Content="&#xE760;"
+                                    FontFamily="Segoe MDL2 Assets"
+                                    Width="32" Height="32"
+                                    FontSize="14"
+                                    Click="PreviousMonthButton_Click"
+                                    AutomationProperties.Name="上一个月"/>
+                            <TextBlock x:Name="MonthYearText"
+                                       Text="2024年1月"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       AutomationProperties.Name="当前年月"/>
+                            <Button Content="&#xE761;"
+                                    FontFamily="Segoe MDL2 Assets"
+                                    Width="32" Height="32"
+                                    FontSize="14"
+                                    Click="NextMonthButton_Click"
+                                    AutomationProperties.Name="下一个月"/>
+                        </StackPanel>
+
+                        <!-- 日历网格（7列 x 6行） -->
+                        <Grid Grid.Row="1"
+                              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                              BorderThickness="1"
+                              CornerRadius="8"
+                              Padding="8"
+                              AutomationProperties.Name="日历网格">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- 星期表头 -->
+                            <Border Grid.Column="0" Grid.Row="0"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    Padding="8,4">
+                                <TextBlock Text="周一" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                            </Border>
+                            <Border Grid.Column="1" Grid.Row="0"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    Padding="8,4">
+                                <TextBlock Text="周二" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                            </Border>
+                            <Border Grid.Column="2" Grid.Row="0"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    Padding="8,4">
+                                <TextBlock Text="周三" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                            </Border>
+                            <Border Grid.Column="3" Grid.Row="0"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    Padding="8,4">
+                                <TextBlock Text="周四" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                            </Border>
+                            <Border Grid.Column="4" Grid.Row="0"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    Padding="8,4">
+                                <TextBlock Text="周五" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                            </Border>
+                            <Border Grid.Column="5" Grid.Row="0"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    Padding="8,4">
+                                <TextBlock Text="周六" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                            </Border>
+                            <Border Grid.Column="6" Grid.Row="0"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    Padding="8,4">
+                                <TextBlock Text="周日" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                            </Border>
+
+                            <!-- 日期单元格（1-42，用于6周显示） -->
+                            <ItemsRepeater x:Name="CalendarItemsRepeater"
+                                           Grid.ColumnSpan="7"
+                                           Grid.Row="1"
+                                           Grid.RowSpan="6"
+                                           AutomationProperties.Name="日历日期项">
+                                <ItemsRepeater.Layout>
+                                    <UniformGridLayout/>
+                                </ItemsRepeater.Layout>
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate x:DataType="local:CalendarDayItem">
+                                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                BorderThickness="1"
+                                                Padding="8,4"
+                                                MinHeight="60"
+                                                CornerRadius="4"
+                                                Tapped="CalendarDayItem_Tapped"
+                                                AutomationProperties.Name="日历日期单元格">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
+
+                                                <!-- 日期数字 -->
+                                                <TextBlock Grid.Row="0"
+                                                           Text="{x:Bind DayNumber}"
+                                                           HorizontalAlignment="Right"
+                                                           FontSize="12"
+                                                           Foreground="{x:Bind DayForeground}"
+                                                           FontWeight="{x:Bind DayFontWeight}"
+                                                           AutomationProperties.Name="日期数字"/>
+
+                                                <!-- 班次标记点 -->
+                                                <StackPanel Grid.Row="1"
+                                                            Orientation="Horizontal"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Bottom"
+                                                            Spacing="2"
+                                                            Margin="0,4,0,0"
+                                                            Visibility="{x:Bind HasShifts, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                            AutomationProperties.Name="班次标记点">
+                                                    <Ellipse Width="6" Height="6"
+                                                             Fill="{ThemeResource AccentBrush}"
+                                                             Visibility="{x:Bind HasDayShift, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                             AutomationProperties.Name="日哨标记点"/>
+                                                    <Ellipse Width="6" Height="6"
+                                                             Fill="{ThemeResource WarningBrush}"
+                                                             Visibility="{x:Bind HasNightShift, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                             AutomationProperties.Name="夜哨标记点"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                        </Grid>
+
+                        <!-- 选中日期的班次列表 -->
+                        <Border Grid.Row="2"
+                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="12"
+                                Margin="0,8,0,0"
+                                AutomationProperties.Name="选中日期班次列表">
+                            <StackPanel>
+                                <TextBlock x:Name="SelectedDateShiftsHeader"
+                                           Text="选中日期的班次"
+                                           FontWeight="SemiBold"
+                                           FontSize="14"
+                                           Margin="0,0,0,8"
+                                           AutomationProperties.Name="选中日期标题"/>
+                                <ItemsRepeater x:Name="SelectedDateShiftsRepeater"
+                                               AutomationProperties.Name="选中日期班次列表项">
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate x:DataType="local:PersonnelShiftItem">
+                                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="8,4"
+                                                    Margin="0,0,0,4">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- 时段 -->
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{x:Bind TimeSlot}"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               Margin="0,0,8,0"
+                                                               AutomationProperties.Name="班次时段"/>
+
+                                                    <!-- 哨位名称 -->
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{x:Bind PositionName}"
+                                                               FontSize="12"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                               AutomationProperties.Name="班次哨位"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </ContentControl>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -6,11 +6,14 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:dto="using:AutoScheduling3.DTOs"
     xmlns:converters="using:AutoScheduling3.Converters"
+    xmlns:controls="using:AutoScheduling3.Controls"
     mc:Ignorable="d"
+    x:Name="PageRoot"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
     <Page.Resources>
         <converters:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
     </Page.Resources>
 
     <Grid>
@@ -25,10 +28,14 @@
         </StackPanel>
 
         <Grid Grid.Row="1" Padding="24,0,24,24">
-            <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <!-- 加载指示器 -->
+            <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" 
+                         HorizontalAlignment="Center" 
+                         VerticalAlignment="Center"/>
 
+            <!-- 草稿列表 -->
             <ListView ItemsSource="{x:Bind ViewModel.Drafts, Mode=OneWay}"
-                      Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True}">
+                      Visibility="{x:Bind ViewModel.Drafts.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=True}">
                 <ListView.HeaderTemplate>
                     <DataTemplate>
                         <Grid Padding="12" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
@@ -76,14 +83,21 @@
                             <TextBlock Grid.Column="3" Text="{x:Bind PositionCount}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 
                             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                                <Button Content="查看" Command="{Binding DataContext.ViewDraftCommand, ElementName=DraftsPage}" CommandParameter="{x:Bind Id}"/>
-                                <Button Content="确认" Style="{ThemeResource AccentButtonStyle}" Command="{Binding DataContext.ConfirmDraftCommand, ElementName=DraftsPage}" CommandParameter="{x:Bind Id}"/>
-                                <AppBarButton Icon="Delete" Label="删除" Command="{Binding DataContext.DeleteDraftCommand, ElementName=DraftsPage}" CommandParameter="{x:Bind Id}"/>
+                                <Button Content="查看" Command="{Binding DataContext.ViewDraftCommand, ElementName=PageRoot}" CommandParameter="{x:Bind Id}"/>
+                                <Button Content="确认" Style="{ThemeResource AccentButtonStyle}" Command="{Binding DataContext.ConfirmDraftCommand, ElementName=PageRoot}" CommandParameter="{x:Bind Id}"/>
+                                <AppBarButton Icon="Delete" Label="删除" Command="{Binding DataContext.DeleteDraftCommand, ElementName=PageRoot}" CommandParameter="{x:Bind Id}"/>
                             </StackPanel>
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
+
+            <!-- 空状态展示 -->
+            <controls:EmptyState 
+                IconGlyph="&#xE8F4;" 
+                Title="暂无草稿排班" 
+                Subtitle="所有排班都已确认或删除"
+                Visibility="{x:Bind ViewModel.Drafts.Count, Mode=OneWay, Converter={StaticResource CountToVisibilityConverter}}"/>
         </Grid>
     </Grid>
 </Page>

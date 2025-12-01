@@ -37,7 +37,7 @@ namespace AutoScheduling3.Data
     {
         private readonly string _connectionString;
         private readonly string _dbPath;
-        private const int CurrentVersion = 1;
+        private const int CurrentVersion = 2;
 
         // New components for enhanced initialization
         private readonly DatabaseHealthChecker _healthChecker;
@@ -955,14 +955,95 @@ CREATE INDEX IF NOT EXISTS idx_manual_assignments_enabled ON ManualAssignments(I
                     // 初始版本，无需迁移
                     _logger.Log("Version 1 is the initial version, no migration needed");
                     break;
-                // 未来版本的迁移逻辑在这里添加
-                // Example for future versions:
-                // case 2:
-                //     await MigrateToVersion2Async(conn, transaction);
-                //     break;
+                case 2:
+                    // 添加约束配置字段到 Schedules 表
+                    await MigrateToVersion2Async(conn, transaction);
+                    break;
                 default:
                     throw new NotSupportedException($"Migration to version {version} is not supported.");
             }
+        }
+
+        /// <summary>
+        /// 迁移到版本 2：为 Schedules 表添加约束配置字段
+        /// </summary>
+        private async Task MigrateToVersion2Async(SqliteConnection conn, SqliteTransaction transaction)
+        {
+            _logger.Log("Migrating to version 2: Adding constraint configuration fields to Schedules table");
+
+            var cmd = conn.CreateCommand();
+            cmd.Transaction = transaction;
+
+            // 检查并添加 HolidayConfigId 字段
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "HolidayConfigId"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN HolidayConfigId INTEGER";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added HolidayConfigId column");
+            }
+            else
+            {
+                _logger.Log("HolidayConfigId column already exists, skipping");
+            }
+
+            // 检查并添加 UseActiveHolidayConfig 字段
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "UseActiveHolidayConfig"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN UseActiveHolidayConfig INTEGER NOT NULL DEFAULT 1";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added UseActiveHolidayConfig column");
+            }
+            else
+            {
+                _logger.Log("UseActiveHolidayConfig column already exists, skipping");
+            }
+
+            // 检查并添加 EnabledFixedRuleIds 字段
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "EnabledFixedRuleIds"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN EnabledFixedRuleIds TEXT NOT NULL DEFAULT '[]'";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added EnabledFixedRuleIds column");
+            }
+            else
+            {
+                _logger.Log("EnabledFixedRuleIds column already exists, skipping");
+            }
+
+            // 检查并添加 EnabledManualAssignmentIds 字段
+            if (!await ColumnExistsAsync(conn, transaction, "Schedules", "EnabledManualAssignmentIds"))
+            {
+                cmd.CommandText = "ALTER TABLE Schedules ADD COLUMN EnabledManualAssignmentIds TEXT NOT NULL DEFAULT '[]'";
+                await cmd.ExecuteNonQueryAsync();
+                _logger.Log("Added EnabledManualAssignmentIds column");
+            }
+            else
+            {
+                _logger.Log("EnabledManualAssignmentIds column already exists, skipping");
+            }
+
+            _logger.Log("Version 2 migration completed successfully");
+        }
+
+        /// <summary>
+        /// 检查列是否存在
+        /// </summary>
+        private async Task<bool> ColumnExistsAsync(SqliteConnection conn, SqliteTransaction transaction, string tableName, string columnName)
+        {
+            var cmd = conn.CreateCommand();
+            cmd.Transaction = transaction;
+            cmd.CommandText = $"PRAGMA table_info({tableName})";
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var colName = reader.GetString(1); // 列名在第2列（索引1）
+                if (colName.Equals(columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -1232,6 +1313,76 @@ CREATE INDEX IF NOT EXISTS idx_manual_assignments_enabled ON ManualAssignments(I
             }
 
             return diagnostics;
+        }
+
+        /// <summary>
+        /// 清空所有数据表（保留 DatabaseVersion 表）
+        /// 此操作会删除所有业务数据，但保留数据库结构
+        /// </summary>
+        /// <returns>清空的记录总数</returns>
+        public async Task<int> ClearAllDataAsync()
+        {
+            _logger.Log("开始清空所有数据表");
+            int totalRecordsDeleted = 0;
+
+            try
+            {
+                using var conn = new SqliteConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // 需要清空的表（按依赖关系倒序）
+                var tablesToClear = new[]
+                {
+                    "SingleShifts",           // 依赖 Schedules, Positions, Personals
+                    "Schedules",              // 依赖 HolidayConfigs
+                    "ManualAssignments",      // 依赖 Positions, Personals
+                    "FixedPositionRules",     // 依赖 Personals
+                    "SchedulingTemplates",    // 独立表
+                    "HolidayConfigs",         // 独立表
+                    "Positions",              // 依赖 Skills
+                    "Personals",              // 依赖 Skills
+                    "Skills"                  // 基础表
+                };
+
+                using var transaction = conn.BeginTransaction();
+                
+                try
+                {
+                    foreach (var tableName in tablesToClear)
+                    {
+                        var countCmd = conn.CreateCommand();
+                        countCmd.Transaction = transaction;
+                        countCmd.CommandText = $"SELECT COUNT(*) FROM {tableName}";
+                        var count = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
+                        
+                        if (count > 0)
+                        {
+                            var deleteCmd = conn.CreateCommand();
+                            deleteCmd.Transaction = transaction;
+                            deleteCmd.CommandText = $"DELETE FROM {tableName}";
+                            await deleteCmd.ExecuteNonQueryAsync();
+                            
+                            totalRecordsDeleted += count;
+                            _logger.Log($"已清空表 {tableName}：{count} 条记录");
+                        }
+                    }
+
+                    await transaction.CommitAsync();
+                    _logger.Log($"成功清空所有数据表，共删除 {totalRecordsDeleted} 条记录");
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"清空数据表失败: {ex.Message}");
+                throw;
+            }
+
+            return totalRecordsDeleted;
         }
 
         /// <summary>

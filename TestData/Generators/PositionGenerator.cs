@@ -26,23 +26,20 @@ public class PositionGenerator : IEntityGenerator<PositionDto>
     }
 
     /// <summary>
-    /// 生成哨位数据
+    /// 生成哨位数据（不计算可用人员）
     /// </summary>
-    /// <param name="dependencies">生成数据所需的依赖项：[0]=技能列表(List&lt;SkillDto&gt;), [1]=人员列表(List&lt;PersonnelDto&gt;)</param>
-    /// <returns>生成的哨位列表</returns>
+    /// <param name="dependencies">生成数据所需的依赖项：[0]=技能列表(List&lt;SkillDto&gt;)</param>
+    /// <returns>生成的哨位列表（可用人员为空）</returns>
     /// <exception cref="ArgumentException">当依赖项不足或类型不正确时抛出</exception>
     public List<PositionDto> Generate(params object[] dependencies)
     {
-        if (dependencies == null || dependencies.Length < 2)
-            throw new ArgumentException("需要提供技能列表和人员列表作为依赖项", nameof(dependencies));
+        if (dependencies == null || dependencies.Length < 1)
+            throw new ArgumentException("需要提供技能列表作为依赖项", nameof(dependencies));
 
         var skills = dependencies[0] as List<SkillDto>;
-        var personnel = dependencies[1] as List<PersonnelDto>;
 
         if (skills == null || skills.Count == 0)
             throw new ArgumentException("技能列表不能为空或类型不正确", nameof(dependencies));
-        if (personnel == null || personnel.Count == 0)
-            throw new ArgumentException("人员列表不能为空或类型不正确", nameof(dependencies));
 
         var positions = new List<PositionDto>();
         var availableNames = _sampleData.GetAllPositionNames();
@@ -67,12 +64,6 @@ public class PositionGenerator : IEntityGenerator<PositionDto>
                 .Take(requiredSkillCount)
                 .ToList();
 
-            // 找出具备所需技能的人员（必须可用、未退役，且至少拥有一项所需技能）
-            var availablePersonnel = personnel
-                .Where(p => p.IsAvailable && !p.IsRetired)
-                .Where(p => requiredSkills.Any(rs => p.SkillIds.Contains(rs.Id)))
-                .ToList();
-
             var skillNames = string.Join("、", requiredSkills.Select(s => s.Name));
 
             // 生成时间戳，确保UpdatedAt不早于CreatedAt
@@ -88,8 +79,8 @@ public class PositionGenerator : IEntityGenerator<PositionDto>
                 Requirements = _sampleData.GetRandomRequirement(skillNames),
                 RequiredSkillIds = requiredSkills.Select(s => s.Id).ToList(),
                 RequiredSkillNames = requiredSkills.Select(s => s.Name).ToList(),
-                AvailablePersonnelIds = availablePersonnel.Select(p => p.Id).ToList(),
-                AvailablePersonnelNames = availablePersonnel.Select(p => p.Name).ToList(),
+                AvailablePersonnelIds = new List<int>(),  // 初始化为空列表
+                AvailablePersonnelNames = new List<string>(),  // 初始化为空列表
                 IsActive = true,
                 CreatedAt = positionCreatedAt,
                 UpdatedAt = positionUpdatedAt

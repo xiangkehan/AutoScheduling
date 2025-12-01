@@ -84,12 +84,13 @@ namespace AutoScheduling3
             _navigationService.RegisterPage("SchedulingProgress", typeof(SchedulingProgressPage));
             _navigationService.RegisterPage("TemplateManage", typeof(TemplatePage));
             _navigationService.RegisterPage("ScheduleResult", typeof(ScheduleResultPage));
+            _navigationService.RegisterPage("ScheduleGridFullScreen", typeof(ScheduleGridFullScreenView));
             _navigationService.RegisterPage("Drafts", typeof(DraftsPage));
 
             // 历史页面注册
             _navigationService.RegisterPage("History", typeof(HistoryPage));
             _navigationService.RegisterPage("Compare", typeof(ComparePage));
-            // 如果存在详情页面，可在此注册: _navigationService.RegisterPage("HistoryDetail", typeof(HistoryDetailPage));
+            // 注意：历史详情使用 ScheduleResult 页面展示，无需单独注册
 
             // 设置页面注册
             _navigationService.RegisterPage("Settings", typeof(SettingsPage));

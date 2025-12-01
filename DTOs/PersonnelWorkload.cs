@@ -29,4 +29,9 @@ public class PersonnelWorkload
     /// 夜哨数
     /// </summary>
     public int NightShifts { get; set; }
+
+    /// <summary>
+    /// 日夜班次摘要文本
+    /// </summary>
+    public string DayNightSummary => $"{DayShifts}日/{NightShifts}夜";
 }

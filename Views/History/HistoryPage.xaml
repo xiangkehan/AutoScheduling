@@ -11,6 +11,7 @@
     <Page.Resources>
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <conv:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
+        <conv:GreaterThanOneConverter x:Key="GreaterThanOneConverter"/>
     </Page.Resources>
 
     <Grid Padding="16">
@@ -19,24 +20,54 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <!-- Filters -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
-            <TextBox Width="200" PlaceholderText="关键字" Text="{Binding Keyword, Mode=TwoWay}"/>
-            <DatePicker Date="{Binding StartDate, Mode=TwoWay}"/>
-            <DatePicker Date="{Binding EndDate, Mode=TwoWay}"/>
-            <Button Content="应用" Command="{Binding ApplyDateRangeCommand}"/>
-            <ComboBox Width="120" ItemsSource="{Binding SortByOptions}" SelectedItem="{Binding SelectedSortBy}"/>
-            <Button Content="时间线" Command="{Binding SwitchViewCommand}" CommandParameter="Timeline"/>
-            <Button Content="列表" Command="{Binding SwitchViewCommand}" CommandParameter="List"/>
-        </StackPanel>
+        <!-- 筛选器 -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="200" MaxWidth="300"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*" MinWidth="150"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*" MinWidth="150"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*" MinWidth="120" MaxWidth="180"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- 第一行：搜索和日期筛选 -->
+            <TextBox Grid.Column="0" PlaceholderText="搜索关键字" Text="{Binding Keyword, Mode=TwoWay}" Margin="0,0,8,0"/>
+            
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="0,0,8,0">
+                <TextBlock Text="开始日期:" VerticalAlignment="Center"/>
+                <DatePicker Date="{Binding StartDate, Mode=TwoWay}"/>
+            </StackPanel>
+            
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="0,0,8,0">
+                <TextBlock Text="结束日期:" VerticalAlignment="Center"/>
+                <DatePicker Date="{Binding EndDate, Mode=TwoWay}"/>
+            </StackPanel>
+            
+            <Button Grid.Column="3" Content="应用筛选" Command="{Binding ApplyDateRangeCommand}" Margin="0,0,8,0"/>
+            
+            <ComboBox Grid.Column="4" ItemsSource="{Binding SortByOptions}" SelectedItem="{Binding SelectedSortBy}" PlaceholderText="排序方式" HorizontalAlignment="Stretch" Margin="0,0,8,0"/>
+            
+            <!-- 第二行：视图切换按钮 -->
+            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="7" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                <Button Content="时间线视图" Command="{Binding SwitchViewCommand}" CommandParameter="Timeline"/>
+                <Button Content="列表视图" Command="{Binding SwitchViewCommand}" CommandParameter="List"/>
+            </StackPanel>
+        </Grid>
 
-        <!-- Paging -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Visibility="{Binding IsListView, Converter={StaticResource BoolToVisibilityConverter}}">
-            <TextBlock Text="页面:"/>
-            <TextBlock Text="{Binding CurrentPage}"/>
-            <TextBlock Text="/"/>
-            <TextBlock Text="{Binding TotalPages}"/>
-            <Button Content="上一页" Command="{Binding PrevPageCommand}"/>
+        <!-- 分页 -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12" Visibility="{Binding IsListView, Converter={StaticResource BoolToVisibilityConverter}}">
+            <TextBlock Text="第" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding CurrentPage}" VerticalAlignment="Center" FontWeight="Bold"/>
+            <TextBlock Text="页 / 共" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding TotalPages}" VerticalAlignment="Center" FontWeight="Bold"/>
+            <TextBlock Text="页" VerticalAlignment="Center"/>
+            <Button Content="上一页" Command="{Binding PrevPageCommand}" IsEnabled="{Binding CurrentPage, Converter={StaticResource GreaterThanOneConverter}}"/>
             <Button Content="下一页" Command="{Binding NextPageCommand}"/>
         </StackPanel>
 
@@ -52,18 +83,19 @@
                             <StackPanel Width="320">
                                 <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold"/>
                                 <TextBlock>
+                                    <Run Text="排班周期: "/>
                                     <Run Text="{Binding StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
-                                    <Run Text=" - "/>
+                                    <Run Text=" 至 "/>
                                     <Run Text="{Binding EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
                                 </TextBlock>
-                                <TextBlock FontSize="12">
-                                    <Run Text="人员:"/>
+                                <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                    <Run Text="人员数量: "/>
                                     <Run Text="{Binding NumberOfPersonnel}"/>
-                                    <Run Text=" 哨位:"/>
+                                    <Run Text=" | 哨位数量: "/>
                                     <Run Text="{Binding NumberOfPositions}"/>
                                 </TextBlock>
-                                <TextBlock FontSize="12">
-                                    <Run Text="确认:"/>
+                                <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                    <Run Text="确认时间: "/>
                                     <Run Text="{Binding ConfirmTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd HH:mm}"/>
                                 </TextBlock>
                             </StackPanel>
@@ -84,44 +116,69 @@
                         <DataTemplate>
                             <StackPanel>
                                 <TextBlock Text="{Binding Key}" FontSize="20" FontWeight="Bold" Margin="0,16,0,4"/>
-                                <ItemsControl ItemsSource="{Binding}" ItemTemplate="{StaticResource TimelineCardTemplate}"/>
+                                <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource TimelineCardTemplate}"/>
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
 
-            <!-- List View -->
-            <ListView x:Name="ListView" Visibility="{Binding IsListView, Converter={StaticResource BoolToVisibilityConverter}}" ItemsSource="{Binding Items}" SelectionMode="None">
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Padding="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Margin="0,4,0,0" CornerRadius="4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120"/>
-                                <ColumnDefinition Width="200"/>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{Binding ConfirmTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Name}"/>
-                            <TextBlock Grid.Column="2">
-                                <Run Text="{Binding StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
-                                <Run Text=" - "/>
-                                <Run Text="{Binding EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
-                            </TextBlock>
-                            <TextBlock Grid.Column="3" Text="{Binding NumberOfPersonnel}"/>
-                            <TextBlock Grid.Column="4" Text="{Binding NumberOfPositions}"/>
-                            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4">
-                                <Button Content="查看" Command="{Binding DataContext.ViewDetailCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
-                                <Button Content="导出" Command="{Binding DataContext.ExportCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
-                                <Button Content="对比" Command="{Binding DataContext.CompareCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
-                            </StackPanel>
-                        </Grid>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+            <!-- 列表视图 -->
+            <Grid Visibility="{Binding IsListView, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- 列表表头 -->
+                <Grid Grid.Row="0" Padding="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Margin="0,0,0,4" CornerRadius="4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120"/>
+                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="220"/>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="确认日期" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="1" Text="排班名称" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="2" Text="排班周期" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="3" Text="人员数" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="4" Text="哨位数" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="5" Text="操作" FontWeight="Bold"/>
+                </Grid>
+                
+                <ListView Grid.Row="1" x:Name="ListView" ItemsSource="{Binding Items}" SelectionMode="None">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Margin="0,4,0,0" CornerRadius="4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="200"/>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding ConfirmTime, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" VerticalAlignment="Center">
+                                    <Run Text="{Binding StartDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
+                                    <Run Text=" 至 "/>
+                                    <Run Text="{Binding EndDate, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=yyyy-MM-dd}"/>
+                                </TextBlock>
+                                <TextBlock Grid.Column="3" Text="{Binding NumberOfPersonnel}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="4" Text="{Binding NumberOfPositions}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4">
+                                    <Button Content="查看详情" Command="{Binding DataContext.ViewDetailCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                    <Button Content="导出数据" Command="{Binding DataContext.ExportCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                    <Button Content="版本对比" Command="{Binding DataContext.CompareCommand, ElementName=RootPage}" CommandParameter="{Binding Id}"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
         </Grid>
     </Grid>
 </Page>

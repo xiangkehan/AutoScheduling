@@ -45,10 +45,22 @@ namespace AutoScheduling3.ViewModels.Scheduling
         /// <param name="positionName">哨位名称</param>
         public void AddTemporary(CreateManualAssignmentDto dto, string personnelName, string positionName)
         {
+            AddTemporary(dto, personnelName, positionName, Guid.NewGuid());
+        }
+
+        /// <summary>
+        /// 添加临时手动指定（带临时ID）
+        /// </summary>
+        /// <param name="dto">创建手动指定DTO</param>
+        /// <param name="personnelName">人员姓名</param>
+        /// <param name="positionName">哨位名称</param>
+        /// <param name="tempId">临时ID</param>
+        public void AddTemporary(CreateManualAssignmentDto dto, string personnelName, string positionName, Guid tempId)
+        {
             var viewModel = new ManualAssignmentViewModel
             {
                 Id = null, // 临时手动指定没有数据库ID
-                TempId = Guid.NewGuid(),
+                TempId = tempId,
                 Date = dto.Date,
                 PersonnelId = dto.PersonnelId,
                 PersonnelName = personnelName,

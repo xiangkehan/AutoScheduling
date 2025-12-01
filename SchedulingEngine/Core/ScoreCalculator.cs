@@ -47,7 +47,26 @@ namespace AutoScheduling3.SchedulingEngine.Core
             var scoreState = _context.PersonScoreStates[personId];
             bool isHoliday = _context.IsHoliday(date);
 
-            return scoreState.CalculateScore(periodIdx, date, isHoliday);
+            // 动态计算各项间隔
+            int recentShiftInterval = scoreState.CalculateRecentShiftInterval(date, periodIdx, _context);
+            int periodInterval = scoreState.CalculatePeriodInterval(periodIdx, date, _context);
+
+            // 充分休息得分
+            double restScore = recentShiftInterval == int.MaxValue ? 1000 : recentShiftInterval;
+
+            // 时段平衡得分
+            double periodScore = periodInterval == int.MaxValue ? 1000 : periodInterval;
+
+            // 如果是休息日，加上休息日平衡得分
+            double totalScore = restScore + periodScore;
+            if (isHoliday)
+            {
+                int holidayInterval = scoreState.CalculateHolidayInterval(date, _context);
+                double holidayScore = holidayInterval == int.MaxValue ? 1000 : holidayInterval;
+                totalScore += holidayScore;
+            }
+
+            return totalScore;
         }
 
         /// <summary>
@@ -102,62 +121,24 @@ namespace AutoScheduling3.SchedulingEngine.Core
             return bestPersonIdx;
         }
 
-        /// <summary>
-        /// 更新人员评分状态（在分配后调用）
-        /// </summary>
-        /// <param name="personIdx">人员索引</param>
-        /// <param name="periodIdx">时段索引</param>
-        /// <param name="date">日期</param>
-        public void UpdatePersonScoreState(int personIdx, int periodIdx, DateTime date)
-        {
-            int personId = _context.PersonIdxToId[personIdx];
-            if (!_context.PersonScoreStates.ContainsKey(personId))
-                return;
 
-            var scoreState = _context.PersonScoreStates[personId];
-            bool isHoliday = _context.IsHoliday(date);
-            
-            scoreState.UpdateAfterAssignment(periodIdx, date, isHoliday);
-        }
-
-        /// <summary>
-        /// 增量更新所有人员的间隔数（在时段推进时调用）
-        /// </summary>
-        public void IncrementAllIntervalsForPeriod()
-        {
-            foreach (var state in _context.PersonScoreStates.Values)
-            {
-                state.IncrementIntervals();
-            }
-        }
-
-        /// <summary>
-        /// 增量更新所有人员的休息日间隔数（在休息日推进时调用）
-        /// </summary>
-        /// <param name="date">当前日期</param>
-        public void IncrementHolidayIntervalsIfNeeded(DateTime date)
-        {
-            if (_context.IsHoliday(date))
-            {
-                foreach (var state in _context.PersonScoreStates.Values)
-                {
-                    state.IncrementHolidayInterval();
-                }
-            }
-        }
 
         /// <summary>
         /// 获取人员的当前评分状态摘要
         /// </summary>
-        public string GetPersonScoreSummary(int personIdx)
+        public string GetPersonScoreSummary(int personIdx, DateTime date, int periodIdx)
         {
             int personId = _context.PersonIdxToId[personIdx];
             if (!_context.PersonScoreStates.ContainsKey(personId))
                 return "未找到评分状态";
 
             var state = _context.PersonScoreStates[personId];
-            return $"人员{personId}: 休息间隔={state.RecentShiftInterval}, 休息日间隔={state.RecentHolidayInterval}, " +
-                   $"最后分配时段={state.LastAssignedPeriod}, 最后分配日期={state.LastAssignedDate:yyyy-MM-dd}";
+            int recentShiftInterval = state.CalculateRecentShiftInterval(date, periodIdx, _context);
+            int periodInterval = state.CalculatePeriodInterval(periodIdx, date, _context);
+            int holidayInterval = state.CalculateHolidayInterval(date, _context);
+
+            return $"人员{personId}: 休息间隔={recentShiftInterval}, 时段{periodIdx}间隔={periodInterval}, " +
+                   $"休息日间隔={holidayInterval}";
         }
     }
 }

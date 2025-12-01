@@ -79,6 +79,36 @@ public class ScheduleDto
     [Required(ErrorMessage = "结束日期不能为空")]
     [JsonPropertyName("endDate")]
     public DateTime EndDate { get; set; }
+
+    /// <summary>
+    /// 软约束评分
+    /// </summary>
+    [JsonPropertyName("softScores")]
+    public SoftConstraintScores? SoftScores { get; set; }
+
+    /// <summary>
+    /// 休息日配置ID（可选）
+    /// </summary>
+    [JsonPropertyName("holidayConfigId")]
+    public int? HolidayConfigId { get; set; }
+
+    /// <summary>
+    /// 是否使用活动的休息日配置
+    /// </summary>
+    [JsonPropertyName("useActiveHolidayConfig")]
+    public bool UseActiveHolidayConfig { get; set; } = true;
+
+    /// <summary>
+    /// 启用的定岗规则ID列表
+    /// </summary>
+    [JsonPropertyName("enabledFixedRuleIds")]
+    public List<int> EnabledFixedRuleIds { get; set; } = new();
+
+    /// <summary>
+    /// 启用的手动指定ID列表
+    /// </summary>
+    [JsonPropertyName("enabledManualAssignmentIds")]
+    public List<int> EnabledManualAssignmentIds { get; set; } = new();
 }
 
 /// <summary>
@@ -145,6 +175,12 @@ public class ShiftDto
     [Range(0, 11, ErrorMessage = "时段索引必须在0-11之间")]
     [JsonPropertyName("periodIndex")]
     public int PeriodIndex { get; set; }
+
+    /// <summary>
+    /// 是否为手动指定的班次
+    /// </summary>
+    [JsonPropertyName("isManualAssignment")]
+    public bool IsManualAssignment { get; set; }
 }
 
 /// <summary>
@@ -312,55 +348,4 @@ public class ManualAssignmentRequestItem
     public string Remarks { get; set; } = string.Empty;
 }
 
-/// <summary>
-/// 冲突/约束提示 DTO
-/// </summary>
-public class ConflictDto
-{
-    /// <summary>
-    /// 冲突类型：hard / soft / info / unassigned
-    /// </summary>
-    [Required(ErrorMessage = "冲突类型不能为空")]
-    [RegularExpression("^(hard|soft|info|unassigned)$", ErrorMessage = "冲突类型必须是 hard、soft、info 或 unassigned")]
-    [JsonPropertyName("type")]
-    public string Type { get; set; } = string.Empty;
-
-    /// <summary>
-    /// 冲突描述
-    /// </summary>
-    [Required(ErrorMessage = "冲突描述不能为空")]
-    [StringLength(500, MinimumLength = 1, ErrorMessage = "冲突描述长度必须在1-500字符之间")]
-    [JsonPropertyName("message")]
-    public string Message { get; set; } = string.Empty;
-
-    /// <summary>
-    /// 相关哨位ID
-    /// </summary>
-    [JsonPropertyName("positionId")]
-    public int? PositionId { get; set; }
-
-    /// <summary>
-    /// 相关人员ID
-    /// </summary>
-    [JsonPropertyName("personnelId")]
-    public int? PersonnelId { get; set; }
-
-    /// <summary>
-    /// 开始时间
-    /// </summary>
-    [JsonPropertyName("startTime")]
-    public DateTime? StartTime { get; set; }
-
-    /// <summary>
-    /// 结束时间
-    /// </summary>
-    [JsonPropertyName("endTime")]
-    public DateTime? EndTime { get; set; }
-
-    /// <summary>
-    /// 时段索引
-    /// </summary>
-    [Range(0, 11, ErrorMessage = "时段索引必须在0-11之间")]
-    [JsonPropertyName("periodIndex")]
-    public int? PeriodIndex { get; set; }
-}
+// ConflictDto 已移至单独的文件 DTOs/ConflictDto.cs

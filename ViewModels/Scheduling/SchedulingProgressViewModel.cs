@@ -1185,35 +1185,21 @@ public partial class SchedulingProgressViewModel : ObservableObject
 
         try
         {
-            // 创建全屏视图
-            var fullScreenView = new AutoScheduling3.Views.Scheduling.ScheduleGridFullScreenView(GridData);
-
-            // 创建全屏对话框
-            var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+            // 准备全屏视图参数
+            var parameter = new FullScreenViewParameter
             {
-                Content = fullScreenView,
-                DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Close,
-                XamlRoot = App.MainWindow?.Content?.XamlRoot
+                ViewMode = ViewMode.Grid,
+                GridData = GridData,
+                Title = "排班表格 - 全屏视图"
             };
 
-            // 应用全屏对话框样式
-            if (Microsoft.UI.Xaml.Application.Current.Resources.ContainsKey("FullScreenDialogStyle"))
-            {
-                dialog.Style = (Microsoft.UI.Xaml.Style)Microsoft.UI.Xaml.Application.Current.Resources["FullScreenDialogStyle"];
-            }
-
-            // 处理全屏视图的关闭请求
-            fullScreenView.CloseRequested += (s, e) =>
-            {
-                dialog.Hide();
-            };
-
+            // 导航到全屏视图页面
             IsGridFullScreen = true;
-            await dialog.ShowAsync();
-            IsGridFullScreen = false;
+            _navigationService.NavigateTo("ScheduleGridFullScreen", parameter);
         }
         catch (Exception ex)
         {
+            IsGridFullScreen = false;
             await _dialogService.ShowErrorAsync("显示全屏表格失败", $"无法显示全屏表格：{ex.Message}");
         }
     }

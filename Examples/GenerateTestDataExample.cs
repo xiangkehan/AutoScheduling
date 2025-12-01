@@ -47,6 +47,42 @@ public class GenerateTestDataExample
     }
 
     /// <summary>
+    /// 示例2.1: 使用演练场景配置（高可用率、低退役率）
+    /// </summary>
+    public static async Task Example2_1_DrillScenario()
+    {
+        // 使用演练场景配置：95%可用率，5%退役率
+        var config = TestDataConfiguration.CreateDrillScenario();
+        var generator = new TestDataGenerator(config);
+
+        var testData = generator.GenerateTestData();
+        await generator.ExportToFileAsync("test-data-drill.json");
+
+        Console.WriteLine("演练场景测试数据已生成");
+        Console.WriteLine($"  - 人员可用率: {config.PersonnelAvailabilityRate:P0}");
+        Console.WriteLine($"  - 人员退役率: {config.PersonnelRetirementRate:P0}");
+        Console.WriteLine($"  - 每哨位最小人员: {config.MinPersonnelPerPosition}");
+    }
+
+    /// <summary>
+    /// 示例2.2: 使用实战场景配置（较低可用率、较高退役率）
+    /// </summary>
+    public static async Task Example2_2_CombatScenario()
+    {
+        // 使用实战场景配置：75%可用率，15%退役率
+        var config = TestDataConfiguration.CreateCombatScenario();
+        var generator = new TestDataGenerator(config);
+
+        var testData = generator.GenerateTestData();
+        await generator.ExportToFileAsync("test-data-combat.json");
+
+        Console.WriteLine("实战场景测试数据已生成");
+        Console.WriteLine($"  - 人员可用率: {config.PersonnelAvailabilityRate:P0}");
+        Console.WriteLine($"  - 人员退役率: {config.PersonnelRetirementRate:P0}");
+        Console.WriteLine($"  - 每哨位最小人员: {config.MinPersonnelPerPosition}");
+    }
+
+    /// <summary>
     /// 示例3: 使用大规模配置生成测试数据
     /// </summary>
     public static async Task Example3_LargeConfiguration()
@@ -72,6 +108,9 @@ public class GenerateTestDataExample
             SkillCount = 10,
             PersonnelCount = 20,
             PositionCount = 15,
+            MinPersonnelPerPosition = 4,           // 每个哨位至少4个可用人员
+            PersonnelAvailabilityRate = 0.80,     // 80%的人员可用
+            PersonnelRetirementRate = 0.12,       // 12%的人员已退役
             TemplateCount = 4,
             FixedAssignmentCount = 8,
             ManualAssignmentCount = 12,
@@ -87,6 +126,51 @@ public class GenerateTestDataExample
         Console.WriteLine("自定义配置测试数据已生成");
         Console.WriteLine($"元数据: {testData.Metadata.ExportVersion}");
         Console.WriteLine($"导出时间: {testData.Metadata.ExportedAt}");
+    }
+
+    /// <summary>
+    /// 示例4.1: 配置验证示例
+    /// </summary>
+    public static void Example4_1_ConfigurationValidation()
+    {
+        // 创建一个可能有问题的配置
+        var config = new TestDataConfiguration
+        {
+            PersonnelCount = 10,
+            PositionCount = 5,
+            MinPersonnelPerPosition = 3,
+            PersonnelAvailabilityRate = 0.70,
+            PersonnelRetirementRate = 0.20
+        };
+
+        // 验证配置
+        var (isValid, errors, warnings) = config.ValidateWithResult();
+
+        Console.WriteLine("=== 配置验证结果 ===");
+        Console.WriteLine($"配置有效: {isValid}");
+
+        if (errors.Any())
+        {
+            Console.WriteLine("\n错误:");
+            foreach (var error in errors)
+            {
+                Console.WriteLine($"  ❌ {error}");
+            }
+        }
+
+        if (warnings.Any())
+        {
+            Console.WriteLine("\n警告:");
+            foreach (var warning in warnings)
+            {
+                Console.WriteLine($"  ⚠️  {warning}");
+            }
+        }
+
+        if (isValid && !warnings.Any())
+        {
+            Console.WriteLine("\n✓ 配置完全正常，可以使用");
+        }
     }
 
     /// <summary>
@@ -120,6 +204,75 @@ public class GenerateTestDataExample
             Console.WriteLine($"ID: {position.Id}, 名称: {position.Name}, 地点: {position.Location}");
             Console.WriteLine($"  所需技能: {string.Join(", ", position.RequiredSkillNames)}");
             Console.WriteLine($"  可用人员数: {position.AvailablePersonnelIds.Count}");
+        }
+    }
+
+    /// <summary>
+    /// 示例5.1: 检查智能技能分配的效果
+    /// </summary>
+    public static void Example5_1_InspectSkillAssignment()
+    {
+        var config = TestDataConfiguration.CreateDefault();
+        var generator = new TestDataGenerator(config);
+        var testData = generator.GenerateTestData();
+
+        Console.WriteLine("=== 智能技能分配效果检查 ===\n");
+
+        // 统计人员技能数量分布
+        var skillCountDistribution = testData.Personnel
+            .GroupBy(p => p.SkillIds.Count)
+            .OrderBy(g => g.Key)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        Console.WriteLine("人员技能数量分布:");
+        foreach (var (skillCount, personCount) in skillCountDistribution)
+        {
+            var percentage = (double)personCount / testData.Personnel.Count * 100;
+            Console.WriteLine($"  {skillCount}个技能: {personCount}人 ({percentage:F1}%)");
+        }
+
+        // 检查每个哨位的可用人员数量
+        Console.WriteLine("\n哨位可用人员数量:");
+        var minAvailable = testData.Positions.Min(p => p.AvailablePersonnelIds.Count);
+        var maxAvailable = testData.Positions.Max(p => p.AvailablePersonnelIds.Count);
+        var avgAvailable = testData.Positions.Average(p => p.AvailablePersonnelIds.Count);
+
+        Console.WriteLine($"  最少: {minAvailable}人");
+        Console.WriteLine($"  最多: {maxAvailable}人");
+        Console.WriteLine($"  平均: {avgAvailable:F1}人");
+        Console.WriteLine($"  配置要求: 至少{config.MinPersonnelPerPosition}人");
+
+        // 检查是否所有哨位都满足最小人员要求
+        var unsatisfiedPositions = testData.Positions
+            .Where(p => p.AvailablePersonnelIds.Count < config.MinPersonnelPerPosition)
+            .ToList();
+
+        if (unsatisfiedPositions.Any())
+        {
+            Console.WriteLine($"\n⚠️  警告: {unsatisfiedPositions.Count}个哨位未满足最小人员要求");
+        }
+        else
+        {
+            Console.WriteLine($"\n✓ 所有哨位都满足最小人员要求");
+        }
+
+        // 显示多技能人员示例
+        Console.WriteLine("\n多技能人员示例:");
+        var multiSkilledPersonnel = testData.Personnel
+            .Where(p => p.SkillIds.Count >= 2)
+            .Take(3);
+
+        foreach (var person in multiSkilledPersonnel)
+        {
+            Console.WriteLine($"  {person.Name}: {string.Join(", ", person.SkillNames)}");
+            
+            // 找出该人员可以满足的哨位
+            var satisfiedPositions = testData.Positions
+                .Where(pos => pos.RequiredSkillIds.All(skillId => person.SkillIds.Contains(skillId)))
+                .Select(pos => pos.Name)
+                .ToList();
+            
+            Console.WriteLine($"    可满足哨位: {string.Join(", ", satisfiedPositions)}");
         }
     }
 

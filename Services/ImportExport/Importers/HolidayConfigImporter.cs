@@ -67,13 +67,42 @@ namespace AutoScheduling3.Services.ImportExport.Importers
         }
 
         /// <summary>
-        /// 从数据库获取现有记录
+        /// 从数据库获取现有记录（单个）
         /// </summary>
+        [Obsolete("此方法已过时，请使用 GetExistingRecordsBatchAsync", true)]
         protected override async Task<HolidayConfig?> GetExistingRecordAsync(int id, ImportContext context)
         {
             // 获取所有节假日配置并查找匹配的 ID
             var allConfigs = await _constraintRepository.GetAllHolidayConfigsAsync();
             return allConfigs.Find(c => c.Id == id);
+        }
+
+        /// <summary>
+        /// 批量从数据库获取现有记录
+        /// 使用一次性查询获取所有记录，避免逐个查询导致锁定
+        /// </summary>
+        protected override async Task<Dictionary<int, HolidayConfig>> GetExistingRecordsBatchAsync(List<int> ids, ImportContext context)
+        {
+            var result = new Dictionary<int, HolidayConfig>();
+
+            if (ids == null || ids.Count == 0)
+            {
+                return result;
+            }
+
+            // 获取所有节假日配置
+            var allConfigs = await _constraintRepository.GetAllHolidayConfigsAsync();
+            
+            // 过滤出需要的记录
+            foreach (var config in allConfigs)
+            {
+                if (ids.Contains(config.Id))
+                {
+                    result[config.Id] = config;
+                }
+            }
+
+            return result;
         }
     }
 }
