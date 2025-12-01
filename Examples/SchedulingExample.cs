@@ -29,7 +29,8 @@ namespace AutoScheduling3.Examples
             var constraintRepo = new ConstraintRepository(db);
             var historyMgmt = new HistoryManagement(db);
             var geneticConfig = SchedulingEngine.Config.GeneticSchedulerConfig.GetDefault();
-            _service = new SchedulingService(personalRepo, positionRepo, skillRepo, constraintRepo, historyMgmt, geneticConfig);
+            var configValidator = new Validators.CachedConfigValidator();
+            _service = new SchedulingService(personalRepo, positionRepo, skillRepo, constraintRepo, historyMgmt, geneticConfig, configValidator);
             ((SchedulingService)_service).InitializeAsync().GetAwaiter().GetResult();
         }
 

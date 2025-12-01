@@ -15,6 +15,7 @@ using AutoScheduling3.SchedulingEngine.Strategies.Crossover;
 using AutoScheduling3.SchedulingEngine.Strategies.Mutation;
 using AutoScheduling3.Services.Interfaces;
 using AutoScheduling3.DTOs;
+using AutoScheduling3.Validators;
 using System.Text;
 using AutoScheduling3.Data.Interfaces;
 
@@ -28,6 +29,7 @@ public class SchedulingService : ISchedulingService
     private readonly IConstraintRepository _constraintRepo;
     private readonly IHistoryManagement _historyMgmt;
     private readonly GeneticSchedulerConfig _geneticConfig;
+    private readonly CachedConfigValidator _configValidator;
     private readonly string _configFilePath;
 
     public SchedulingService(
@@ -36,7 +38,8 @@ public class SchedulingService : ISchedulingService
         ISkillRepository skillRepo, 
         IConstraintRepository constraintRepo, 
         IHistoryManagement historyMgmt,
-        GeneticSchedulerConfig geneticConfig)
+        GeneticSchedulerConfig geneticConfig,
+        CachedConfigValidator configValidator)
     {
         _personalRepo = personalRepo;
         _positionRepo = positionRepo;
@@ -44,6 +47,7 @@ public class SchedulingService : ISchedulingService
         _constraintRepo = constraintRepo;
         _historyMgmt = historyMgmt;
         _geneticConfig = geneticConfig;
+        _configValidator = configValidator;
         
         // 配置文件路径：存储在应用数据目录
         var localFolder = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
@@ -430,8 +434,8 @@ public class SchedulingService : ISchedulingService
             CreatedAt = b.CreateTime,
             ConfirmedAt = null,
             SchedulingMode = (SchedulingMode)b.Schedule.SchedulingMode,
-            ProgressPercentage = b.Schedule.ProgressPercentage,
-            IsResumable = b.Schedule.IsPartialResult && b.Schedule.ProgressPercentage < 100
+            ProgressPercentage = b.Schedule.ProgressPercentage ?? 0.0,
+            IsResumable = b.Schedule.IsPartialResult && (b.Schedule.ProgressPercentage ?? 0.0) < 100
         }).ToList();
     }
 
@@ -1898,7 +1902,20 @@ public class SchedulingService : ISchedulingService
         {
             try
             {
-                // 保存到文件（内部会自动验证）
+                // 使用缓存验证器验证配置
+                System.Diagnostics.Debug.WriteLine("验证遗传算法配置...");
+                var validationResult = _configValidator.Validate(config);
+                
+                if (!validationResult.IsValid)
+                {
+                    var errorMessage = validationResult.GetErrorMessage();
+                    System.Diagnostics.Debug.WriteLine($"配置验证失败: {errorMessage}");
+                    throw new ArgumentException($"配置参数无效: {errorMessage}");
+                }
+                
+                System.Diagnostics.Debug.WriteLine("配置验证通过");
+                
+                // 保存到文件
                 System.Diagnostics.Debug.WriteLine($"保存遗传算法配置到文件: {_configFilePath}");
                 config.SaveToFile(_configFilePath);
                 
@@ -1917,6 +1934,7 @@ public class SchedulingService : ISchedulingService
                 _geneticConfig.EnableDetailedLogging = config.EnableDetailedLogging;
                 
                 System.Diagnostics.Debug.WriteLine("遗传算法配置保存成功");
+                System.Diagnostics.Debug.WriteLine($"验证器统计: {_configValidator.GetCacheStatistics()}");
             }
             catch (ArgumentException ex)
             {
@@ -2274,41 +2292,5 @@ public class SchedulingService : ISchedulingService
             };
         }
     }
-
-    /// <summary>
-    /// 创建遗传算法调度器
-    /// </summary>
-    private GeneticScheduler CreateGeneticScheduler(SchedulingContext context)
-    {
-        // 创建适应度评估器
-        var fitnessEvaluator = new FitnessEvaluator(context);
-
-        // 创建策略实例
-        ISelectionStrategy selectionStrategy = _geneticConfig.SelectionStrategy switch
-        {
-            SelectionStrategyType.Tournament => new TournamentSelection(_geneticConfig.TournamentSize),
-            SelectionStrategyType.RouletteWheel => new RouletteWheelSelection(),
-            _ => new TournamentSelection(_geneticConfig.TournamentSize)
-        };
-
-        ICrossoverStrategy crossoverStrategy = _geneticConfig.CrossoverStrategy switch
-        {
-            CrossoverStrategyType.SinglePoint => new SinglePointCrossover(),
-            CrossoverStrategyType.Uniform => new UniformCrossover(),
-            _ => new UniformCrossover()
-        };
-
-        IMutationStrategy mutationStrategy = new SwapMutation();
-
-        // 创建遗传算法调度器
-        return new GeneticScheduler(
-            context,
-            _geneticConfig,
-            fitnessEvaluator,
-            selectionStrategy,
-            crossoverStrategy,
-            mutationStrategy);
-    }
-
     #endregion
 }

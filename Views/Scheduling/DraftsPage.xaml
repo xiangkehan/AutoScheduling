@@ -42,7 +42,6 @@
                 </StackPanel>
 
                 <Button Grid.Column="1" 
-                        Content="过滤选项" 
                         Command="{x:Bind ViewModel.ToggleFiltersCommand}"
                         VerticalAlignment="Center">
                     <Button.Content>

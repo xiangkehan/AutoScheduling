@@ -100,6 +100,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AutoScheduling3.SchedulingEngine.Config.GeneticSchedulerConfig>(sp => 
             AutoScheduling3.SchedulingEngine.Config.GeneticSchedulerConfig.GetDefault());
         
+        // 注册配置验证器（单例）
+        services.AddSingleton<AutoScheduling3.Validators.GeneticConfigValidator>();
+        services.AddSingleton<AutoScheduling3.Validators.CachedConfigValidator>();
+        
         // 注册 SchedulingService
         services.AddSingleton<ISchedulingService, SchedulingService>();
 

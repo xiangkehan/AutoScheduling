@@ -15,6 +15,7 @@ using AutoScheduling3.History;
 using AutoScheduling3.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml;
+using AutoScheduling3.Services;
 
 namespace AutoScheduling3.ViewModels.Scheduling;
 
