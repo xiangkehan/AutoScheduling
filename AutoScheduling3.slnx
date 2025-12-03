@@ -4,6 +4,7 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="../TestProject1/TestProject1.csproj" Id="36a80473-f735-4c4e-9629-6ae931093aac" />
   <Project Path="AutoScheduling3.csproj">
     <Platform Solution="*|ARM64" Project="ARM64" />
     <Platform Solution="*|x64" Project="x64" />
