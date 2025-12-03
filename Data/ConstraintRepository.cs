@@ -193,13 +193,41 @@ SELECT last_insert_rowid();";
                     PositionId = reader.GetInt32(1),
                     PeriodIndex = reader.GetInt32(2),
                     PersonalId = reader.GetInt32(3),
-                    Date = DateTime.Parse(reader.GetString(4)),
+                    Date = ParseDateTime(reader.GetString(4)),
                     IsEnabled = reader.GetInt32(5) == 1,
                     Remarks = reader.GetString(6)
                 });
             }
 
             return list;
+        }
+
+        /// <summary>
+        /// 解析日期时间字符串，支持 ISO 8601 格式和 Ticks 格式（兼容旧数据）
+        /// </summary>
+        private static DateTime ParseDateTime(string value)
+        {
+            // 尝试解析为 ISO 8601 格式
+            if (DateTime.TryParse(value, out var dateTime))
+            {
+                return dateTime;
+            }
+
+            // 尝试解析为 Ticks 格式（兼容旧数据）
+            if (long.TryParse(value, out var ticks))
+            {
+                try
+                {
+                    return new DateTime(ticks, DateTimeKind.Utc);
+                }
+                catch
+                {
+                    // Ticks 值无效，抛出异常
+                    throw new FormatException($"无法将字符串 '{value}' 解析为有效的日期时间。");
+                }
+            }
+
+            throw new FormatException($"无法将字符串 '{value}' 解析为有效的日期时间。");
         }
 
         public async Task UpdateManualAssignmentAsync(ManualAssignment assignment)

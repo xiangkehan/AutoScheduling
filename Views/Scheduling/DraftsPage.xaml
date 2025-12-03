@@ -68,11 +68,11 @@
                         <TextBlock Text="排班模式" Style="{ThemeResource CaptionTextBlockStyle}"/>
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <RadioButton Content="全部" 
-                                        IsChecked="{x:Bind ViewModel.FilterMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=null}"/>
+                                        IsChecked="{x:Bind ViewModel.FilterMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter='null'}"/>
                             <RadioButton Content="仅贪心" 
-                                        IsChecked="{x:Bind ViewModel.FilterMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=GreedyOnly}"/>
+                                        IsChecked="{x:Bind ViewModel.FilterMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter='GreedyOnly'}"/>
                             <RadioButton Content="混合模式" 
-                                        IsChecked="{x:Bind ViewModel.FilterMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Hybrid}"/>
+                                        IsChecked="{x:Bind ViewModel.FilterMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter='Hybrid'}"/>
                         </StackPanel>
                     </StackPanel>
 

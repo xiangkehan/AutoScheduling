@@ -12,16 +12,21 @@ public class AddOneConverter : IValueConverter
     {
         if (value is int intValue)
         {
-            return intValue + 1;
+            // 返回字符串类型，因为通常用于 TextBlock 的 Text 属性
+            return (intValue + 1).ToString();
         }
-        return value;
+        return value?.ToString() ?? string.Empty;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, string language)
     {
-        if (value is int intValue)
+        if (value is string stringValue && int.TryParse(stringValue, out int intValue))
         {
             return intValue - 1;
+        }
+        if (value is int intVal)
+        {
+            return intVal - 1;
         }
         return value;
     }

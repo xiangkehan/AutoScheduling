@@ -46,7 +46,10 @@ namespace AutoScheduling3.Converters
                 return null;
             }
 
-            return Enum.Parse(targetType, enumString);
+            // 获取实际的枚举类型（处理可空类型）
+            var actualType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+            
+            return Enum.Parse(actualType, enumString);
         }
     }
 }

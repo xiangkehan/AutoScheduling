@@ -336,12 +336,40 @@ namespace AutoScheduling3.Data
                 ScheduleId = reader.GetInt32(1),
                 PositionId = reader.GetInt32(2),
                 PersonnelId = reader.GetInt32(3),
-                StartTime = DateTime.Parse(reader.GetString(4)).ToUniversalTime(),
-                EndTime = DateTime.Parse(reader.GetString(5)).ToUniversalTime(),
+                StartTime = ParseDateTime(reader.GetString(4)),
+                EndTime = ParseDateTime(reader.GetString(5)),
                 DayIndex = reader.GetInt32(6),
                 TimeSlotIndex = reader.IsDBNull(7) ? 0 : reader.GetInt32(7),
                 IsNightShift = reader.IsDBNull(8) ? false : reader.GetInt32(8) == 1
             };
+        }
+
+        /// <summary>
+        /// 解析日期时间字符串，支持 ISO 8601 格式和 Ticks 格式（兼容旧数据）
+        /// </summary>
+        private DateTime ParseDateTime(string value)
+        {
+            // 尝试解析为 ISO 8601 格式
+            if (DateTime.TryParse(value, out var dateTime))
+            {
+                return dateTime.ToUniversalTime();
+            }
+
+            // 尝试解析为 Ticks 格式（兼容旧数据）
+            if (long.TryParse(value, out var ticks))
+            {
+                try
+                {
+                    return new DateTime(ticks, DateTimeKind.Utc);
+                }
+                catch
+                {
+                    // Ticks 值无效，抛出异常
+                    throw new FormatException($"无法将字符串 '{value}' 解析为有效的日期时间。");
+                }
+            }
+
+            throw new FormatException($"无法将字符串 '{value}' 解析为有效的日期时间。");
         }
         #endregion
 
