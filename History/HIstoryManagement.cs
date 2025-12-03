@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
             {
                 int bufferId = reader.GetInt32(0);
                 int scheduleId = reader.GetInt32(1);
-                DateTime createTime = DateTime.Parse(reader.GetString(2)).ToUniversalTime();
+                DateTime createTime = ParseDateTime(reader.GetString(2));
 
                 var schedule = await _schedulingRepo.GetByIdAsync(scheduleId);
                 if (schedule != null)
@@ -367,7 +367,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
 
             var cmd = conn.CreateCommand();
             cmd.CommandText = "UPDATE BufferSchedules SET CreateTime = @createTime WHERE ScheduleId = @scheduleId";
-            cmd.Parameters.AddWithValue("@createTime", DateTime.UtcNow.Ticks);
+            cmd.Parameters.AddWithValue("@createTime", DateTime.UtcNow.ToString("o"));
             cmd.Parameters.AddWithValue("@scheduleId", schedule.Id);
             await cmd.ExecuteNonQueryAsync();
         }
@@ -392,6 +392,34 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
 
             int scheduleId = Convert.ToInt32(result);
             return await _schedulingRepo.GetByIdAsync(scheduleId);
+        }
+
+        /// <summary>
+        /// 解析日期时间字符串，支持 ISO 8601 格式和 Ticks 格式（兼容旧数据）
+        /// </summary>
+        private DateTime ParseDateTime(string value)
+        {
+            // 尝试解析为 ISO 8601 格式
+            if (DateTime.TryParse(value, out var dateTime))
+            {
+                return dateTime.ToUniversalTime();
+            }
+
+            // 尝试解析为 Ticks 格式（兼容旧数据）
+            if (long.TryParse(value, out var ticks))
+            {
+                try
+                {
+                    return new DateTime(ticks, DateTimeKind.Utc);
+                }
+                catch
+                {
+                    // Ticks 值无效，抛出异常
+                    throw new FormatException($"无法将字符串 '{value}' 解析为有效的日期时间。");
+                }
+            }
+
+            throw new FormatException($"无法将字符串 '{value}' 解析为有效的日期时间。");
         }
     }
 }

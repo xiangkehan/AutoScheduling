@@ -131,11 +131,49 @@ CREATE TABLE IF NOT EXISTS SingleShifts (
 5. 测试导入测试数据（验证日期格式正确）
 6. 测试生成新的测试数据并导入
 
+## 2024-12-03 补充修复
+
+### 新发现的问题
+
+在点击"查看详细结果"时出现错误：
+```
+加载排班数据失败
+详细信息：
+String '639003438244105694' was not recognized as a valid DateTime.
+```
+
+### 根本原因
+
+`History/HIstoryManagement.cs` 中的 `UpdateBufferScheduleAsync` 方法在更新缓冲区记录时，错误地使用了 `DateTime.UtcNow.Ticks` 而不是 ISO 8601 格式：
+
+```csharp
+// ❌ 错误代码
+cmd.Parameters.AddWithValue("@createTime", DateTime.UtcNow.Ticks);
+```
+
+这导致 `BufferSchedules` 表的 `CreateTime` 字段存储了 Ticks 格式的数据，而在读取时使用 `DateTime.Parse()` 无法解析。
+
+### 修复方案
+
+#### `History/HIstoryManagement.cs`
+1. **修复写入格式**：在 `UpdateBufferScheduleAsync` 方法中，将 `DateTime.UtcNow.Ticks` 改为 `DateTime.UtcNow.ToString("o")`
+2. **添加兼容解析**：在 `GetAllBufferSchedulesAsync` 方法中，使用新的 `ParseDateTime` 方法替代 `DateTime.Parse`
+3. **添加 ParseDateTime 方法**：支持 ISO 8601 格式和 Ticks 格式（兼容旧数据）
+
+```csharp
+// ✅ 正确代码
+cmd.Parameters.AddWithValue("@createTime", DateTime.UtcNow.ToString("o"));
+
+// ✅ 兼容解析
+DateTime createTime = ParseDateTime(reader.GetString(2));
+```
+
 ## 相关文件
 
 ### 核心修复
 - `Data/SchedulingRepository.cs` - 主要修复（添加 ParseDateTime 方法）
 - `Data/ConstraintRepository.cs` - 辅助修复（添加 ParseDateTime 方法）
+- `History/HIstoryManagement.cs` - **新增修复**（修复 UpdateBufferScheduleAsync，添加 ParseDateTime 方法）
 
 ### 数据库层
 - `Data/DatabaseSchema.cs` - 数据库结构定义
