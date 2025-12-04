@@ -56,6 +56,16 @@ public enum SchedulingStage
     GeneticOptimizing,
 
     /// <summary>
+    /// 回溯中
+    /// </summary>
+    Backtracking,
+
+    /// <summary>
+    /// 回溯完成
+    /// </summary>
+    BacktrackingComplete,
+
+    /// <summary>
     /// 完成
     /// </summary>
     Completed,

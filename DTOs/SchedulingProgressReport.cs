@@ -74,4 +74,14 @@ public class SchedulingProgressReport
     /// 遗传算法进度信息（仅在使用遗传算法时有值）
     /// </summary>
     public GeneticProgressInfo? GeneticProgressInfo { get; set; }
+
+    /// <summary>
+    /// 回溯统计信息（仅在启用回溯时有值）
+    /// </summary>
+    public BacktrackingStatistics? BacktrackingStats { get; set; }
+
+    /// <summary>
+    /// 当前回溯深度
+    /// </summary>
+    public int CurrentBacktrackDepth { get; set; }
 }

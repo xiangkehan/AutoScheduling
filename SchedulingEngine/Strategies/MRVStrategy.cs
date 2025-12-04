@@ -235,6 +235,27 @@ namespace AutoScheduling3.SchedulingEngine.Strategies
         }
 
         /// <summary>
+        /// 获取所有未分配的位置
+        /// </summary>
+        public List<(int PositionIdx, int PeriodIdx)> GetUnassignedSlots()
+        {
+            var result = new List<(int, int)>();
+
+            for (int x = 0; x < _tensor.PositionCount; x++)
+            {
+                for (int y = 0; y < _tensor.PeriodCount; y++)
+                {
+                    if (!_assignedFlags[x, y])
+                    {
+                        result.Add((x, y));
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// 获取MRV统计信息
         /// </summary>
         public string GetStatistics()
@@ -265,6 +286,38 @@ namespace AutoScheduling3.SchedulingEngine.Strategies
 
             return $"总位置: {totalSlots}, 已分配: {assignedCount}, 无候选: {zeroCandidate}, " +
                    $"最少候选: {(minCandidates == int.MaxValue ? 0 : minCandidates)}, 最多候选: {maxCandidates}";
+        }
+
+        /// <summary>
+        /// 获取候选计数数组的副本（用于状态快照）
+        /// </summary>
+        public int[,] GetCandidateCountsCopy()
+        {
+            return (int[,])_candidateCounts.Clone();
+        }
+
+        /// <summary>
+        /// 获取分配标记数组的副本（用于状态快照）
+        /// </summary>
+        public bool[,] GetAssignedFlagsCopy()
+        {
+            return (bool[,])_assignedFlags.Clone();
+        }
+
+        /// <summary>
+        /// 获取候选计数数组的引用（用于状态恢复）
+        /// </summary>
+        internal int[,] GetCandidateCountsReference()
+        {
+            return _candidateCounts;
+        }
+
+        /// <summary>
+        /// 获取分配标记数组的引用（用于状态恢复）
+        /// </summary>
+        internal bool[,] GetAssignedFlagsReference()
+        {
+            return _assignedFlags;
         }
     }
 }

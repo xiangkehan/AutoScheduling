@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoScheduling3.Data.Logging;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Models;
 using AutoScheduling3.SchedulingEngine.Core;
@@ -29,6 +30,9 @@ namespace AutoScheduling3.SchedulingEngine
 
         // 算法配置参数
         private readonly GreedySchedulerConfig _config;
+        
+        // 日志记录器 - 对应需求8.4
+        private readonly ILogger _logger;
 
         // 进度报告相关字段
         private Stopwatch? _executionTimer;
@@ -36,10 +40,11 @@ namespace AutoScheduling3.SchedulingEngine
         private int _totalSlotsToAssign;
         private int _completedAssignments;
 
-        public GreedyScheduler(SchedulingContext context, GreedySchedulerConfig? config = null)
+        public GreedyScheduler(SchedulingContext context, GreedySchedulerConfig? config = null, ILogger? logger = null)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _config = config ?? new GreedySchedulerConfig();
+            _logger = logger ?? new DebugLogger("GreedyScheduler");
         }
 
         /// <summary>
@@ -365,8 +370,8 @@ namespace AutoScheduling3.SchedulingEngine
         }
 
         /// <summary>
-        /// 执行贪心分配算法 - 对应需求7.5
-        /// 按照先哨位再时段的顺序进行人员分配
+        /// 执行贪心分配算法（集成回溯机制） - 对应需求1.1, 1.2, 1.3, 7.5
+        /// 按照先哨位再时段的顺序进行人员分配，遇到死胡同时自动回溯
         /// </summary>
         private async Task PerformGreedyAssignmentsAsync(DateTime date, IProgress<SchedulingProgressReport>? progress, CancellationToken cancellationToken)
         {
@@ -376,10 +381,153 @@ namespace AutoScheduling3.SchedulingEngine
             InitializeStrategies();
             if (_mrvStrategy == null) return;
 
+            // 检查是否启用回溯机制 - 对应需求3.4
+            if (!_config.Backtracking.EnableBacktracking)
+            {
+                // 禁用回溯时使用原有的贪心算法逻辑
+                await PerformGreedyAssignmentsWithoutBacktrackingAsync(date, progress, cancellationToken);
+                return;
+            }
+
+            // 初始化回溯引擎 - 对应需求1.1, 1.2, 8.4
+            var backtrackingEngine = new BacktrackingEngine(
+                _context,
+                _tensor,
+                _mrvStrategy,
+                _constraintValidator!,
+                _softConstraintCalculator,
+                _config.Backtracking,
+                _logger);
+
             // 按照先哨位再时段的顺序进行分配 - 对应需求7.5
             int maxSlots = _tensor.PositionCount * 12;
             int processedSlots = 0;
             int dayStartAssignments = _completedAssignments;
+
+            for (int iteration = 0; iteration < maxSlots; iteration++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // 检测死胡同 - 对应需求1.1
+                if (backtrackingEngine.DetectDeadEnd())
+                {
+                    // 报告回溯开始 - 对应需求4.1
+                    ReportBacktrackingProgress(progress, backtrackingEngine, date, "检测到死胡同，开始回溯...");
+
+                    // 执行回溯 - 对应需求1.2, 1.3
+                    bool backtrackSuccess = await backtrackingEngine.Backtrack(date, progress, cancellationToken);
+
+                    if (!backtrackSuccess)
+                    {
+                        // 回溯失败（深度超限或无解） - 对应需求1.3
+                        if (_config.LogUnassignedSlots)
+                        {
+                            var unassignedSlots = _mrvStrategy.GetUnassignedWithNoCandidates();
+                            LogUnassignedSlots(date, unassignedSlots);
+                        }
+
+                        // 报告回溯失败 - 对应需求4.2, 4.4
+                        ReportBacktrackingComplete(progress, backtrackingEngine, date, false);
+                        break;
+                    }
+
+                    // 回溯成功，继续分配
+                    ReportBacktrackingProgress(progress, backtrackingEngine, date, "回溯成功，继续分配...");
+                    continue;
+                }
+
+                // 使用MRV策略选择下一个分配位置
+                var (posIdx, periodIdx) = _mrvStrategy.SelectNextSlot();
+                if (posIdx == -1 || periodIdx == -1)
+                {
+                    break; // 所有位置已分配或无可行分配
+                }
+
+                // 使用回溯引擎尝试分配（支持回溯） - 对应需求1.2, 5.3
+                bool assigned = await backtrackingEngine.TryAssignWithBacktracking(
+                    posIdx, periodIdx, date, progress, cancellationToken);
+
+                if (assigned)
+                {
+                    processedSlots++;
+                    _completedAssignments++;
+
+                    // 报告进度（每完成10%或每处理10个时段）
+                    if (processedSlots % Math.Max(1, maxSlots / 10) == 0 || processedSlots % 10 == 0)
+                    {
+                        var positionName = _context.Positions[posIdx].Name;
+                        ReportProgress(progress, SchedulingStage.GreedyAssignment,
+                            $"正在分配: {positionName} - 时段 {periodIdx}",
+                            10 + (_completedAssignments * 80.0 / _totalSlotsToAssign),
+                            date, positionName, periodIdx);
+                    }
+
+                    // 定期让出控制权，避免长时间阻塞
+                    if (processedSlots % _config.YieldInterval == 0)
+                    {
+                        await Task.Yield();
+                    }
+                }
+                else
+                {
+                    // 分配失败，标记为已处理
+                    _mrvStrategy.MarkAsAssigned(posIdx, periodIdx);
+                }
+            }
+
+            // 报告回溯完成 - 对应需求4.1, 4.2, 4.4, 4.5
+            ReportBacktrackingComplete(progress, backtrackingEngine, date, true);
+
+            // 验证约束一致性（如果启用） - 对应需求1.5, 7.1, 7.4
+            if (_config.Backtracking.EnableConstraintConsistencyVerification)
+            {
+                var consistencyReport = backtrackingEngine.VerifyConstraintConsistency(date);
+                
+                if (!consistencyReport.IsConsistent)
+                {
+                    _logger.LogWarning($"约束一致性验证失败:\n{consistencyReport}");
+                    
+                    // 将验证结果添加到进度报告
+                    if (progress != null)
+                    {
+                        var warningReport = new SchedulingProgressReport
+                        {
+                            CurrentStage = SchedulingStage.Backtracking,
+                            StageDescription = "约束一致性验证失败",
+                            ProgressPercentage = 10 + (_completedAssignments * 80.0 / _totalSlotsToAssign),
+                            CurrentDate = date,
+                            Warnings = consistencyReport.Issues,
+                            HasErrors = true,
+                            ErrorMessage = consistencyReport.Summary
+                        };
+                        progress.Report(warningReport);
+                    }
+                }
+                else
+                {
+                    _logger.Log($"约束一致性验证通过: {consistencyReport.Summary}");
+                }
+            }
+
+            // 检查是否有未分配的位置
+            var finalUnassignedSlots = _mrvStrategy.GetUnassignedWithNoCandidates();
+            if (finalUnassignedSlots.Count > 0 && _config.LogUnassignedSlots)
+            {
+                LogUnassignedSlots(date, finalUnassignedSlots);
+            }
+        }
+
+        /// <summary>
+        /// 执行贪心分配算法（不使用回溯） - 对应需求3.4
+        /// 保持与原始实现一致的行为
+        /// </summary>
+        private async Task PerformGreedyAssignmentsWithoutBacktrackingAsync(DateTime date, IProgress<SchedulingProgressReport>? progress, CancellationToken cancellationToken)
+        {
+            if (_tensor == null || _softConstraintCalculator == null || _mrvStrategy == null) return;
+
+            // 按照先哨位再时段的顺序进行分配 - 对应需求7.5
+            int maxSlots = _tensor.PositionCount * 12;
+            int processedSlots = 0;
 
             for (int iteration = 0; iteration < maxSlots; iteration++)
             {
@@ -437,6 +585,76 @@ namespace AutoScheduling3.SchedulingEngine
             {
                 LogUnassignedSlots(date, unassignedSlots);
             }
+        }
+
+        /// <summary>
+        /// 报告回溯进度 - 对应需求4.1, 4.2, 4.4
+        /// </summary>
+        private void ReportBacktrackingProgress(
+            IProgress<SchedulingProgressReport>? progress,
+            BacktrackingEngine engine,
+            DateTime date,
+            string message)
+        {
+            if (progress == null) return;
+
+            var stats = engine.GetStatistics();
+            var report = new SchedulingProgressReport
+            {
+                CurrentStage = SchedulingStage.Backtracking,
+                StageDescription = message,
+                ProgressPercentage = 10 + (_completedAssignments * 80.0 / _totalSlotsToAssign),
+                CurrentDate = date,
+                CurrentBacktrackDepth = engine.CurrentDepth,
+                BacktrackingStats = stats,
+                CompletedAssignments = _completedAssignments,
+                TotalSlotsToAssign = _totalSlotsToAssign,
+                RemainingSlots = _totalSlotsToAssign - _completedAssignments,
+                ElapsedTime = _executionTimer?.Elapsed ?? TimeSpan.Zero,
+                Warnings = new List<string>(),
+                HasErrors = false
+            };
+
+            progress.Report(report);
+        }
+
+        /// <summary>
+        /// 报告回溯完成 - 对应需求4.1, 4.2, 4.4, 4.5, 8.4
+        /// </summary>
+        private void ReportBacktrackingComplete(
+            IProgress<SchedulingProgressReport>? progress,
+            BacktrackingEngine engine,
+            DateTime date,
+            bool success)
+        {
+            // 记录回溯摘要日志 - 对应需求8.4
+            engine.LogBacktrackingSummary();
+
+            if (progress == null) return;
+
+            var stats = engine.GetStatistics();
+            var stage = success ? SchedulingStage.BacktrackingComplete : SchedulingStage.Backtracking;
+            var message = success
+                ? $"回溯完成 - 总回溯次数: {stats.TotalBacktracks}, 成功: {stats.SuccessfulBacktracks}"
+                : $"回溯失败 - 已达最大深度或无解";
+
+            var report = new SchedulingProgressReport
+            {
+                CurrentStage = stage,
+                StageDescription = message,
+                ProgressPercentage = 10 + (_completedAssignments * 80.0 / _totalSlotsToAssign),
+                CurrentDate = date,
+                CurrentBacktrackDepth = engine.CurrentDepth,
+                BacktrackingStats = stats,
+                CompletedAssignments = _completedAssignments,
+                TotalSlotsToAssign = _totalSlotsToAssign,
+                RemainingSlots = _totalSlotsToAssign - _completedAssignments,
+                ElapsedTime = _executionTimer?.Elapsed ?? TimeSpan.Zero,
+                Warnings = success ? new List<string>() : new List<string> { "回溯失败，部分时段未分配" },
+                HasErrors = !success
+            };
+
+            progress.Report(report);
         }
 
         /// <summary>
@@ -669,4 +887,180 @@ public class GreedySchedulerConfig
     /// 是否启用性能监控
     /// </summary>
     public bool EnablePerformanceMonitoring { get; set; } = false;
+
+    /// <summary>
+    /// 回溯配置 - 对应需求3.1, 3.2, 3.3, 3.5
+    /// </summary>
+    public BacktrackingConfig Backtracking { get; set; } = new BacktrackingConfig();
+}
+
+/// <summary>
+/// 回溯机制配置类 - 对应需求3.1, 3.2, 3.3, 3.5
+/// </summary>
+public class BacktrackingConfig
+{
+    private int _maxBacktrackDepth = 50;
+    private int _maxCandidatesPerDecision = 5;
+    private int _snapshotInterval = 10;
+    private long _memoryThresholdMB = 500;
+
+    /// <summary>
+    /// 是否启用回溯机制 - 对应需求3.2
+    /// </summary>
+    public bool EnableBacktracking { get; set; } = true;
+
+    /// <summary>
+    /// 最大回溯深度 - 对应需求3.1
+    /// 默认值: 50
+    /// </summary>
+    public int MaxBacktrackDepth
+    {
+        get => _maxBacktrackDepth;
+        set
+        {
+            if (value <= 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[警告] MaxBacktrackDepth 必须大于0，使用默认值50");
+                _maxBacktrackDepth = 50;
+            }
+            else
+            {
+                _maxBacktrackDepth = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 每个决策点保留的候选人员数量 - 对应需求3.3
+    /// 默认值: 5
+    /// </summary>
+    public int MaxCandidatesPerDecision
+    {
+        get => _maxCandidatesPerDecision;
+        set
+        {
+            if (value <= 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[警告] MaxCandidatesPerDecision 必须大于0，使用默认值5");
+                _maxCandidatesPerDecision = 5;
+            }
+            else
+            {
+                _maxCandidatesPerDecision = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 是否启用智能回溯点选择 - 对应需求5.1, 5.2
+    /// </summary>
+    public bool EnableSmartBacktrackSelection { get; set; } = true;
+
+    /// <summary>
+    /// 是否启用路径记忆（避免重复尝试） - 对应需求5.5
+    /// </summary>
+    public bool EnablePathMemory { get; set; } = true;
+
+    /// <summary>
+    /// 状态快照保存间隔（每N次分配保存一次完整快照） - 对应需求6.3
+    /// 默认值: 10
+    /// </summary>
+    public int SnapshotInterval
+    {
+        get => _snapshotInterval;
+        set
+        {
+            if (value <= 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[警告] SnapshotInterval 必须大于0，使用默认值10");
+                _snapshotInterval = 10;
+            }
+            else
+            {
+                _snapshotInterval = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 内存使用阈值（MB），超过后降低回溯深度 - 对应需求6.5
+    /// 默认值: 500MB
+    /// </summary>
+    public long MemoryThresholdMB
+    {
+        get => _memoryThresholdMB;
+        set
+        {
+            if (value <= 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[警告] MemoryThresholdMB 必须大于0，使用默认值500");
+                _memoryThresholdMB = 500;
+            }
+            else
+            {
+                _memoryThresholdMB = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 是否记录回溯日志 - 对应需求8.4
+    /// </summary>
+    public bool LogBacktracking { get; set; } = true;
+
+    /// <summary>
+    /// 是否启用约束一致性验证（用于调试和测试） - 对应需求1.5, 7.1, 7.4
+    /// 注意：启用此选项会增加性能开销，建议仅在开发和测试环境使用
+    /// </summary>
+    public bool EnableConstraintConsistencyVerification { get; set; } = false;
+
+    /// <summary>
+    /// 验证配置参数的有效性 - 对应需求3.5
+    /// </summary>
+    /// <returns>配置是否有效</returns>
+    public bool Validate()
+    {
+        bool isValid = true;
+
+        if (MaxBacktrackDepth <= 0)
+        {
+            System.Diagnostics.Debug.WriteLine($"[配置错误] MaxBacktrackDepth 必须大于0");
+            isValid = false;
+        }
+
+        if (MaxCandidatesPerDecision <= 0)
+        {
+            System.Diagnostics.Debug.WriteLine($"[配置错误] MaxCandidatesPerDecision 必须大于0");
+            isValid = false;
+        }
+
+        if (SnapshotInterval <= 0)
+        {
+            System.Diagnostics.Debug.WriteLine($"[配置错误] SnapshotInterval 必须大于0");
+            isValid = false;
+        }
+
+        if (MemoryThresholdMB <= 0)
+        {
+            System.Diagnostics.Debug.WriteLine($"[配置错误] MemoryThresholdMB 必须大于0");
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    /// <summary>
+    /// 获取配置的描述信息（用于调试）
+    /// </summary>
+    public override string ToString()
+    {
+        return $"BacktrackingConfig [Enabled={EnableBacktracking}, " +
+               $"MaxDepth={MaxBacktrackDepth}, " +
+               $"MaxCandidates={MaxCandidatesPerDecision}, " +
+               $"SmartSelection={EnableSmartBacktrackSelection}, " +
+               $"PathMemory={EnablePathMemory}, " +
+               $"SnapshotInterval={SnapshotInterval}, " +
+               $"MemoryThreshold={MemoryThresholdMB}MB, " +
+               $"Logging={LogBacktracking}]";
+    }
 }

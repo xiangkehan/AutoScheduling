@@ -26,45 +26,50 @@
 
 ## Common Commands
 
+**默认使用 `--verbosity quiet` 只显示错误，保持输出简洁。**
+
 ### Build & Run
 
 ```bash
 # Restore dependencies
 dotnet restore
 
-# Build project
-dotnet build
+# Build project (默认：只显示错误)
+dotnet build --verbosity quiet
+
+# Build release version (默认：只显示错误)
+dotnet publish -c Release -r win-x64 --verbosity quiet
 
 # Run application
 dotnet run
 
-# Build release version
-dotnet publish -c Release -r win-x64
-
 # Clean build output
 dotnet clean
+
+# 如需查看警告，使用 minimal 级别
+dotnet build --verbosity minimal
 ```
 
 ### Testing
 
 ```bash
-# Run all tests
-dotnet test
+# Run all tests (默认：只显示错误)
+dotnet test --verbosity quiet
 
 # Run with detailed output
 dotnet test --verbosity normal
 
 # Run with code coverage
-dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura --verbosity quiet
 ```
 
 ### Platform-Specific
 
 ```bash
-# Build for specific platform
-dotnet build -r win-x64
-dotnet build -r win-x86
-dotnet build -r win-arm64
+# Build for specific platform (默认：只显示错误)
+dotnet build -r win-x64 --verbosity quiet
+dotnet build -r win-x86 --verbosity quiet
+dotnet build -r win-arm64 --verbosity quiet
 ```
 
 ## Development Tools

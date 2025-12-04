@@ -705,6 +705,70 @@ namespace AutoScheduling3.SchedulingEngine.Core
             }
         }
 
+        /// <summary>
+        /// 序列化张量状态为字节数组（用于回溯快照）
+        /// </summary>
+        public byte[] SerializeState()
+        {
+            // 使用二进制张量进行序列化，因为它更紧凑
+            int totalBytes = _positionCount * _periodCount * _binarySlices * sizeof(ulong);
+            byte[] buffer = new byte[totalBytes];
+            
+            int offset = 0;
+            for (int x = 0; x < _positionCount; x++)
+            {
+                for (int y = 0; y < _periodCount; y++)
+                {
+                    for (int slice = 0; slice < _binarySlices; slice++)
+                    {
+                        ulong value = _binaryTensor[x, y, slice];
+                        byte[] bytes = BitConverter.GetBytes(value);
+                        Array.Copy(bytes, 0, buffer, offset, sizeof(ulong));
+                        offset += sizeof(ulong);
+                    }
+                }
+            }
+            
+            return buffer;
+        }
+
+        /// <summary>
+        /// 从字节数组反序列化张量状态（用于回溯恢复）
+        /// </summary>
+        public void DeserializeState(byte[] buffer)
+        {
+            if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+            
+            int expectedSize = _positionCount * _periodCount * _binarySlices * sizeof(ulong);
+            if (buffer.Length != expectedSize)
+            {
+                throw new ArgumentException($"缓冲区大小不匹配。期望 {expectedSize} 字节，实际 {buffer.Length} 字节");
+            }
+            
+            int offset = 0;
+            for (int x = 0; x < _positionCount; x++)
+            {
+                for (int y = 0; y < _periodCount; y++)
+                {
+                    for (int slice = 0; slice < _binarySlices; slice++)
+                    {
+                        ulong value = BitConverter.ToUInt64(buffer, offset);
+                        _binaryTensor[x, y, slice] = value;
+                        offset += sizeof(ulong);
+                    }
+                }
+            }
+            
+            // 同步到布尔张量
+            SyncBoolTensorFromBinary();
+            
+            // 同步到矩阵（如果存在）
+            if (_constraintMatrix != null)
+            {
+                SyncMatrixFromTensor();
+            }
+        }
+
         public override string ToString()
         {
             var stats = GetMemoryStats();

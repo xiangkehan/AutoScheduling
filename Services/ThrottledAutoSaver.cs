@@ -71,7 +71,7 @@ public class ThrottledAutoSaver
         // 检查是否正在保存
         if (_isSaving)
         {
-            System.Diagnostics.Debug.WriteLine("[ThrottledAutoSaver] 已有保存操作正在进行，跳过");
+            //System.Diagnostics.Debug.WriteLine("[ThrottledAutoSaver] 已有保存操作正在进行，跳过");
             return false;
         }
 
