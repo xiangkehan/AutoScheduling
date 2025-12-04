@@ -13,25 +13,82 @@ inclusion: always
 
 ## 2. 日期时间格式
 
-- 存储：ISO 8601 (`.ToString("o")`)，禁止 Ticks
-- 时区：数据库统一 UTC，UI 显示转本地时间
-- 字段类型：SQLite 使用 `TEXT NOT NULL`
-- 读取：使用 `ParseDateTime` 兼容旧数据
+- **存储格式**：ISO 8601 (`.ToString("o")`)，禁止 Ticks
+- **时区策略**：数据库统一存储 UTC，UI 显示本地时间
+- **字段类型**：SQLite 使用 `TEXT NOT NULL`
+- **Kind 处理**：明确指定 DateTimeKind，避免 Unspecified
+
+### 存储规则
 
 ```csharp
-// 写入
-cmd.Parameters.AddWithValue("@time", DateTime.UtcNow.ToString("o"));
+// 写入：转换为UTC后存储
+private DateTime ToUtc(DateTime dateTime)
+{
+    switch (dateTime.Kind)
+    {
+        case DateTimeKind.Utc:
+            return dateTime;
+        case DateTimeKind.Local:
+            return dateTime.ToUniversalTime();
+        case DateTimeKind.Unspecified:
+            // Unspecified视为本地时间
+            return DateTime.SpecifyKind(dateTime, DateTimeKind.Local).ToUniversalTime();
+        default:
+            return dateTime.ToUniversalTime();
+    }
+}
 
-// 读取（兼容旧 Ticks）
+cmd.Parameters.AddWithValue("@time", ToUtc(dateTime).ToString("o"));
+```
+
+### 读取规则
+
+```csharp
+// 读取：从UTC转换为本地时间
 private DateTime ParseDateTime(string value)
 {
-    if (DateTime.TryParse(value, out var dt))
-        return dt.ToUniversalTime();
+    // 尝试解析为 ISO 8601 格式
+    if (DateTime.TryParse(value, out var dateTime))
+    {
+        // 数据库存储的是UTC时间，转换为本地时间
+        return ToLocal(dateTime);
+    }
+    
+    // 兼容旧 Ticks 格式
     if (long.TryParse(value, out var ticks))
-        return new DateTime(ticks, DateTimeKind.Utc);
+    {
+        return new DateTime(ticks, DateTimeKind.Local);
+    }
+    
     throw new FormatException($"无法解析日期时间: '{value}'");
 }
+
+private DateTime ToLocal(DateTime dateTime)
+{
+    switch (dateTime.Kind)
+    {
+        case DateTimeKind.Local:
+            return dateTime;
+        case DateTimeKind.Utc:
+            return dateTime.ToLocalTime();
+        case DateTimeKind.Unspecified:
+            // Unspecified视为UTC时间
+            return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc).ToLocalTime();
+        default:
+            return dateTime.ToLocalTime();
+    }
+}
 ```
+
+### 关键点
+
+1. **存储前转换**：所有写入数据库的时间必须先转换为 UTC
+2. **读取后转换**：所有从数据库读取的时间必须转换为本地时间
+3. **处理 Unspecified**：
+   - 存储时：Unspecified 视为本地时间
+   - 读取时：Unspecified 视为 UTC 时间
+4. **生成时明确 Kind**：创建 DateTime 时使用 `DateTime.SpecifyKind()` 明确指定类型
+5. **兼容旧数据**：保留 Ticks 格式解析，假定为本地时间
 
 ## 3. 语言使用
 

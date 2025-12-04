@@ -36,6 +36,8 @@ public class HybridScheduler
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine("=== HybridScheduler.ExecuteAsync 开始执行 ===");
+            
             // 阶段1: 执行贪心算法获得初始解 - 对应需求1.1
             ReportProgress(progress, SchedulingStage.Initializing, 0, "正在启动混合调度...");
 
@@ -63,12 +65,15 @@ public class HybridScheduler
             });
 
             // 执行贪心算法
+            System.Diagnostics.Debug.WriteLine("[HybridScheduler] 开始执行贪心算法...");
             var greedySolution = await _greedyScheduler.ExecuteAsync(greedyProgress, cancellationToken);
+            System.Diagnostics.Debug.WriteLine($"[HybridScheduler] 贪心算法完成，生成 {greedySolution.Results?.Count ?? 0} 个班次");
 
             // 检查取消令牌 - 对应需求6.4
             cancellationToken.ThrowIfCancellationRequested();
 
             // 阶段2: 使用遗传算法优化 - 对应需求1.2
+            System.Diagnostics.Debug.WriteLine("[HybridScheduler] 开始执行遗传算法优化...");
             ReportProgress(progress, SchedulingStage.GeneticOptimizing, 50, "正在启动遗传算法优化...");
 
             // 创建遗传算法进度包装器（将50-100%映射到遗传阶段）
@@ -96,10 +101,12 @@ public class HybridScheduler
             });
 
             // 执行遗传算法优化
+            System.Diagnostics.Debug.WriteLine("[HybridScheduler] 调用遗传算法优化...");
             var optimizedSolution = await _geneticScheduler.ExecuteAsync(
                 greedySolution,
                 geneticProgress,
                 cancellationToken);
+            System.Diagnostics.Debug.WriteLine($"[HybridScheduler] 遗传算法优化完成，生成 {optimizedSolution.Results?.Count ?? 0} 个班次");
 
             // 报告完成 - 对应需求6.1
             ReportProgress(progress, SchedulingStage.Completed, 100, "混合调度完成");

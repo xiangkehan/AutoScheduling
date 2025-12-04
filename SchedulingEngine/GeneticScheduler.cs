@@ -64,16 +64,25 @@ public class GeneticScheduler
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine("=== GeneticScheduler.ExecuteAsync 开始执行 ===");
+            System.Diagnostics.Debug.WriteLine($"初始解: {(initialSolution != null ? $"{initialSolution.Results?.Count ?? 0} 个班次" : "null")}");
+            System.Diagnostics.Debug.WriteLine($"种群大小: {_config.PopulationSize}");
+            System.Diagnostics.Debug.WriteLine($"最大代数: {_config.MaxGenerations}");
+            
             // 报告初始化阶段 - 对应需求6.1
             ReportProgress(progress, SchedulingStage.Initializing, 0, null);
 
             // 初始化种群 - 对应需求1.3, 2.1
+            System.Diagnostics.Debug.WriteLine("[GeneticScheduler] 开始初始化种群...");
             var population = new Population(_random);
             population.Initialize(initialSolution, _config.PopulationSize, _context);
+            System.Diagnostics.Debug.WriteLine($"[GeneticScheduler] 种群初始化完成，个体数: {population.Individuals.Count}");
 
             // 评估初始种群的适应度
+            System.Diagnostics.Debug.WriteLine("[GeneticScheduler] 开始评估初始种群适应度...");
             EvaluatePopulation(population);
             population.UpdateStatistics();
+            System.Diagnostics.Debug.WriteLine($"[GeneticScheduler] 初始种群评估完成，最优适应度: {population.BestIndividual?.Fitness ?? 0}");
 
             if (_config.EnableDetailedLogging)
             {
@@ -84,8 +93,10 @@ public class GeneticScheduler
             ReportProgress(progress, SchedulingStage.GeneticOptimizing, 0, population);
 
             // 遗传算法主循环 - 对应需求2.2
+            System.Diagnostics.Debug.WriteLine($"[GeneticScheduler] 开始主循环，最大代数: {_config.MaxGenerations}");
             for (int generation = 1; generation <= _config.MaxGenerations; generation++)
             {
+                //System.Diagnostics.Debug.WriteLine($"[GeneticScheduler] 第 {generation} 代开始...");
                 // 检查取消令牌 - 对应需求6.4
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -156,6 +167,14 @@ public class GeneticScheduler
                 {
                     LogGeneration(generation, population);
                 }
+                else
+                {
+                    // 即使不启用详细日志，也每10代输出一次
+                    if (generation % 10 == 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[GeneticScheduler] 第 {generation} 代完成，最优适应度: {population.BestIndividual?.Fitness ?? 0:F4}");
+                    }
+                }
 
                 // 报告进度 - 对应需求6.2, 6.5
                 double progressPercentage = (double)generation / _config.MaxGenerations * 100;
@@ -169,12 +188,15 @@ public class GeneticScheduler
             }
 
             // 返回最优解 - 对应需求1.4
+            System.Diagnostics.Debug.WriteLine($"[GeneticScheduler] 主循环结束，共执行 {_config.MaxGenerations} 代");
             if (population.BestIndividual == null)
             {
                 throw new InvalidOperationException("遗传算法未能生成有效解");
             }
 
+            System.Diagnostics.Debug.WriteLine($"[GeneticScheduler] 最终最优适应度: {population.BestIndividual.Fitness:F4}");
             var bestSchedule = population.BestIndividual.ToSchedule(_context);
+            System.Diagnostics.Debug.WriteLine($"[GeneticScheduler] 转换为排班方案，班次数: {bestSchedule.Results?.Count ?? 0}");
 
             // 报告完成
             ReportProgress(progress, SchedulingStage.Completed, 100, population);

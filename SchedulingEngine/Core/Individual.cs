@@ -96,6 +96,22 @@ public class Individual
     /// <returns>排班方案</returns>
     public Schedule ToSchedule(SchedulingContext context)
     {
+        // 调试：输出Genes字典中的所有日期
+        System.Diagnostics.Debug.WriteLine($"[Individual.ToSchedule] Genes字典包含 {Genes.Count} 个日期:");
+        foreach (var date in Genes.Keys.OrderBy(d => d))
+        {
+            var assignedCount = 0;
+            var assignments = Genes[date];
+            for (int p = 0; p < 12; p++)
+            {
+                for (int x = 0; x < assignments.GetLength(1); x++)
+                {
+                    if (assignments[p, x] >= 0) assignedCount++;
+                }
+            }
+            System.Diagnostics.Debug.WriteLine($"  {date:yyyy-MM-dd}: {assignedCount} 个分配");
+        }
+        
         var schedule = new Schedule
         {
             StartDate = context.StartDate,
@@ -108,6 +124,13 @@ public class Individual
         // 遍历所有基因，生成 SingleShift
         foreach (var (date, assignments) in Genes)
         {
+            // 验证日期在范围内 - 修复遗传算法可能产生的日期越界问题
+            if (date.Date < context.StartDate.Date || date.Date > context.EndDate.Date)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Individual.ToSchedule] 跳过范围外的日期: {date:yyyy-MM-dd}");
+                continue;
+            }
+            
             for (int periodIdx = 0; periodIdx < 12; periodIdx++)
             {
                 for (int positionIdx = 0; positionIdx < context.Positions.Count; positionIdx++)
@@ -122,15 +145,17 @@ public class Individual
                     int positionId = context.PositionIdxToId[positionIdx];
                     int personnelId = context.PersonIdxToId[personIdx];
 
-                    // 计算时间
-                    var startTime = date.AddHours(periodIdx * 2);
-                    var endTime = startTime.AddHours(2);
+                    // 计算时间（明确指定为本地时间）
+                    var startTime = DateTime.SpecifyKind(date.AddHours(periodIdx * 2), DateTimeKind.Local);
+                    var endTime = DateTime.SpecifyKind(startTime.AddHours(2), DateTimeKind.Local);
 
                     // 判断是否为夜哨
                     bool isNightShift = periodIdx == 11 || periodIdx == 0 || periodIdx == 1 || periodIdx == 2;
 
                     // 计算天数索引
                     int dayIndex = (date.Date - context.StartDate.Date).Days;
+
+
 
                     var shift = new SingleShift
                     {

@@ -2032,6 +2032,10 @@ public class SchedulingService : ISchedulingService
             {
                 foreach (var shift in scheduleDto.Shifts)
                 {
+                    // 计算 DayIndex 和 IsNightShift
+                    int dayIndex = (shift.StartTime.Date - schedule.StartDate.Date).Days;
+                    bool isNightShift = shift.PeriodIndex == 11 || shift.PeriodIndex == 0 || shift.PeriodIndex == 1 || shift.PeriodIndex == 2;
+                    
                     schedule.Results.Add(new SingleShift
                     {
                         ScheduleId = scheduleDto.Id,
@@ -2039,7 +2043,9 @@ public class SchedulingService : ISchedulingService
                         PositionId = shift.PositionId,
                         StartTime = shift.StartTime,
                         EndTime = shift.EndTime,
-                        TimeSlotIndex = shift.PeriodIndex
+                        TimeSlotIndex = shift.PeriodIndex,
+                        DayIndex = dayIndex,
+                        IsNightShift = isNightShift
                     });
                 }
             }

@@ -742,6 +742,14 @@ namespace AutoScheduling3.SchedulingEngine
             foreach (var kvp in _context.Assignments)
             {
                 var date = kvp.Key;
+                
+                // 验证日期在范围内 - 修复遗传算法优化后的日期越界问题
+                if (date.Date < _context.StartDate.Date || date.Date > _context.EndDate.Date)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[警告] 跳过范围外的日期: {date:yyyy-MM-dd}，排班范围: {_context.StartDate:yyyy-MM-dd} 到 {_context.EndDate:yyyy-MM-dd}");
+                    continue;
+                }
+                
                 var assignments = kvp.Value;
                 for (int periodIdx = 0; periodIdx < 12; periodIdx++)
                 {

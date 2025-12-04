@@ -35,7 +35,7 @@
 dotnet restore
 
 # Build project (默认：只显示错误)
-dotnet build --verbosity quiet
+dotnet build 2>&1 | Select-String "error" t
 
 # Build release version (默认：只显示错误)
 dotnet publish -c Release -r win-x64 --verbosity quiet

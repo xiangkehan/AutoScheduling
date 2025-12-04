@@ -109,7 +109,7 @@ public class PositionPersonnelManager
 
             // 返回当前数据的副本（包含临时更改）
             var result = new List<int>(_currentAvailablePersonnel[positionId]);
-            System.Diagnostics.Debug.WriteLine($"GetAvailablePersonnel: 哨位 {positionId} 返回 {result.Count} 个人员");
+            //System.Diagnostics.Debug.WriteLine($"GetAvailablePersonnel: 哨位 {positionId} 返回 {result.Count} 个人员");
             return result;
         }
         catch (Exception ex)

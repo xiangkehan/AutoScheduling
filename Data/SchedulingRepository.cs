@@ -233,8 +233,9 @@ namespace AutoScheduling3.Data
             cmd.Parameters.AddWithValue("@sid", shift.ScheduleId);
             cmd.Parameters.AddWithValue("@pos", shift.PositionId);
             cmd.Parameters.AddWithValue("@pid", shift.PersonnelId);
-            cmd.Parameters.AddWithValue("@start", shift.StartTime.ToUniversalTime().ToString("o"));
-            cmd.Parameters.AddWithValue("@end", shift.EndTime.ToUniversalTime().ToString("o"));
+            // 转换为UTC时间后存储
+            cmd.Parameters.AddWithValue("@start", ToUtc(shift.StartTime).ToString("o"));
+            cmd.Parameters.AddWithValue("@end", ToUtc(shift.EndTime).ToString("o"));
             cmd.Parameters.AddWithValue("@dayIndex", shift.DayIndex);
             cmd.Parameters.AddWithValue("@timeSlot", shift.TimeSlotIndex);
             cmd.Parameters.AddWithValue("@isNight", shift.IsNightShift ? 1 : 0);
@@ -271,8 +272,9 @@ namespace AutoScheduling3.Data
             cmd.Parameters.AddWithValue("@sid", shift.ScheduleId);
             cmd.Parameters.AddWithValue("@pos", shift.PositionId);
             cmd.Parameters.AddWithValue("@pid", shift.PersonnelId);
-            cmd.Parameters.AddWithValue("@start", shift.StartTime.ToUniversalTime().ToString("o"));
-            cmd.Parameters.AddWithValue("@end", shift.EndTime.ToUniversalTime().ToString("o"));
+            // 转换为UTC时间后存储
+            cmd.Parameters.AddWithValue("@start", ToUtc(shift.StartTime).ToString("o"));
+            cmd.Parameters.AddWithValue("@end", ToUtc(shift.EndTime).ToString("o"));
             cmd.Parameters.AddWithValue("@dayIndex", shift.DayIndex);
             cmd.Parameters.AddWithValue("@timeSlot", shift.TimeSlotIndex);
             cmd.Parameters.AddWithValue("@isNight", shift.IsNightShift ? 1 : 0);
@@ -300,8 +302,9 @@ namespace AutoScheduling3.Data
             cmd.Parameters.AddWithValue("@sid", shift.ScheduleId);
             cmd.Parameters.AddWithValue("@pos", shift.PositionId);
             cmd.Parameters.AddWithValue("@pid", shift.PersonnelId);
-            cmd.Parameters.AddWithValue("@start", shift.StartTime.ToUniversalTime().ToString("o"));
-            cmd.Parameters.AddWithValue("@end", shift.EndTime.ToUniversalTime().ToString("o"));
+            // 转换为UTC时间后存储
+            cmd.Parameters.AddWithValue("@start", ToUtc(shift.StartTime).ToString("o"));
+            cmd.Parameters.AddWithValue("@end", ToUtc(shift.EndTime).ToString("o"));
             cmd.Parameters.AddWithValue("@dayIndex", shift.DayIndex);
             cmd.Parameters.AddWithValue("@timeSlot", shift.TimeSlotIndex);
             cmd.Parameters.AddWithValue("@isNight", shift.IsNightShift ? 1 : 0);
@@ -346,13 +349,15 @@ namespace AutoScheduling3.Data
 
         /// <summary>
         /// 解析日期时间字符串，支持 ISO 8601 格式和 Ticks 格式（兼容旧数据）
+        /// 数据库存储的是UTC时间，读取后转换为本地时间
         /// </summary>
         private DateTime ParseDateTime(string value)
         {
             // 尝试解析为 ISO 8601 格式
             if (DateTime.TryParse(value, out var dateTime))
             {
-                return dateTime.ToUniversalTime();
+                // 数据库存储的是UTC时间，需要转换为本地时间
+                return ToLocal(dateTime);
             }
 
             // 尝试解析为 Ticks 格式（兼容旧数据）
@@ -360,7 +365,8 @@ namespace AutoScheduling3.Data
             {
                 try
                 {
-                    return new DateTime(ticks, DateTimeKind.Utc);
+                    // 旧数据使用Ticks存储，假定为本地时间
+                    return new DateTime(ticks, DateTimeKind.Local);
                 }
                 catch
                 {
@@ -370,6 +376,46 @@ namespace AutoScheduling3.Data
             }
 
             throw new FormatException($"无法将字符串 '{value}' 解析为有效的日期时间。");
+        }
+
+        /// <summary>
+        /// 将DateTime转换为UTC时间
+        /// 处理Unspecified类型，将其视为本地时间
+        /// </summary>
+        private DateTime ToUtc(DateTime dateTime)
+        {
+            switch (dateTime.Kind)
+            {
+                case DateTimeKind.Utc:
+                    return dateTime;
+                case DateTimeKind.Local:
+                    return dateTime.ToUniversalTime();
+                case DateTimeKind.Unspecified:
+                    // Unspecified视为本地时间
+                    return DateTime.SpecifyKind(dateTime, DateTimeKind.Local).ToUniversalTime();
+                default:
+                    return dateTime.ToUniversalTime();
+            }
+        }
+
+        /// <summary>
+        /// 将UTC时间转换为本地时间
+        /// 处理Unspecified类型，将其视为UTC时间
+        /// </summary>
+        private DateTime ToLocal(DateTime dateTime)
+        {
+            switch (dateTime.Kind)
+            {
+                case DateTimeKind.Local:
+                    return dateTime;
+                case DateTimeKind.Utc:
+                    return dateTime.ToLocalTime();
+                case DateTimeKind.Unspecified:
+                    // Unspecified视为UTC时间
+                    return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc).ToLocalTime();
+                default:
+                    return dateTime.ToLocalTime();
+            }
         }
         #endregion
 

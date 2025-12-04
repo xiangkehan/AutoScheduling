@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using AutoScheduling3.Models;
 namespace AutoScheduling3.History;
 /// <summary>
-/// ��ʷ�����ӿ�
+/// 历史管理接口
 /// </summary>
 public interface IHistoryManagement 
 { 
