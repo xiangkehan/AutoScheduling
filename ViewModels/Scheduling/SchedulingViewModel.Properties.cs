@@ -337,8 +337,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
             {
                 _ = LoadConstraintsAsync();
             }
-            else if (value == 5)
+            else if (value == 6)
             {
+                // 步骤6：构建摘要
                 BuildSummarySections();
             }
         }
@@ -351,7 +352,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             RefreshCommandStates();
             if (CurrentStep >= 4)
                 _ = LoadConstraintsAsync();
-            if (CurrentStep == 5) BuildSummarySections();
+            if (CurrentStep == 6) BuildSummarySections();
         }
 
         partial void OnEndDateChanged(DateTimeOffset value)
@@ -360,7 +361,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             RefreshCommandStates();
             if (CurrentStep >= 4)
                 _ = LoadConstraintsAsync();
-            if (CurrentStep == 5) BuildSummarySections();
+            if (CurrentStep == 6) BuildSummarySections();
         }
 
         partial void OnSelectedPersonnelsChanged(ObservableCollection<PersonnelDto> value)
@@ -370,7 +371,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 value.CollectionChanged += (s, e) => RefreshCommandStates();
             }
             RefreshCommandStates();
-            if (CurrentStep == 5) BuildSummarySections();
+            if (CurrentStep == 6) BuildSummarySections();
         }
 
         partial void OnSelectedPositionsChanged(ObservableCollection<PositionDto> value)
@@ -396,19 +397,19 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 ExtractPersonnelFromPositions();
             }
             
-            if (CurrentStep == 5) BuildSummarySections();
+            if (CurrentStep == 6) BuildSummarySections();
         }
 
         partial void OnUseActiveHolidayConfigChanged(bool value)
         {
             RefreshCommandStates();
-            if (CurrentStep == 5) BuildSummarySections();
+            if (CurrentStep == 6) BuildSummarySections();
         }
 
         partial void OnSelectedHolidayConfigIdChanged(int? value)
         {
             RefreshCommandStates();
-            if (CurrentStep == 5) BuildSummarySections();
+            if (CurrentStep == 6) BuildSummarySections();
         }
 
         #endregion

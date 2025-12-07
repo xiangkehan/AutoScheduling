@@ -9,10 +9,10 @@ namespace AutoScheduling3.Services;
 /// <summary>
 /// 自动保存节流器 - 控制自动保存的频率和条件
 /// 
-/// 性能优化策略：
-/// 1. 最小保存间隔：默认2分钟，避免频繁保存
-/// 2. 最小进度变化阈值：默认5%，避免微小变化触发保存
-/// 3. 关键进度点：25%, 50%, 75% 自动保存
+/// 性能优化策略（方案4 - 混合策略）：
+/// 1. 最小进度变化阈值：默认5%，避免微小变化触发保存
+/// 2. 最大时间间隔：默认5秒，确保长时间任务定期保存
+/// 3. 关键进度点：25%, 50%, 75% 强制保存
 /// 4. 异步保存：不阻塞主线程
 /// 
 /// 预期性能影响：< 2% 性能开销
@@ -20,19 +20,19 @@ namespace AutoScheduling3.Services;
 public class ThrottledAutoSaver
 {
     private readonly ISchedulingService _schedulingService;
-    private readonly TimeSpan _minSaveInterval;
     private readonly double _minProgressChangeThreshold;
+    private readonly int _maxSaveIntervalSeconds;
     private readonly double[] _keyProgressPoints = { 25.0, 50.0, 75.0 };
 
-    private DateTime _lastSaveTime = DateTime.MinValue;
     private double _lastSavedProgress = 0.0;
+    private DateTime _lastSaveTime = DateTime.MinValue;
     private bool _isSaving = false;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
 
     /// <summary>
     /// 上次保存时间（用于UI显示）
     /// </summary>
-    public DateTime LastSaveTime => _lastSaveTime;
+    public DateTime? LastSaveTime { get; private set; }
 
     /// <summary>
     /// 是否正在保存
@@ -43,16 +43,16 @@ public class ThrottledAutoSaver
     /// 初始化自动保存节流器
     /// </summary>
     /// <param name="schedulingService">排班服务</param>
-    /// <param name="minSaveIntervalMinutes">最小保存间隔（分钟），默认2分钟</param>
     /// <param name="minProgressChangeThreshold">最小进度变化阈值（百分比），默认5%</param>
+    /// <param name="maxSaveIntervalSeconds">最大保存时间间隔（秒），默认5秒</param>
     public ThrottledAutoSaver(
         ISchedulingService schedulingService,
-        int minSaveIntervalMinutes = 2,
-        double minProgressChangeThreshold = 5.0)
+        double minProgressChangeThreshold = 5.0,
+        int maxSaveIntervalSeconds = 5)
     {
         _schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
-        _minSaveInterval = TimeSpan.FromMinutes(minSaveIntervalMinutes);
         _minProgressChangeThreshold = minProgressChangeThreshold;
+        _maxSaveIntervalSeconds = maxSaveIntervalSeconds;
     }
 
     /// <summary>
@@ -71,15 +71,15 @@ public class ThrottledAutoSaver
         // 检查是否正在保存
         if (_isSaving)
         {
-            //System.Diagnostics.Debug.WriteLine("[ThrottledAutoSaver] 已有保存操作正在进行，跳过");
             return false;
         }
 
-        var currentProgress = progressReport.ProgressPercentage;
-        var now = DateTime.UtcNow;
+        var currentProgress = Math.Round(progressReport.ProgressPercentage, 1); // 保留1位小数
+        var timeSinceLastSave = _lastSaveTime == DateTime.MinValue ? double.MaxValue : (DateTime.Now - _lastSaveTime).TotalSeconds;
 
         // 检查是否应该保存
-        if (!ShouldSave(currentProgress, now))
+        var (shouldSave, reason) = ShouldSave(currentProgress, timeSinceLastSave);
+        if (!shouldSave)
         {
             return false;
         }
@@ -87,14 +87,12 @@ public class ThrottledAutoSaver
         // 使用信号量确保同一时间只有一个保存操作
         if (!await _saveLock.WaitAsync(0))
         {
-            System.Diagnostics.Debug.WriteLine("[ThrottledAutoSaver] 无法获取保存锁，跳过");
             return false;
         }
 
         try
         {
             _isSaving = true;
-            System.Diagnostics.Debug.WriteLine($"[ThrottledAutoSaver] 开始自动保存，进度: {currentProgress:F1}%");
 
             // 异步保存，不阻塞主线程
             await Task.Run(async () =>
@@ -103,14 +101,12 @@ public class ThrottledAutoSaver
                 {
                     await _schedulingService.SaveProgressAsDraftAsync(scheduleDto, progressReport);
                     
-                    _lastSaveTime = now;
+                    LastSaveTime = DateTime.UtcNow;
+                    _lastSaveTime = DateTime.Now;
                     _lastSavedProgress = currentProgress;
-                    
-                    System.Diagnostics.Debug.WriteLine($"[ThrottledAutoSaver] 自动保存成功，时间: {now:HH:mm:ss}");
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ThrottledAutoSaver] 自动保存失败: {ex.Message}");
                     // 不抛出异常，避免影响主流程
                 }
             });
@@ -125,33 +121,33 @@ public class ThrottledAutoSaver
     }
 
     /// <summary>
-    /// 判断是否应该保存
+    /// 判断是否应该保存（方案4 - 混合策略）
     /// </summary>
-    private bool ShouldSave(double currentProgress, DateTime now)
+    /// <param name="currentProgress">当前进度百分比</param>
+    /// <param name="timeSinceLastSave">距上次保存的秒数</param>
+    /// <returns>(是否应该保存, 保存原因)</returns>
+    private (bool shouldSave, string reason) ShouldSave(double currentProgress, double timeSinceLastSave)
     {
-        // 检查是否达到关键进度点
+        // 策略1：检查是否达到关键进度点
         if (IsKeyProgressPoint(currentProgress))
         {
-            System.Diagnostics.Debug.WriteLine($"[ThrottledAutoSaver] 达到关键进度点: {currentProgress:F1}%");
-            return true;
+            return (true, $"关键进度点 ({currentProgress:F1}%)");
         }
 
-        // 检查时间间隔
-        var timeSinceLastSave = now - _lastSaveTime;
-        if (timeSinceLastSave < _minSaveInterval)
-        {
-            return false;
-        }
-
-        // 检查进度变化
+        // 策略2：检查进度变化是否达到阈值
         var progressChange = Math.Abs(currentProgress - _lastSavedProgress);
-        if (progressChange < _minProgressChangeThreshold)
+        if (progressChange >= _minProgressChangeThreshold)
         {
-            return false;
+            return (true, $"进度变化 ({progressChange:F1}% >= {_minProgressChangeThreshold}%)");
         }
 
-        System.Diagnostics.Debug.WriteLine($"[ThrottledAutoSaver] 满足保存条件 - 时间间隔: {timeSinceLastSave.TotalMinutes:F1}分钟, 进度变化: {progressChange:F1}%");
-        return true;
+        // 策略3：检查时间间隔是否超过最大值（确保长时间任务定期保存）
+        if (timeSinceLastSave >= _maxSaveIntervalSeconds)
+        {
+            return (true, $"时间间隔 ({timeSinceLastSave:F1}秒 >= {_maxSaveIntervalSeconds}秒)");
+        }
+
+        return (false, "不满足任何保存条件");
     }
 
     /// <summary>
@@ -161,8 +157,8 @@ public class ThrottledAutoSaver
     {
         foreach (var keyPoint in _keyProgressPoints)
         {
-            // 如果当前进度刚好跨过关键点（在关键点±2%范围内，且上次保存进度小于关键点）
-            if (currentProgress >= keyPoint - 2.0 && currentProgress <= keyPoint + 2.0 && _lastSavedProgress < keyPoint)
+            // 判断是否跨过关键点（上次保存进度 < 关键点 <= 当前进度）
+            if (_lastSavedProgress < keyPoint && currentProgress >= keyPoint)
             {
                 return true;
             }
@@ -175,9 +171,9 @@ public class ThrottledAutoSaver
     /// </summary>
     public void Reset()
     {
+        LastSaveTime = null;
         _lastSaveTime = DateTime.MinValue;
         _lastSavedProgress = 0.0;
         _isSaving = false;
-        System.Diagnostics.Debug.WriteLine("[ThrottledAutoSaver] 状态已重置");
     }
 }

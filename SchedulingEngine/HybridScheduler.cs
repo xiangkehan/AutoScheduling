@@ -45,10 +45,12 @@ public class HybridScheduler
             var greedyProgress = new Progress<SchedulingProgressReport>(report =>
             {
                 // 将贪心算法的进度映射到0-50%
+                var mappedProgress = Math.Round(report.ProgressPercentage * 0.5, 1);
+                
                 var mappedReport = new SchedulingProgressReport
                 {
                     CurrentStage = report.CurrentStage,
-                    ProgressPercentage = report.ProgressPercentage * 0.5,
+                    ProgressPercentage = mappedProgress,
                     StageDescription = $"[贪心阶段] {report.StageDescription}",
                     CompletedAssignments = report.CompletedAssignments,
                     TotalSlotsToAssign = report.TotalSlotsToAssign,
@@ -80,10 +82,12 @@ public class HybridScheduler
             var geneticProgress = new Progress<SchedulingProgressReport>(report =>
             {
                 // 将遗传算法的进度映射到50-100%
+                var mappedProgress = Math.Round(50 + report.ProgressPercentage * 0.5, 1);
+                
                 var mappedReport = new SchedulingProgressReport
                 {
                     CurrentStage = report.CurrentStage,
-                    ProgressPercentage = 50 + report.ProgressPercentage * 0.5,
+                    ProgressPercentage = mappedProgress,
                     StageDescription = $"[遗传优化] {report.StageDescription}",
                     CompletedAssignments = report.CompletedAssignments,
                     TotalSlotsToAssign = report.TotalSlotsToAssign,

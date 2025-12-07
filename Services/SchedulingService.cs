@@ -422,6 +422,7 @@ public class SchedulingService : ISchedulingService
     public async Task<List<ScheduleSummaryDto>> GetDraftsAsync()
     {
         var buffers = await _historyMgmt.GetAllBufferSchedulesAsync();
+        
         return buffers.Select(b => new ScheduleSummaryDto
         {
             Id = b.Schedule.Id,
@@ -2002,11 +2003,12 @@ public class SchedulingService : ISchedulingService
 
         try
         {
-            System.Diagnostics.Debug.WriteLine($"[SchedulingService] 开始保存排班进度草稿，进度: {progressReport.ProgressPercentage:F1}%");
-
-            // 标记为部分结果
-            scheduleDto.IsPartialResult = true;
-            scheduleDto.ProgressPercentage = progressReport.ProgressPercentage;
+            var roundedProgress = Math.Round(progressReport.ProgressPercentage, 1); // 保留1位小数
+            
+            // 标记为部分结果（只有未完成时才是部分结果）
+            bool isPartialResult = roundedProgress < 100.0;
+            scheduleDto.IsPartialResult = isPartialResult;
+            scheduleDto.ProgressPercentage = roundedProgress;
             scheduleDto.CurrentStage = progressReport.CurrentStage.ToString();
 
             // 转换为 Schedule 模型
@@ -2020,8 +2022,8 @@ public class SchedulingService : ISchedulingService
                 PersonnelIds = scheduleDto.PersonnelIds,
                 PositionIds = scheduleDto.PositionIds,
                 IsConfirmed = false, // 草稿不确认
-                IsPartialResult = true,
-                ProgressPercentage = progressReport.ProgressPercentage,
+                IsPartialResult = isPartialResult, // 使用计算的值
+                ProgressPercentage = Math.Round(progressReport.ProgressPercentage, 1), // 保留1位小数
                 CurrentStage = progressReport.CurrentStage.ToString(),
                 SchedulingMode = (int)scheduleDto.SchedulingMode,
                 Results = new List<SingleShift>()
@@ -2055,17 +2057,13 @@ public class SchedulingService : ISchedulingService
             {
                 // 更新现有草稿
                 await _historyMgmt.UpdateBufferScheduleAsync(schedule);
-                System.Diagnostics.Debug.WriteLine($"[SchedulingService] 更新现有草稿 ID: {schedule.Id}");
             }
             else
             {
                 // 创建新草稿
                 var draftId = await _historyMgmt.AddToBufferAsync(schedule);
                 scheduleDto.Id = draftId;
-                System.Diagnostics.Debug.WriteLine($"[SchedulingService] 创建新草稿 ID: {draftId}");
             }
-
-            System.Diagnostics.Debug.WriteLine($"[SchedulingService] 排班进度草稿保存成功");
         }
         catch (Exception ex)
         {

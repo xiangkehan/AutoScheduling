@@ -220,8 +220,11 @@ public partial class SchedulingProgressViewModel : ObservableObject
         // 获取当前线程的 DispatcherQueue
         _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
         
-        // 初始化自动保存节流器
-        _autoSaver = new ThrottledAutoSaver(_schedulingService, minSaveIntervalMinutes: 2, minProgressChangeThreshold: 5.0);
+        // 初始化自动保存节流器（方案4：5%进度变化 + 5秒最大间隔）
+        _autoSaver = new ThrottledAutoSaver(
+            _schedulingService, 
+            minProgressChangeThreshold: 5.0,
+            maxSaveIntervalSeconds: 5);
         
         // 初始化命令
         StartSchedulingCommand = new AsyncRelayCommand<SchedulingRequestDto>(ExecuteStartSchedulingAsync);
@@ -499,6 +502,29 @@ public partial class SchedulingProgressViewModel : ObservableObject
 
         if (result.IsSuccess)
         {
+            // 强制保存最终进度（100%）
+            if (result.Schedule != null && _schedulingService != null)
+            {
+                try
+                {
+                    var finalReport = new SchedulingProgressReport
+                    {
+                        ProgressPercentage = 100.0,
+                        CurrentStage = SchedulingStage.Completed,
+                        StageDescription = "排班完成",
+                        CompletedAssignments = result.Statistics?.TotalAssignments ?? 0,
+                        TotalSlotsToAssign = result.Statistics?.TotalAssignments ?? 0,
+                        RemainingSlots = 0
+                    };
+                    
+                    await _schedulingService.SaveProgressAsDraftAsync(result.Schedule, finalReport);
+                }
+                catch (Exception ex)
+                {
+                    // 保存失败不影响主流程
+                }
+            }
+            
             // 排班成功
             IsCompleted = true;
             IsFailed = false;
@@ -1474,6 +1500,12 @@ public partial class SchedulingProgressViewModel
     private async Task TryAutoSaveAsync()
     {
         if (_autoSaver == null || Result?.Schedule == null || _latestProgressReport == null)
+        {
+            return;
+        }
+
+        // 如果排班已完成或失败，不再自动保存（避免覆盖最终进度）
+        if (IsCompleted || IsFailed)
         {
             return;
         }
