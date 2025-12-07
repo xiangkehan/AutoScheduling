@@ -14,7 +14,8 @@ public interface IHistoryManagement
     Task<List<(Schedule Schedule, DateTime ConfirmTime)>> GetAllHistorySchedulesAsync();
     Task<List<(Schedule Schedule, DateTime CreateTime, int BufferId)>> GetAllBufferSchedulesAsync(); 
     Task ClearBufferAsync(); Task DeleteHistoryScheduleAsync(int scheduleId); 
-    Task DeleteBufferScheduleAsync(int bufferId); 
+    Task DeleteBufferScheduleAsync(int bufferId);
+    Task DeleteBufferScheduleByScheduleIdAsync(int scheduleId); 
     Task<Schedule?> GetLastConfirmedScheduleAsync(); 
     Task<(Schedule Schedule, DateTime ConfirmTime)?> GetHistoryScheduleByScheduleIdAsync(int scheduleId);
     Task UpdateBufferScheduleAsync(Schedule schedule);

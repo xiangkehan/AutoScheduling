@@ -316,6 +316,47 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
         }
 
         /// <summary>
+        /// 通过 ScheduleId 删除缓冲区排班（性能优化版本）
+        /// </summary>
+        public async Task DeleteBufferScheduleByScheduleIdAsync(int scheduleId)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+            using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
+
+            try
+            {
+                // 1. 先删除 SingleShifts（子表）
+                var shiftsCmd = conn.CreateCommand();
+                shiftsCmd.Transaction = tx;
+                shiftsCmd.CommandText = "DELETE FROM SingleShifts WHERE ScheduleId = @scheduleId";
+                shiftsCmd.Parameters.AddWithValue("@scheduleId", scheduleId);
+                await shiftsCmd.ExecuteNonQueryAsync();
+
+                // 2. 删除 BufferSchedules
+                var bufferCmd = conn.CreateCommand();
+                bufferCmd.Transaction = tx;
+                bufferCmd.CommandText = "DELETE FROM BufferSchedules WHERE ScheduleId = @scheduleId";
+                bufferCmd.Parameters.AddWithValue("@scheduleId", scheduleId);
+                await bufferCmd.ExecuteNonQueryAsync();
+
+                // 3. 最后删除 Schedules（主表）
+                var scheduleCmd = conn.CreateCommand();
+                scheduleCmd.Transaction = tx;
+                scheduleCmd.CommandText = "DELETE FROM Schedules WHERE Id = @scheduleId";
+                scheduleCmd.Parameters.AddWithValue("@scheduleId", scheduleId);
+                await scheduleCmd.ExecuteNonQueryAsync();
+
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+        }
+
+        /// <summary>
         /// 获取最近一次确认的排班表（用于算法历史约束处理）
         /// </summary>
         /// <returns>最近确认的排班表，如果没有则返回 null</returns>

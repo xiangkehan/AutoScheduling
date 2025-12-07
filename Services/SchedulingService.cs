@@ -475,10 +475,8 @@ public class SchedulingService : ISchedulingService
 
     public async Task DeleteDraftAsync(int id)
     {
-        var buffers = await _historyMgmt.GetAllBufferSchedulesAsync();
-        var buffer = buffers.FirstOrDefault(b => b.Schedule.Id == id);
-        if (buffer.Schedule == null) return;
-        await _historyMgmt.DeleteBufferScheduleAsync(buffer.BufferId);
+        // 直接通过 ScheduleId 删除，避免加载所有草稿数据
+        await _historyMgmt.DeleteBufferScheduleByScheduleIdAsync(id);
     }
 
     /// <summary>
@@ -503,44 +501,10 @@ public class SchedulingService : ISchedulingService
             // 2. 如果需要清空其他草稿 - 对应需求4.2, 4.3
             if (clearOtherDrafts)
             {
-                // 获取所有剩余草稿 - 对应需求4.2
-                System.Diagnostics.Debug.WriteLine($"步骤2: 获取所有剩余草稿");
-                var remainingDrafts = await GetDraftsAsync();
-                System.Diagnostics.Debug.WriteLine($"找到 {remainingDrafts.Count} 个剩余草稿");
-                
-                if (remainingDrafts.Count > 0)
-                {
-                    // 删除所有剩余草稿 - 对应需求4.3, 4.4
-                    System.Diagnostics.Debug.WriteLine($"步骤3: 开始删除剩余草稿");
-                    int successCount = 0;
-                    int failureCount = 0;
-                    
-                    foreach (var draft in remainingDrafts)
-                    {
-                        try
-                        {
-                            System.Diagnostics.Debug.WriteLine($"正在删除草稿 {draft.Id} (标题: {draft.Title})");
-                            await DeleteDraftAsync(draft.Id);
-                            successCount++;
-                            System.Diagnostics.Debug.WriteLine($"草稿 {draft.Id} 删除成功");
-                        }
-                        catch (Exception ex)
-                        {
-                            // 记录错误但继续删除其他草稿 - 对应需求4.5
-                            failureCount++;
-                            System.Diagnostics.Debug.WriteLine($"错误: 删除草稿 {draft.Id} 失败");
-                            System.Diagnostics.Debug.WriteLine($"错误类型: {ex.GetType().Name}");
-                            System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
-                            System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
-                        }
-                    }
-                    
-                    System.Diagnostics.Debug.WriteLine($"删除操作完成: 成功 {successCount} 个, 失败 {failureCount} 个");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"没有剩余草稿需要删除");
-                }
+                // 直接清空所有剩余草稿，避免加载完整数据 - 对应需求4.2, 4.3, 4.4
+                System.Diagnostics.Debug.WriteLine($"步骤2: 清空所有剩余草稿");
+                await _historyMgmt.ClearBufferAsync();
+                System.Diagnostics.Debug.WriteLine($"所有剩余草稿已清空");
             }
             
             System.Diagnostics.Debug.WriteLine($"=== 确认草稿并清空其他草稿操作完成 ===");

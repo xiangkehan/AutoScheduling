@@ -176,7 +176,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
             try
             {
                 await _schedulingService.DeleteDraftAsync(scheduleId);
-                await _dialogService.ShowSuccessAsync("草稿已删除");
                 await LoadDraftsAsync(); // 刷新草稿列表
             }
             catch (InvalidOperationException ex)
