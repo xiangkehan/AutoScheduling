@@ -85,15 +85,18 @@ namespace AutoScheduling3.SchedulingEngine
             await PreprocessAsync();
             cancellationToken.ThrowIfCancellationRequested();
 
+            // 临时调试：确认全局调度模式配置
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 全局调度配置 - EnableGlobalScheduling: {_config.GlobalScheduling.EnableGlobalScheduling}, 天数: {totalDays}, 最大天数阈值: {_config.GlobalScheduling.MaxDaysForGlobalMode}");
+
             // 检查是否启用全局调度模式 - 对应需求9.1, 9.2, 9.3
             if (_config.GlobalScheduling.EnableGlobalScheduling)
             {
-                _logger.Log($"使用全局调度模式 (天数: {totalDays})");
+                _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] ✓ 使用全局调度模式 (天数: {totalDays})");
                 return await ExecuteGlobalSchedulingAsync(progress, cancellationToken);
             }
             else
             {
-                _logger.Log($"使用按天调度模式 (天数: {totalDays})");
+                _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] ✗ 使用按天调度模式 (天数: {totalDays})");
                 return await ExecutePerDaySchedulingAsync(progress, cancellationToken);
             }
         }
@@ -214,9 +217,15 @@ namespace AutoScheduling3.SchedulingEngine
                 return await FallbackToPerDayScheduling("排班天数超过阈值", progress, cancellationToken);
             }
 
+            // 临时调试：记录全局调度初始化
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 开始初始化全局调度组件 - 开始日期: {_context.StartDate:yyyy-MM-dd}, 结束日期: {_context.EndDate:yyyy-MM-dd}");
+
             // 初始化全局组件
             _periodMapper = new PeriodMapper(_context.StartDate, _context.EndDate);
             int totalPeriods = _periodMapper.TotalPeriods;
+            
+            // 临时调试：记录PeriodMapper信息
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] PeriodMapper已创建 - 总天数: {_periodMapper.TotalDays}, 总时段数: {totalPeriods}, 每天时段数: {_periodMapper.PeriodsPerDay}");
             
             ReportProgress(progress, SchedulingStage.Initializing, 
                 $"正在初始化全局张量 ({totalDays}天 × 12时段 = {totalPeriods}时段)...", 0);
@@ -228,11 +237,18 @@ namespace AutoScheduling3.SchedulingEngine
                 _context.Personals.Count,
                 _config.UseOptimizedTensor);
 
+            // 临时调试：记录全局张量维度
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 全局张量已创建 - 哨位数: {_context.Positions.Count}, 全局时段数: {totalPeriods}, 人员数: {_context.Personals.Count}, 优化模式: {_config.UseOptimizedTensor}");
+
             // 检查内存占用 - 对应需求11.3
             long memoryMB = _tensor.GetMemoryUsageBytes() / (1024 * 1024);
+            
+            // 临时调试：记录内存占用
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 全局张量内存占用: {memoryMB}MB, 阈值: {_config.GlobalScheduling.MemoryThresholdMB}MB");
+            
             if (memoryMB > _config.GlobalScheduling.MemoryThresholdMB)
             {
-                _logger.LogWarning($"全局张量内存占用({memoryMB}MB)超过阈值({_config.GlobalScheduling.MemoryThresholdMB}MB)，降级到按天模式");
+                _logger.LogWarning($"[DEBUG][{nameof(GreedyScheduler)}] ✗ 全局张量内存占用({memoryMB}MB)超过阈值({_config.GlobalScheduling.MemoryThresholdMB}MB)，降级到按天模式");
                 return await FallbackToPerDayScheduling("内存占用超过阈值", progress, cancellationToken);
             }
 
@@ -242,18 +258,50 @@ namespace AutoScheduling3.SchedulingEngine
             // 初始化全局张量（使用哨位可用人员列表）
             _tensor.InitializeWithAvailablePersonnel(_context.Positions, _context.PersonIdToIdx);
 
+            // 临时调试：记录初始化后的候选数（应用约束前）
+            int samplePosIdx = 0;
+            int sampleGlobalPeriod = 0;
+            int initialCandidates = _tensor.CountFeasiblePersons(samplePosIdx, sampleGlobalPeriod);
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 张量初始化后样本候选数 - 哨位0, 全局时段0: {initialCandidates}人");
+
             // 应用全局约束 - 对应需求1.1-1.5, 7.1-7.5
             await ApplyGlobalConstraintsAsync(progress, cancellationToken);
+
+            // 临时调试：记录约束应用后的候选数
+            int afterConstraintCandidates = _tensor.CountFeasiblePersons(samplePosIdx, sampleGlobalPeriod);
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 约束应用后样本候选数 - 哨位0, 全局时段0: {afterConstraintCandidates}人 (减少了{initialCandidates - afterConstraintCandidates}人)");
 
             // 应用手动指定（全局范围） - 对应需求5.8
             await ApplyGlobalManualAssignmentsAsync(progress, cancellationToken);
 
+            // 临时调试：记录全局MRV策略初始化
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 开始初始化全局MRV策略");
+
             // 初始化全局MRV策略 - 对应需求3.1-3.5
             var globalMRV = new Strategies.GlobalMRVStrategy(_tensor, _context, _periodMapper);
 
+            // 临时调试：记录全局MRV策略统计
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 全局MRV策略已初始化 - {globalMRV.GetStatistics()}");
+
+            // 临时调试：检查约束应用后的候选数分布
+            var candidateDistribution = new Dictionary<int, int>();
+            for (int globalPeriod = 0; globalPeriod < _periodMapper.TotalPeriods; globalPeriod++)
+            {
+                for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
+                {
+                    int count = globalMRV.GetCandidateCount(posIdx, globalPeriod);
+                    if (!candidateDistribution.ContainsKey(count))
+                        candidateDistribution[count] = 0;
+                    candidateDistribution[count]++;
+                }
+            }
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 约束应用后候选数分布: {string.Join(", ", candidateDistribution.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}人:{kv.Value}个位置"))}");
+
             // 执行全局贪心分配 - 对应需求2.1-2.5, 3.1-3.5
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 开始执行全局贪心分配");
             await PerformGlobalGreedyAssignmentsAsync(
                 globalMRV, progress, cancellationToken);
+            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 全局贪心分配完成");
 
             // 生成排班结果
             return GenerateSchedule();
@@ -276,6 +324,15 @@ namespace AutoScheduling3.SchedulingEngine
 
             var constraintViolations = new List<(int positionIdx, int periodIdx, int[] infeasiblePersons)>();
 
+            // 临时调试：统计约束违反原因
+            var constraintReasons = new Dictionary<string, int>
+            {
+                ["不在可用人员列表"] = 0,
+                ["技能不匹配"] = 0,
+                ["人员不可用"] = 0,
+                ["其他约束"] = 0
+            };
+
             // 遍历所有全局时段
             for (int globalPeriod = 0; globalPeriod < _periodMapper.TotalPeriods; globalPeriod++)
             {
@@ -296,6 +353,7 @@ namespace AutoScheduling3.SchedulingEngine
                         if (!position.AvailablePersonnelIds.Contains(personId))
                         {
                             infeasiblePersons.Add(personIdx);
+                            constraintReasons["不在可用人员列表"]++;
                             continue;
                         }
 
@@ -303,6 +361,7 @@ namespace AutoScheduling3.SchedulingEngine
                         if (!_constraintValidator.ValidateAllConstraints(personIdx, posIdx, localPeriod, date, globalPeriod))
                         {
                             infeasiblePersons.Add(personIdx);
+                            constraintReasons["其他约束"]++;
                         }
                     }
 
@@ -1057,7 +1116,11 @@ namespace AutoScheduling3.SchedulingEngine
             _context.RecordAssignment(date, localPeriod, positionIdx, personIdx);
             globalMRV.MarkAsAssigned(positionIdx, globalPeriodIdx);
 
-            // 更新张量约束（使用全局时段索引）
+            // 先更新全局MRV策略的候选计数（在张量修改之前）
+            // 这样可以基于张量的当前状态正确计算受影响的位置
+            globalMRV.UpdateCandidateCountsAfterAssignment(positionIdx, globalPeriodIdx, personIdx);
+
+            // 然后更新张量约束（使用全局时段索引）
             _tensor.SetOthersInfeasibleForSlot(positionIdx, globalPeriodIdx, personIdx);
             _tensor.SetOtherPositionsInfeasibleForPersonPeriod(personIdx, globalPeriodIdx, positionIdx);
 
@@ -1069,9 +1132,6 @@ namespace AutoScheduling3.SchedulingEngine
 
             // 应用全局夜哨唯一约束（支持跨日）
             ApplyNightShiftUniquenessConstraintGlobal(personIdx, globalPeriodIdx);
-
-            // 更新全局MRV策略的候选计数
-            globalMRV.UpdateCandidateCountsAfterAssignment(positionIdx, globalPeriodIdx, personIdx);
 
             // 异步操作：记录分配日志（如果启用）
             if (_config.EnableAssignmentLogging)

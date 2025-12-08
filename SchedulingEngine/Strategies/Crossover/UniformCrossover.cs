@@ -11,16 +11,22 @@ namespace AutoScheduling3.SchedulingEngine.Strategies.Crossover;
 public class UniformCrossover : ICrossoverStrategy
 {
     private readonly ConstraintValidator _constraintValidator;
+    private readonly FeasibilityTensor _feasibilityTensor;
     private readonly int _maxRepairAttempts;
 
     /// <summary>
     /// 构造函数
     /// </summary>
     /// <param name="constraintValidator">约束验证器</param>
+    /// <param name="feasibilityTensor">可行性张量</param>
     /// <param name="maxRepairAttempts">最大修复尝试次数（默认3）</param>
-    public UniformCrossover(ConstraintValidator constraintValidator, int maxRepairAttempts = 3)
+    public UniformCrossover(
+        ConstraintValidator constraintValidator,
+        FeasibilityTensor feasibilityTensor,
+        int maxRepairAttempts = 3)
     {
         _constraintValidator = constraintValidator ?? throw new ArgumentNullException(nameof(constraintValidator));
+        _feasibilityTensor = feasibilityTensor ?? throw new ArgumentNullException(nameof(feasibilityTensor));
         _maxRepairAttempts = maxRepairAttempts;
     }
 
@@ -120,8 +126,14 @@ public class UniformCrossover : ICrossoverStrategy
                         {
                             hasViolation = true;
 
-                            // 尝试修复：设置为未分配
-                            individual.Genes[date][periodIdx, positionIdx] = -1;
+                            // 尝试修复：从可行人员中重新分配
+                            bool repaired = TryReassignSlot(individual, date, periodIdx, positionIdx, context, random);
+                            
+                            // 如果无法修复，设置为未分配
+                            if (!repaired)
+                            {
+                                individual.Genes[date][periodIdx, positionIdx] = -1;
+                            }
                         }
                     }
                 }
@@ -136,5 +148,46 @@ public class UniformCrossover : ICrossoverStrategy
 
         // 重新识别未分配时段
         individual.IdentifyUnassignedSlots();
+    }
+
+    /// <summary>
+    /// 尝试重新分配时段
+    /// </summary>
+    private bool TryReassignSlot(
+        Individual individual,
+        DateTime date,
+        int periodIdx,
+        int positionIdx,
+        SchedulingContext context,
+        Random random)
+    {
+        // 获取该时段的可行人员
+        var feasiblePersons = _feasibilityTensor.GetFeasiblePersons(positionIdx, periodIdx);
+
+        if (feasiblePersons == null || feasiblePersons.Length == 0)
+        {
+            return false;
+        }
+
+        // 随机打乱可行人员顺序
+        var shuffled = feasiblePersons.OrderBy(_ => random.Next()).ToArray();
+
+        // 尝试每个可行人员
+        foreach (var personIdx in shuffled)
+        {
+            // 临时分配
+            individual.Genes[date][periodIdx, positionIdx] = personIdx;
+
+            // 验证约束
+            if (_constraintValidator.ValidateAllConstraints(personIdx, positionIdx, periodIdx, date))
+            {
+                // 分配成功
+                return true;
+            }
+        }
+
+        // 所有可行人员都失败，恢复为未分配
+        individual.Genes[date][periodIdx, positionIdx] = -1;
+        return false;
     }
 }

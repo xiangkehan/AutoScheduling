@@ -1792,19 +1792,19 @@ public class SchedulingService : ISchedulingService
             _ => new TournamentSelection(_geneticConfig.TournamentSize)
         };
         
-        // 根据配置创建交叉策略
-        ICrossoverStrategy crossoverStrategy = _geneticConfig.CrossoverStrategy switch
-        {
-            CrossoverStrategyType.Uniform => new UniformCrossover(constraintValidator),
-            CrossoverStrategyType.SinglePoint => new SinglePointCrossover(constraintValidator),
-            _ => new UniformCrossover(constraintValidator)
-        };
-        
-        // 创建可行性张量
+        // 创建可行性张量（需要在交叉策略之前创建）
         var feasibilityTensor = new FeasibilityTensor(
             context.Positions.Count,
             12, // 12个时段
             context.Personals.Count);
+        
+        // 根据配置创建交叉策略
+        ICrossoverStrategy crossoverStrategy = _geneticConfig.CrossoverStrategy switch
+        {
+            CrossoverStrategyType.Uniform => new UniformCrossover(constraintValidator, feasibilityTensor),
+            CrossoverStrategyType.SinglePoint => new SinglePointCrossover(constraintValidator),
+            _ => new UniformCrossover(constraintValidator, feasibilityTensor)
+        };
         
         // 根据配置创建变异策略
         IMutationStrategy mutationStrategy = _geneticConfig.MutationStrategy switch

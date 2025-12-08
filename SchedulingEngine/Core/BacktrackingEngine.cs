@@ -361,6 +361,12 @@ namespace AutoScheduling3.SchedulingEngine.Core
             CancellationToken cancellationToken = default,
             PeriodMapper? periodMapper = null)
         {
+            // 临时调试：记录回溯模式
+            if (_config.LogBacktracking)
+            {
+                _logger.Log($"[DEBUG][{nameof(BacktrackingEngine)}] 开始回溯 - 模式: {(periodMapper != null ? "全局模式" : "按天模式")}, 当前深度: {_assignmentStack.Depth}");
+            }
+
             _backtrackingTimer.Start();
 
             try
@@ -370,7 +376,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
                 {
                     if (_config.LogBacktracking)
                     {
-                        _logger.LogWarning("分配栈为空，无法回溯");
+                        _logger.LogWarning("[DEBUG][BacktrackingEngine] 分配栈为空，无法回溯");
                     }
                     _statistics.RecordBacktrack(_assignmentStack.Depth, false);
                     return false;
