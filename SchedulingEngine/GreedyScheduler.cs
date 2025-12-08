@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using AutoScheduling3.Data.Logging;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Models;
+using AutoScheduling3.SchedulingEngine.Config;
 using AutoScheduling3.SchedulingEngine.Core;
 using AutoScheduling3.SchedulingEngine.Strategies;
 using AutoScheduling3.Models.Constraints;
@@ -900,6 +901,11 @@ public class GreedySchedulerConfig
     /// 回溯配置 - 对应需求3.1, 3.2, 3.3, 3.5
     /// </summary>
     public BacktrackingConfig Backtracking { get; set; } = new BacktrackingConfig();
+
+    /// <summary>
+    /// 全局调度配置 - 对应需求6, 9, 11
+    /// </summary>
+    public GlobalSchedulingConfig GlobalScheduling { get; set; } = new GlobalSchedulingConfig();
 }
 
 /// <summary>

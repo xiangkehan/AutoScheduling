@@ -14,10 +14,20 @@ namespace AutoScheduling3.SchedulingEngine.Core
     public class ConstraintValidator
     {
         private readonly SchedulingContext _context;
+        private CrossDayConstraintValidator? _crossDayValidator;
 
         public ConstraintValidator(SchedulingContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+
+        /// <summary>
+        /// 设置跨日约束验证器（用于全局调度模式）
+        /// </summary>
+        /// <param name="crossDayValidator">跨日约束验证器实例</param>
+        public void SetCrossDayValidator(CrossDayConstraintValidator crossDayValidator)
+        {
+            _crossDayValidator = crossDayValidator;
         }
 
         /// <summary>
@@ -317,6 +327,32 @@ namespace AutoScheduling3.SchedulingEngine.Core
             // 验证手动指定
             if (!ValidateManualAssignment(personIdx, positionIdx, periodIdx, date))
                 return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// 综合验证所有硬约束（全局调度模式）
+        /// 对应需求1.1-1.5, 7.3, 7.4
+        /// </summary>
+        /// <param name="personIdx">人员索引</param>
+        /// <param name="positionIdx">哨位索引</param>
+        /// <param name="periodIdx">局部时段索引</param>
+        /// <param name="date">日期</param>
+        /// <param name="globalPeriodIdx">全局时段索引（可选，用于跨日约束验证）</param>
+        /// <returns>是否满足所有硬约束</returns>
+        public bool ValidateAllConstraints(int personIdx, int positionIdx, int periodIdx, DateTime date, int? globalPeriodIdx)
+        {
+            // 先验证常规约束
+            if (!ValidateAllConstraints(personIdx, positionIdx, periodIdx, date))
+                return false;
+
+            // 如果提供了全局时段索引且设置了跨日验证器，则验证跨日约束
+            if (globalPeriodIdx.HasValue && _crossDayValidator != null)
+            {
+                if (!_crossDayValidator.ValidateAllCrossDayConstraints(personIdx, globalPeriodIdx.Value))
+                    return false;
+            }
 
             return true;
         }

@@ -566,6 +566,30 @@ namespace AutoScheduling3.SchedulingEngine.Core
         }
 
         /// <summary>
+        /// 获取张量的总内存使用量（字节）
+        /// 对应需求4.4
+        /// </summary>
+        /// <returns>总内存使用量（字节）</returns>
+        public long GetMemoryUsageBytes()
+        {
+            var stats = GetMemoryStats();
+            return stats.TotalBytes;
+        }
+
+        /// <summary>
+        /// 检查内存使用是否超过指定阈值
+        /// 对应需求4.4, 11.3
+        /// </summary>
+        /// <param name="thresholdMB">内存阈值（MB）</param>
+        /// <returns>如果内存使用超过阈值返回 true，否则返回 false</returns>
+        public bool IsMemoryExceeded(long thresholdMB)
+        {
+            long usageBytes = GetMemoryUsageBytes();
+            long thresholdBytes = thresholdMB * 1024 * 1024;
+            return usageBytes > thresholdBytes;
+        }
+
+        /// <summary>
         /// 验证张量一致性（调试用）
         /// </summary>
         public bool ValidateConsistency()
