@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AutoScheduling3.Constants;
 using AutoScheduling3.Models;
 
 namespace AutoScheduling3.SchedulingEngine.Core;
@@ -163,10 +164,9 @@ public class FitnessEvaluator
         }
 
         // 检查夜哨唯一性（同一晚上只能一个夜哨）
-        int[] nightPeriods = { 11, 0, 1, 2 };
-        if (nightPeriods.Contains(periodIdx))
+        if (SchedulingConstants.NightShiftPeriods.Contains(periodIdx))
         {
-            foreach (var nightPeriod in nightPeriods)
+            foreach (var nightPeriod in SchedulingConstants.NightShiftPeriods)
             {
                 if (nightPeriod == periodIdx)
                     continue;
@@ -201,12 +201,12 @@ public class FitnessEvaluator
         }
 
         // 跨日检查
-        if (periodIdx == 0 && individual.Genes.ContainsKey(date.AddDays(-1)))
+        if (periodIdx == SchedulingConstants.MinPeriodIndex && individual.Genes.ContainsKey(date.AddDays(-1)))
         {
             var prevDayAssignments = individual.Genes[date.AddDays(-1)];
             for (int posIdx = 0; posIdx < positions; posIdx++)
             {
-                if (prevDayAssignments[11, posIdx] == personIdx)
+                if (prevDayAssignments[SchedulingConstants.MaxPeriodIndex, posIdx] == personIdx)
                     return true; // 冲突
             }
         }
@@ -216,7 +216,7 @@ public class FitnessEvaluator
             var nextDayAssignments = individual.Genes[date.AddDays(1)];
             for (int posIdx = 0; posIdx < positions; posIdx++)
             {
-                if (nextDayAssignments[0, posIdx] == personIdx)
+                if (nextDayAssignments[SchedulingConstants.MinPeriodIndex, posIdx] == personIdx)
                     return true; // 冲突
             }
         }

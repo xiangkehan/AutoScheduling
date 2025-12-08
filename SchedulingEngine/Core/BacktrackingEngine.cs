@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoScheduling3.Constants;
 using AutoScheduling3.Data.Logging;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.SchedulingEngine.Strategies;
@@ -18,7 +19,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
     {
         private readonly SchedulingContext _context;
         private readonly FeasibilityTensor _tensor;
-        private readonly MRVStrategy _mrvStrategy;
+        private readonly ISchedulingStrategy _schedulingStrategy;
         private readonly ConstraintValidator _constraintValidator;
         private readonly SoftConstraintCalculator _softConstraintCalculator;
         private readonly AssignmentStack _assignmentStack;
@@ -45,7 +46,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
         public BacktrackingEngine(
             SchedulingContext context,
             FeasibilityTensor tensor,
-            MRVStrategy mrvStrategy,
+            ISchedulingStrategy schedulingStrategy,
             ConstraintValidator constraintValidator,
             SoftConstraintCalculator softConstraintCalculator,
             BacktrackingConfig config,
@@ -53,7 +54,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _tensor = tensor ?? throw new ArgumentNullException(nameof(tensor));
-            _mrvStrategy = mrvStrategy ?? throw new ArgumentNullException(nameof(mrvStrategy));
+            _schedulingStrategy = schedulingStrategy ?? throw new ArgumentNullException(nameof(schedulingStrategy));
             _constraintValidator = constraintValidator ?? throw new ArgumentNullException(nameof(constraintValidator));
             _softConstraintCalculator = softConstraintCalculator ?? throw new ArgumentNullException(nameof(softConstraintCalculator));
             _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -166,7 +167,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
         public bool DetectDeadEnd()
         {
             // 使用MRV策略检测无候选时段
-            var unassignedWithNoCandidates = _mrvStrategy.GetUnassignedWithNoCandidates();
+            var unassignedWithNoCandidates = _schedulingStrategy.GetUnassignedWithNoCandidates();
             
             if (unassignedWithNoCandidates.Count > 0)
             {
@@ -346,13 +347,19 @@ namespace AutoScheduling3.SchedulingEngine.Core
         }
 
         /// <summary>
-        /// 执行回溯操作
-        /// 对应需求: 1.2, 1.3, 5.4, 6.5
+        /// 执行回溯操作（支持按天和全局模式）
+        /// 对应需求: 1.2, 1.3, 2.1-2.5, 5.4, 6.5
         /// </summary>
+        /// <param name="date">回溯日期（按天模式使用）</param>
+        /// <param name="progress">进度报告</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <param name="periodMapper">时段映射器（null表示按天模式，非null表示全局模式）</param>
+        /// <returns>回溯是否成功</returns>
         public async Task<bool> Backtrack(
             DateTime date,
             IProgress<SchedulingProgressReport>? progress,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            PeriodMapper? periodMapper = null)
         {
             _backtrackingTimer.Start();
 
@@ -398,18 +405,35 @@ namespace AutoScheduling3.SchedulingEngine.Core
                     return false;
                 }
 
+                // 根据 periodMapper 是否为 null 决定日志格式
                 if (_config.LogBacktracking)
                 {
                     var positionName = _context.Positions[record.PositionIdx].Name;
                     var currentPersonName = _context.Personals[record.PersonIdx].Name;
-                    _logger.Log($"开始回溯 - 深度: {record.Depth}, 哨位: {positionName}, 时段: {record.PeriodIdx}, " +
-                               $"当前人员: {currentPersonName}, " +
-                               $"候选进度: {record.CurrentCandidateIndex + 1}/{record.Candidates.Count}, " +
-                               $"时间: {DateTime.Now:HH:mm:ss.fff}");
+                    
+                    if (periodMapper != null)
+                    {
+                        // 全局模式日志
+                        int globalPeriodIdx = periodMapper.ToGlobalPeriod(record.Date, record.PeriodIdx);
+                        var (dayIndex, localPeriod) = periodMapper.ToLocalPeriod(globalPeriodIdx);
+                        _logger.Log($"开始全局回溯 - 深度: {record.Depth}, 哨位: {positionName}, " +
+                                   $"全局时段: {globalPeriodIdx} (第{dayIndex + 1}天 时段{localPeriod}), " +
+                                   $"当前人员: {currentPersonName}, " +
+                                   $"候选进度: {record.CurrentCandidateIndex + 1}/{record.Candidates.Count}, " +
+                                   $"时间: {DateTime.Now:HH:mm:ss.fff}");
+                    }
+                    else
+                    {
+                        // 按天模式日志
+                        _logger.Log($"开始回溯 - 深度: {record.Depth}, 哨位: {positionName}, 时段: {record.PeriodIdx}, " +
+                                   $"当前人员: {currentPersonName}, " +
+                                   $"候选进度: {record.CurrentCandidateIndex + 1}/{record.Candidates.Count}, " +
+                                   $"时间: {DateTime.Now:HH:mm:ss.fff}");
+                    }
                 }
 
                 // 恢复状态快照
-                RestoreState(record.Snapshot, date);
+                RestoreState(record.Snapshot, record.Date);
                 _statistics.RecordStateRestore();
 
                 // 获取下一个候选人员
@@ -422,7 +446,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
                         record.PositionIdx,
                         record.PeriodIdx,
                         nextCandidate.Value,
-                        date);
+                        record.Date);
 
                     if (assigned)
                     {
@@ -436,15 +460,40 @@ namespace AutoScheduling3.SchedulingEngine.Core
                         {
                             var positionName = _context.Positions[record.PositionIdx].Name;
                             var newPersonName = _context.Personals[nextCandidate.Value].Name;
-                            _logger.Log($"回溯成功 - 哨位: {positionName}, 时段: {record.PeriodIdx}, " +
-                                       $"新人员: {newPersonName}, " +
-                                       $"候选序号: {record.CurrentCandidateIndex + 1}/{record.Candidates.Count}, " +
-                                       $"深度: {record.Depth}, " +
-                                       $"总回溯次数: {_statistics.TotalBacktracks}");
+                            
+                            if (periodMapper != null)
+                            {
+                                // 全局模式日志
+                                int globalPeriodIdx = periodMapper.ToGlobalPeriod(record.Date, record.PeriodIdx);
+                                var (dayIndex, localPeriod) = periodMapper.ToLocalPeriod(globalPeriodIdx);
+                                _logger.Log($"全局回溯成功 - 哨位: {positionName}, " +
+                                           $"全局时段: {globalPeriodIdx} (第{dayIndex + 1}天 时段{localPeriod}), " +
+                                           $"新人员: {newPersonName}, " +
+                                           $"候选序号: {record.CurrentCandidateIndex + 1}/{record.Candidates.Count}, " +
+                                           $"深度: {record.Depth}, " +
+                                           $"总回溯次数: {_statistics.TotalBacktracks}");
+                            }
+                            else
+                            {
+                                // 按天模式日志
+                                _logger.Log($"回溯成功 - 哨位: {positionName}, 时段: {record.PeriodIdx}, " +
+                                           $"新人员: {newPersonName}, " +
+                                           $"候选序号: {record.CurrentCandidateIndex + 1}/{record.Candidates.Count}, " +
+                                           $"深度: {record.Depth}, " +
+                                           $"总回溯次数: {_statistics.TotalBacktracks}");
+                            }
                         }
                         
                         // 报告回溯进度
-                        ReportBacktrackProgress(progress, record.Depth, true);
+                        if (periodMapper != null)
+                        {
+                            int globalPeriodIdx = periodMapper.ToGlobalPeriod(record.Date, record.PeriodIdx);
+                            ReportGlobalBacktrackProgress(progress, record.Depth, globalPeriodIdx, true);
+                        }
+                        else
+                        {
+                            ReportBacktrackProgress(progress, record.Depth, true);
+                        }
                         
                         return true;
                     }
@@ -455,10 +504,20 @@ namespace AutoScheduling3.SchedulingEngine.Core
                         {
                             var positionName = _context.Positions[record.PositionIdx].Name;
                             var failedPersonName = _context.Personals[nextCandidate.Value].Name;
-                            _logger.Log($"候选人员分配失败 - 哨位: {positionName}, 时段: {record.PeriodIdx}, " +
-                                       $"人员: {failedPersonName}, 继续回溯");
+                            
+                            if (periodMapper != null)
+                            {
+                                int globalPeriodIdx = periodMapper.ToGlobalPeriod(record.Date, record.PeriodIdx);
+                                _logger.Log($"候选人员分配失败 - 哨位: {positionName}, " +
+                                           $"全局时段: {globalPeriodIdx}, 人员: {failedPersonName}, 继续回溯");
+                            }
+                            else
+                            {
+                                _logger.Log($"候选人员分配失败 - 哨位: {positionName}, 时段: {record.PeriodIdx}, " +
+                                           $"人员: {failedPersonName}, 继续回溯");
+                            }
                         }
-                        return await Backtrack(date, progress, cancellationToken);
+                        return await Backtrack(date, progress, cancellationToken, periodMapper);
                     }
                 }
                 else
@@ -467,14 +526,26 @@ namespace AutoScheduling3.SchedulingEngine.Core
                     if (_config.LogBacktracking)
                     {
                         var positionName = _context.Positions[record.PositionIdx].Name;
-                        _logger.Log($"所有候选已尝试 - 哨位: {positionName}, 时段: {record.PeriodIdx}, " +
-                                   $"候选总数: {record.Candidates.Count}, 继续回溯到更早决策点");
+                        
+                        if (periodMapper != null)
+                        {
+                            int globalPeriodIdx = periodMapper.ToGlobalPeriod(record.Date, record.PeriodIdx);
+                            var (dayIndex, localPeriod) = periodMapper.ToLocalPeriod(globalPeriodIdx);
+                            _logger.Log($"所有候选已尝试 - 哨位: {positionName}, " +
+                                       $"全局时段: {globalPeriodIdx} (第{dayIndex + 1}天 时段{localPeriod}), " +
+                                       $"候选总数: {record.Candidates.Count}, 继续回溯到更早决策点");
+                        }
+                        else
+                        {
+                            _logger.Log($"所有候选已尝试 - 哨位: {positionName}, 时段: {record.PeriodIdx}, " +
+                                       $"候选总数: {record.Candidates.Count}, 继续回溯到更早决策点");
+                        }
                     }
                     
                     _statistics.RecordBacktrack(record.Depth, false);
                     
                     // 递归回溯
-                    return await Backtrack(date, progress, cancellationToken);
+                    return await Backtrack(date, progress, cancellationToken, periodMapper);
                 }
             }
             finally
@@ -482,6 +553,30 @@ namespace AutoScheduling3.SchedulingEngine.Core
                 _backtrackingTimer.Stop();
                 _statistics.BacktrackingTimeMs = _backtrackingTimer.ElapsedMilliseconds;
             }
+        }
+
+        /// <summary>
+        /// 执行全局回溯操作（支持跨日回溯）
+        /// 这是 Backtrack 方法的便捷包装，用于全局模式
+        /// 对应需求: 2.1, 2.2, 2.3, 2.4, 2.5
+        /// </summary>
+        /// <param name="periodMapper">时段映射器，用于全局时段索引转换</param>
+        /// <param name="progress">进度报告</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>回溯是否成功</returns>
+        public async Task<bool> BacktrackGlobal(
+            PeriodMapper periodMapper,
+            IProgress<SchedulingProgressReport>? progress,
+            CancellationToken cancellationToken = default)
+        {
+            if (periodMapper == null)
+            {
+                throw new ArgumentNullException(nameof(periodMapper));
+            }
+
+            // 调用统一的 Backtrack 方法，传入 periodMapper 以启用全局模式
+            // date 参数在全局模式下会从 record.Date 获取，这里传入默认值
+            return await Backtrack(DateTime.MinValue, progress, cancellationToken, periodMapper);
         }
 
         /// <summary>
@@ -509,8 +604,8 @@ namespace AutoScheduling3.SchedulingEngine.Core
         /// </summary>
         private void RestoreState(StateSnapshot snapshot, DateTime date)
         {
-            var candidateCounts = _mrvStrategy.GetCandidateCountsReference();
-            var assignedFlags = _mrvStrategy.GetAssignedFlagsReference();
+            var candidateCounts = _schedulingStrategy.GetCandidateCountsReference();
+            var assignedFlags = _schedulingStrategy.GetAssignedFlagsReference();
 
             snapshot.RestoreToTensor(
                 _tensor,
@@ -533,7 +628,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
 
             // 执行分配
             _context.RecordAssignment(date, periodIdx, positionIdx, personIdx);
-            _mrvStrategy.MarkAsAssigned(positionIdx, periodIdx);
+            _schedulingStrategy.MarkAsAssigned(positionIdx, periodIdx);
 
             // 更新张量约束
             _tensor.SetOthersInfeasibleForSlot(positionIdx, periodIdx, personIdx);
@@ -546,7 +641,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
             ApplyNightShiftUniquenessConstraint(personIdx, periodIdx);
 
             // 更新MRV策略的候选计数
-            _mrvStrategy.UpdateCandidateCountsAfterAssignment(positionIdx, periodIdx, personIdx);
+            _schedulingStrategy.UpdateCandidateCountsAfterAssignment(positionIdx, periodIdx, personIdx);
 
             return true;
         }
@@ -568,12 +663,10 @@ namespace AutoScheduling3.SchedulingEngine.Core
         /// </summary>
         private void ApplyNightShiftUniquenessConstraint(int personIdx, int periodIdx)
         {
-            // 夜哨时段：23:00-01:00, 01:00-03:00, 03:00-05:00, 05:00-07:00
-            int[] nightPeriods = { 11, 0, 1, 2 };
-
-            if (nightPeriods.Contains(periodIdx))
+            // 夜哨时段：22:00-00:00, 00:00-02:00, 02:00-04:00, 04:00-06:00
+            if (SchedulingConstants.NightShiftPeriods.Contains(periodIdx))
             {
-                foreach (var np in nightPeriods)
+                foreach (var np in SchedulingConstants.NightShiftPeriods)
                 {
                     if (np != periodIdx)
                         _tensor.SetPersonInfeasibleForPeriod(personIdx, np);
@@ -681,11 +774,38 @@ namespace AutoScheduling3.SchedulingEngine.Core
         }
 
         /// <summary>
+        /// 报告全局回溯进度
+        /// 对应需求: 8.3
+        /// </summary>
+        private void ReportGlobalBacktrackProgress(
+            IProgress<SchedulingProgressReport>? progress, 
+            int depth, 
+            int globalPeriodIdx, 
+            bool success)
+        {
+            if (progress == null) return;
+
+            var report = new SchedulingProgressReport
+            {
+                CurrentStage = SchedulingStage.Backtracking,
+                StageDescription = success 
+                    ? $"全局回溯成功 (深度={depth}, 全局时段={globalPeriodIdx})" 
+                    : $"全局回溯中 (深度={depth}, 全局时段={globalPeriodIdx})",
+                CurrentBacktrackDepth = depth,
+                BacktrackingStats = _statistics,
+                IsGlobalScheduling = true,
+                GlobalPeriodIndex = globalPeriodIdx
+            };
+
+            progress.Report(report);
+        }
+
+        /// <summary>
         /// 获取MRV策略的候选计数（用于创建快照）
         /// </summary>
         private int[,] GetMRVCandidateCounts()
         {
-            return _mrvStrategy.GetCandidateCountsCopy();
+            return _schedulingStrategy.GetCandidateCountsCopy();
         }
 
         /// <summary>
@@ -693,7 +813,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
         /// </summary>
         private bool[,] GetMRVAssignedFlags()
         {
-            return _mrvStrategy.GetAssignedFlagsCopy();
+            return _schedulingStrategy.GetAssignedFlagsCopy();
         }
 
         /// <summary>
@@ -705,7 +825,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
             // 当分配栈为空且仍存在未分配时段时，判定为无解
             if (_assignmentStack.IsEmpty)
             {
-                var unassignedSlots = _mrvStrategy.GetUnassignedSlots();
+                var unassignedSlots = _schedulingStrategy.GetUnassignedSlots();
                 return unassignedSlots.Count > 0;
             }
             
@@ -731,7 +851,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
             report.AssignedSlots = _context.Assignments.Count;
 
             // 收集未分配时段信息
-            var unassignedSlots = _mrvStrategy.GetUnassignedSlots();
+            var unassignedSlots = _schedulingStrategy.GetUnassignedSlots();
             foreach (var (posIdx, periodIdx) in unassignedSlots)
             {
                 var position = _context.Positions[posIdx];
@@ -811,8 +931,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
             }
 
             // 检查时段类型
-            int[] nightPeriods = { 11, 0, 1, 2 };
-            if (nightPeriods.Contains(periodIdx))
+            if (SchedulingConstants.NightShiftPeriods.Contains(periodIdx))
             {
                 conflicts.Add("夜哨时段（可能受夜哨唯一约束影响）");
             }
@@ -993,7 +1112,6 @@ namespace AutoScheduling3.SchedulingEngine.Core
         private List<string> VerifyNightShiftUniqueness(DateTime date)
         {
             var violations = new List<string>();
-            int[] nightPeriods = { 11, 0, 1, 2 };
 
             if (!_context.Assignments.TryGetValue(date, out var assignments))
                 return violations;
@@ -1001,7 +1119,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
             // 统计每个人员在夜哨时段的分配次数
             var nightShiftCounts = new Dictionary<int, List<int>>();
 
-            foreach (var nightPeriod in nightPeriods)
+            foreach (var nightPeriod in SchedulingConstants.NightShiftPeriods)
             {
                 for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
                 {
@@ -1213,3 +1331,4 @@ namespace AutoScheduling3.SchedulingEngine.Core
         }
     }
 }
+

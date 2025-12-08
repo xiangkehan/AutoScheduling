@@ -6,7 +6,7 @@
 
 ### 第一阶段: 核心组件
 
-- [ ] 1. 实现时段映射工具类
+- [x] 1. 实现时段映射工具类
   - 在 `SchedulingEngine/Core/` 目录创建 `PeriodMapper.cs` 文件
   - 实现 `ToGlobalPeriod(dayIndex, localPeriod)` 方法
   - 实现 `ToLocalPeriod(globalPeriod)` 方法
@@ -18,7 +18,7 @@
   - **Property 5: 时段映射双射性**
   - **Validates: Requirements 5.1, 5.2**
 
-- [ ] 2. 扩展FeasibilityTensor支持全局时段
+- [x] 2. 扩展FeasibilityTensor支持全局时段
   - 验证现有构造函数已支持可变 `periodCount` 参数（已支持）
   - 在 `FeasibilityTensor` 类中添加 `GetMemoryUsageBytes()` 方法
   - 添加 `IsMemoryExceeded(thresholdMB)` 方法
@@ -29,7 +29,7 @@
   - **Property 6: 内存占用可预测性**
   - **Validates: Requirements 4.1, 4.2**
 
-- [ ] 3. 实现全局MRV策略
+- [x] 3. 实现全局MRV策略
   - 在 `SchedulingEngine/Strategies/` 目录创建 `GlobalMRVStrategy.cs` 文件
   - 实现构造函数接受 `FeasibilityTensor`, `SchedulingContext`, `PeriodMapper`
   - 实现 `SelectNextSlot()` 返回 `(positionIdx, globalPeriodIdx)`
@@ -43,7 +43,7 @@
   - **Property 3: 全局MRV最优性**
   - **Validates: Requirements 3.1**
 
-- [ ] 4. 实现跨日约束验证器
+- [x] 4. 实现跨日约束验证器
   - 在 `SchedulingEngine/Core/` 目录创建 `CrossDayConstraintValidator.cs` 文件
   - 实现构造函数接受 `SchedulingContext` 和 `PeriodMapper`
   - 实现 `ValidateCrossDayRestConstraint(personIdx, globalPeriodIdx)` 方法
@@ -59,7 +59,7 @@
   - **Property 2: 跨日夜哨唯一性**
   - **Validates: Requirements 1.5**
 
-- [ ] 5. 创建全局调度配置类
+- [x] 5. 创建全局调度配置类
   - 在 `SchedulingEngine/Config/` 目录创建 `GlobalSchedulingConfig.cs` 文件
   - 添加 `EnableGlobalScheduling` 配置项（默认 true）
   - 添加 `MaxDaysForGlobalMode` 配置项（默认 30）
@@ -68,7 +68,7 @@
   - 在 `GreedyScheduler.cs` 中的 `GreedySchedulerConfig` 类添加 `GlobalScheduling` 属性
   - _Requirements: 6.1, 9.1, 9.4, 11.1, 11.3_
 
-- [ ] 6. 扩展SchedulingProgressReport
+- [x] 6. 扩展SchedulingProgressReport
   - 在 `DTOs/SchedulingProgressReport.cs` 中添加 `GlobalPeriodIndex` 字段（可空 int）
   - 添加 `TotalGlobalPeriods` 字段（可空 int）
   - 添加 `IsGlobalScheduling` 字段（bool，默认 false）

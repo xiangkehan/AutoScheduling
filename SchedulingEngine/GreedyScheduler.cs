@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoScheduling3.Constants;
 using AutoScheduling3.Data.Logging;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Models;
@@ -28,6 +29,9 @@ namespace AutoScheduling3.SchedulingEngine
         // 新增的约束处理组件 - 对应需求5.1-5.8, 6.1-6.4
         private ConstraintValidator? _constraintValidator;
         private SoftConstraintCalculator? _softConstraintCalculator;
+
+        // 全局调度组件 - 对应需求1-12
+        private PeriodMapper? _periodMapper;
 
         // 算法配置参数
         private readonly GreedySchedulerConfig _config;
@@ -58,8 +62,8 @@ namespace AutoScheduling3.SchedulingEngine
         }
 
         /// <summary>
-        /// 执行排班算法（支持进度报告和取消） - 对应需求1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5
-        /// 按照先哨位再时段的顺序进行人员分配
+        /// 执行排班算法（支持进度报告和取消） - 对应需求1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5, 9.1, 9.2, 9.3
+        /// 根据配置选择全局调度或按天调度模式
         /// </summary>
         public async Task<Schedule> ExecuteAsync(IProgress<SchedulingProgressReport>? progress, CancellationToken cancellationToken = default)
         {
@@ -79,6 +83,29 @@ namespace AutoScheduling3.SchedulingEngine
 
             // 预处理阶段
             await PreprocessAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // 检查是否启用全局调度模式 - 对应需求9.1, 9.2, 9.3
+            if (_config.GlobalScheduling.EnableGlobalScheduling)
+            {
+                _logger.Log($"使用全局调度模式 (天数: {totalDays})");
+                return await ExecuteGlobalSchedulingAsync(progress, cancellationToken);
+            }
+            else
+            {
+                _logger.Log($"使用按天调度模式 (天数: {totalDays})");
+                return await ExecutePerDaySchedulingAsync(progress, cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// 执行按天调度模式（原有逻辑） - 对应需求9.2
+        /// </summary>
+        private async Task<Schedule> ExecutePerDaySchedulingAsync(IProgress<SchedulingProgressReport>? progress, CancellationToken cancellationToken = default)
+        {
+            // 计算总时段数
+            int totalDays = (_context.EndDate.Date - _context.StartDate.Date).Days + 1;
+
             cancellationToken.ThrowIfCancellationRequested();
 
             // 报告加载数据阶段
@@ -168,6 +195,290 @@ namespace AutoScheduling3.SchedulingEngine
                 _config.WorkloadBalanceWeight);
 
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 执行全局调度
+        /// 对应需求1-12
+        /// </summary>
+        private async Task<Schedule> ExecuteGlobalSchedulingAsync(
+            IProgress<SchedulingProgressReport>? progress, 
+            CancellationToken cancellationToken)
+        {
+            int totalDays = (_context.EndDate.Date - _context.StartDate.Date).Days + 1;
+            
+            // 检查是否需要降级到按天模式 - 对应需求11.1
+            if (totalDays > _config.GlobalScheduling.MaxDaysForGlobalMode)
+            {
+                _logger.LogWarning($"排班天数({totalDays})超过阈值({_config.GlobalScheduling.MaxDaysForGlobalMode})，降级到按天模式");
+                return await FallbackToPerDayScheduling("排班天数超过阈值", progress, cancellationToken);
+            }
+
+            // 初始化全局组件
+            _periodMapper = new PeriodMapper(_context.StartDate, _context.EndDate);
+            int totalPeriods = _periodMapper.TotalPeriods;
+            
+            ReportProgress(progress, SchedulingStage.Initializing, 
+                $"正在初始化全局张量 ({totalDays}天 × 12时段 = {totalPeriods}时段)...", 0);
+
+            // 初始化全局张量 - 对应需求4.1, 4.2
+            _tensor = new FeasibilityTensor(
+                _context.Positions.Count, 
+                totalPeriods,  // 全局时段数
+                _context.Personals.Count,
+                _config.UseOptimizedTensor);
+
+            // 检查内存占用 - 对应需求11.3
+            long memoryMB = _tensor.GetMemoryUsageBytes() / (1024 * 1024);
+            if (memoryMB > _config.GlobalScheduling.MemoryThresholdMB)
+            {
+                _logger.LogWarning($"全局张量内存占用({memoryMB}MB)超过阈值({_config.GlobalScheduling.MemoryThresholdMB}MB)，降级到按天模式");
+                return await FallbackToPerDayScheduling("内存占用超过阈值", progress, cancellationToken);
+            }
+
+            ReportProgress(progress, SchedulingStage.InitializingTensor, 
+                $"全局张量初始化完成 (内存占用: {memoryMB}MB)...", 5);
+
+            // 初始化全局张量（使用哨位可用人员列表）
+            _tensor.InitializeWithAvailablePersonnel(_context.Positions, _context.PersonIdToIdx);
+
+            // 应用全局约束 - 对应需求1.1-1.5, 7.1-7.5
+            await ApplyGlobalConstraintsAsync(progress, cancellationToken);
+
+            // 应用手动指定（全局范围） - 对应需求5.8
+            await ApplyGlobalManualAssignmentsAsync(progress, cancellationToken);
+
+            // 初始化全局MRV策略 - 对应需求3.1-3.5
+            var globalMRV = new Strategies.GlobalMRVStrategy(_tensor, _context, _periodMapper);
+
+            // 执行全局贪心分配 - 对应需求2.1-2.5, 3.1-3.5
+            await PerformGlobalGreedyAssignmentsAsync(
+                globalMRV, progress, cancellationToken);
+
+            // 生成排班结果
+            return GenerateSchedule();
+        }
+
+        /// <summary>
+        /// 应用全局约束
+        /// 对应需求1.1-1.5, 7.1-7.5
+        /// </summary>
+        private async Task ApplyGlobalConstraintsAsync(
+            IProgress<SchedulingProgressReport>? progress, 
+            CancellationToken cancellationToken)
+        {
+            if (_tensor == null || _constraintValidator == null || _periodMapper == null) 
+                return;
+
+            var constraintViolations = new List<(int positionIdx, int periodIdx, int[] infeasiblePersons)>();
+
+            // 遍历所有全局时段
+            for (int globalPeriod = 0; globalPeriod < _periodMapper.TotalPeriods; globalPeriod++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                var (date, localPeriod) = _periodMapper.ToDateTime(globalPeriod);
+
+                for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
+                {
+                    var position = _context.Positions[posIdx];
+                    var infeasiblePersons = new List<int>();
+
+                    for (int personIdx = 0; personIdx < _context.Personals.Count; personIdx++)
+                    {
+                        int personId = _context.PersonIdxToId[personIdx];
+                        
+                        // 检查是否在可用人员列表中
+                        if (!position.AvailablePersonnelIds.Contains(personId))
+                        {
+                            infeasiblePersons.Add(personIdx);
+                            continue;
+                        }
+
+                        // 验证所有约束（包括跨日约束）
+                        if (!_constraintValidator.ValidateAllConstraints(personIdx, posIdx, localPeriod, date))
+                        {
+                            infeasiblePersons.Add(personIdx);
+                        }
+                    }
+
+                    if (infeasiblePersons.Count > 0)
+                    {
+                        constraintViolations.Add((posIdx, globalPeriod, infeasiblePersons.ToArray()));
+                    }
+                }
+
+                // 定期报告进度
+                if (globalPeriod % 12 == 0)
+                {
+                    int dayIndex = globalPeriod / 12;
+                    ReportProgress(progress, SchedulingStage.ApplyingConstraints,
+                        $"正在应用第 {dayIndex + 1} 天的约束...",
+                        5 + (globalPeriod * 10.0 / _periodMapper.TotalPeriods));
+                }
+            }
+
+            // 批量应用约束
+            if (constraintViolations.Count > 0)
+            {
+                _tensor.ApplyBatchConstraints(constraintViolations);
+            }
+
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 应用全局手动指定
+        /// 对应需求5.8
+        /// </summary>
+        private async Task ApplyGlobalManualAssignmentsAsync(
+            IProgress<SchedulingProgressReport>? progress,
+            CancellationToken cancellationToken)
+        {
+            if (_tensor == null || _constraintValidator == null || _periodMapper == null) 
+                return;
+
+            ReportProgress(progress, SchedulingStage.ApplyingManualAssignments,
+                "正在应用手动指定...", 15);
+
+            var manualAssignments = _context.ManualAssignments
+                .Where(m => m.IsEnabled)
+                .OrderBy(m => m.Date)
+                .ThenBy(m => m.PeriodIndex)
+                .ToList();
+
+            foreach (var manual in manualAssignments)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // 验证基础索引
+                if (!_context.PositionIdToIdx.TryGetValue(manual.PositionId, out int posIdx)) continue;
+                if (!_context.PersonIdToIdx.TryGetValue(manual.PersonalId, out int personIdx)) continue;
+                int periodIdx = manual.PeriodIndex;
+                if (periodIdx < 0 || periodIdx > 11) continue;
+
+                // 转换为全局时段索引
+                int globalPeriodIdx = _periodMapper.ToGlobalPeriod(manual.Date, periodIdx);
+
+                // 使用约束验证器检查手动指定的有效性
+                if (!_constraintValidator.ValidateManualAssignment(personIdx, posIdx, periodIdx, manual.Date))
+                {
+                    if (_config.LogConstraintViolations)
+                    {
+                        var violations = _constraintValidator.GetConstraintViolations(personIdx, posIdx, periodIdx, manual.Date);
+                        await LogConstraintViolationsAsync(manual, violations);
+                    }
+                    continue;
+                }
+
+                // 检查冲突
+                if (_context.GetAssignment(manual.Date, periodIdx, posIdx) >= 0)
+                    continue; // 已存在分配
+
+                // 检查人员时段唯一性
+                if (!_constraintValidator.ValidatePersonTimeSlotUniqueness(personIdx, periodIdx, posIdx, manual.Date))
+                    continue;
+
+                // 执行手动分配
+                await AssignPersonAsync(posIdx, periodIdx, personIdx, manual.Date, isManual: true);
+            }
+
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 执行全局贪心分配
+        /// 对应需求2.1-2.5, 3.1-3.5
+        /// </summary>
+        private async Task PerformGlobalGreedyAssignmentsAsync(
+            Strategies.GlobalMRVStrategy globalMRV,
+            IProgress<SchedulingProgressReport>? progress,
+            CancellationToken cancellationToken)
+        {
+            if (_periodMapper == null || _softConstraintCalculator == null) return;
+
+            int maxSlots = _tensor!.PositionCount * _periodMapper.TotalPeriods;
+            int processedSlots = 0;
+
+            for (int iteration = 0; iteration < maxSlots; iteration++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // 全局MRV选择 - 对应需求3.1
+                var (posIdx, globalPeriodIdx) = globalMRV.SelectNextSlot();
+                if (posIdx == -1 || globalPeriodIdx == -1)
+                {
+                    break; // 所有位置已分配或无可行分配
+                }
+
+                var (date, localPeriod) = _periodMapper.ToDateTime(globalPeriodIdx);
+
+                // 获取可行人员列表
+                var feasiblePersons = GetOptimizedFeasiblePersons(posIdx, localPeriod);
+                if (feasiblePersons.Length == 0)
+                {
+                    globalMRV.MarkAsAssigned(posIdx, globalPeriodIdx);
+                    continue; // 无可行人员，跳过此位置
+                }
+
+                // 使用软约束评分选择最优人员
+                int bestPersonIdx = _softConstraintCalculator.SelectBestPerson(feasiblePersons, localPeriod, date);
+                if (bestPersonIdx >= 0)
+                {
+                    // 执行分配
+                    await AssignPersonAsync(posIdx, localPeriod, bestPersonIdx, date);
+                    processedSlots++;
+                    _completedAssignments++;
+
+                    // 报告进度
+                    if (processedSlots % 10 == 0)
+                    {
+                        int dayIndex = globalPeriodIdx / 12;
+                        var positionName = _context.Positions[posIdx].Name;
+                        ReportProgress(progress, SchedulingStage.GreedyAssignment,
+                            $"正在分配: 第{dayIndex + 1}天 {positionName} - 时段{localPeriod}",
+                            15 + (_completedAssignments * 80.0 / maxSlots));
+                    }
+
+                    // 定期让出控制权
+                    if (processedSlots % _config.YieldInterval == 0)
+                    {
+                        await Task.Yield();
+                    }
+                }
+                else
+                {
+                    globalMRV.MarkAsAssigned(posIdx, globalPeriodIdx);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 降级到按天调度模式
+        /// 对应需求9.2, 11.3
+        /// </summary>
+        private async Task<Schedule> FallbackToPerDayScheduling(
+            string reason,
+            IProgress<SchedulingProgressReport>? progress,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogWarning($"降级到按天调度模式: {reason}");
+            
+            // 通知用户
+            if (progress != null)
+            {
+                var report = new SchedulingProgressReport
+                {
+                    CurrentStage = SchedulingStage.Initializing,
+                    StageDescription = $"降级到按天模式: {reason}",
+                    ProgressPercentage = 0,
+                    Warnings = new List<string> { $"已降级到按天调度模式: {reason}" }
+                };
+                progress.Report(report);
+            }
+
+            // 执行按天调度
+            return await ExecutePerDaySchedulingAsync(progress, cancellationToken);
         }
 
         /// <summary>
@@ -715,12 +1026,10 @@ namespace AutoScheduling3.SchedulingEngine
         {
             if (_tensor == null) return;
 
-            // 夜哨时段：23:00-01:00, 01:00-03:00, 03:00-05:00, 05:00-07:00
-            int[] nightPeriods = { 11, 0, 1, 2 };
-
-            if (nightPeriods.Contains(periodIdx))
+            // 夜哨时段：22:00-00:00, 00:00-02:00, 02:00-04:00, 04:00-06:00
+            if (SchedulingConstants.NightShiftPeriods.Contains(periodIdx))
             {
-                foreach (var np in nightPeriods)
+                foreach (var np in SchedulingConstants.NightShiftPeriods)
                 {
                     if (np != periodIdx)
                         _tensor.SetPersonInfeasibleForPeriod(personIdx, np);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AutoScheduling3.Constants;
 using AutoScheduling3.DTOs;
 using AutoScheduling3.Models;
 using AutoScheduling3.Models.Constraints;
@@ -40,14 +41,12 @@ namespace AutoScheduling3.SchedulingEngine.Core
         /// <returns>是否满足约束</returns>
         public bool ValidateNightShiftUniqueness(int personIdx, int periodIdx, DateTime date)
         {
-            // 夜哨时段定义：23:00-01:00, 01:00-03:00, 03:00-05:00, 05:00-07:00 (时段11, 0, 1, 2)
-            int[] nightPeriods = { 11, 0, 1, 2 };
-            
-            if (!nightPeriods.Contains(periodIdx))
+            // 夜哨时段定义：22:00-00:00, 00:00-02:00, 02:00-04:00, 04:00-06:00 (时段11, 0, 1, 2)
+            if (!SchedulingConstants.NightShiftPeriods.Contains(periodIdx))
                 return true; // 非夜哨时段，无需检查
 
             // 检查该人员在同一晚上是否已有其他夜哨分配
-            foreach (var nightPeriod in nightPeriods)
+            foreach (var nightPeriod in SchedulingConstants.NightShiftPeriods)
             {
                 if (nightPeriod == periodIdx) continue;
 
@@ -84,7 +83,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
             }
 
             // 检查后一个时段
-            if (periodIdx < 11)
+            if (periodIdx < SchedulingConstants.MaxPeriodIndex)
             {
                 for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
                 {
@@ -107,7 +106,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
             }
 
             // 跨日检查：如果是最后时段(11)，检查后一天的第一个时段(0)
-            if (periodIdx == 11)
+            if (periodIdx == SchedulingConstants.MaxPeriodIndex)
             {
                 var nextDate = date.AddDays(1);
                 for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
