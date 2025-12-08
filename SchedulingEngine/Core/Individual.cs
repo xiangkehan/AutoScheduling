@@ -96,22 +96,6 @@ public class Individual
     /// <returns>排班方案</returns>
     public Schedule ToSchedule(SchedulingContext context)
     {
-        // 调试：输出Genes字典中的所有日期
-        System.Diagnostics.Debug.WriteLine($"[Individual.ToSchedule] Genes字典包含 {Genes.Count} 个日期:");
-        foreach (var date in Genes.Keys.OrderBy(d => d))
-        {
-            var assignedCount = 0;
-            var assignments = Genes[date];
-            for (int p = 0; p < 12; p++)
-            {
-                for (int x = 0; x < assignments.GetLength(1); x++)
-                {
-                    if (assignments[p, x] >= 0) assignedCount++;
-                }
-            }
-            System.Diagnostics.Debug.WriteLine($"  {date:yyyy-MM-dd}: {assignedCount} 个分配");
-        }
-        
         var schedule = new Schedule
         {
             StartDate = context.StartDate,
