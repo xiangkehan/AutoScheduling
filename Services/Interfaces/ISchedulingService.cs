@@ -14,6 +14,15 @@ namespace AutoScheduling3.Services.Interfaces;
 public interface ISchedulingService
 {
  /// <summary>
+ /// 草稿列表变化事件
+ /// </summary>
+ event EventHandler? DraftsChanged;
+
+ /// <summary>
+ /// 历史记录变化事件
+ /// </summary>
+ event EventHandler? HistoryChanged;
+ /// <summary>
  /// 执行排班算法
  /// </summary>
  Task<ScheduleDto> ExecuteSchedulingAsync(SchedulingRequestDto request, CancellationToken cancellationToken = default);

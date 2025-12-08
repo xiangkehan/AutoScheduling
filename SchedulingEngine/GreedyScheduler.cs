@@ -270,6 +270,10 @@ namespace AutoScheduling3.SchedulingEngine
             if (_tensor == null || _constraintValidator == null || _periodMapper == null) 
                 return;
 
+            // 初始化跨日约束验证器
+            var crossDayValidator = new CrossDayConstraintValidator(_context, _periodMapper);
+            _constraintValidator.SetCrossDayValidator(crossDayValidator);
+
             var constraintViolations = new List<(int positionIdx, int periodIdx, int[] infeasiblePersons)>();
 
             // 遍历所有全局时段
@@ -296,7 +300,7 @@ namespace AutoScheduling3.SchedulingEngine
                         }
 
                         // 验证所有约束（包括跨日约束）
-                        if (!_constraintValidator.ValidateAllConstraints(personIdx, posIdx, localPeriod, date))
+                        if (!_constraintValidator.ValidateAllConstraints(personIdx, posIdx, localPeriod, date, globalPeriod))
                         {
                             infeasiblePersons.Add(personIdx);
                         }
@@ -413,8 +417,9 @@ namespace AutoScheduling3.SchedulingEngine
 
                 var (date, localPeriod) = _periodMapper.ToDateTime(globalPeriodIdx);
 
-                // 获取可行人员列表
-                var feasiblePersons = GetOptimizedFeasiblePersons(posIdx, localPeriod);
+                // 获取可行人员列表（使用全局时段索引）
+                var feasiblePersons = GetOptimizedFeasiblePersonsGlobal(posIdx, globalPeriodIdx);
+                
                 if (feasiblePersons.Length == 0)
                 {
                     globalMRV.MarkAsAssigned(posIdx, globalPeriodIdx);
@@ -425,8 +430,8 @@ namespace AutoScheduling3.SchedulingEngine
                 int bestPersonIdx = _softConstraintCalculator.SelectBestPerson(feasiblePersons, localPeriod, date);
                 if (bestPersonIdx >= 0)
                 {
-                    // 执行分配
-                    await AssignPersonAsync(posIdx, localPeriod, bestPersonIdx, date);
+                    // 执行分配（全局模式）
+                    await AssignPersonGlobalAsync(posIdx, globalPeriodIdx, bestPersonIdx, date, globalMRV);
                     processedSlots++;
                     _completedAssignments++;
 
@@ -524,6 +529,33 @@ namespace AutoScheduling3.SchedulingEngine
                 {
                     // 检查张量中的可行性状态
                     if (_tensor[positionIdx, periodIdx, personIdx])
+                    {
+                        feasiblePersons.Add(personIdx);
+                    }
+                }
+            }
+
+            return feasiblePersons.ToArray();
+        }
+
+        /// <summary>
+        /// 获取优化的可行人员列表（全局模式）
+        /// 使用全局时段索引从张量中获取可行人员
+        /// </summary>
+        private int[] GetOptimizedFeasiblePersonsGlobal(int positionIdx, int globalPeriodIdx)
+        {
+            if (_tensor == null) return Array.Empty<int>();
+
+            var position = _context.Positions[positionIdx];
+            var feasiblePersons = new List<int>();
+
+            // 仅检查哨位可用人员列表中的人员
+            foreach (var personnelId in position.AvailablePersonnelIds)
+            {
+                if (_context.PersonIdToIdx.TryGetValue(personnelId, out int personIdx))
+                {
+                    // 检查张量中的可行性状态（使用全局时段索引）
+                    if (_tensor[positionIdx, globalPeriodIdx, personIdx])
                     {
                         feasiblePersons.Add(personIdx);
                     }
@@ -1006,6 +1038,49 @@ namespace AutoScheduling3.SchedulingEngine
         }
 
         /// <summary>
+        /// 执行分配并更新约束（全局模式）
+        /// 对应需求1-12
+        /// </summary>
+        private async Task AssignPersonGlobalAsync(
+            int positionIdx, 
+            int globalPeriodIdx, 
+            int personIdx, 
+            DateTime date, 
+            Strategies.GlobalMRVStrategy globalMRV,
+            bool isManual = false)
+        {
+            if (_tensor == null || _periodMapper == null) return;
+
+            var (_, localPeriod) = _periodMapper.ToDateTime(globalPeriodIdx);
+
+            // 记录分配
+            _context.RecordAssignment(date, localPeriod, positionIdx, personIdx);
+            globalMRV.MarkAsAssigned(positionIdx, globalPeriodIdx);
+
+            // 更新张量约束（使用全局时段索引）
+            _tensor.SetOthersInfeasibleForSlot(positionIdx, globalPeriodIdx, personIdx);
+            _tensor.SetOtherPositionsInfeasibleForPersonPeriod(personIdx, globalPeriodIdx, positionIdx);
+
+            // 应用全局时段不连续约束（支持跨日）
+            if (!isManual)
+            {
+                ApplyNonConsecutiveConstraintGlobal(personIdx, globalPeriodIdx);
+            }
+
+            // 应用全局夜哨唯一约束（支持跨日）
+            ApplyNightShiftUniquenessConstraintGlobal(personIdx, globalPeriodIdx);
+
+            // 更新全局MRV策略的候选计数
+            globalMRV.UpdateCandidateCountsAfterAssignment(positionIdx, globalPeriodIdx, personIdx);
+
+            // 异步操作：记录分配日志（如果启用）
+            if (_config.EnableAssignmentLogging)
+            {
+                await LogAssignmentAsync(positionIdx, localPeriod, personIdx, date, isManual);
+            }
+        }
+
+        /// <summary>
         /// 应用时段不连续约束 - 对应需求5.2
         /// </summary>
         private void ApplyNonConsecutiveConstraint(int personIdx, int periodIdx)
@@ -1034,6 +1109,73 @@ namespace AutoScheduling3.SchedulingEngine
                     if (np != periodIdx)
                         _tensor.SetPersonInfeasibleForPeriod(personIdx, np);
                 }
+            }
+        }
+
+        /// <summary>
+        /// 应用全局时段不连续约束（支持跨日）
+        /// 对应需求1.1, 1.3, 1.4, 10.3
+        /// </summary>
+        private void ApplyNonConsecutiveConstraintGlobal(int personIdx, int globalPeriodIdx)
+        {
+            if (_tensor == null || _periodMapper == null) return;
+
+            // 边界检查
+            if (!_periodMapper.IsValidGlobalPeriod(globalPeriodIdx))
+                return;
+
+            // 前一个时段（可能跨日）
+            if (globalPeriodIdx > 0)
+            {
+                int prevGlobalPeriod = globalPeriodIdx - 1;
+                _tensor.SetPersonInfeasibleForPeriod(personIdx, prevGlobalPeriod);
+            }
+
+            // 后一个时段（可能跨日）
+            if (globalPeriodIdx < _periodMapper.TotalPeriods - 1)
+            {
+                int nextGlobalPeriod = globalPeriodIdx + 1;
+                _tensor.SetPersonInfeasibleForPeriod(personIdx, nextGlobalPeriod);
+            }
+        }
+
+        /// <summary>
+        /// 应用全局夜哨唯一约束（支持跨日夜哨）
+        /// 对应需求1.5, 7.3, 10.3
+        /// </summary>
+        private void ApplyNightShiftUniquenessConstraintGlobal(int personIdx, int globalPeriodIdx)
+        {
+            if (_tensor == null || _periodMapper == null) return;
+
+            // 边界检查
+            if (!_periodMapper.IsValidGlobalPeriod(globalPeriodIdx))
+                return;
+
+            var (dayIndex, localPeriod) = _periodMapper.ToLocalPeriod(globalPeriodIdx);
+
+            // 夜哨时段：11, 0, 1, 2
+            if (!SchedulingConstants.NightShiftPeriods.Contains(localPeriod))
+                return;
+
+            // 识别跨日的夜哨周期
+            int nightCycleDay = localPeriod == SchedulingConstants.MaxPeriodIndex ? dayIndex : dayIndex - 1;
+
+            // 更新同一夜哨周期的其他时段
+            foreach (var np in SchedulingConstants.NightShiftPeriods)
+            {
+                int targetDay = np == SchedulingConstants.MaxPeriodIndex ? nightCycleDay : nightCycleDay + 1;
+
+                // 边界条件检查
+                if (!_periodMapper.IsValidDayIndex(targetDay))
+                    continue;
+
+                int targetGlobalPeriod = _periodMapper.ToGlobalPeriod(targetDay, np);
+
+                // 跳过当前时段
+                if (targetGlobalPeriod == globalPeriodIdx)
+                    continue;
+
+                _tensor.SetPersonInfeasibleForPeriod(personIdx, targetGlobalPeriod);
             }
         }
 

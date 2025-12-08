@@ -32,6 +32,10 @@ public class SchedulingService : ISchedulingService
     private readonly CachedConfigValidator _configValidator;
     private readonly string _configFilePath;
 
+    // 事件声明
+    public event EventHandler? DraftsChanged;
+    public event EventHandler? HistoryChanged;
+
     public SchedulingService(
         IPersonalRepository personalRepo, 
         IPositionRepository positionRepo, 
@@ -471,12 +475,19 @@ public class SchedulingService : ISchedulingService
         await ValidateScheduleForConfirmationAsync(buffer.Schedule);
         
         await _historyMgmt.ConfirmBufferScheduleAsync(buffer.BufferId);
+        
+        // 触发事件通知
+        DraftsChanged?.Invoke(this, EventArgs.Empty);
+        HistoryChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public async Task DeleteDraftAsync(int id)
     {
         // 直接通过 ScheduleId 删除，避免加载所有草稿数据
         await _historyMgmt.DeleteBufferScheduleByScheduleIdAsync(id);
+        
+        // 触发事件通知
+        DraftsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -508,6 +519,8 @@ public class SchedulingService : ISchedulingService
             }
             
             System.Diagnostics.Debug.WriteLine($"=== 确认草稿并清空其他草稿操作完成 ===");
+            
+            // 触发事件通知（已在 ConfirmScheduleAsync 中触发，这里无需重复）
         }
         catch (Exception ex)
         {
@@ -1172,6 +1185,10 @@ public class SchedulingService : ISchedulingService
             await ValidateScheduleForConfirmationAsync(buffer.Schedule);
             await _historyMgmt.ConfirmBufferScheduleAsync(buffer.BufferId);
         }
+        
+        // 触发事件通知
+        DraftsChanged?.Invoke(this, EventArgs.Empty);
+        HistoryChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -1192,6 +1209,9 @@ public class SchedulingService : ISchedulingService
         if (expiredBuffers.Any())
         {
             System.Diagnostics.Debug.WriteLine($"已清理 {expiredBuffers.Count} 个过期草稿排班");
+            
+            // 触发事件通知
+            DraftsChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -2028,6 +2048,9 @@ public class SchedulingService : ISchedulingService
                 var draftId = await _historyMgmt.AddToBufferAsync(schedule);
                 scheduleDto.Id = draftId;
             }
+            
+            // 触发事件通知
+            DraftsChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {

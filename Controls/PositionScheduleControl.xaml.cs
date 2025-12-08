@@ -602,7 +602,14 @@ namespace AutoScheduling3.Controls
                         isHighlighted = highlightKeys.Contains(shiftKey);
                     }
                     
-                    // 2. 兼容旧的坐标格式
+                    // 2. 未分配冲突的特殊格式：unassigned_{positionId}_{date}_{period}
+                    if (!isHighlighted && ScheduleData != null && cellTag.CellData != null)
+                    {
+                        var unassignedKey = $"unassigned_{ScheduleData.PositionId}_{cellTag.CellData.Date:yyyyMMdd}_{cellTag.CellData.PeriodIndex}";
+                        isHighlighted = highlightKeys.Contains(unassignedKey);
+                    }
+                    
+                    // 3. 兼容旧的坐标格式
                     if (!isHighlighted)
                     {
                         isHighlighted = highlightKeys.Contains(cellTag.CellKey);

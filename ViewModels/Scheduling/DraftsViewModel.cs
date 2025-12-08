@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace AutoScheduling3.ViewModels.Scheduling
 {
-    public partial class DraftsViewModel : ObservableObject
+    public partial class DraftsViewModel : ObservableObject, IDisposable
     {
         private readonly ISchedulingService _schedulingService;
         private readonly DialogService _dialogService;
@@ -80,6 +80,27 @@ namespace AutoScheduling3.ViewModels.Scheduling
             ToggleFiltersCommand = new RelayCommand(ToggleFilters);
             ApplyFiltersCommand = new AsyncRelayCommand(ApplyFiltersAsync);
             ClearFiltersCommand = new AsyncRelayCommand(ClearFiltersAsync);
+
+            // 订阅草稿变化事件
+            _schedulingService.DraftsChanged += OnDraftsChanged;
+        }
+
+        private async void OnDraftsChanged(object? sender, EventArgs e)
+        {
+            // 在 UI 线程上刷新草稿列表
+            var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            if (dispatcherQueue != null)
+            {
+                dispatcherQueue.TryEnqueue(async () =>
+                {
+                    await LoadDraftsAsync();
+                });
+            }
+            else
+            {
+                // 如果已经在 UI 线程上，直接执行
+                await LoadDraftsAsync();
+            }
         }
 
         private async Task LoadDraftsAsync()
@@ -232,6 +253,12 @@ namespace AutoScheduling3.ViewModels.Scheduling
             FilterMode = null;
             FilterResumableOnly = false;
             await LoadPageAsync(0);
+        }
+
+        public void Dispose()
+        {
+            // 取消订阅事件，避免内存泄漏
+            _schedulingService.DraftsChanged -= OnDraftsChanged;
         }
     }
 }
