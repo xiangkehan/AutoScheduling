@@ -192,7 +192,7 @@
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1"
-                            CornerRadius="{StaticResource ControlCornerRadius}"
+                            CornerRadius="{StaticResource ControlCornerRadius}" 
                             Padding="16"
                             AutomationProperties.Name="阶段历史卡片">
                         <StackPanel Spacing="12">
@@ -222,18 +222,18 @@
                                             
                                             <!-- 状态图标 -->
                                             <TextBlock Grid.Column="0"
-                                                       Text="{x:Bind StatusIcon}"
+                                                       Text="{x:Bind StatusIcon, Mode=OneWay}"
                                                        FontFamily="Segoe MDL2 Assets"
                                                        FontSize="16"
                                                        VerticalAlignment="Center">
                                                 <TextBlock.Foreground>
-                                                    <SolidColorBrush Color="{x:Bind StatusColor}"/>
+                                                    <SolidColorBrush Color="{x:Bind StatusColor, Mode=OneWay}"/>
                                                 </TextBlock.Foreground>
                                             </TextBlock>
                                             
                                             <!-- 阶段名称 -->
                                             <TextBlock Grid.Column="1"
-                                                       Text="{x:Bind StageName}"
+                                                       Text="{x:Bind StageName, Mode=OneWay}"
                                                        VerticalAlignment="Center"
                                                        TextWrapping="NoWrap"
                                                        TextTrimming="CharacterEllipsis"/>

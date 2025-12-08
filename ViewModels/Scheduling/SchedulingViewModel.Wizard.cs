@@ -21,8 +21,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             if (CurrentStep < 6 && CanGoNext())
             {
-                System.Diagnostics.Debug.WriteLine($"=== NextStep: 从步骤 {CurrentStep} 前进 ===");
-                
                 // 如果模板已应用，并且在第1步，直接跳到第6步（摘要）
                 if (TemplateApplied && CurrentStep == 1)
                 {
@@ -34,9 +32,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     CurrentStep++;
                 }
 
-                System.Diagnostics.Debug.WriteLine($"=== NextStep: 当前步骤 {CurrentStep} ===");
-                System.Diagnostics.Debug.WriteLine($"=== SelectedPersonnels 数量: {SelectedPersonnels.Count} ===");
-
                 if (CurrentStep == 4 && !IsLoadingConstraints && FixedPositionRules.Count == 0)
                 {
                     _ = LoadConstraintsAsync();
@@ -46,22 +41,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     BuildSummarySections();
                 }
                 RefreshCommandStates();
-                
-                System.Diagnostics.Debug.WriteLine($"=== NextStep 完成，SelectedPersonnels 数量: {SelectedPersonnels.Count} ===");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"=== NextStep 被阻止: CurrentStep={CurrentStep}, CanGoNext={CanGoNext()} ===");
-                if (!CanGoNext())
-                {
-                    // 输出详细的验证失败原因
-                    if (CurrentStep == 1 && !ValidateStep1(out var e1))
-                        System.Diagnostics.Debug.WriteLine($"步骤1验证失败: {e1}");
-                    else if (CurrentStep == 2 && !ValidateStep2(out var e2))
-                        System.Diagnostics.Debug.WriteLine($"步骤2验证失败: {e2}");
-                    else if (CurrentStep == 3 && !ValidateStep3(out var e3))
-                        System.Diagnostics.Debug.WriteLine($"步骤3验证失败: {e3}");
-                }
             }
         }
 
@@ -155,27 +134,11 @@ namespace AutoScheduling3.ViewModels.Scheduling
         {
             var step6 = CurrentStep == 6;
             var notExecuting = !IsExecuting;
-            var step1Valid = ValidateStep1(out var step1Error);
-            var step2Valid = ValidateStep2(out var step2Error);
-            var step3Valid = ValidateStep3(out var step3Error);
+            var step1Valid = ValidateStep1(out _);
+            var step2Valid = ValidateStep2(out _);
+            var step3Valid = ValidateStep3(out _);
             
-            var canExecute = step6 && notExecuting && step1Valid && step2Valid && step3Valid;
-            
-            // 只在步骤6且验证失败时输出调试信息
-            if (step6 && !canExecute)
-            {
-                System.Diagnostics.Debug.WriteLine($"=== 开始排班按钮被禁用 ===");
-                if (IsExecuting)
-                    System.Diagnostics.Debug.WriteLine($"原因: 正在执行排班");
-                if (!step1Valid)
-                    System.Diagnostics.Debug.WriteLine($"原因: 步骤1验证失败 - {step1Error}");
-                if (!step2Valid)
-                    System.Diagnostics.Debug.WriteLine($"原因: 步骤2验证失败 - {step2Error}");
-                if (!step3Valid)
-                    System.Diagnostics.Debug.WriteLine($"原因: 步骤3验证失败 - {step3Error}");
-            }
-            
-            return canExecute;
+            return step6 && notExecuting && step1Valid && step2Valid && step3Valid;
         }
 
         #endregion
@@ -202,10 +165,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 
                 // 在后台线程构建请求，避免UI冻结
                 var request = await Task.Run(() => BuildSchedulingRequest());
-                
-                System.Diagnostics.Debug.WriteLine($"准备导航到排班进度页面: {request.Title}");
-                System.Diagnostics.Debug.WriteLine($"人员数: {request.PersonnelIds.Count}, 哨位数: {request.PositionIds.Count}");
-                System.Diagnostics.Debug.WriteLine($"排班模式: {request.SchedulingMode}");
                 
                 // 验证请求数据的有效性
                 if (request.PersonnelIds == null || !request.PersonnelIds.Any())
@@ -247,8 +206,6 @@ namespace AutoScheduling3.ViewModels.Scheduling
             var temporaryManualAssignments = allEnabledAssignments
                 .Where(a => !a.Id.HasValue)
                 .ToList();
-            
-            System.Diagnostics.Debug.WriteLine($"BuildSchedulingRequest - 已保存的手动指定: {enabledManualAssignmentIds.Count}, 临时手动指定: {temporaryManualAssignments.Count}");
             
             return new SchedulingRequestDto
             {

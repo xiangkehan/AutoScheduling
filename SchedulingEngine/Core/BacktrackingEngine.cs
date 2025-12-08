@@ -221,18 +221,9 @@ namespace AutoScheduling3.SchedulingEngine.Core
             IProgress<SchedulingProgressReport>? progress,
             CancellationToken cancellationToken)
         {
-            // 检查是否已达最大深度
-            if (IsAtMaxDepth)
-            {
-                if (_config.LogBacktracking)
-                {
-                    _logger.LogWarning($"已达最大回溯深度 {_config.MaxBacktrackDepth}，无法继续分配");
-                }
-                return false;
-            }
-
             // 获取可行候选人员列表
             var feasiblePersons = _tensor.GetFeasiblePersons(positionIdx, periodIdx);
+            
             if (feasiblePersons.Length == 0)
             {
                 return false; // 无可行人员
@@ -250,28 +241,40 @@ namespace AutoScheduling3.SchedulingEngine.Core
                 return false;
             }
 
-            // 创建状态快照
-            var snapshot = CreateSnapshot(date, _assignmentStack.Depth);
-            _statistics.RecordSnapshotCreated();
-
-            // 创建分配记录
-            var record = AssignmentRecord.Create(
-                positionIdx,
-                periodIdx,
-                sortedCandidates[0],
-                date,
-                sortedCandidates,
-                snapshot,
-                _assignmentStack.Depth,
-                isManual: false);
+            // 检查是否需要创建快照（只有在可能需要回溯时才创建）
+            // 如果栈深度接近最大值，才创建快照以支持回溯
+            bool shouldCreateSnapshot = _assignmentStack.Depth < _config.MaxBacktrackDepth;
+            StateSnapshot? snapshot = null;
+            
+            if (shouldCreateSnapshot)
+            {
+                // 创建状态快照
+                snapshot = CreateSnapshot(date, _assignmentStack.Depth);
+                _statistics.RecordSnapshotCreated();
+            }
 
             // 尝试分配第一个候选人员
             bool assigned = await TryAssignPerson(positionIdx, periodIdx, sortedCandidates[0], date);
             
             if (assigned)
             {
-                // 分配成功，压入栈
-                _assignmentStack.Push(record);
+                // 分配成功
+                if (shouldCreateSnapshot && snapshot != null)
+                {
+                    // 只有在创建了快照的情况下才压入栈
+                    var record = AssignmentRecord.Create(
+                        positionIdx,
+                        periodIdx,
+                        sortedCandidates[0],
+                        date,
+                        sortedCandidates,
+                        snapshot,
+                        _assignmentStack.Depth,
+                        isManual: false);
+                    
+                    _assignmentStack.Push(record);
+                }
+                
                 _statistics.RecordCandidatesTried(1);
                 
                 if (_config.LogBacktracking)
@@ -298,9 +301,22 @@ namespace AutoScheduling3.SchedulingEngine.Core
                 
                 if (assigned)
                 {
-                    record.CurrentCandidateIndex = i;
-                    record.PersonIdx = sortedCandidates[i];
-                    _assignmentStack.Push(record);
+                    if (shouldCreateSnapshot && snapshot != null)
+                    {
+                        var record = AssignmentRecord.Create(
+                            positionIdx,
+                            periodIdx,
+                            sortedCandidates[i],
+                            date,
+                            sortedCandidates,
+                            snapshot,
+                            _assignmentStack.Depth,
+                            isManual: false);
+                        
+                        record.CurrentCandidateIndex = i;
+                        _assignmentStack.Push(record);
+                    }
+                    
                     _statistics.RecordCandidatesTried(i + 1);
                     
                     if (_config.LogBacktracking)

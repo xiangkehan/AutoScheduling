@@ -608,16 +608,7 @@
                 <Button Content="保存为模板" Command="{x:Bind ViewModel.SaveAsTemplateCommand}"
                         Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=6, Mode=OneWay}"/>
                 <Button Content="开始排班" Command="{x:Bind ViewModel.ExecuteSchedulingCommand}" Style="{ThemeResource AccentButtonStyle}"
-                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=6, Mode=OneWay}">
-                    <Button.Flyout>
-                        <Flyout>
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="正在执行排班..." Style="{ThemeResource BodyStrongTextBlockStyle}"/>
-                                <ProgressRing IsActive="{x:Bind ViewModel.IsExecuting, Mode=OneWay}"/>
-                            </StackPanel>
-                        </Flyout>
-                    </Button.Flyout>
-                </Button>
+                        Visibility="{x:Bind ViewModel.CurrentStep, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=6, Mode=OneWay}"/>
             </StackPanel>
         </Grid>
 

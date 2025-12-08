@@ -44,6 +44,15 @@ public class HybridScheduler
             // 创建贪心算法进度包装器（将0-50%映射到贪心阶段）
             var greedyProgress = new Progress<SchedulingProgressReport>(report =>
             {
+                // 过滤掉子调度器的 Initializing、Finalizing、Completed 阶段
+                // 避免在阶段历史中产生重复或未完成的阶段
+                if (report.CurrentStage == SchedulingStage.Initializing ||
+                    report.CurrentStage == SchedulingStage.Finalizing ||
+                    report.CurrentStage == SchedulingStage.Completed)
+                {
+                    return;
+                }
+                
                 // 将贪心算法的进度映射到0-50%
                 var mappedProgress = Math.Round(report.ProgressPercentage * 0.5, 1);
                 
@@ -73,6 +82,9 @@ public class HybridScheduler
 
             // 检查取消令牌 - 对应需求6.4
             cancellationToken.ThrowIfCancellationRequested();
+            
+            // 明确报告贪心阶段完成
+            ReportProgress(progress, SchedulingStage.GreedyAssignment, 50, "贪心分配完成，准备遗传算法优化...");
 
             // 阶段2: 使用遗传算法优化 - 对应需求1.2
             System.Diagnostics.Debug.WriteLine("[HybridScheduler] 开始执行遗传算法优化...");
@@ -81,6 +93,15 @@ public class HybridScheduler
             // 创建遗传算法进度包装器（将50-100%映射到遗传阶段）
             var geneticProgress = new Progress<SchedulingProgressReport>(report =>
             {
+                // 过滤掉子调度器的 Initializing、Finalizing、Completed 阶段
+                // 避免在阶段历史中产生重复或未完成的阶段
+                if (report.CurrentStage == SchedulingStage.Initializing ||
+                    report.CurrentStage == SchedulingStage.Finalizing ||
+                    report.CurrentStage == SchedulingStage.Completed)
+                {
+                    return;
+                }
+                
                 // 将遗传算法的进度映射到50-100%
                 var mappedProgress = Math.Round(50 + report.ProgressPercentage * 0.5, 1);
                 
@@ -112,6 +133,9 @@ public class HybridScheduler
                 cancellationToken);
             System.Diagnostics.Debug.WriteLine($"[HybridScheduler] 遗传算法优化完成，生成 {optimizedSolution.Results?.Count ?? 0} 个班次");
 
+            // 报告完成处理阶段
+            ReportProgress(progress, SchedulingStage.Finalizing, 95, "正在生成最终排班结果...");
+            
             // 报告完成 - 对应需求6.1
             ReportProgress(progress, SchedulingStage.Completed, 100, "混合调度完成");
 
