@@ -492,14 +492,11 @@ namespace AutoScheduling3.Views.Scheduling
             ViewModel.FilterEndDate = default;
             ViewModel.SelectedPositionIds.Clear();
 
-            // 应用筛选（触发搜索和高亮）
+            // 应用筛选（触发搜索和高亮），不打开搜索面板
             if (ViewModel.ApplyFiltersCommand?.CanExecute(null) == true)
             {
                 _ = ViewModel.ApplyFiltersCommand.ExecuteAsync(null);
             }
-
-            // 打开搜索面板
-            ViewModel.IsSearchPaneOpen = true;
         }
 
         /// <summary>

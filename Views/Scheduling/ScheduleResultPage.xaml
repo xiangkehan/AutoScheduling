@@ -163,6 +163,15 @@
                                         AutomationProperties.Name="冲突面板开关"
                                         AutomationProperties.HelpText="显示或隐藏冲突和警告面板"
                                         ToolTipService.ToolTip="冲突和警告"/>
+                    <AppBarToggleButton Label="统计" 
+                                        IsChecked="{x:Bind ViewModel.IsStatisticsPaneOpen, Mode=TwoWay}"
+                                        AutomationProperties.Name="统计面板开关"
+                                        AutomationProperties.HelpText="显示或隐藏统计信息面板"
+                                        ToolTipService.ToolTip="统计信息">
+                        <AppBarToggleButton.Icon>
+                            <FontIcon Glyph="&#xE9D9;"/>
+                        </AppBarToggleButton.Icon>
+                    </AppBarToggleButton>
                 </CommandBar>
             </StackPanel>
 
@@ -453,186 +462,6 @@
                                     </StackPanel>
                                 </Border>
                             </Grid>
-
-                            <!-- Statistics Panel -->
-                            <StackPanel Spacing="12">
-                                <!-- Statistics Title -->
-                                <TextBlock Text="统计信息" 
-                                           FontWeight="SemiBold"
-                                           FontSize="14"
-                                           Margin="0,4,0,8"
-                                           AutomationProperties.Name="统计信息标题"
-                                           AutomationProperties.HeadingLevel="Level2"/>
-                                
-                                <StackPanel Spacing="12">
-                                    <!-- Summary Stats -->
-                                    <Grid AutomationProperties.Name="统计摘要">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border x:Name="TotalAssignmentsCard"
-                                                Grid.Column="0" 
-                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                                                BorderThickness="1" 
-                                                CornerRadius="8" 
-                                                Padding="12"
-                                                AutomationProperties.Name="总分配数统计卡片"
-                                                PointerEntered="StatCard_PointerEntered"
-                                                PointerExited="StatCard_PointerExited">
-                                            <StackPanel>
-                                                <TextBlock Text="总分配数" 
-                                                           FontSize="12" 
-                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                           AutomationProperties.Name="总分配数标签"/>
-                                                <TextBlock Text="{x:Bind ViewModel.Statistics.TotalAssignments, Mode=OneWay, FallbackValue=0}" 
-                                                           FontSize="24" 
-                                                           FontWeight="Bold"
-                                                           AutomationProperties.Name="总分配数值"
-                                                           AutomationProperties.LiveSetting="Polite"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <Border x:Name="PersonnelCountCard"
-                                                Grid.Column="1" 
-                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                                                BorderThickness="1" 
-                                                CornerRadius="8" 
-                                                Padding="12"
-                                                AutomationProperties.Name="参与人员数统计卡片"
-                                                PointerEntered="StatCard_PointerEntered"
-                                                PointerExited="StatCard_PointerExited">
-                                            <StackPanel>
-                                                <TextBlock Text="参与人员数" 
-                                                           FontSize="12" 
-                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                           AutomationProperties.Name="参与人员数标签"/>
-                                                <TextBlock Text="{x:Bind ViewModel.PersonnelWorkloads.Count, Mode=OneWay, FallbackValue=0}" 
-                                                           FontSize="24" 
-                                                           FontWeight="Bold"
-                                                           AutomationProperties.Name="参与人员数值"
-                                                           AutomationProperties.LiveSetting="Polite"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <Border x:Name="PositionCountCard"
-                                                Grid.Column="2" 
-                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                                                BorderThickness="1" 
-                                                CornerRadius="8" 
-                                                Padding="12"
-                                                AutomationProperties.Name="参与哨位数统计卡片"
-                                                PointerEntered="StatCard_PointerEntered"
-                                                PointerExited="StatCard_PointerExited">
-                                            <StackPanel>
-                                                <TextBlock Text="参与哨位数" 
-                                                           FontSize="12" 
-                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                           AutomationProperties.Name="参与哨位数标签"/>
-                                                <TextBlock Text="{x:Bind ViewModel.PositionCoverages.Count, Mode=OneWay, FallbackValue=0}" 
-                                                           FontSize="24" 
-                                                           FontWeight="Bold"
-                                                           AutomationProperties.Name="参与哨位数值"
-                                                           AutomationProperties.LiveSetting="Polite"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </Grid>
-
-                                    <!-- Personnel Workload Table -->
-                                    <StackPanel>
-                                        <Grid Margin="0,8,0,4">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0"
-                                                       Text="人员工作量" 
-                                                       FontWeight="SemiBold" 
-                                                       VerticalAlignment="Center"
-                                                       AutomationProperties.Name="人员工作量统计标题"
-                                                       AutomationProperties.HeadingLevel="Level3"/>
-                                            <ComboBox Grid.Column="1"
-                                                      SelectedIndex="{x:Bind ViewModel.PersonnelWorkloadSortOrderIndex, Mode=TwoWay}"
-                                                      MinWidth="100"
-                                                      AutomationProperties.Name="工作量排序方式"
-                                                      AutomationProperties.HelpText="选择按工作量升序或降序排列">
-                                                <ComboBoxItem Content="降序"/>
-                                                <ComboBoxItem Content="升序"/>
-                                            </ComboBox>
-                                        </Grid>
-                                        <ListView ItemsSource="{x:Bind ViewModel.PersonnelWorkloads, Mode=OneWay}" 
-                                                  MaxHeight="200" 
-                                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                  AutomationProperties.Name="人员工作量统计表"
-                                                  AutomationProperties.LandmarkType="Custom"
-                                                  DoubleTapped="PersonnelWorkloadListView_DoubleTapped">
-                                            <ListView.ItemTemplate>
-                                                <DataTemplate x:DataType="dto:PersonnelWorkload">
-                                                    <Grid PointerEntered="PersonnelWorkloadItem_PointerEntered"
-                                                          PointerExited="PersonnelWorkloadItem_PointerExited">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Grid.Column="0" Text="{x:Bind PersonnelName}" VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="1" Text="{x:Bind TotalShifts}" Margin="16,0" VerticalAlignment="Center"/>
-                                                        <ProgressBar Grid.Column="2" Width="100" Value="{x:Bind TotalShifts}" Maximum="20" Margin="8,0"/>
-                                                        <TextBlock Grid.Column="3"
-                                                                   Text="{x:Bind DayNightSummary}"
-                                                                   Margin="16,0,0,0"
-                                                                   VerticalAlignment="Center"
-                                                                   FontSize="12"
-                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ListView.ItemTemplate>
-                                        </ListView>
-                                    </StackPanel>
-
-                                    <!-- Position Coverage Table -->
-                                    <StackPanel>
-                                        <TextBlock Text="哨位覆盖率" 
-                                                   FontWeight="SemiBold" 
-                                                   Margin="0,8,0,4"
-                                                   AutomationProperties.Name="哨位覆盖率统计标题"
-                                                   AutomationProperties.HeadingLevel="Level3"/>
-                                        <ListView ItemsSource="{x:Bind ViewModel.PositionCoverages, Mode=OneWay}" 
-                                                  MaxHeight="200" 
-                                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                  AutomationProperties.Name="哨位覆盖率统计表"
-                                                  AutomationProperties.LandmarkType="Custom"
-                                                  DoubleTapped="PositionCoverageListView_DoubleTapped">
-                                            <ListView.ItemTemplate>
-                                                <DataTemplate x:DataType="dto:PositionCoverage">
-                                                    <Grid PointerEntered="PositionCoverageItem_PointerEntered"
-                                                          PointerExited="PositionCoverageItem_PointerExited">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Grid.Column="0" Text="{x:Bind PositionName}" VerticalAlignment="Center"/>
-                                                        <ProgressBar Grid.Column="1" Width="100" Value="{x:Bind CoverageRate}" Maximum="1" Margin="8,0"/>
-                                                        <TextBlock Grid.Column="2"
-                                                                   Text="{x:Bind CoverageRateDisplay}"
-                                                                   Margin="16,0,0,0"
-                                                                   VerticalAlignment="Center"
-                                                                   FontSize="12"
-                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ListView.ItemTemplate>
-                                        </ListView>
-                                    </StackPanel>
-                                </StackPanel>
-                            </StackPanel>
                         </StackPanel>
 
                                             <!-- Filter and Sort Controls -->
@@ -870,6 +699,173 @@
                                             </StackPanel>
                                         </StackPanel>
                                     </ScrollViewer>
+                            </Grid>
+
+                            <!-- 统计面板 -->
+                            <Grid Visibility="{x:Bind ViewModel.IsStatisticsPaneOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                  AutomationProperties.Name="统计面板">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,0">
+                                    <StackPanel Spacing="12">
+                                        <!-- 统计面板标题 -->
+                                        <TextBlock Text="统计信息" 
+                                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                                   AutomationProperties.Name="统计信息标题"
+                                                   AutomationProperties.HeadingLevel="Level2"/>
+
+                                        <!-- 统计摘要卡片 -->
+                                        <Grid AutomationProperties.Name="统计摘要">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border x:Name="TotalAssignmentsCard"
+                                                    Grid.Column="0" 
+                                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                                    BorderThickness="1" 
+                                                    CornerRadius="8" 
+                                                    Padding="12"
+                                                    Margin="0,0,4,0"
+                                                    AutomationProperties.Name="总分配数统计卡片"
+                                                    PointerEntered="StatCard_PointerEntered"
+                                                    PointerExited="StatCard_PointerExited">
+                                                <StackPanel>
+                                                    <TextBlock Text="总分配数" 
+                                                               FontSize="12" 
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    <TextBlock Text="{x:Bind ViewModel.Statistics.TotalAssignments, Mode=OneWay, FallbackValue=0}" 
+                                                               FontSize="24" 
+                                                               FontWeight="Bold"/>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Border x:Name="PersonnelCountCard"
+                                                    Grid.Column="1" 
+                                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                                    BorderThickness="1" 
+                                                    CornerRadius="8" 
+                                                    Padding="12"
+                                                    Margin="4,0"
+                                                    AutomationProperties.Name="参与人员数统计卡片"
+                                                    PointerEntered="StatCard_PointerEntered"
+                                                    PointerExited="StatCard_PointerExited">
+                                                <StackPanel>
+                                                    <TextBlock Text="参与人员" 
+                                                               FontSize="12" 
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    <TextBlock Text="{x:Bind ViewModel.PersonnelWorkloads.Count, Mode=OneWay, FallbackValue=0}" 
+                                                               FontSize="24" 
+                                                               FontWeight="Bold"/>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Border x:Name="PositionCountCard"
+                                                    Grid.Column="2" 
+                                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                                    BorderThickness="1" 
+                                                    CornerRadius="8" 
+                                                    Padding="12"
+                                                    Margin="4,0,0,0"
+                                                    AutomationProperties.Name="参与哨位数统计卡片"
+                                                    PointerEntered="StatCard_PointerEntered"
+                                                    PointerExited="StatCard_PointerExited">
+                                                <StackPanel>
+                                                    <TextBlock Text="参与哨位" 
+                                                               FontSize="12" 
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    <TextBlock Text="{x:Bind ViewModel.PositionCoverages.Count, Mode=OneWay, FallbackValue=0}" 
+                                                               FontSize="24" 
+                                                               FontWeight="Bold"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- 人员工作量 -->
+                                        <StackPanel>
+                                            <Grid Margin="0,8,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="人员工作量" 
+                                                           FontWeight="SemiBold" 
+                                                           VerticalAlignment="Center"
+                                                           AutomationProperties.HeadingLevel="Level3"/>
+                                                <ComboBox Grid.Column="1"
+                                                          SelectedIndex="{x:Bind ViewModel.PersonnelWorkloadSortOrderIndex, Mode=TwoWay}"
+                                                          MinWidth="80">
+                                                    <ComboBoxItem Content="降序"/>
+                                                    <ComboBoxItem Content="升序"/>
+                                                </ComboBox>
+                                            </Grid>
+                                            <ListView ItemsSource="{x:Bind ViewModel.PersonnelWorkloads, Mode=OneWay}" 
+                                                      MaxHeight="200" 
+                                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                      DoubleTapped="PersonnelWorkloadListView_DoubleTapped">
+                                                <ListView.ItemTemplate>
+                                                    <DataTemplate x:DataType="dto:PersonnelWorkload">
+                                                        <Grid PointerEntered="PersonnelWorkloadItem_PointerEntered"
+                                                              PointerExited="PersonnelWorkloadItem_PointerExited">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{x:Bind PersonnelName}" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="1" Text="{x:Bind TotalShifts}" Margin="12,0" VerticalAlignment="Center"/>
+                                                            <ProgressBar Grid.Column="2" Width="80" Value="{x:Bind TotalShifts}" Maximum="20" Margin="4,0"/>
+                                                            <TextBlock Grid.Column="3"
+                                                                       Text="{x:Bind DayNightSummary}"
+                                                                       Margin="8,0,0,0"
+                                                                       VerticalAlignment="Center"
+                                                                       FontSize="11"
+                                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListView.ItemTemplate>
+                                            </ListView>
+                                        </StackPanel>
+
+                                        <!-- 哨位覆盖率 -->
+                                        <StackPanel>
+                                            <TextBlock Text="哨位覆盖率" 
+                                                       FontWeight="SemiBold" 
+                                                       Margin="0,8,0,4"
+                                                       AutomationProperties.HeadingLevel="Level3"/>
+                                            <ListView ItemsSource="{x:Bind ViewModel.PositionCoverages, Mode=OneWay}" 
+                                                      MaxHeight="200" 
+                                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                      DoubleTapped="PositionCoverageListView_DoubleTapped">
+                                                <ListView.ItemTemplate>
+                                                    <DataTemplate x:DataType="dto:PositionCoverage">
+                                                        <Grid PointerEntered="PositionCoverageItem_PointerEntered"
+                                                              PointerExited="PositionCoverageItem_PointerExited">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{x:Bind PositionName}" VerticalAlignment="Center"/>
+                                                            <ProgressBar Grid.Column="1" Width="80" Value="{x:Bind CoverageRate}" Maximum="1" Margin="4,0"/>
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{x:Bind CoverageRateDisplay}"
+                                                                       Margin="8,0,0,0"
+                                                                       VerticalAlignment="Center"
+                                                                       FontSize="11"
+                                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListView.ItemTemplate>
+                                            </ListView>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ScrollViewer>
                             </Grid>
                         </Grid>
                     </Grid>

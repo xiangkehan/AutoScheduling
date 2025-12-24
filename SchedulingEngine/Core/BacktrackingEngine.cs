@@ -33,11 +33,18 @@ namespace AutoScheduling3.SchedulingEngine.Core
         // 路径记忆（避免重复尝试失败的路径）
         private readonly HashSet<string> _failedPaths;
 
+        // 路径记忆最大容量（防止内存溢出）
+        private const int MaxFailedPathsCount = 10000;
+
         // 内存监控 - 对应需求6.5
         private long _lastMemoryCheck;
         private const long MemoryCheckInterval = 10; // 每10次分配检查一次内存
         private bool _memoryThresholdExceeded;
         private int _memoryWarningCount;
+
+        // 全局模式标志 - 对应需求7.1
+        private bool _isGlobalMode;
+        private PeriodMapper? _periodMapper;
 
         /// <summary>
         /// 构造函数：初始化回溯引擎
@@ -161,6 +168,100 @@ namespace AutoScheduling3.SchedulingEngine.Core
         }
 
         /// <summary>
+        /// 设置全局模式
+        /// 对应需求: 7.1
+        /// </summary>
+        /// <param name="isGlobalMode">是否为全局模式</param>
+        /// <param name="periodMapper">时段映射器（全局模式下需要）</param>
+        public void SetGlobalMode(bool isGlobalMode, PeriodMapper? periodMapper = null)
+        {
+            _isGlobalMode = isGlobalMode;
+            _periodMapper = periodMapper;
+            
+            if (_config.LogBacktracking)
+            {
+                _logger.Log($"回溯引擎模式设置: {(isGlobalMode ? "全局模式" : "按天模式")}");
+            }
+        }
+
+        /// <summary>
+        /// 获取是否为全局模式
+        /// </summary>
+        public bool IsGlobalMode => _isGlobalMode;
+
+        #region 路径记忆功能 - 对应需求 4.1, 4.2, 4.3, 4.4, 4.5
+
+        /// <summary>
+        /// 生成路径标识符
+        /// 对应需求: 4.5
+        /// </summary>
+        /// <param name="positionIdx">哨位索引</param>
+        /// <param name="periodIdx">时段索引</param>
+        /// <param name="personIdx">人员索引</param>
+        /// <returns>路径标识符字符串</returns>
+        private string GeneratePathKey(int positionIdx, int periodIdx, int personIdx)
+        {
+            return $"{positionIdx}:{periodIdx}:{personIdx}";
+        }
+
+        /// <summary>
+        /// 检查路径是否已失败
+        /// 对应需求: 4.2
+        /// </summary>
+        /// <param name="positionIdx">哨位索引</param>
+        /// <param name="periodIdx">时段索引</param>
+        /// <param name="personIdx">人员索引</param>
+        /// <returns>如果路径已失败返回 true</returns>
+        private bool IsPathFailed(int positionIdx, int periodIdx, int personIdx)
+        {
+            if (!_config.EnablePathMemory)
+            {
+                return false;
+            }
+
+            var pathKey = GeneratePathKey(positionIdx, periodIdx, personIdx);
+            return _failedPaths.Contains(pathKey);
+        }
+
+        /// <summary>
+        /// 记录失败路径
+        /// 对应需求: 4.1
+        /// </summary>
+        /// <param name="positionIdx">哨位索引</param>
+        /// <param name="periodIdx">时段索引</param>
+        /// <param name="personIdx">人员索引</param>
+        private void RecordFailedPath(int positionIdx, int periodIdx, int personIdx)
+        {
+            if (!_config.EnablePathMemory)
+            {
+                return;
+            }
+
+            // 检查是否超过最大容量
+            if (_failedPaths.Count >= MaxFailedPathsCount)
+            {
+                // 清理一半的旧路径（简单策略）
+                if (_config.LogBacktracking)
+                {
+                    _logger.LogWarning($"路径记忆达到上限 ({MaxFailedPathsCount})，清理旧路径");
+                }
+                _failedPaths.Clear();
+            }
+
+            var pathKey = GeneratePathKey(positionIdx, periodIdx, personIdx);
+            _failedPaths.Add(pathKey);
+
+            if (_config.LogBacktracking)
+            {
+                var positionName = _context.Positions[positionIdx].Name;
+                var personName = _context.Personals[personIdx].Name;
+                _logger.Log($"记录失败路径: 哨位={positionName}, 时段={periodIdx}, 人员={personName}");
+            }
+        }
+
+        #endregion
+
+        /// <summary>
         /// 检测是否遇到死胡同
         /// 对应需求: 1.1, 5.1
         /// </summary>
@@ -213,7 +314,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
 
         /// <summary>
         /// 尝试分配人员到指定位置，支持回溯
-        /// 对应需求: 1.2, 5.3
+        /// 对应需求: 1.2, 4.2, 4.3, 5.3
         /// </summary>
         public async Task<bool> TryAssignWithBacktracking(
             int positionIdx,
@@ -240,6 +341,40 @@ namespace AutoScheduling3.SchedulingEngine.Core
             if (sortedCandidates.Count == 0)
             {
                 return false;
+            }
+
+            // 过滤掉已知失败的路径（路径记忆功能）
+            if (_config.EnablePathMemory)
+            {
+                var filteredCandidates = new List<int>();
+                foreach (var personIdx in sortedCandidates)
+                {
+                    if (IsPathFailed(positionIdx, periodIdx, personIdx))
+                    {
+                        _statistics.AvoidedDuplicatePaths++;
+                        if (_config.LogBacktracking)
+                        {
+                            var positionName = _context.Positions[positionIdx].Name;
+                            var personName = _context.Personals[personIdx].Name;
+                            _logger.Log($"跳过已知失败路径: 哨位={positionName}, 时段={periodIdx}, 人员={personName}");
+                        }
+                    }
+                    else
+                    {
+                        filteredCandidates.Add(personIdx);
+                    }
+                }
+                sortedCandidates = filteredCandidates;
+
+                if (sortedCandidates.Count == 0)
+                {
+                    if (_config.LogBacktracking)
+                    {
+                        var positionName = _context.Positions[positionIdx].Name;
+                        _logger.LogWarning($"所有候选都是已知失败路径 - 哨位: {positionName}, 时段: {periodIdx}");
+                    }
+                    return false;
+                }
             }
 
             // 检查是否需要创建快照（只有在可能需要回溯时才创建）
@@ -292,6 +427,11 @@ namespace AutoScheduling3.SchedulingEngine.Core
                 
                 return true;
             }
+            else
+            {
+                // 第一个候选失败，记录失败路径
+                RecordFailedPath(positionIdx, periodIdx, sortedCandidates[0]);
+            }
 
             // 第一个候选失败，尝试其他候选
             for (int i = 1; i < sortedCandidates.Count; i++)
@@ -330,6 +470,11 @@ namespace AutoScheduling3.SchedulingEngine.Core
                     
                     CheckMemoryUsage();
                     return true;
+                }
+                else
+                {
+                    // 候选失败，记录失败路径
+                    RecordFailedPath(positionIdx, periodIdx, sortedCandidates[i]);
                 }
             }
 
@@ -586,12 +731,14 @@ namespace AutoScheduling3.SchedulingEngine.Core
         }
 
         /// <summary>
-        /// 创建状态快照
+        /// 创建状态快照（自动使用类级别的全局模式标志）
+        /// 对应需求: 1.1, 7.1
         /// </summary>
+        /// <param name="date">当前日期</param>
+        /// <param name="depth">快照深度</param>
         private StateSnapshot CreateSnapshot(DateTime date, int depth)
         {
-            // 获取MRV策略的内部状态（需要通过反射或添加公共访问器）
-            // 这里假设MRVStrategy提供了获取状态的方法
+            // 获取MRV策略的内部状态
             var candidateCounts = GetMRVCandidateCounts();
             var assignedFlags = GetMRVAssignedFlags();
 
@@ -601,24 +748,50 @@ namespace AutoScheduling3.SchedulingEngine.Core
                 assignedFlags,
                 _context.Assignments,
                 date,
-                depth);
+                depth,
+                _isGlobalMode,
+                _isGlobalMode ? _context : null);
         }
 
         /// <summary>
-        /// 恢复状态快照
-        /// 对应需求: 2.4
+        /// 恢复状态快照（支持全局模式）
+        /// 对应需求: 1.2, 2.4, 6.1, 7.1
         /// </summary>
+        /// <param name="snapshot">状态快照</param>
+        /// <param name="date">当前日期</param>
         private void RestoreState(StateSnapshot snapshot, DateTime date)
         {
             var candidateCounts = _schedulingStrategy.GetCandidateCountsReference();
             var assignedFlags = _schedulingStrategy.GetAssignedFlagsReference();
 
-            snapshot.RestoreToTensor(
+            // 验证快照完整性
+            if (!snapshot.ValidateIntegrity())
+            {
+                _logger.LogWarning("状态快照完整性验证失败，可能导致恢复不完整");
+            }
+
+            // 使用扩展的 RestoreToContext 方法恢复完整状态
+            snapshot.RestoreToContext(
                 _tensor,
                 candidateCounts,
                 assignedFlags,
                 _context.Assignments,
-                date);
+                date,
+                snapshot.IsGlobalMode ? _context : null);
+
+            // 在全局模式下验证状态一致性
+            if (snapshot.IsGlobalMode)
+            {
+                var consistencyResult = _context.ValidateStateConsistency();
+                if (!consistencyResult.IsConsistent)
+                {
+                    _logger.LogWarning($"状态恢复后一致性验证失败: {consistencyResult}");
+                }
+                else if (_config.LogBacktracking)
+                {
+                    _logger.Log("状态恢复后一致性验证通过");
+                }
+            }
         }
 
         /// <summary>
