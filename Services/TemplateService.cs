@@ -2,6 +2,7 @@ using AutoScheduling3.DTOs;
 using AutoScheduling3.DTOs.Mappers;
 using AutoScheduling3.Data.Interfaces;
 using AutoScheduling3.Services.Interfaces;
+using AutoScheduling3.Validators;
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -22,19 +23,25 @@ public class TemplateService : ITemplateService
     private readonly IPositionRepository _positionRepository;
     private readonly ISchedulingService _schedulingService;
     private readonly TemplateMapper _mapper;
+    private readonly TemplateConfigCache _cache;
+    private readonly CachedConfigValidator _configValidator;
 
     public TemplateService(
         ITemplateRepository templateRepository,
         IPersonalRepository personnelRepository,
         IPositionRepository positionRepository,
         ISchedulingService schedulingService,
-        TemplateMapper mapper)
+        TemplateMapper mapper,
+        TemplateConfigCache cache,
+        CachedConfigValidator configValidator)
     {
         _templateRepository = templateRepository ?? throw new ArgumentNullException(nameof(templateRepository));
         _personnelRepository = personnelRepository ?? throw new ArgumentNullException(nameof(personnelRepository));
         _positionRepository = positionRepository ?? throw new ArgumentNullException(nameof(positionRepository));
         _schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _configValidator = configValidator ?? throw new ArgumentNullException(nameof(configValidator));
     }
 
     /// <summary>
@@ -47,15 +54,31 @@ public class TemplateService : ITemplateService
     }
 
     /// <summary>
-    /// 根据ID获取模板
+    /// 根据ID获取模板（带缓存）
+    /// 性能优化：使用缓存减少数据库查询
     /// </summary>
     public async Task<SchedulingTemplateDto?> GetByIdAsync(int id)
     {
         if (id <= 0)
             throw new ArgumentException("无效的模板ID", nameof(id));
 
+        // 尝试从缓存获取
+        if (_cache.TryGet(id, out var cachedTemplate))
+        {
+            return cachedTemplate;
+        }
+
+        // 缓存未命中，从数据库加载
         var template = await _templateRepository.GetByIdAsync(id);
-        return template != null ? _mapper.ToDto(template) : null;
+        if (template != null)
+        {
+            var dto = _mapper.ToDto(template);
+            // 添加到缓存
+            _cache.Set(id, dto);
+            return dto;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -64,6 +87,9 @@ public class TemplateService : ITemplateService
     public async Task<SchedulingTemplateDto> CreateAsync(CreateTemplateDto dto)
     {
         await ValidateCreateDtoAsync(dto);
+
+        // 验证算法配置（如果包含遗传算法配置）
+        ValidateAlgorithmConfig(dto.StrategyConfig);
 
         // 名称唯一校验
         var nameExists = await _templateRepository.ExistsByNameAsync(dto.Name, null);
@@ -79,7 +105,12 @@ public class TemplateService : ITemplateService
         var id = await _templateRepository.CreateAsync(model);
 
         model.Id = id;
-        return _mapper.ToDto(model);
+        var result = _mapper.ToDto(model);
+        
+        // 添加到缓存
+        _cache.Set(id, result);
+        
+        return result;
     }
 
     /// <summary>
@@ -91,6 +122,9 @@ public class TemplateService : ITemplateService
             throw new ArgumentException("无效的模板ID", nameof(id));
 
         await ValidateUpdateDtoAsync(dto);
+
+        // 验证算法配置（如果包含遗传算法配置）
+        ValidateAlgorithmConfig(dto.StrategyConfig);
 
         var existingTemplate = await _templateRepository.GetByIdAsync(id);
         if (existingTemplate == null)
@@ -108,6 +142,9 @@ public class TemplateService : ITemplateService
 
         _mapper.UpdateModel(existingTemplate, dto);
         await _templateRepository.UpdateAsync(existingTemplate);
+        
+        // 更新后移除缓存，下次访问时重新加载
+        _cache.Remove(id);
     }
 
     /// <summary>
@@ -123,6 +160,9 @@ public class TemplateService : ITemplateService
             throw new ArgumentException($"模板 ID {id} 不存在", nameof(id));
 
         await _templateRepository.DeleteAsync(id);
+        
+        // 删除后移除缓存
+        _cache.Remove(id);
     }
 
     /// <summary>
@@ -211,8 +251,9 @@ public class TemplateService : ITemplateService
 
     /// <summary>
     /// 使用模板创建排班
+    /// 性能优化：使用优化的序列化器解析配置
     /// </summary>
-    public async Task<ScheduleDto> UseTemplateAsync(UseTemplateDto dto)
+    public async Task<ScheduleDto> UseTemplateAsync(UseTemplateDto dto, SchedulingMode? overrideMode = null, GeneticAlgorithmConfigDto? overrideGeneticConfig = null)
     {
         ValidateUseTemplateDto(dto);
 
@@ -229,6 +270,39 @@ public class TemplateService : ITemplateService
             throw new InvalidOperationException($"模板验证失败: {string.Join("; ", errorMessages)}");
         }
 
+        // 从模板的 StrategyConfig 中加载算法配置
+        TemplateAlgorithmConfig? algorithmConfig = null;
+        if (!string.IsNullOrWhiteSpace(template.StrategyConfig))
+        {
+            algorithmConfig = Helpers.OptimizedConfigSerializer.Deserialize<TemplateAlgorithmConfig>(template.StrategyConfig);
+        }
+
+        // 确定使用的排班模式（优先使用覆盖值）
+        var schedulingMode = overrideMode ?? algorithmConfig?.SchedulingMode ?? SchedulingMode.GreedyOnly;
+
+        // 确定使用的遗传算法配置（优先使用覆盖值）
+        SchedulingEngine.Config.GeneticSchedulerConfig? geneticConfig = null;
+        if (schedulingMode == SchedulingMode.Hybrid)
+        {
+            var configDto = overrideGeneticConfig ?? algorithmConfig?.GeneticConfig;
+            if (configDto != null)
+            {
+                geneticConfig = ConvertToGeneticSchedulerConfig(configDto);
+                
+                // 验证遗传算法配置的有效性
+                var configValidation = _configValidator.Validate(geneticConfig);
+                if (!configValidation.IsValid)
+                {
+                    throw new InvalidOperationException($"遗传算法配置无效: {configValidation.GetErrorMessage()}");
+                }
+            }
+            else
+            {
+                // 使用默认配置
+                geneticConfig = SchedulingEngine.Config.GeneticSchedulerConfig.GetDefault();
+            }
+        }
+
         // 构建排班请求
         var schedulingRequest = new SchedulingRequestDto
         {
@@ -243,8 +317,17 @@ public class TemplateService : ITemplateService
             EnabledManualAssignmentIds = new List<int>(template.EnabledManualAssignmentIds)
         };
 
+        // 设置排班请求的模式
+        schedulingRequest.SchedulingMode = schedulingMode;
+
+        // 如果有遗传算法配置，先保存它（临时保存，用于本次排班）
+        if (geneticConfig != null)
+        {
+            await _schedulingService.SaveGeneticSchedulerConfigAsync(geneticConfig);
+        }
+
         // 执行排班
-        var result = await _schedulingService.ExecuteSchedulingAsync(schedulingRequest, null, System.Threading.CancellationToken.None);
+        var result = await _schedulingService.ExecuteSchedulingAsync(schedulingRequest, null, System.Threading.CancellationToken.None, schedulingMode);
         if (!result.IsSuccess || result.Schedule == null)
         {
             throw new InvalidOperationException($"使用模板排班失败: {result.ErrorMessage}");
@@ -254,6 +337,25 @@ public class TemplateService : ITemplateService
         await _templateRepository.UpdateUsageAsync(dto.TemplateId);
 
         return result.Schedule;
+    }
+
+    /// <summary>
+    /// 将 GeneticAlgorithmConfigDto 转换为 GeneticSchedulerConfig
+    /// </summary>
+    private SchedulingEngine.Config.GeneticSchedulerConfig ConvertToGeneticSchedulerConfig(GeneticAlgorithmConfigDto dto)
+    {
+        return new SchedulingEngine.Config.GeneticSchedulerConfig
+        {
+            PopulationSize = dto.PopulationSize,
+            MaxGenerations = dto.MaxGenerations,
+            CrossoverRate = dto.CrossoverRate,
+            MutationRate = dto.MutationRate,
+            EliteCount = dto.EliteCount,
+            SelectionStrategy = dto.SelectionStrategy,
+            CrossoverStrategy = dto.CrossoverStrategy,
+            MutationStrategy = dto.MutationStrategy,
+            TournamentSize = dto.TournamentSize
+        };
     }
 
     /// <summary>
@@ -426,5 +528,57 @@ public class TemplateService : ITemplateService
 
         if (dto.OverridePositionIds != null && dto.OverridePositionIds.Count == 0)
             throw new ArgumentException("覆盖哨位列表不能为空，请传入null使用模板配置", nameof(dto.OverridePositionIds));
+    }
+
+    /// <summary>
+    /// 验证算法配置
+    /// 如果配置包含遗传算法配置，则验证其有效性
+    /// </summary>
+    /// <param name="strategyConfigJson">策略配置的 JSON 字符串</param>
+    private void ValidateAlgorithmConfig(string? strategyConfigJson)
+    {
+        if (string.IsNullOrWhiteSpace(strategyConfigJson))
+        {
+            // 没有配置，跳过验证
+            return;
+        }
+
+        try
+        {
+            // 尝试解析算法配置
+            var algorithmConfig = Helpers.OptimizedConfigSerializer.Deserialize<TemplateAlgorithmConfig>(strategyConfigJson);
+            
+            if (algorithmConfig == null)
+            {
+                // 解析失败，但不抛出异常（可能是旧格式或其他配置）
+                System.Diagnostics.Debug.WriteLine("[TemplateService] 无法解析算法配置，跳过验证");
+                return;
+            }
+
+            // 如果是混合模式且包含遗传算法配置，则验证
+            if (algorithmConfig.SchedulingMode == SchedulingMode.Hybrid && algorithmConfig.GeneticConfig != null)
+            {
+                var geneticConfig = ConvertToGeneticSchedulerConfig(algorithmConfig.GeneticConfig);
+                var validationResult = _configValidator.Validate(geneticConfig);
+                
+                if (!validationResult.IsValid)
+                {
+                    throw new ArgumentException($"遗传算法配置无效: {validationResult.GetErrorMessage()}", nameof(strategyConfigJson));
+                }
+                
+                System.Diagnostics.Debug.WriteLine("[TemplateService] 遗传算法配置验证通过");
+            }
+        }
+        catch (ArgumentException)
+        {
+            // 重新抛出验证错误
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // 解析或验证过程中的其他错误
+            System.Diagnostics.Debug.WriteLine($"[TemplateService] 验证算法配置时出错: {ex.Message}");
+            // 不抛出异常，允许保存（可能是格式问题，不影响基本功能）
+        }
     }
 }

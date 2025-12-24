@@ -117,6 +117,10 @@ namespace AutoScheduling3.Data
                         new() { Name = "UseActiveHolidayConfig", DataType = "INTEGER", IsNullable = false, DefaultValue = "1" },
                         new() { Name = "EnabledFixedRuleIds", DataType = "TEXT", IsNullable = false, DefaultValue = "'[]'" },
                         new() { Name = "EnabledManualAssignmentIds", DataType = "TEXT", IsNullable = false, DefaultValue = "'[]'" },
+                        new() { Name = "IsPartialResult", DataType = "INTEGER", IsNullable = false, DefaultValue = "0" },
+                        new() { Name = "ProgressPercentage", DataType = "REAL", IsNullable = true },
+                        new() { Name = "CurrentStage", DataType = "TEXT", IsNullable = true },
+                        new() { Name = "SchedulingMode", DataType = "INTEGER", IsNullable = false, DefaultValue = "0" },
                         new() { Name = "CreatedAt", DataType = "TEXT", IsNullable = false, DefaultValue = "CURRENT_TIMESTAMP" },
                         new() { Name = "UpdatedAt", DataType = "TEXT", IsNullable = false, DefaultValue = "CURRENT_TIMESTAMP" }
                     },

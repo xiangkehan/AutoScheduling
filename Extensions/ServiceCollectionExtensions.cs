@@ -82,9 +82,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPositionService, PositionService>();
         services.AddSingleton<ISkillService, SkillService>();
         services.AddSingleton<IConstraintService, ConstraintService>();
+        
+        // 注册模板配置缓存（单例）
+        services.AddSingleton<TemplateConfigCache>();
         services.AddSingleton<ITemplateService, TemplateService>();
+        
         services.AddSingleton<IHistoryService, HistoryService>();
-        services.AddSingleton<ISchedulingService, SchedulingService>();
         services.AddSingleton<IStoragePathService, StoragePathService>();
         services.AddSingleton<ISchedulingDraftService, SchedulingDraftService>();
         services.AddSingleton<IScheduleGridExporter, ScheduleGridExporter>();
@@ -92,6 +95,17 @@ public static class ServiceCollectionExtensions
         // 注册冲突管理服务
         services.AddSingleton<IConflictDetectionService, ConflictDetectionService>();
         services.AddSingleton<IConflictResolutionService, ConflictResolutionService>();
+
+        // 注册遗传算法配置（单例）
+        services.AddSingleton<AutoScheduling3.SchedulingEngine.Config.GeneticSchedulerConfig>(sp => 
+            AutoScheduling3.SchedulingEngine.Config.GeneticSchedulerConfig.GetDefault());
+        
+        // 注册配置验证器（单例）
+        services.AddSingleton<AutoScheduling3.Validators.GeneticConfigValidator>();
+        services.AddSingleton<AutoScheduling3.Validators.CachedConfigValidator>();
+        
+        // 注册 SchedulingService
+        services.AddSingleton<ISchedulingService, SchedulingService>();
 
         // 注册数据导入导出相关服务
         // Register data validation service
@@ -149,6 +163,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<NavigationService>();
         services.AddSingleton<Helpers.DialogService>();
         services.AddSingleton<IThemeService, ThemeService>();
+        
+        // 注册分页草稿加载器
+        services.AddSingleton<PaginatedDraftLoader>();
 
         return services;
     }
@@ -170,6 +187,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<SchedulingViewModel>();
         services.AddTransient<ScheduleResultViewModel>();
         services.AddTransient<SchedulingProgressViewModel>();
+        services.AddTransient<AlgorithmConfigViewModel>();
 
         // 历史ViewModels
         services.AddTransient<HistoryViewModel>();

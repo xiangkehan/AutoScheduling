@@ -99,6 +99,18 @@ public class SchedulingTemplateDto
     public string StrategyConfig { get; set; } = string.Empty;
 
     /// <summary>
+    /// 排班模式（可选）
+    /// </summary>
+    [JsonPropertyName("schedulingMode")]
+    public SchedulingMode? SchedulingMode { get; set; }
+
+    /// <summary>
+    /// 遗传算法配置（可选，仅在 Hybrid 模式下使用）
+    /// </summary>
+    [JsonPropertyName("geneticAlgorithmConfig")]
+    public GeneticAlgorithmConfigDto? GeneticAlgorithmConfig { get; set; }
+
+    /// <summary>
     /// 使用次数
     /// </summary>
     [Range(0, int.MaxValue, ErrorMessage = "使用次数不能为负数")]
@@ -204,6 +216,24 @@ public class CreateTemplateDto
     /// </summary>
     [JsonPropertyName("enabledManualAssignmentIds")]
     public List<int> EnabledManualAssignmentIds { get; set; } = new();
+
+    /// <summary>
+    /// 排班模式（可选）
+    /// </summary>
+    [JsonPropertyName("schedulingMode")]
+    public SchedulingMode? SchedulingMode { get; set; }
+
+    /// <summary>
+    /// 遗传算法配置（可选，仅在 Hybrid 模式下使用）
+    /// </summary>
+    [JsonPropertyName("geneticAlgorithmConfig")]
+    public GeneticAlgorithmConfigDto? GeneticAlgorithmConfig { get; set; }
+
+    /// <summary>
+    /// 排班策略配置（JSON格式）
+    /// </summary>
+    [JsonPropertyName("strategyConfig")]
+    public string StrategyConfig { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -260,6 +290,21 @@ public class UpdateTemplateDto
     /// 启用的手动指定ID
     /// </summary>
     public List<int> EnabledManualAssignmentIds { get; set; } = new();
+
+    /// <summary>
+    /// 排班模式（可选）
+    /// </summary>
+    public SchedulingMode? SchedulingMode { get; set; }
+
+    /// <summary>
+    /// 遗传算法配置（可选，仅在 Hybrid 模式下使用）
+    /// </summary>
+    public GeneticAlgorithmConfigDto? GeneticAlgorithmConfig { get; set; }
+
+    /// <summary>
+    /// 排班策略配置（JSON格式）
+    /// </summary>
+    public string StrategyConfig { get; set; } = string.Empty;
 }
 
 /// <summary>

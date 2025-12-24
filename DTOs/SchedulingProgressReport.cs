@@ -69,4 +69,39 @@ public class SchedulingProgressReport
     /// 错误消息
     /// </summary>
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// 遗传算法进度信息（仅在使用遗传算法时有值）
+    /// </summary>
+    public GeneticProgressInfo? GeneticProgressInfo { get; set; }
+
+    /// <summary>
+    /// 回溯统计信息（仅在启用回溯时有值）
+    /// </summary>
+    public BacktrackingStatistics? BacktrackingStats { get; set; }
+
+    /// <summary>
+    /// 当前回溯深度
+    /// </summary>
+    public int CurrentBacktrackDepth { get; set; }
+
+    /// <summary>
+    /// 全局时段索引（仅在全局调度模式下有值）
+    /// </summary>
+    public int? GlobalPeriodIndex { get; set; }
+
+    /// <summary>
+    /// 总全局时段数（仅在全局调度模式下有值）
+    /// </summary>
+    public int? TotalGlobalPeriods { get; set; }
+
+    /// <summary>
+    /// 是否使用全局调度模式
+    /// </summary>
+    public bool IsGlobalScheduling { get; set; }
+
+    /// <summary>
+    /// 跨日回溯次数（仅在全局调度模式下有值）
+    /// </summary>
+    public int CrossDayBacktracks { get; set; }
 }

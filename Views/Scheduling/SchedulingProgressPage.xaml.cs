@@ -20,6 +20,11 @@ namespace AutoScheduling3.Views.Scheduling
         public SchedulingProgressViewModel ViewModel { get; }
 
         /// <summary>
+        /// 待执行的排班请求（在 OnNavigatedTo 中保存，在 Loaded 中执行）
+        /// </summary>
+        private SchedulingRequestDto? _pendingRequest;
+
+        /// <summary>
         /// 初始化排班进度页面
         /// </summary>
         public SchedulingProgressPage()
@@ -31,11 +36,31 @@ namespace AutoScheduling3.Views.Scheduling
             
             // 设置数据上下文
             this.DataContext = ViewModel;
+
+            // 订阅 Loaded 事件，在页面完全加载后启动排班
+            this.Loaded += OnPageLoaded;
+        }
+
+        /// <summary>
+        /// 页面加载完成后触发
+        /// 在此启动排班任务，确保页面已完全渲染
+        /// </summary>
+        private void OnPageLoaded(object sender, RoutedEventArgs e)
+        {
+            // 取消订阅，避免重复执行
+            this.Loaded -= OnPageLoaded;
+
+            if (_pendingRequest != null)
+            {
+                // 页面已加载，现在启动排班（fire-and-forget，不阻塞 UI）
+                _ = ViewModel.StartSchedulingCommand.ExecuteAsync(_pendingRequest);
+                _pendingRequest = null;
+            }
         }
 
         /// <summary>
         /// 页面导航到时触发
-        /// 接收 SchedulingRequestDto 参数并启动排班
+        /// 接收 SchedulingRequestDto 参数，保存待执行
         /// </summary>
         /// <param name="e">导航事件参数</param>
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -45,8 +70,8 @@ namespace AutoScheduling3.Views.Scheduling
             // 检查导航参数
             if (e.Parameter is SchedulingRequestDto request)
             {
-                // 启动排班任务
-                _ = ViewModel.StartSchedulingCommand.ExecuteAsync(request);
+                // 保存请求，等待 Loaded 事件触发后执行
+                _pendingRequest = request;
             }
             else
             {

@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Optimize Steering Language",
+  "description": "When users create or modify steering configurations, this hook automatically optimizes the user's language to be more concise and clear, while ensuring the steering content is brief to reduce token consumption",
+  "version": "1",
+  "when": {
+    "type": "userPrompt"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "用户正在创建或修改 steering 配置。请分析用户的输入，并执行以下优化：\n\n1. **语言优化**：\n   - 将用户的描述改写为更简洁、清晰的表达\n   - 去除冗余词汇和重复内容\n   - 使用精准的技术术语\n   - 保持原意但提高表达效率\n\n2. **内容精简**：\n   - 确保 steering 内容简洁明了\n   - 移除不必要的解释和示例\n   - 聚焦核心指令和要求\n   - 优化为最小化 token 消耗的形式\n\n3. **输出格式**：\n   - 提供优化后的 steering 内容\n   - 说明优化了哪些方面\n   - 估算 token 节省量（如果显著）\n\n用户输入：{{{PROMPT}}}"
+  }
+}

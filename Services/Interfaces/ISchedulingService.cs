@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoScheduling3.Models.Constraints; // 新增约束模型引用
+using AutoScheduling3.SchedulingEngine.Config; // 遗传算法配置
 
 namespace AutoScheduling3.Services.Interfaces;
 
@@ -12,6 +13,15 @@ namespace AutoScheduling3.Services.Interfaces;
 /// </summary>
 public interface ISchedulingService
 {
+ /// <summary>
+ /// 草稿列表变化事件
+ /// </summary>
+ event EventHandler? DraftsChanged;
+
+ /// <summary>
+ /// 历史记录变化事件
+ /// </summary>
+ event EventHandler? HistoryChanged;
  /// <summary>
  /// 执行排班算法
  /// </summary>
@@ -23,8 +33,9 @@ public interface ISchedulingService
  /// <param name="request">排班请求</param>
  /// <param name="progress">进度报告回调</param>
  /// <param name="cancellationToken">取消令牌</param>
+ /// <param name="mode">排班模式（仅贪心或混合模式）</param>
  /// <returns>排班结果</returns>
- Task<SchedulingResult> ExecuteSchedulingAsync(SchedulingRequestDto request, IProgress<SchedulingProgressReport>? progress = null, CancellationToken cancellationToken = default);
+ Task<SchedulingResult> ExecuteSchedulingAsync(SchedulingRequestDto request, IProgress<SchedulingProgressReport>? progress = null, CancellationToken cancellationToken = default, SchedulingMode mode = SchedulingMode.GreedyOnly);
 
  /// <summary>
  /// 获取草稿列表
@@ -113,4 +124,46 @@ public interface ISchedulingService
  /// <param name="id">要确认的草稿ID</param>
  /// <param name="clearOtherDrafts">是否清空其他草稿，默认为true</param>
  Task ConfirmScheduleAndClearOthersAsync(int id, bool clearOtherDrafts = true);
+
+ // === 新增：遗传算法配置管理方法 ===
+
+ /// <summary>
+ /// 获取遗传算法调度器配置
+ /// </summary>
+ Task<GeneticSchedulerConfig> GetGeneticSchedulerConfigAsync();
+
+ /// <summary>
+ /// 保存遗传算法调度器配置
+ /// </summary>
+ Task SaveGeneticSchedulerConfigAsync(GeneticSchedulerConfig config);
+
+ /// <summary>
+ /// 重置遗传算法调度器配置为默认值
+ /// </summary>
+ Task ResetGeneticSchedulerConfigAsync();
+
+ // === 新增：排班进度草稿保存方法 ===
+
+ /// <summary>
+ /// 保存排班进度为草稿（增量保存，只保存必要状态）
+ /// </summary>
+ /// <param name="scheduleDto">当前排班DTO</param>
+ /// <param name="progressReport">当前进度报告</param>
+ Task SaveProgressAsDraftAsync(ScheduleDto scheduleDto, SchedulingProgressReport progressReport);
+
+ /// <summary>
+ /// 获取草稿的完成进度
+ /// </summary>
+ /// <param name="draftId">草稿ID</param>
+ /// <returns>进度百分比（0-100），如果草稿不存在或不是部分结果则返回null</returns>
+ Task<double?> GetDraftProgressAsync(int draftId);
+
+ /// <summary>
+ /// 从草稿恢复排班
+ /// </summary>
+ /// <param name="draftId">草稿ID</param>
+ /// <param name="progress">进度报告回调</param>
+ /// <param name="cancellationToken">取消令牌</param>
+ /// <returns>排班结果</returns>
+ Task<SchedulingResult> ResumeFromDraftAsync(int draftId, IProgress<SchedulingProgressReport>? progress = null, CancellationToken cancellationToken = default);
 }

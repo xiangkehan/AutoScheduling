@@ -19,7 +19,7 @@ public class TemplateMapper
         if (model == null)
             throw new ArgumentNullException(nameof(model));
 
-        return new SchedulingTemplateDto
+        var dto = new SchedulingTemplateDto
         {
             Id = model.Id,
             Name = model.Name,
@@ -32,10 +32,24 @@ public class TemplateMapper
             UseActiveHolidayConfig = model.UseActiveHolidayConfig,
             EnabledFixedRuleIds = new List<int>(model.EnabledFixedRuleIds),
             EnabledManualAssignmentIds = new List<int>(model.EnabledManualAssignmentIds),
+            StrategyConfig = model.StrategyConfig,
             CreatedAt = model.CreatedAt,
             LastUsedAt = model.LastUsedAt,
             UsageCount = model.UsageCount
         };
+
+        // 从 StrategyConfig 解析算法配置
+        if (!string.IsNullOrWhiteSpace(model.StrategyConfig))
+        {
+            var algorithmConfig = Helpers.OptimizedConfigSerializer.Deserialize<TemplateAlgorithmConfig>(model.StrategyConfig);
+            if (algorithmConfig != null)
+            {
+                dto.SchedulingMode = algorithmConfig.SchedulingMode;
+                dto.GeneticAlgorithmConfig = algorithmConfig.GeneticConfig;
+            }
+        }
+
+        return dto;
     }
 
     /// <summary>
@@ -45,6 +59,18 @@ public class TemplateMapper
     {
         if (dto == null)
             throw new ArgumentNullException(nameof(dto));
+
+        // 构建算法配置JSON
+        string strategyConfig = string.Empty;
+        if (dto.SchedulingMode.HasValue)
+        {
+            var algorithmConfig = new TemplateAlgorithmConfig
+            {
+                SchedulingMode = dto.SchedulingMode.Value,
+                GeneticConfig = dto.GeneticAlgorithmConfig
+            };
+            strategyConfig = Helpers.OptimizedConfigSerializer.Serialize(algorithmConfig);
+        }
 
         return new SchedulingTemplate
         {
@@ -58,6 +84,7 @@ public class TemplateMapper
             UseActiveHolidayConfig = dto.UseActiveHolidayConfig,
             EnabledFixedRuleIds = new List<int>(dto.EnabledFixedRuleIds),
             EnabledManualAssignmentIds = new List<int>(dto.EnabledManualAssignmentIds),
+            StrategyConfig = strategyConfig,
             CreatedAt = DateTime.Now,
             UpdatedAt = DateTime.Now,
             LastUsedAt = null,
@@ -86,6 +113,17 @@ public class TemplateMapper
         model.EnabledFixedRuleIds = new List<int>(dto.EnabledFixedRuleIds);
         model.EnabledManualAssignmentIds = new List<int>(dto.EnabledManualAssignmentIds);
         model.UpdatedAt = DateTime.Now;
+
+        // 更新算法配置
+        if (dto.SchedulingMode.HasValue)
+        {
+            var algorithmConfig = new TemplateAlgorithmConfig
+            {
+                SchedulingMode = dto.SchedulingMode.Value,
+                GeneticConfig = dto.GeneticAlgorithmConfig
+            };
+            model.StrategyConfig = Helpers.OptimizedConfigSerializer.Serialize(algorithmConfig);
+        }
     }
 
     /// <summary>

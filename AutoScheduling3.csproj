@@ -131,7 +131,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Models\" />
-    <Folder Include="Tests\" />
   </ItemGroup>
   <ItemGroup>
     <Page Update="Themes\AnimationResources.xaml">

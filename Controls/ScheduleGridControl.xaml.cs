@@ -425,15 +425,26 @@ namespace AutoScheduling3.Controls
                         isHighlighted = highlightKeys.Contains(shiftKey);
                     }
                     
-                    // 2. 兼容旧的坐标格式（用于未分配冲突等特殊情况）
+                    // 2. 未分配冲突的特殊格式：unassigned_{positionId}_{date}_{period}
+                    if (!isHighlighted && GridData != null)
+                    {
+                        // 获取当前单元格对应的行和列信息
+                        var rowData = GridData.Rows.FirstOrDefault(r => r.RowIndex == row);
+                        var colData = GridData.Columns.FirstOrDefault(c => c.ColumnIndex == col);
+                        
+                        if (rowData != null && colData != null)
+                        {
+                            var unassignedKey = $"unassigned_{colData.PositionId}_{rowData.Date:yyyyMMdd}_{rowData.PeriodIndex}";
+                            isHighlighted = highlightKeys.Contains(unassignedKey);
+                        }
+                    }
+                    
+                    // 3. 兼容旧的坐标格式
                     if (!isHighlighted)
                     {
                         var coordKey = $"{row}_{col}";
                         isHighlighted = highlightKeys.Contains(coordKey);
                     }
-                    
-                    // 3. 未分配冲突的特殊格式（如果需要）
-                    // 这里可以根据需要添加更多格式支持
 
                     var isFocused = FocusedShiftId.HasValue && cellControl.CellData.ShiftId == FocusedShiftId.Value;
 

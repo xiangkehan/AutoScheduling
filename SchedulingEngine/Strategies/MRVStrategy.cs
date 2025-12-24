@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AutoScheduling3.Constants;
 using AutoScheduling3.SchedulingEngine.Core;
 
 namespace AutoScheduling3.SchedulingEngine.Strategies
@@ -9,7 +10,7 @@ namespace AutoScheduling3.SchedulingEngine.Strategies
     /// MRV（Minimum Remaining Values）启发式策略：
     /// 优先选择候选人员最少的哨位-时段进行分配，减少无解风险
     /// </summary>
-    public class MRVStrategy
+    public class MRVStrategy : ISchedulingStrategy
     {
         private readonly FeasibilityTensor _tensor;
         private readonly SchedulingContext _context;
@@ -38,7 +39,7 @@ namespace AutoScheduling3.SchedulingEngine.Strategies
         /// <summary>
         /// 初始化候选人员数缓存
         /// </summary>
-        private void InitializeCandidateCounts()
+        public void InitializeCandidateCounts()
         {
             for (int x = 0; x < _tensor.PositionCount; x++)
             {
@@ -54,7 +55,7 @@ namespace AutoScheduling3.SchedulingEngine.Strategies
         /// 选择候选人员最少的未分配位置（MRV核心逻辑）
         /// </summary>
         /// <returns>选中的(哨位索引, 时段索引)，如果所有位置已分配则返回(-1, -1)</returns>
-        public (int PositionIdx, int PeriodIdx) SelectNextSlot()
+        public (int positionIdx, int periodIdx) SelectNextSlot()
         {
             int minCandidates = int.MaxValue;
             int selectedPosIdx = -1;
@@ -120,8 +121,7 @@ namespace AutoScheduling3.SchedulingEngine.Strategies
             UpdateAdjacentPeriodCounts(assignedPersonIdx, assignedPeriodIdx);
 
             // 4. "夜哨唯一"约束：如果是夜哨时段，更新同一晚其他夜哨时段
-            int[] nightPeriods = { 11, 0, 1, 2 };
-            if (nightPeriods.Contains(assignedPeriodIdx))
+            if (SchedulingConstants.NightShiftPeriods.Contains(assignedPeriodIdx))
             {
                 UpdateNightShiftCounts(assignedPersonIdx, assignedPeriodIdx);
             }
@@ -157,7 +157,7 @@ namespace AutoScheduling3.SchedulingEngine.Strategies
             }
 
             // 跨日情况：时段11和时段0相邻
-            if (periodIdx == 11)
+            if (periodIdx == SchedulingConstants.MaxPeriodIndex)
             {
                 // 时段11分配后，次日时段0受影响（需要在日期推进时处理）
             }
@@ -172,9 +172,7 @@ namespace AutoScheduling3.SchedulingEngine.Strategies
         /// </summary>
         private void UpdateNightShiftCounts(int personIdx, int assignedNightPeriod)
         {
-            int[] nightPeriods = { 11, 0, 1, 2 };
-            
-            foreach (var nightPeriod in nightPeriods)
+            foreach (var nightPeriod in SchedulingConstants.NightShiftPeriods)
             {
                 if (nightPeriod == assignedNightPeriod)
                     continue;
@@ -216,7 +214,7 @@ namespace AutoScheduling3.SchedulingEngine.Strategies
         /// <summary>
         /// 获取所有未分配且无候选人员的位置（无解检测）
         /// </summary>
-        public List<(int PositionIdx, int PeriodIdx)> GetUnassignedWithNoCandidates()
+        public List<(int positionIdx, int periodIdx)> GetUnassignedWithNoCandidates()
         {
             var result = new List<(int, int)>();
 
@@ -225,6 +223,27 @@ namespace AutoScheduling3.SchedulingEngine.Strategies
                 for (int y = 0; y < _tensor.PeriodCount; y++)
                 {
                     if (!_assignedFlags[x, y] && _candidateCounts[x, y] == 0)
+                    {
+                        result.Add((x, y));
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 获取所有未分配的位置
+        /// </summary>
+        public List<(int positionIdx, int periodIdx)> GetUnassignedSlots()
+        {
+            var result = new List<(int, int)>();
+
+            for (int x = 0; x < _tensor.PositionCount; x++)
+            {
+                for (int y = 0; y < _tensor.PeriodCount; y++)
+                {
+                    if (!_assignedFlags[x, y])
                     {
                         result.Add((x, y));
                     }
@@ -265,6 +284,38 @@ namespace AutoScheduling3.SchedulingEngine.Strategies
 
             return $"总位置: {totalSlots}, 已分配: {assignedCount}, 无候选: {zeroCandidate}, " +
                    $"最少候选: {(minCandidates == int.MaxValue ? 0 : minCandidates)}, 最多候选: {maxCandidates}";
+        }
+
+        /// <summary>
+        /// 获取候选计数数组的副本（用于状态快照）
+        /// </summary>
+        public int[,] GetCandidateCountsCopy()
+        {
+            return (int[,])_candidateCounts.Clone();
+        }
+
+        /// <summary>
+        /// 获取分配标记数组的副本（用于状态快照）
+        /// </summary>
+        public bool[,] GetAssignedFlagsCopy()
+        {
+            return (bool[,])_assignedFlags.Clone();
+        }
+
+        /// <summary>
+        /// 获取候选计数数组的引用（用于状态恢复）
+        /// </summary>
+        public int[,] GetCandidateCountsReference()
+        {
+            return _candidateCounts;
+        }
+
+        /// <summary>
+        /// 获取分配标记数组的引用（用于状态恢复）
+        /// </summary>
+        public bool[,] GetAssignedFlagsReference()
+        {
+            return _assignedFlags;
         }
     }
 }

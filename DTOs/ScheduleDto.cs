@@ -109,6 +109,30 @@ public class ScheduleDto
     /// </summary>
     [JsonPropertyName("enabledManualAssignmentIds")]
     public List<int> EnabledManualAssignmentIds { get; set; } = new();
+
+    /// <summary>
+    /// 进度百分比（0-100），用于标识部分完成的排班
+    /// </summary>
+    [JsonPropertyName("progressPercentage")]
+    public double? ProgressPercentage { get; set; }
+
+    /// <summary>
+    /// 当前阶段，用于标识排班执行到哪个阶段
+    /// </summary>
+    [JsonPropertyName("currentStage")]
+    public string? CurrentStage { get; set; }
+
+    /// <summary>
+    /// 是否为部分结果（未完成的排班）
+    /// </summary>
+    [JsonPropertyName("isPartialResult")]
+    public bool IsPartialResult { get; set; }
+
+    /// <summary>
+    /// 排班模式（仅贪心或混合模式）
+    /// </summary>
+    [JsonPropertyName("schedulingMode")]
+    public SchedulingMode SchedulingMode { get; set; } = SchedulingMode.GreedyOnly;
 }
 
 /// <summary>
@@ -249,6 +273,25 @@ public class ScheduleSummaryDto
     /// </summary>
     [JsonPropertyName("confirmedAt")]
     public DateTime? ConfirmedAt { get; set; }
+
+    /// <summary>
+    /// 排班模式（仅贪心或混合）
+    /// </summary>
+    [JsonPropertyName("schedulingMode")]
+    public SchedulingMode SchedulingMode { get; set; }
+
+    /// <summary>
+    /// 进度百分比（0-100）
+    /// </summary>
+    [Range(0, 100, ErrorMessage = "进度百分比必须在0-100之间")]
+    [JsonPropertyName("progressPercentage")]
+    public double ProgressPercentage { get; set; }
+
+    /// <summary>
+    /// 是否可恢复（未完成的草稿）
+    /// </summary>
+    [JsonPropertyName("isResumable")]
+    public bool IsResumable { get; set; }
 }
 
 /// <summary>
@@ -310,6 +353,11 @@ public class SchedulingRequestDto
     public List<ManualAssignmentRequestItem>? TemporaryManualAssignments { get; set; }
     
     public int? HolidayConfigId { get; set; }
+
+    /// <summary>
+    /// 排班模式（默认混合模式）
+    /// </summary>
+    public SchedulingMode SchedulingMode { get; set; } = SchedulingMode.Hybrid;
 }
 
 /// <summary>

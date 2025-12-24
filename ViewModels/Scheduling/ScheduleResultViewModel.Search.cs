@@ -24,7 +24,13 @@ namespace AutoScheduling3.ViewModels.Scheduling
         public ObservableCollection<SearchResultItem> SearchResults
         {
             get => _searchResults;
-            set => SetProperty(ref _searchResults, value);
+            set
+            {
+                if (SetProperty(ref _searchResults, value))
+                {
+                    OnPropertyChanged(nameof(SearchResultCountText));
+                }
+            }
         }
 
         /// <summary>
@@ -60,7 +66,27 @@ namespace AutoScheduling3.ViewModels.Scheduling
         public int CurrentHighlightIndex
         {
             get => _currentHighlightIndex;
-            set => SetProperty(ref _currentHighlightIndex, value);
+            set
+            {
+                if (SetProperty(ref _currentHighlightIndex, value))
+                {
+                    OnPropertyChanged(nameof(SearchResultCountText));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 搜索结果计数文本（格式：当前/总数）
+        /// </summary>
+        public string SearchResultCountText
+        {
+            get
+            {
+                if (!HasActiveSearch || SearchResults.Count == 0)
+                    return string.Empty;
+                
+                return $"{CurrentHighlightIndex + 1}/{SearchResults.Count}";
+            }
         }
 
         /// <summary>

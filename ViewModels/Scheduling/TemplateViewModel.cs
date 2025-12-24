@@ -87,6 +87,41 @@ namespace AutoScheduling3.ViewModels.Scheduling
  private ObservableCollection<FixedPositionRule> _fixedPositionRules = new();
  public ObservableCollection<FixedPositionRule> FixedPositionRules { get => _fixedPositionRules; set => SetProperty(ref _fixedPositionRules, value); }
 
+ // 算法配置属性
+ private SchedulingMode _selectedSchedulingMode = SchedulingMode.Hybrid;
+ public SchedulingMode SelectedSchedulingMode { get => _selectedSchedulingMode; set => SetProperty(ref _selectedSchedulingMode, value); }
+
+ private int _populationSize = 50;
+ public int PopulationSize { get => _populationSize; set => SetProperty(ref _populationSize, value); }
+
+ private int _maxGenerations = 100;
+ public int MaxGenerations { get => _maxGenerations; set => SetProperty(ref _maxGenerations, value); }
+
+ private double _crossoverRate = 0.8;
+ public double CrossoverRate { get => _crossoverRate; set => SetProperty(ref _crossoverRate, value); }
+
+ private double _mutationRate = 0.1;
+ public double MutationRate { get => _mutationRate; set => SetProperty(ref _mutationRate, value); }
+
+ private int _eliteCount = 2;
+ public int EliteCount { get => _eliteCount; set => SetProperty(ref _eliteCount, value); }
+
+ private SelectionStrategyType _selectionStrategy = SelectionStrategyType.Tournament;
+ public SelectionStrategyType SelectionStrategy { get => _selectionStrategy; set => SetProperty(ref _selectionStrategy, value); }
+
+ private CrossoverStrategyType _crossoverStrategy = CrossoverStrategyType.Uniform;
+ public CrossoverStrategyType CrossoverStrategy { get => _crossoverStrategy; set => SetProperty(ref _crossoverStrategy, value); }
+
+ private MutationStrategyType _mutationStrategy = MutationStrategyType.Swap;
+ public MutationStrategyType MutationStrategy { get => _mutationStrategy; set => SetProperty(ref _mutationStrategy, value); }
+
+ private int _tournamentSize = 5;
+ public int TournamentSize { get => _tournamentSize; set => SetProperty(ref _tournamentSize, value); }
+
+ public List<SchedulingMode> AvailableSchedulingModes { get; } = new() { SchedulingMode.GreedyOnly, SchedulingMode.Hybrid };
+ public List<SelectionStrategyType> AvailableSelectionStrategies { get; } = new() { SelectionStrategyType.Tournament, SelectionStrategyType.RouletteWheel };
+ public List<CrossoverStrategyType> AvailableCrossoverStrategies { get; } = new() { CrossoverStrategyType.Uniform, CrossoverStrategyType.SinglePoint };
+ public List<MutationStrategyType> AvailableMutationStrategies { get; } = new() { MutationStrategyType.Swap };
 
  private bool _isLoading;
  public bool IsLoading { get => _isLoading; set { if (SetProperty(ref _isLoading, value)) RefreshCommandStates(); } }
@@ -265,7 +300,20 @@ namespace AutoScheduling3.ViewModels.Scheduling
  EnabledFixedRuleIds = new List<int>(),
  EnabledManualAssignmentIds = new List<int>(),
  UseActiveHolidayConfig = true,
- CreatedAt = DateTime.Now
+ CreatedAt = DateTime.Now,
+ SchedulingMode = SchedulingMode.Hybrid,
+ GeneticAlgorithmConfig = new GeneticAlgorithmConfigDto
+ {
+ PopulationSize = 50,
+ MaxGenerations = 100,
+ CrossoverRate = 0.8,
+ MutationRate = 0.1,
+ EliteCount = 2,
+ SelectionStrategy = SelectionStrategyType.Tournament,
+ CrossoverStrategy = CrossoverStrategyType.Uniform,
+ MutationStrategy = MutationStrategyType.Swap,
+ TournamentSize = 5
+ }
  };
  }
 
@@ -278,6 +326,28 @@ namespace AutoScheduling3.ViewModels.Scheduling
  SelectedTemplate.PositionIds = SelectedPositions.Select(p => p.Id).ToList();
  SelectedTemplate.EnabledFixedRuleIds = FixedPositionRules.Where(r => r.IsEnabled).Select(r => r.Id).ToList();
  // Manual assignments are not edited here. Keep existing values.
+
+ // 更新算法配置
+ SelectedTemplate.SchedulingMode = SelectedSchedulingMode;
+ if (SelectedSchedulingMode == SchedulingMode.Hybrid)
+ {
+ SelectedTemplate.GeneticAlgorithmConfig = new GeneticAlgorithmConfigDto
+ {
+ PopulationSize = PopulationSize,
+ MaxGenerations = MaxGenerations,
+ CrossoverRate = CrossoverRate,
+ MutationRate = MutationRate,
+ EliteCount = EliteCount,
+ SelectionStrategy = SelectionStrategy,
+ CrossoverStrategy = CrossoverStrategy,
+ MutationStrategy = MutationStrategy,
+ TournamentSize = TournamentSize
+ };
+ }
+ else
+ {
+ SelectedTemplate.GeneticAlgorithmConfig = null;
+ }
 
  IsLoadingDetails = true;
  try
@@ -295,7 +365,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
  HolidayConfigId = SelectedTemplate.HolidayConfigId,
  UseActiveHolidayConfig = SelectedTemplate.UseActiveHolidayConfig,
  EnabledFixedRuleIds = SelectedTemplate.EnabledFixedRuleIds,
- EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds // Keep original
+ EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds, // Keep original
+ SchedulingMode = SelectedTemplate.SchedulingMode,
+ GeneticAlgorithmConfig = SelectedTemplate.GeneticAlgorithmConfig
  };
  var newTpl = await _templateService.CreateAsync(createDto);
  _allTemplates.Add(newTpl);
@@ -315,7 +387,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
  HolidayConfigId = SelectedTemplate.HolidayConfigId,
  UseActiveHolidayConfig = SelectedTemplate.UseActiveHolidayConfig,
  EnabledFixedRuleIds = SelectedTemplate.EnabledFixedRuleIds,
- EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds // Keep original
+ EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds, // Keep original
+ SchedulingMode = SelectedTemplate.SchedulingMode,
+ GeneticAlgorithmConfig = SelectedTemplate.GeneticAlgorithmConfig
  };
  await _templateService.UpdateAsync(SelectedTemplate.Id, updateDto);
  var latest = await _templateService.GetByIdAsync(SelectedTemplate.Id);
@@ -386,7 +460,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
  HolidayConfigId = SelectedTemplate.HolidayConfigId,
  UseActiveHolidayConfig = SelectedTemplate.UseActiveHolidayConfig,
  EnabledFixedRuleIds = SelectedTemplate.EnabledFixedRuleIds.ToList(),
- EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds.ToList()
+ EnabledManualAssignmentIds = SelectedTemplate.EnabledManualAssignmentIds.ToList(),
+ SchedulingMode = SelectedTemplate.SchedulingMode,
+ GeneticAlgorithmConfig = SelectedTemplate.GeneticAlgorithmConfig
  };
  var dup = await _templateService.CreateAsync(createDto);
  _allTemplates.Add(dup);
@@ -468,6 +544,18 @@ namespace AutoScheduling3.ViewModels.Scheduling
  SelectedPersonnel.Clear();
  SelectedPositions.Clear();
  foreach (var rule in FixedPositionRules) rule.IsEnabled = false;
+ 
+ // 重置算法配置为默认值
+ SelectedSchedulingMode = SchedulingMode.Hybrid;
+ PopulationSize = 50;
+ MaxGenerations = 100;
+ CrossoverRate = 0.8;
+ MutationRate = 0.1;
+ EliteCount = 2;
+ SelectionStrategy = SelectionStrategyType.Tournament;
+ CrossoverStrategy = CrossoverStrategyType.Uniform;
+ MutationStrategy = MutationStrategyType.Swap;
+ TournamentSize = 5;
  return;
  }
 
@@ -481,6 +569,34 @@ namespace AutoScheduling3.ViewModels.Scheduling
  rule.IsEnabled = SelectedTemplate.EnabledFixedRuleIds.Contains(rule.Id);
  }
  // Note: HolidayConfigId and UseActiveHolidayConfig are bound directly to SelectedTemplate properties.
+
+ // 加载算法配置
+ SelectedSchedulingMode = SelectedTemplate.SchedulingMode ?? SchedulingMode.Hybrid;
+ if (SelectedTemplate.GeneticAlgorithmConfig != null)
+ {
+ PopulationSize = SelectedTemplate.GeneticAlgorithmConfig.PopulationSize;
+ MaxGenerations = SelectedTemplate.GeneticAlgorithmConfig.MaxGenerations;
+ CrossoverRate = SelectedTemplate.GeneticAlgorithmConfig.CrossoverRate;
+ MutationRate = SelectedTemplate.GeneticAlgorithmConfig.MutationRate;
+ EliteCount = SelectedTemplate.GeneticAlgorithmConfig.EliteCount;
+ SelectionStrategy = SelectedTemplate.GeneticAlgorithmConfig.SelectionStrategy;
+ CrossoverStrategy = SelectedTemplate.GeneticAlgorithmConfig.CrossoverStrategy;
+ MutationStrategy = SelectedTemplate.GeneticAlgorithmConfig.MutationStrategy;
+ TournamentSize = SelectedTemplate.GeneticAlgorithmConfig.TournamentSize;
+ }
+ else
+ {
+ // 使用默认值
+ PopulationSize = 50;
+ MaxGenerations = 100;
+ CrossoverRate = 0.8;
+ MutationRate = 0.1;
+ EliteCount = 2;
+ SelectionStrategy = SelectionStrategyType.Tournament;
+ CrossoverStrategy = CrossoverStrategyType.Uniform;
+ MutationStrategy = MutationStrategyType.Swap;
+ TournamentSize = 5;
+ }
  }
 
  private void RefreshCommandStates()

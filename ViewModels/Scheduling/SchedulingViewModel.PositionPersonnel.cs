@@ -127,10 +127,12 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
                 
-                await _dialogService.ShowErrorAsync("添加人员失败", ex);
-                
-                // 确保对话框关闭
+                // 先关闭当前对话框，避免多个对话框冲突
                 IsAddingPersonnelToPosition = false;
+                
+                // 延迟显示错误对话框，确保前一个对话框已完全关闭
+                await Task.Delay(100);
+                await _dialogService.ShowErrorAsync("添加人员失败", ex);
             }
         }
 
@@ -604,6 +606,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 // 关闭对话框
                 IsManualAddingPersonnel = false;
 
+                // 刷新命令状态，使"下一步"按钮可用
+                RefreshCommandStates();
+
                 System.Diagnostics.Debug.WriteLine("手动添加人员完成，对话框已关闭");
             }
             catch (Exception ex)
@@ -613,10 +618,12 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 System.Diagnostics.Debug.WriteLine($"错误消息: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"堆栈跟踪: {ex.StackTrace}");
                 
-                await _dialogService.ShowErrorAsync("添加人员失败", ex);
-                
-                // 确保对话框关闭
+                // 先关闭当前对话框，避免多个对话框冲突
                 IsManualAddingPersonnel = false;
+                
+                // 延迟显示错误对话框，确保前一个对话框已完全关闭
+                await Task.Delay(100);
+                await _dialogService.ShowErrorAsync("添加人员失败", ex);
             }
         }
 
@@ -682,6 +689,9 @@ namespace AutoScheduling3.ViewModels.Scheduling
 
             // 更新ManuallyAddedPersonnelCount
             ManuallyAddedPersonnelCount = ManuallyAddedPersonnelIds.Count;
+
+            // 刷新命令状态，更新"下一步"按钮状态
+            RefreshCommandStates();
 
             System.Diagnostics.Debug.WriteLine($"手动添加人员总数: {ManuallyAddedPersonnelCount}");
             System.Diagnostics.Debug.WriteLine("=== 移除完成 ===");

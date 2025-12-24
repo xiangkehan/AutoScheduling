@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
             {
                 int bufferId = reader.GetInt32(0);
                 int scheduleId = reader.GetInt32(1);
-                DateTime createTime = DateTime.Parse(reader.GetString(2)).ToUniversalTime();
+                DateTime createTime = ParseDateTime(reader.GetString(2));
 
                 var schedule = await _schedulingRepo.GetByIdAsync(scheduleId);
                 if (schedule != null)
@@ -316,6 +316,47 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
         }
 
         /// <summary>
+        /// 通过 ScheduleId 删除缓冲区排班（性能优化版本）
+        /// </summary>
+        public async Task DeleteBufferScheduleByScheduleIdAsync(int scheduleId)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+            using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
+
+            try
+            {
+                // 1. 先删除 SingleShifts（子表）
+                var shiftsCmd = conn.CreateCommand();
+                shiftsCmd.Transaction = tx;
+                shiftsCmd.CommandText = "DELETE FROM SingleShifts WHERE ScheduleId = @scheduleId";
+                shiftsCmd.Parameters.AddWithValue("@scheduleId", scheduleId);
+                await shiftsCmd.ExecuteNonQueryAsync();
+
+                // 2. 删除 BufferSchedules
+                var bufferCmd = conn.CreateCommand();
+                bufferCmd.Transaction = tx;
+                bufferCmd.CommandText = "DELETE FROM BufferSchedules WHERE ScheduleId = @scheduleId";
+                bufferCmd.Parameters.AddWithValue("@scheduleId", scheduleId);
+                await bufferCmd.ExecuteNonQueryAsync();
+
+                // 3. 最后删除 Schedules（主表）
+                var scheduleCmd = conn.CreateCommand();
+                scheduleCmd.Transaction = tx;
+                scheduleCmd.CommandText = "DELETE FROM Schedules WHERE Id = @scheduleId";
+                scheduleCmd.Parameters.AddWithValue("@scheduleId", scheduleId);
+                await scheduleCmd.ExecuteNonQueryAsync();
+
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+        }
+
+        /// <summary>
         /// 获取最近一次确认的排班表（用于算法历史约束处理）
         /// </summary>
         /// <returns>最近确认的排班表，如果没有则返回 null</returns>
@@ -346,6 +387,80 @@ CREATE TABLE IF NOT EXISTS BufferSchedules (
             var item = all.FirstOrDefault(h => h.Schedule.Id == scheduleId);
             if (item.Schedule == null) return null;
             return item;
+        }
+
+        /// <summary>
+        /// 更新缓冲区中的排班表（用于保存进度草稿）
+        /// </summary>
+        public async Task UpdateBufferScheduleAsync(Schedule schedule)
+        {
+            if (schedule == null)
+            {
+                throw new ArgumentNullException(nameof(schedule));
+            }
+
+            // 更新排班表
+            await _schedulingRepo.UpdateAsync(schedule);
+
+            // 更新缓冲区记录的时间戳
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE BufferSchedules SET CreateTime = @createTime WHERE ScheduleId = @scheduleId";
+            cmd.Parameters.AddWithValue("@createTime", DateTime.UtcNow.ToString("o"));
+            cmd.Parameters.AddWithValue("@scheduleId", schedule.Id);
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
+        /// 从缓冲区获取排班表（用于恢复进度草稿）
+        /// </summary>
+        public async Task<Schedule?> GetBufferScheduleAsync(int bufferId)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT ScheduleId FROM BufferSchedules WHERE Id = @bufferId";
+            cmd.Parameters.AddWithValue("@bufferId", bufferId);
+            
+            var result = await cmd.ExecuteScalarAsync();
+            if (result == null)
+            {
+                return null;
+            }
+
+            int scheduleId = Convert.ToInt32(result);
+            return await _schedulingRepo.GetByIdAsync(scheduleId);
+        }
+
+        /// <summary>
+        /// 解析日期时间字符串，支持 ISO 8601 格式和 Ticks 格式（兼容旧数据）
+        /// </summary>
+        private DateTime ParseDateTime(string value)
+        {
+            // 尝试解析为 ISO 8601 格式
+            if (DateTime.TryParse(value, out var dateTime))
+            {
+                return dateTime.ToUniversalTime();
+            }
+
+            // 尝试解析为 Ticks 格式（兼容旧数据）
+            if (long.TryParse(value, out var ticks))
+            {
+                try
+                {
+                    return new DateTime(ticks, DateTimeKind.Utc);
+                }
+                catch
+                {
+                    // Ticks 值无效，抛出异常
+                    throw new FormatException($"无法将字符串 '{value}' 解析为有效的日期时间。");
+                }
+            }
+
+            throw new FormatException($"无法将字符串 '{value}' 解析为有效的日期时间。");
         }
     }
 }

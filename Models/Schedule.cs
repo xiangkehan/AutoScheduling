@@ -83,6 +83,26 @@ namespace AutoScheduling3.Models
         /// </summary>
         public List<int> EnabledManualAssignmentIds { get; set; } = new List<int>();
 
+        /// <summary>
+        /// 进度百分比（0-100），用于标识部分完成的排班
+        /// </summary>
+        public double? ProgressPercentage { get; set; }
+
+        /// <summary>
+        /// 当前阶段，用于标识排班执行到哪个阶段
+        /// </summary>
+        public string? CurrentStage { get; set; }
+
+        /// <summary>
+        /// 是否为部分结果（未完成的排班）
+        /// </summary>
+        public bool IsPartialResult { get; set; }
+
+        /// <summary>
+        /// 排班模式（仅贪心或混合模式）
+        /// </summary>
+        public int SchedulingMode { get; set; } = 0; // 0 = GreedyOnly, 1 = Hybrid
+
         public override string ToString() => $"Schedule[{Id}] {Header} Results={Results.Count}";
     }
 }

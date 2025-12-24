@@ -242,5 +242,225 @@ namespace AutoScheduling3.SchedulingEngine.Core
         {
             return HolidayConfig?.IsHoliday(date) ?? false;
         }
+
+        #region 状态快照支持方法
+
+        /// <summary>
+        /// 创建人员评分状态的深拷贝
+        /// 对应需求: 2.1, 3.1
+        /// </summary>
+        public Dictionary<int, PersonScoreStateSnapshot> CreatePersonScoreStatesSnapshot()
+        {
+            var snapshot = new Dictionary<int, PersonScoreStateSnapshot>();
+            foreach (var kvp in PersonScoreStates)
+            {
+                snapshot[kvp.Key] = PersonScoreStateSnapshot.FromPersonScoreState(kvp.Value);
+            }
+            return snapshot;
+        }
+
+        /// <summary>
+        /// 从快照恢复人员评分状态
+        /// 对应需求: 2.2
+        /// </summary>
+        public void RestorePersonScoreStates(Dictionary<int, PersonScoreStateSnapshot> snapshot)
+        {
+            if (snapshot == null) return;
+
+            foreach (var kvp in snapshot)
+            {
+                if (PersonScoreStates.TryGetValue(kvp.Key, out var state))
+                {
+                    kvp.Value.RestoreToPersonScoreState(state);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 创建人员分配时间戳的深拷贝
+        /// 对应需求: 3.1
+        /// </summary>
+        public Dictionary<int, SortedSet<int>> CreatePersonAssignmentTimestampsSnapshot()
+        {
+            var snapshot = new Dictionary<int, SortedSet<int>>();
+            foreach (var kvp in PersonAssignmentTimestamps)
+            {
+                snapshot[kvp.Key] = new SortedSet<int>(kvp.Value);
+            }
+            return snapshot;
+        }
+
+        /// <summary>
+        /// 从快照恢复人员分配时间戳
+        /// 对应需求: 3.3
+        /// </summary>
+        public void RestorePersonAssignmentTimestamps(Dictionary<int, SortedSet<int>> snapshot)
+        {
+            if (snapshot == null) return;
+
+            foreach (var kvp in snapshot)
+            {
+                if (PersonAssignmentTimestamps.ContainsKey(kvp.Key))
+                {
+                    PersonAssignmentTimestamps[kvp.Key] = new SortedSet<int>(kvp.Value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 创建人员分配详情的深拷贝
+        /// 对应需求: 3.2
+        /// </summary>
+        public Dictionary<int, Dictionary<int, (DateTime date, int period, int positionIdx)>> CreatePersonAssignmentDetailsSnapshot()
+        {
+            var snapshot = new Dictionary<int, Dictionary<int, (DateTime, int, int)>>();
+            foreach (var kvp in PersonAssignmentDetails)
+            {
+                snapshot[kvp.Key] = new Dictionary<int, (DateTime, int, int)>(kvp.Value);
+            }
+            return snapshot;
+        }
+
+        /// <summary>
+        /// 从快照恢复人员分配详情
+        /// 对应需求: 3.4
+        /// </summary>
+        public void RestorePersonAssignmentDetails(Dictionary<int, Dictionary<int, (DateTime date, int period, int positionIdx)>> snapshot)
+        {
+            if (snapshot == null) return;
+
+            foreach (var kvp in snapshot)
+            {
+                if (PersonAssignmentDetails.ContainsKey(kvp.Key))
+                {
+                    PersonAssignmentDetails[kvp.Key] = new Dictionary<int, (DateTime, int, int)>(kvp.Value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 验证状态一致性
+        /// 对应需求: 6.1, 6.2, 6.3
+        /// </summary>
+        public StateConsistencyResult ValidateStateConsistency()
+        {
+            var result = new StateConsistencyResult
+            {
+                IsConsistent = true,
+                Inconsistencies = new List<string>()
+            };
+
+            // 检查 Assignments 与 PersonAssignmentTimestamps 一致性
+            foreach (var dateAssignments in Assignments)
+            {
+                var date = dateAssignments.Key;
+                var assignments = dateAssignments.Value;
+
+                for (int periodIdx = 0; periodIdx < assignments.GetLength(0); periodIdx++)
+                {
+                    for (int positionIdx = 0; positionIdx < assignments.GetLength(1); positionIdx++)
+                    {
+                        int personIdx = assignments[periodIdx, positionIdx];
+                        if (personIdx >= 0)
+                        {
+                            int personId = PersonIdxToId[personIdx];
+                            int timestamp = CalculateTimestamp(date, periodIdx);
+
+                            // 检查时间戳是否存在
+                            if (!PersonAssignmentTimestamps.TryGetValue(personId, out var timestamps) ||
+                                !timestamps.Contains(timestamp))
+                            {
+                                result.IsConsistent = false;
+                                result.Inconsistencies.Add(
+                                    $"分配记录与时间戳不一致: 人员{personId} 在 {date:yyyy-MM-dd} 时段{periodIdx} 有分配，但时间戳索引中不存在");
+                            }
+
+                            // 检查详情是否存在
+                            if (!PersonAssignmentDetails.TryGetValue(personId, out var details) ||
+                                !details.ContainsKey(timestamp))
+                            {
+                                result.IsConsistent = false;
+                                result.Inconsistencies.Add(
+                                    $"分配记录与详情不一致: 人员{personId} 在 {date:yyyy-MM-dd} 时段{periodIdx} 有分配，但详情索引中不存在");
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 检查 PersonScoreStates 与分配记录一致性
+            foreach (var kvp in PersonScoreStates)
+            {
+                int personId = kvp.Key;
+                var state = kvp.Value;
+
+                // 统计该人员的实际分配次数
+                int actualAssignments = 0;
+                int actualNightShifts = 0;
+                int actualDayShifts = 0;
+
+                if (PersonAssignmentTimestamps.TryGetValue(personId, out var timestamps))
+                {
+                    foreach (var timestamp in timestamps)
+                    {
+                        // 只统计当前排班周期内的分配（时间戳 >= 0）
+                        if (timestamp >= 0)
+                        {
+                            actualAssignments++;
+                            int periodIdx = timestamp % 12;
+                            if (periodIdx == 11 || periodIdx == 0 || periodIdx == 1 || periodIdx == 2)
+                            {
+                                actualNightShifts++;
+                            }
+                            else
+                            {
+                                actualDayShifts++;
+                            }
+                        }
+                    }
+                }
+
+                // 注意：由于历史数据的存在，累积计数器可能大于当前周期的分配数
+                // 这里只检查当前周期的分配是否被正确计入
+                // 如果累积计数器小于当前周期的分配数，则说明有问题
+                if (state.TotalAssignments < actualAssignments)
+                {
+                    result.IsConsistent = false;
+                    result.Inconsistencies.Add(
+                        $"人员{personId}的TotalAssignments({state.TotalAssignments})小于实际分配数({actualAssignments})");
+                }
+            }
+
+            return result;
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// 状态一致性验证结果
+    /// 对应需求: 6.1, 6.2, 6.3
+    /// </summary>
+    public class StateConsistencyResult
+    {
+        /// <summary>
+        /// 是否一致
+        /// </summary>
+        public bool IsConsistent { get; set; }
+
+        /// <summary>
+        /// 不一致详情列表
+        /// </summary>
+        public List<string> Inconsistencies { get; set; } = new();
+
+        public override string ToString()
+        {
+            if (IsConsistent)
+            {
+                return "状态一致性验证通过";
+            }
+            return $"状态一致性验证失败: {Inconsistencies.Count} 个问题\n" +
+                   string.Join("\n", Inconsistencies.Select(i => $"  - {i}"));
+        }
     }
 }

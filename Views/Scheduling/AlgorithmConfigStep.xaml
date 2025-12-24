@@ -1,0 +1,353 @@
+<UserControl
+    x:Class="AutoScheduling3.Views.Scheduling.AlgorithmConfigStep"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:dto="using:AutoScheduling3.DTOs"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <!-- 标题样式 -->
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <!-- 参数标签样式 -->
+        <Style x:Key="ParameterLabelStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="MinWidth" Value="100"/>
+        </Style>
+
+        <!-- 参数输入框样式 -->
+        <Style x:Key="ParameterInputStyle" TargetType="NumberBox">
+            <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="SpinButtonPlacementMode" Value="Inline"/>
+        </Style>
+
+        <!-- 错误提示样式 -->
+        <Style x:Key="ErrorTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#C42B1C"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,4,0,0"/>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer>
+        <StackPanel Spacing="24" Padding="24">
+            <!-- 排班模式选择 -->
+            <StackPanel Spacing="12">
+                <TextBlock Text="排班模式" Style="{StaticResource SectionTitleStyle}"/>
+                
+                <RadioButton
+                    GroupName="SchedulingMode"
+                    IsChecked="{x:Bind ViewModel.IsGreedyOnlyMode, Mode=TwoWay}"
+                    Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="仅贪心算法" FontWeight="SemiBold"/>
+                        <TextBlock 
+                            Text="快速生成排班方案，适合低性能设备" 
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            TextWrapping="Wrap"
+                            Margin="0,4,0,0"/>
+                    </StackPanel>
+                </RadioButton>
+
+                <RadioButton
+                    GroupName="SchedulingMode"
+                    IsChecked="{x:Bind ViewModel.IsHybridMode, Mode=TwoWay}"
+                    Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="混合模式（推荐）" FontWeight="SemiBold"/>
+                        <TextBlock 
+                            Text="先使用贪心算法生成初始解，再使用遗传算法优化，质量更优" 
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            TextWrapping="Wrap"
+                            Margin="0,4,0,0"/>
+                    </StackPanel>
+                </RadioButton>
+            </StackPanel>
+
+            <!-- 遗传算法参数 -->
+            <StackPanel 
+                Spacing="16" 
+                Visibility="{x:Bind ViewModel.IsHybridMode, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                
+                <Border
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="20">
+                    <StackPanel Spacing="16">
+                        <Grid>
+                            <TextBlock Text="遗传算法参数" Style="{StaticResource SectionTitleStyle}"/>
+                            <Button 
+                                Content="恢复默认值"
+                                Command="{x:Bind ViewModel.RestoreDefaultsCommand}"
+                                HorizontalAlignment="Right"/>
+                        </Grid>
+
+                        <!-- 种群大小 -->
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock 
+                                    Grid.Column="0"
+                                    Text="种群大小:" 
+                                    Style="{StaticResource ParameterLabelStyle}"/>
+                                
+                                <NumberBox
+                                    Grid.Column="1"
+                                    Value="{x:Bind ViewModel.PopulationSize, Mode=TwoWay}"
+                                    Minimum="10"
+                                    Maximum="200"
+                                    SmallChange="10"
+                                    LargeChange="50"
+                                    Style="{StaticResource ParameterInputStyle}"/>
+
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="(10-200)"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    VerticalAlignment="Center"
+                                    Margin="12,0,0,0"/>
+                            </Grid>
+                            <TextBlock 
+                                Text="{x:Bind ViewModel.PopulationSizeError, Mode=OneWay}"
+                                Style="{StaticResource ErrorTextStyle}"
+                                Visibility="{x:Bind ViewModel.PopulationSizeError, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        </StackPanel>
+
+                        <!-- 最大代数 -->
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock 
+                                    Grid.Column="0"
+                                    Text="最大代数:" 
+                                    Style="{StaticResource ParameterLabelStyle}"/>
+                                
+                                <NumberBox
+                                    Grid.Column="1"
+                                    Value="{x:Bind ViewModel.MaxGenerations, Mode=TwoWay}"
+                                    Minimum="10"
+                                    Maximum="500"
+                                    SmallChange="10"
+                                    LargeChange="50"
+                                    Style="{StaticResource ParameterInputStyle}"/>
+
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="(10-500)"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    VerticalAlignment="Center"
+                                    Margin="12,0,0,0"/>
+                            </Grid>
+                            <TextBlock 
+                                Text="{x:Bind ViewModel.MaxGenerationsError, Mode=OneWay}"
+                                Style="{StaticResource ErrorTextStyle}"
+                                Visibility="{x:Bind ViewModel.MaxGenerationsError, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        </StackPanel>
+
+                        <!-- 交叉率 -->
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock 
+                                    Grid.Column="0"
+                                    Text="交叉率:" 
+                                    Style="{StaticResource ParameterLabelStyle}"/>
+                                
+                                <NumberBox
+                                    Grid.Column="1"
+                                    Value="{x:Bind ViewModel.CrossoverRate, Mode=TwoWay}"
+                                    Minimum="0.0"
+                                    Maximum="1.0"
+                                    SmallChange="0.1"
+                                    LargeChange="0.2"
+                                    Style="{StaticResource ParameterInputStyle}"/>
+
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="(0.0-1.0)"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    VerticalAlignment="Center"
+                                    Margin="12,0,0,0"/>
+                            </Grid>
+                            <TextBlock 
+                                Text="{x:Bind ViewModel.CrossoverRateError, Mode=OneWay}"
+                                Style="{StaticResource ErrorTextStyle}"
+                                Visibility="{x:Bind ViewModel.CrossoverRateError, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        </StackPanel>
+
+                        <!-- 变异率 -->
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock 
+                                    Grid.Column="0"
+                                    Text="变异率:" 
+                                    Style="{StaticResource ParameterLabelStyle}"/>
+                                
+                                <NumberBox
+                                    Grid.Column="1"
+                                    Value="{x:Bind ViewModel.MutationRate, Mode=TwoWay}"
+                                    Minimum="0.0"
+                                    Maximum="1.0"
+                                    SmallChange="0.05"
+                                    LargeChange="0.1"
+                                    Style="{StaticResource ParameterInputStyle}"/>
+
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="(0.0-1.0)"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    VerticalAlignment="Center"
+                                    Margin="12,0,0,0"/>
+                            </Grid>
+                            <TextBlock 
+                                Text="{x:Bind ViewModel.MutationRateError, Mode=OneWay}"
+                                Style="{StaticResource ErrorTextStyle}"
+                                Visibility="{x:Bind ViewModel.MutationRateError, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        </StackPanel>
+
+                        <!-- 精英保留 -->
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock 
+                                    Grid.Column="0"
+                                    Text="精英保留:" 
+                                    Style="{StaticResource ParameterLabelStyle}"/>
+                                
+                                <NumberBox
+                                    Grid.Column="1"
+                                    Value="{x:Bind ViewModel.EliteCount, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="10"
+                                    SmallChange="1"
+                                    LargeChange="2"
+                                    Style="{StaticResource ParameterInputStyle}"/>
+
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="(0-10)"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    VerticalAlignment="Center"
+                                    Margin="12,0,0,0"/>
+                            </Grid>
+                            <TextBlock 
+                                Text="{x:Bind ViewModel.EliteCountError, Mode=OneWay}"
+                                Style="{StaticResource ErrorTextStyle}"
+                                Visibility="{x:Bind ViewModel.EliteCountError, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        </StackPanel>
+
+                        <!-- 锦标赛大小 -->
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock 
+                                    Grid.Column="0"
+                                    Text="锦标赛大小:" 
+                                    Style="{StaticResource ParameterLabelStyle}"/>
+                                
+                                <NumberBox
+                                    Grid.Column="1"
+                                    Value="{x:Bind ViewModel.TournamentSize, Mode=TwoWay}"
+                                    Minimum="2"
+                                    Maximum="{x:Bind ViewModel.PopulationSize, Mode=OneWay}"
+                                    SmallChange="1"
+                                    LargeChange="5"
+                                    Style="{StaticResource ParameterInputStyle}"/>
+
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="(2-200)"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    VerticalAlignment="Center"
+                                    Margin="12,0,0,0"/>
+                            </Grid>
+                            <TextBlock 
+                                Text="{x:Bind ViewModel.TournamentSizeError, Mode=OneWay}"
+                                Style="{StaticResource ErrorTextStyle}"
+                                Visibility="{x:Bind ViewModel.TournamentSizeError, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        </StackPanel>
+
+                        <!-- 策略选择 -->
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="高级选项" FontWeight="SemiBold"/>
+                            
+                            <!-- 选择策略 -->
+                            <ComboBox
+                                Header="选择策略"
+                                ItemsSource="{x:Bind ViewModel.AvailableSelectionStrategies, Mode=OneTime}"
+                                SelectedValue="{x:Bind ViewModel.SelectionStrategy, Mode=TwoWay}"
+                                SelectedValuePath="Strategy"
+                                DisplayMemberPath="DisplayName"
+                                HorizontalAlignment="Stretch"/>
+
+                            <!-- 交叉策略 -->
+                            <ComboBox
+                                Header="交叉策略"
+                                ItemsSource="{x:Bind ViewModel.AvailableCrossoverStrategies, Mode=OneTime}"
+                                SelectedValue="{x:Bind ViewModel.CrossoverStrategy, Mode=TwoWay}"
+                                SelectedValuePath="Strategy"
+                                DisplayMemberPath="DisplayName"
+                                HorizontalAlignment="Stretch"/>
+
+                            <!-- 变异策略 -->
+                            <ComboBox
+                                Header="变异策略"
+                                ItemsSource="{x:Bind ViewModel.AvailableMutationStrategies, Mode=OneTime}"
+                                SelectedValue="{x:Bind ViewModel.MutationStrategy, Mode=TwoWay}"
+                                SelectedValuePath="Strategy"
+                                DisplayMemberPath="DisplayName"
+                                HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 提示信息 -->
+                <InfoBar
+                    IsOpen="True"
+                    Severity="Informational"
+                    Title="提示"
+                    Message="增加种群大小和代数可以获得更优解，但会增加执行时间。低性能设备建议使用仅贪心模式。"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "中文Git提交信息",
+  "description": "当用户准备提交代码时，自动生成中文格式的Git提交信息",
+  "version": "1",
+  "when": {
+    "type": "userPrompt"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "用户正在准备提交代码。请分析当前的代码更改，并生成符合以下规范的中文Git提交信息：\n\n1. 格式：`类型: 简短描述`\n2. 类型使用中文：feat（新功能）、fix（修复）、docs（文档）、style（格式）、refactor（重构）、test（测试）、chore（构建/工具）\n3. 描述使用中文，简洁明了\n4. 如果需要详细说明，在空行后添加中文正文\n\n示例：\n- feat: 添加用户登录功能\n- fix: 修复日期格式化错误\n- refactor: 重构排班算法核心逻辑\n\n请根据实际的代码更改生成合适的提交信息。"
+  }
+}

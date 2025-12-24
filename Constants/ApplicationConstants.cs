@@ -133,6 +133,137 @@ public static class ApplicationConstants
         /// 模板文件夹名称
         /// </summary>
         public const string TemplatesFolderName = "Templates";
+        
+        /// <summary>
+        /// 遗传算法配置文件名
+        /// </summary>
+        public const string GeneticSchedulerConfigFileName = "GeneticSchedulerConfig.json";
+    }
+
+    /// <summary>
+    /// 遗传算法相关常量
+    /// </summary>
+    public static class GeneticAlgorithm
+    {
+        /// <summary>
+        /// 默认种群大小
+        /// </summary>
+        public const int DefaultPopulationSize = 50;
+        
+        /// <summary>
+        /// 最小种群大小
+        /// </summary>
+        public const int MinPopulationSize = 10;
+        
+        /// <summary>
+        /// 最大种群大小
+        /// </summary>
+        public const int MaxPopulationSize = 200;
+        
+        /// <summary>
+        /// 默认最大代数
+        /// </summary>
+        public const int DefaultMaxGenerations = 100;
+        
+        /// <summary>
+        /// 最小代数
+        /// </summary>
+        public const int MinGenerations = 10;
+        
+        /// <summary>
+        /// 最大代数
+        /// </summary>
+        public const int MaxGenerations = 500;
+        
+        /// <summary>
+        /// 默认交叉率
+        /// </summary>
+        public const double DefaultCrossoverRate = 0.8;
+        
+        /// <summary>
+        /// 最小交叉率
+        /// </summary>
+        public const double MinCrossoverRate = 0.0;
+        
+        /// <summary>
+        /// 最大交叉率
+        /// </summary>
+        public const double MaxCrossoverRate = 1.0;
+        
+        /// <summary>
+        /// 默认变异率
+        /// </summary>
+        public const double DefaultMutationRate = 0.1;
+        
+        /// <summary>
+        /// 最小变异率
+        /// </summary>
+        public const double MinMutationRate = 0.0;
+        
+        /// <summary>
+        /// 最大变异率
+        /// </summary>
+        public const double MaxMutationRate = 1.0;
+        
+        /// <summary>
+        /// 默认精英保留数量
+        /// </summary>
+        public const int DefaultEliteCount = 2;
+        
+        /// <summary>
+        /// 最小精英保留数量
+        /// </summary>
+        public const int MinEliteCount = 0;
+        
+        /// <summary>
+        /// 最大精英保留数量
+        /// </summary>
+        public const int MaxEliteCount = 10;
+        
+        /// <summary>
+        /// 默认锦标赛大小
+        /// </summary>
+        public const int DefaultTournamentSize = 5;
+        
+        /// <summary>
+        /// 最小锦标赛大小
+        /// </summary>
+        public const int MinTournamentSize = 2;
+        
+        /// <summary>
+        /// 最大锦标赛大小
+        /// </summary>
+        public const int MaxTournamentSize = 10;
+        
+        /// <summary>
+        /// 默认未分配时段惩罚权重
+        /// </summary>
+        public const double DefaultUnassignedPenaltyWeight = 1000.0;
+        
+        /// <summary>
+        /// 默认硬约束违反惩罚权重
+        /// </summary>
+        public const double DefaultHardConstraintPenaltyWeight = 10000.0;
+        
+        /// <summary>
+        /// 早期终止：连续无改进代数阈值
+        /// </summary>
+        public const int EarlyTerminationGenerations = 20;
+        
+        /// <summary>
+        /// 早期终止：改进阈值（百分比）
+        /// </summary>
+        public const double EarlyTerminationImprovementThreshold = 0.001;
+        
+        /// <summary>
+        /// 进度报告节流间隔（毫秒）
+        /// </summary>
+        public const int ProgressReportThrottleMs = 100;
+        
+        /// <summary>
+        /// 交叉/变异操作最大重试次数
+        /// </summary>
+        public const int MaxOperationRetries = 3;
     }
 
     /// <summary>

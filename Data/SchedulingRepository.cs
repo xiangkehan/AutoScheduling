@@ -42,10 +42,12 @@ namespace AutoScheduling3.Data
             cmd.CommandText = @"INSERT INTO Schedules 
                 (Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, 
                  HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds, 
+                 ProgressPercentage, CurrentStage, IsPartialResult, SchedulingMode,
                  CreatedAt, UpdatedAt) 
                 VALUES 
                 (@header, @pIds, @posIds, @startDate, @endDate, @isConfirmed, 
                  @holidayConfigId, @useActiveHolidayConfig, @enabledFixedRuleIds, @enabledManualAssignmentIds, 
+                 @progressPercentage, @currentStage, @isPartialResult, @schedulingMode,
                  @createdAt, @updatedAt); 
                 SELECT last_insert_rowid();";
             cmd.Parameters.AddWithValue("@header", schedule.Header ?? string.Empty);
@@ -58,6 +60,10 @@ namespace AutoScheduling3.Data
             cmd.Parameters.AddWithValue("@useActiveHolidayConfig", schedule.UseActiveHolidayConfig ? 1 : 0);
             cmd.Parameters.AddWithValue("@enabledFixedRuleIds", JsonSerializer.Serialize(schedule.EnabledFixedRuleIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@enabledManualAssignmentIds", JsonSerializer.Serialize(schedule.EnabledManualAssignmentIds, _jsonOptions));
+            cmd.Parameters.AddWithValue("@progressPercentage", schedule.ProgressPercentage.HasValue ? (object)schedule.ProgressPercentage.Value : DBNull.Value);
+            cmd.Parameters.AddWithValue("@currentStage", schedule.CurrentStage ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@isPartialResult", schedule.IsPartialResult ? 1 : 0);
+            cmd.Parameters.AddWithValue("@schedulingMode", schedule.SchedulingMode);
             cmd.Parameters.AddWithValue("@createdAt", schedule.CreatedAt.ToString("o"));
             cmd.Parameters.AddWithValue("@updatedAt", schedule.UpdatedAt.ToString("o"));
             var newIdObj = await cmd.ExecuteScalarAsync();
@@ -82,6 +88,7 @@ namespace AutoScheduling3.Data
             var cmd = conn.CreateCommand();
             cmd.CommandText = @"SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, 
                                 HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds, 
+                                ProgressPercentage, CurrentStage, IsPartialResult, SchedulingMode,
                                 CreatedAt, UpdatedAt 
                                 FROM Schedules WHERE Id=@id";
             cmd.Parameters.AddWithValue("@id", id);
@@ -101,8 +108,12 @@ namespace AutoScheduling3.Data
                 UseActiveHolidayConfig = reader.IsDBNull(8) ? true : reader.GetInt32(8) == 1,
                 EnabledFixedRuleIds = reader.IsDBNull(9) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(9)) ?? new List<int>(),
                 EnabledManualAssignmentIds = reader.IsDBNull(10) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(10)) ?? new List<int>(),
-                CreatedAt = DateTime.Parse(reader.GetString(11)),
-                UpdatedAt = DateTime.Parse(reader.GetString(12))
+                ProgressPercentage = reader.IsDBNull(11) ? null : reader.GetDouble(11),
+                CurrentStage = reader.IsDBNull(12) ? null : reader.GetString(12),
+                IsPartialResult = reader.IsDBNull(13) ? false : reader.GetInt32(13) == 1,
+                SchedulingMode = reader.IsDBNull(14) ? 0 : reader.GetInt32(14),
+                CreatedAt = DateTime.Parse(reader.GetString(15)),
+                UpdatedAt = DateTime.Parse(reader.GetString(16))
             };
 
             schedule.Results = await GetShiftsByScheduleAsync(conn, id);
@@ -118,6 +129,7 @@ namespace AutoScheduling3.Data
             var cmd = conn.CreateCommand();
             cmd.CommandText = @"SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, 
                                 HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds, 
+                                ProgressPercentage, CurrentStage, IsPartialResult, SchedulingMode,
                                 CreatedAt, UpdatedAt 
                                 FROM Schedules ORDER BY Id";
             using var reader = await cmd.ExecuteReaderAsync();
@@ -136,8 +148,12 @@ namespace AutoScheduling3.Data
                     UseActiveHolidayConfig = reader.IsDBNull(8) ? true : reader.GetInt32(8) == 1,
                     EnabledFixedRuleIds = reader.IsDBNull(9) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(9)) ?? new List<int>(),
                     EnabledManualAssignmentIds = reader.IsDBNull(10) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(10)) ?? new List<int>(),
-                    CreatedAt = DateTime.Parse(reader.GetString(11)),
-                    UpdatedAt = DateTime.Parse(reader.GetString(12))
+                    ProgressPercentage = reader.IsDBNull(11) ? null : reader.GetDouble(11),
+                    CurrentStage = reader.IsDBNull(12) ? null : reader.GetString(12),
+                    IsPartialResult = reader.IsDBNull(13) ? false : reader.GetInt32(13) == 1,
+                    SchedulingMode = reader.IsDBNull(14) ? 0 : reader.GetInt32(14),
+                    CreatedAt = DateTime.Parse(reader.GetString(15)),
+                    UpdatedAt = DateTime.Parse(reader.GetString(16))
                 };
                 schedule.Results = await GetShiftsByScheduleAsync(conn, schedule.Id);
                 list.Add(schedule);
@@ -158,6 +174,8 @@ namespace AutoScheduling3.Data
                 StartDate=@startDate, EndDate=@endDate, IsConfirmed=@isConfirmed, 
                 HolidayConfigId=@holidayConfigId, UseActiveHolidayConfig=@useActiveHolidayConfig, 
                 EnabledFixedRuleIds=@enabledFixedRuleIds, EnabledManualAssignmentIds=@enabledManualAssignmentIds, 
+                ProgressPercentage=@progressPercentage, CurrentStage=@currentStage, 
+                IsPartialResult=@isPartialResult, SchedulingMode=@schedulingMode,
                 UpdatedAt=@updatedAt 
                 WHERE Id=@id";
             cmd.Parameters.AddWithValue("@header", schedule.Header ?? string.Empty);
@@ -170,6 +188,10 @@ namespace AutoScheduling3.Data
             cmd.Parameters.AddWithValue("@useActiveHolidayConfig", schedule.UseActiveHolidayConfig ? 1 : 0);
             cmd.Parameters.AddWithValue("@enabledFixedRuleIds", JsonSerializer.Serialize(schedule.EnabledFixedRuleIds, _jsonOptions));
             cmd.Parameters.AddWithValue("@enabledManualAssignmentIds", JsonSerializer.Serialize(schedule.EnabledManualAssignmentIds, _jsonOptions));
+            cmd.Parameters.AddWithValue("@progressPercentage", schedule.ProgressPercentage.HasValue ? (object)schedule.ProgressPercentage.Value : DBNull.Value);
+            cmd.Parameters.AddWithValue("@currentStage", schedule.CurrentStage ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@isPartialResult", schedule.IsPartialResult ? 1 : 0);
+            cmd.Parameters.AddWithValue("@schedulingMode", schedule.SchedulingMode);
             cmd.Parameters.AddWithValue("@updatedAt", DateTime.UtcNow.ToString("o"));
             cmd.Parameters.AddWithValue("@id", schedule.Id);
             await cmd.ExecuteNonQueryAsync();
@@ -211,8 +233,9 @@ namespace AutoScheduling3.Data
             cmd.Parameters.AddWithValue("@sid", shift.ScheduleId);
             cmd.Parameters.AddWithValue("@pos", shift.PositionId);
             cmd.Parameters.AddWithValue("@pid", shift.PersonnelId);
-            cmd.Parameters.AddWithValue("@start", shift.StartTime.ToUniversalTime().ToString("o"));
-            cmd.Parameters.AddWithValue("@end", shift.EndTime.ToUniversalTime().ToString("o"));
+            // 转换为UTC时间后存储
+            cmd.Parameters.AddWithValue("@start", ToUtc(shift.StartTime).ToString("o"));
+            cmd.Parameters.AddWithValue("@end", ToUtc(shift.EndTime).ToString("o"));
             cmd.Parameters.AddWithValue("@dayIndex", shift.DayIndex);
             cmd.Parameters.AddWithValue("@timeSlot", shift.TimeSlotIndex);
             cmd.Parameters.AddWithValue("@isNight", shift.IsNightShift ? 1 : 0);
@@ -249,8 +272,9 @@ namespace AutoScheduling3.Data
             cmd.Parameters.AddWithValue("@sid", shift.ScheduleId);
             cmd.Parameters.AddWithValue("@pos", shift.PositionId);
             cmd.Parameters.AddWithValue("@pid", shift.PersonnelId);
-            cmd.Parameters.AddWithValue("@start", shift.StartTime.ToUniversalTime().ToString("o"));
-            cmd.Parameters.AddWithValue("@end", shift.EndTime.ToUniversalTime().ToString("o"));
+            // 转换为UTC时间后存储
+            cmd.Parameters.AddWithValue("@start", ToUtc(shift.StartTime).ToString("o"));
+            cmd.Parameters.AddWithValue("@end", ToUtc(shift.EndTime).ToString("o"));
             cmd.Parameters.AddWithValue("@dayIndex", shift.DayIndex);
             cmd.Parameters.AddWithValue("@timeSlot", shift.TimeSlotIndex);
             cmd.Parameters.AddWithValue("@isNight", shift.IsNightShift ? 1 : 0);
@@ -278,8 +302,9 @@ namespace AutoScheduling3.Data
             cmd.Parameters.AddWithValue("@sid", shift.ScheduleId);
             cmd.Parameters.AddWithValue("@pos", shift.PositionId);
             cmd.Parameters.AddWithValue("@pid", shift.PersonnelId);
-            cmd.Parameters.AddWithValue("@start", shift.StartTime.ToUniversalTime().ToString("o"));
-            cmd.Parameters.AddWithValue("@end", shift.EndTime.ToUniversalTime().ToString("o"));
+            // 转换为UTC时间后存储
+            cmd.Parameters.AddWithValue("@start", ToUtc(shift.StartTime).ToString("o"));
+            cmd.Parameters.AddWithValue("@end", ToUtc(shift.EndTime).ToString("o"));
             cmd.Parameters.AddWithValue("@dayIndex", shift.DayIndex);
             cmd.Parameters.AddWithValue("@timeSlot", shift.TimeSlotIndex);
             cmd.Parameters.AddWithValue("@isNight", shift.IsNightShift ? 1 : 0);
@@ -314,12 +339,83 @@ namespace AutoScheduling3.Data
                 ScheduleId = reader.GetInt32(1),
                 PositionId = reader.GetInt32(2),
                 PersonnelId = reader.GetInt32(3),
-                StartTime = DateTime.Parse(reader.GetString(4)).ToUniversalTime(),
-                EndTime = DateTime.Parse(reader.GetString(5)).ToUniversalTime(),
+                StartTime = ParseDateTime(reader.GetString(4)),
+                EndTime = ParseDateTime(reader.GetString(5)),
                 DayIndex = reader.GetInt32(6),
                 TimeSlotIndex = reader.IsDBNull(7) ? 0 : reader.GetInt32(7),
                 IsNightShift = reader.IsDBNull(8) ? false : reader.GetInt32(8) == 1
             };
+        }
+
+        /// <summary>
+        /// 解析日期时间字符串，支持 ISO 8601 格式和 Ticks 格式（兼容旧数据）
+        /// 数据库存储的是UTC时间，读取后转换为本地时间
+        /// </summary>
+        private DateTime ParseDateTime(string value)
+        {
+            // 尝试解析为 ISO 8601 格式
+            if (DateTime.TryParse(value, out var dateTime))
+            {
+                // 数据库存储的是UTC时间，需要转换为本地时间
+                return ToLocal(dateTime);
+            }
+
+            // 尝试解析为 Ticks 格式（兼容旧数据）
+            if (long.TryParse(value, out var ticks))
+            {
+                try
+                {
+                    // 旧数据使用Ticks存储，假定为本地时间
+                    return new DateTime(ticks, DateTimeKind.Local);
+                }
+                catch
+                {
+                    // Ticks 值无效，抛出异常
+                    throw new FormatException($"无法将字符串 '{value}' 解析为有效的日期时间。");
+                }
+            }
+
+            throw new FormatException($"无法将字符串 '{value}' 解析为有效的日期时间。");
+        }
+
+        /// <summary>
+        /// 将DateTime转换为UTC时间
+        /// 处理Unspecified类型，将其视为本地时间
+        /// </summary>
+        private DateTime ToUtc(DateTime dateTime)
+        {
+            switch (dateTime.Kind)
+            {
+                case DateTimeKind.Utc:
+                    return dateTime;
+                case DateTimeKind.Local:
+                    return dateTime.ToUniversalTime();
+                case DateTimeKind.Unspecified:
+                    // Unspecified视为本地时间
+                    return DateTime.SpecifyKind(dateTime, DateTimeKind.Local).ToUniversalTime();
+                default:
+                    return dateTime.ToUniversalTime();
+            }
+        }
+
+        /// <summary>
+        /// 将UTC时间转换为本地时间
+        /// 处理Unspecified类型，将其视为UTC时间
+        /// </summary>
+        private DateTime ToLocal(DateTime dateTime)
+        {
+            switch (dateTime.Kind)
+            {
+                case DateTimeKind.Local:
+                    return dateTime;
+                case DateTimeKind.Utc:
+                    return dateTime.ToLocalTime();
+                case DateTimeKind.Unspecified:
+                    // Unspecified视为UTC时间
+                    return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc).ToLocalTime();
+                default:
+                    return dateTime.ToLocalTime();
+            }
         }
         #endregion
 
@@ -346,6 +442,7 @@ namespace AutoScheduling3.Data
             var cmd = conn.CreateCommand();
             cmd.CommandText = @"SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, 
                                 HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds, 
+                                ProgressPercentage, CurrentStage, IsPartialResult, SchedulingMode,
                                 CreatedAt, UpdatedAt 
                                 FROM Schedules WHERE IsConfirmed = 0 ORDER BY CreatedAt DESC";
 
@@ -365,8 +462,12 @@ namespace AutoScheduling3.Data
                     UseActiveHolidayConfig = reader.IsDBNull(8) ? true : reader.GetInt32(8) == 1,
                     EnabledFixedRuleIds = reader.IsDBNull(9) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(9)) ?? new List<int>(),
                     EnabledManualAssignmentIds = reader.IsDBNull(10) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(10)) ?? new List<int>(),
-                    CreatedAt = DateTime.Parse(reader.GetString(11)),
-                    UpdatedAt = DateTime.Parse(reader.GetString(12))
+                    ProgressPercentage = reader.IsDBNull(11) ? null : reader.GetDouble(11),
+                    CurrentStage = reader.IsDBNull(12) ? null : reader.GetString(12),
+                    IsPartialResult = reader.IsDBNull(13) ? false : reader.GetInt32(13) == 1,
+                    SchedulingMode = reader.IsDBNull(14) ? 0 : reader.GetInt32(14),
+                    CreatedAt = DateTime.Parse(reader.GetString(15)),
+                    UpdatedAt = DateTime.Parse(reader.GetString(16))
                 };
                 schedule.Results = await GetShiftsByScheduleAsync(conn, schedule.Id);
                 list.Add(schedule);
@@ -383,6 +484,7 @@ namespace AutoScheduling3.Data
             var cmd = conn.CreateCommand();
             cmd.CommandText = @"SELECT Id, Header, PersonnelIds, PositionIds, StartDate, EndDate, IsConfirmed, 
                                 HolidayConfigId, UseActiveHolidayConfig, EnabledFixedRuleIds, EnabledManualAssignmentIds, 
+                                ProgressPercentage, CurrentStage, IsPartialResult, SchedulingMode,
                                 CreatedAt, UpdatedAt 
                                 FROM Schedules WHERE IsConfirmed = 1 ORDER BY CreatedAt DESC";
 
@@ -402,8 +504,12 @@ namespace AutoScheduling3.Data
                     UseActiveHolidayConfig = reader.IsDBNull(8) ? true : reader.GetInt32(8) == 1,
                     EnabledFixedRuleIds = reader.IsDBNull(9) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(9)) ?? new List<int>(),
                     EnabledManualAssignmentIds = reader.IsDBNull(10) ? new List<int>() : JsonSerializer.Deserialize<List<int>>(reader.GetString(10)) ?? new List<int>(),
-                    CreatedAt = DateTime.Parse(reader.GetString(11)),
-                    UpdatedAt = DateTime.Parse(reader.GetString(12))
+                    ProgressPercentage = reader.IsDBNull(11) ? null : reader.GetDouble(11),
+                    CurrentStage = reader.IsDBNull(12) ? null : reader.GetString(12),
+                    IsPartialResult = reader.IsDBNull(13) ? false : reader.GetInt32(13) == 1,
+                    SchedulingMode = reader.IsDBNull(14) ? 0 : reader.GetInt32(14),
+                    CreatedAt = DateTime.Parse(reader.GetString(15)),
+                    UpdatedAt = DateTime.Parse(reader.GetString(16))
                 };
                 schedule.Results = await GetShiftsByScheduleAsync(conn, schedule.Id);
                 list.Add(schedule);

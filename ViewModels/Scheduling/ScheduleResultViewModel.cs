@@ -97,17 +97,20 @@ namespace AutoScheduling3.ViewModels.Scheduling
             {
                 if (SetProperty(ref _isConflictPaneOpen, value))
                 {
-                    // 当冲突面板打开时，关闭搜索面板（互斥显示）
+                    // 当冲突面板打开时，关闭其他面板（互斥显示）
                     if (value)
                     {
-                        // 关闭搜索面板（避免同时显示两个面板）
                         if (_isSearchPaneOpen)
                         {
                             _isSearchPaneOpen = false;
                             OnPropertyChanged(nameof(IsSearchPaneOpen));
                         }
+                        if (_isStatisticsPaneOpen)
+                        {
+                            _isStatisticsPaneOpen = false;
+                            OnPropertyChanged(nameof(IsStatisticsPaneOpen));
+                        }
                     }
-                    // 更新右侧面板的打开状态
                     UpdateRightPaneOpenState();
                 }
             }
@@ -121,29 +124,58 @@ namespace AutoScheduling3.ViewModels.Scheduling
             {
                 if (SetProperty(ref _isSearchPaneOpen, value))
                 {
-                    // 当搜索面板打开时，关闭冲突面板（互斥显示）
+                    // 当搜索面板打开时，关闭其他面板（互斥显示）
                     if (value)
                     {
-                        // 关闭冲突面板（避免同时显示两个面板）
                         if (_isConflictPaneOpen)
                         {
                             _isConflictPaneOpen = false;
                             OnPropertyChanged(nameof(IsConflictPaneOpen));
                         }
+                        if (_isStatisticsPaneOpen)
+                        {
+                            _isStatisticsPaneOpen = false;
+                            OnPropertyChanged(nameof(IsStatisticsPaneOpen));
+                        }
                     }
-                    // 更新右侧面板的打开状态
+                    UpdateRightPaneOpenState();
+                }
+            }
+        }
+
+        private bool _isStatisticsPaneOpen;
+        public bool IsStatisticsPaneOpen
+        {
+            get => _isStatisticsPaneOpen;
+            set
+            {
+                if (SetProperty(ref _isStatisticsPaneOpen, value))
+                {
+                    // 当统计面板打开时，关闭其他面板（互斥显示）
+                    if (value)
+                    {
+                        if (_isConflictPaneOpen)
+                        {
+                            _isConflictPaneOpen = false;
+                            OnPropertyChanged(nameof(IsConflictPaneOpen));
+                        }
+                        if (_isSearchPaneOpen)
+                        {
+                            _isSearchPaneOpen = false;
+                            OnPropertyChanged(nameof(IsSearchPaneOpen));
+                        }
+                    }
                     UpdateRightPaneOpenState();
                 }
             }
         }
 
         /// <summary>
-        /// 根据搜索和冲突面板的状态更新右侧面板的打开状态
+        /// 根据各面板的状态更新右侧面板的打开状态
         /// </summary>
         private void UpdateRightPaneOpenState()
         {
-            // 只要搜索或冲突任一面板打开，就打开右侧面板
-            IsRightPaneOpen = IsSearchPaneOpen || IsConflictPaneOpen;
+            IsRightPaneOpen = IsSearchPaneOpen || IsConflictPaneOpen || IsStatisticsPaneOpen;
         }
 
         private bool _isRightPaneOpen = true;

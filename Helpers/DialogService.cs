@@ -201,6 +201,22 @@ public class DialogService
     }
 
     /// <summary>
+    /// 显示信息对话框
+    /// </summary>
+    public async Task ShowInfoAsync(string title, string message)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = message,
+            CloseButtonText = "确定",
+            XamlRoot = App.MainWindow?.Content?.XamlRoot
+        };
+
+        await dialog.ShowAsync();
+    }
+
+    /// <summary>
     /// 显示加载对话框
     /// </summary>
     public ContentDialog ShowLoadingDialog(string message = "正在加载...")

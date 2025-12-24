@@ -152,5 +152,19 @@ namespace AutoScheduling3.ViewModels.Scheduling
         public IRelayCommand<int> RemoveManualPersonnelCommand { get; private set; } = null!;
 
         #endregion
+
+        #region 未完成草稿命令
+
+        /// <summary>
+        /// 继续未完成的排班命令
+        /// </summary>
+        public IAsyncRelayCommand<ScheduleSummaryDto> ContinueIncompleteDraftCommand { get; private set; } = null!;
+
+        /// <summary>
+        /// 忽略未完成草稿并重新开始命令
+        /// </summary>
+        public IRelayCommand DismissIncompleteDraftPromptCommand { get; private set; } = null!;
+
+        #endregion
     }
 }

@@ -15,6 +15,7 @@ using AutoScheduling3.History;
 using AutoScheduling3.Models;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml;
+using AutoScheduling3.Services;
 
 namespace AutoScheduling3.ViewModels.Scheduling;
 
@@ -30,6 +31,7 @@ public partial class SchedulingProgressViewModel : ObservableObject
     private readonly IScheduleGridExporter _gridExporter;
     private readonly DialogService _dialogService;
     private readonly IHistoryManagement _historyManagement;
+    private readonly ThrottledAutoSaver? _autoSaver;
 
     #endregion
 
@@ -39,6 +41,8 @@ public partial class SchedulingProgressViewModel : ObservableObject
     private Stopwatch? _stopwatch;
     private DispatcherQueueTimer? _elapsedTimeTimer;
     private readonly DispatcherQueue _dispatcherQueue;
+    private SchedulingRequestDto? _currentRequest;
+    private SchedulingProgressReport? _latestProgressReport;
 
     #endregion
 
@@ -176,6 +180,18 @@ public partial class SchedulingProgressViewModel : ObservableObject
     [ObservableProperty]
     private bool _isGridFullScreen;
 
+    /// <summary>
+    /// 上次自动保存时间
+    /// </summary>
+    [ObservableProperty]
+    private string _lastAutoSaveTime = "从未保存";
+
+    /// <summary>
+    /// 是否正在保存草稿
+    /// </summary>
+    [ObservableProperty]
+    private bool _isSavingDraft;
+
     #endregion
 
     #region 构造函数
@@ -204,6 +220,12 @@ public partial class SchedulingProgressViewModel : ObservableObject
         // 获取当前线程的 DispatcherQueue
         _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
         
+        // 初始化自动保存节流器（方案4：5%进度变化 + 5秒最大间隔）
+        _autoSaver = new ThrottledAutoSaver(
+            _schedulingService, 
+            minProgressChangeThreshold: 5.0,
+            maxSaveIntervalSeconds: 5);
+        
         // 初始化命令
         StartSchedulingCommand = new AsyncRelayCommand<SchedulingRequestDto>(ExecuteStartSchedulingAsync);
         CancelSchedulingCommand = new AsyncRelayCommand(ExecuteCancelSchedulingAsync, CanCancelScheduling);
@@ -213,6 +235,7 @@ public partial class SchedulingProgressViewModel : ObservableObject
         ReturnToConfigCommand = new RelayCommand(ExecuteReturnToConfig);
         ToggleGridFullScreenCommand = new AsyncRelayCommand(ExecuteToggleGridFullScreenAsync, CanToggleGridFullScreen);
         ExportGridCommand = new AsyncRelayCommand<string>(ExecuteExportGridAsync, CanExportGrid);
+        SaveProgressAsDraftCommand = new AsyncRelayCommand(ExecuteSaveProgressAsDraftAsync, CanSaveProgressAsDraft);
     }
 
     #endregion
@@ -259,6 +282,11 @@ public partial class SchedulingProgressViewModel : ObservableObject
     /// </summary>
     public IAsyncRelayCommand<string> ExportGridCommand { get; }
 
+    /// <summary>
+    /// 保存进度为草稿命令
+    /// </summary>
+    public IAsyncRelayCommand SaveProgressAsDraftCommand { get; }
+
     #endregion
 
     #region 排班执行方法
@@ -280,6 +308,12 @@ public partial class SchedulingProgressViewModel : ObservableObject
             // 重置状态
             ResetState();
 
+            // 保存当前请求，用于草稿保存
+            _currentRequest = request;
+
+            // 重置自动保存器
+            _autoSaver?.Reset();
+
             // 设置执行状态
             IsExecuting = true;
             IsCompleted = false;
@@ -288,6 +322,7 @@ public partial class SchedulingProgressViewModel : ObservableObject
 
             // 通知命令状态变化
             CancelSchedulingCommand.NotifyCanExecuteChanged();
+            SaveProgressAsDraftCommand.NotifyCanExecuteChanged();
 
             // 创建取消令牌源
             _cancellationTokenSource = new CancellationTokenSource();
@@ -298,13 +333,17 @@ public partial class SchedulingProgressViewModel : ObservableObject
             // 创建进度报告器
             var progress = new Progress<SchedulingProgressReport>(OnProgressReported);
 
-            // 执行排班
-            var result = await _schedulingService.ExecuteSchedulingAsync(
-                request,
-                progress,
-                _cancellationTokenSource.Token);
+            // 在后台线程执行排班，避免阻塞 UI
+            var result = await Task.Run(async () =>
+            {
+                return await _schedulingService.ExecuteSchedulingAsync(
+                    request,
+                    progress,
+                    _cancellationTokenSource.Token,
+                    request.SchedulingMode);
+            });
 
-            // 处理结果
+            // 处理结果（在 UI 线程）
             await ProcessSchedulingResultAsync(result);
         }
         catch (OperationCanceledException)
@@ -340,6 +379,7 @@ public partial class SchedulingProgressViewModel : ObservableObject
             SaveScheduleCommand.NotifyCanExecuteChanged();
             DiscardScheduleCommand.NotifyCanExecuteChanged();
             ViewDetailedResultCommand.NotifyCanExecuteChanged();
+            SaveProgressAsDraftCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -349,6 +389,9 @@ public partial class SchedulingProgressViewModel : ObservableObject
     /// <param name="report">进度报告</param>
     private void OnProgressReported(SchedulingProgressReport report)
     {
+        // 保存最新的进度报告，用于草稿保存
+        _latestProgressReport = report;
+
         // 确保在UI线程上更新
         _dispatcherQueue.TryEnqueue(() =>
         {
@@ -389,6 +432,9 @@ public partial class SchedulingProgressViewModel : ObservableObject
                     }
                 }
             }
+
+            // 尝试自动保存（异步，不阻塞UI）
+            _ = TryAutoSaveAsync();
         });
     }
 
@@ -422,7 +468,7 @@ public partial class SchedulingProgressViewModel : ObservableObject
         }
         else
         {
-            // 将之前的阶段标记为已完成
+            // 将之前的阶段标记为已完成（除非它们已经是 Failed 状态）
             foreach (var stage in StageHistory)
             {
                 if (stage.Status == "InProgress")
@@ -447,6 +493,19 @@ public partial class SchedulingProgressViewModel : ObservableObject
 
             StageHistory.Add(newStage);
         }
+        
+        // 当排班完成或失败时，将所有 InProgress 的阶段标记为 Completed（除非是 Failed 状态）
+        if (currentStage == SchedulingStage.Completed || currentStage == SchedulingStage.Failed)
+        {
+            foreach (var stage in StageHistory)
+            {
+                if (stage.Status == "InProgress")
+                {
+                    stage.Status = "Completed";
+                    stage.CompletedTime = DateTime.Now;
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -459,14 +518,40 @@ public partial class SchedulingProgressViewModel : ObservableObject
 
         if (result.IsSuccess)
         {
+            // 强制保存最终进度（100%）
+            if (result.Schedule != null && _schedulingService != null)
+            {
+                try
+                {
+                    var finalReport = new SchedulingProgressReport
+                    {
+                        ProgressPercentage = 100.0,
+                        CurrentStage = SchedulingStage.Completed,
+                        StageDescription = "排班完成",
+                        CompletedAssignments = result.Statistics?.TotalAssignments ?? 0,
+                        TotalSlotsToAssign = result.Statistics?.TotalAssignments ?? 0,
+                        RemainingSlots = 0
+                    };
+                    
+                    await _schedulingService.SaveProgressAsDraftAsync(result.Schedule, finalReport);
+                }
+                catch (Exception ex)
+                {
+                    // 保存失败不影响主流程
+                }
+            }
+            
             // 排班成功
             IsCompleted = true;
             IsFailed = false;
             CurrentStage = "已完成";
             StageDescription = "排班任务已成功完成";
 
-            // 更新阶段历史
-            UpdateStageHistory(SchedulingStage.Completed);
+            // 确保在 UI 线程中更新阶段历史
+            _dispatcherQueue.TryEnqueue(() =>
+            {
+                UpdateStageHistory(SchedulingStage.Completed);
+            });
 
             // 填充统计数据
             if (result.Statistics != null)
@@ -492,8 +577,11 @@ public partial class SchedulingProgressViewModel : ObservableObject
             CurrentStage = "排班失败";
             StageDescription = result.ErrorMessage ?? "排班执行失败";
 
-            // 更新阶段历史
-            UpdateStageHistory(SchedulingStage.Failed);
+            // 确保在 UI 线程中更新阶段历史
+            _dispatcherQueue.TryEnqueue(() =>
+            {
+                UpdateStageHistory(SchedulingStage.Failed);
+            });
 
             // 填充冲突信息
             if (result.Conflicts != null && result.Conflicts.Count > 0)
@@ -609,8 +697,11 @@ public partial class SchedulingProgressViewModel : ObservableObject
         CurrentStage = "已取消";
         StageDescription = "排班任务已被用户取消";
 
-        // 更新阶段历史
-        UpdateStageHistory(SchedulingStage.Failed);
+        // 确保在 UI 线程中更新阶段历史
+        _dispatcherQueue.TryEnqueue(() =>
+        {
+            UpdateStageHistory(SchedulingStage.Failed);
+        });
 
         // 通知命令状态变化
         CancelSchedulingCommand.NotifyCanExecuteChanged();
@@ -633,8 +724,11 @@ public partial class SchedulingProgressViewModel : ObservableObject
         CurrentStage = "参数错误";
         StageDescription = "排班参数验证失败";
 
-        // 更新阶段历史
-        UpdateStageHistory(SchedulingStage.Failed);
+        // 确保在 UI 线程中更新阶段历史
+        _dispatcherQueue.TryEnqueue(() =>
+        {
+            UpdateStageHistory(SchedulingStage.Failed);
+        });
 
         // 构建详细错误消息
         var errorMessage = $"排班参数验证失败，请检查以下内容：\n\n{ex.Message}\n\n建议：\n";
@@ -659,8 +753,11 @@ public partial class SchedulingProgressViewModel : ObservableObject
         CurrentStage = "业务逻辑错误";
         StageDescription = "排班执行过程中遇到业务逻辑错误";
 
-        // 更新阶段历史
-        UpdateStageHistory(SchedulingStage.Failed);
+        // 确保在 UI 线程中更新阶段历史
+        _dispatcherQueue.TryEnqueue(() =>
+        {
+            UpdateStageHistory(SchedulingStage.Failed);
+        });
 
         // 构建详细错误消息
         var errorMessage = $"排班执行失败：\n\n{ex.Message}\n\n";
@@ -721,8 +818,11 @@ public partial class SchedulingProgressViewModel : ObservableObject
         CurrentStage = "系统错误";
         StageDescription = "排班执行过程中发生系统错误";
 
-        // 更新阶段历史
-        UpdateStageHistory(SchedulingStage.Failed);
+        // 确保在 UI 线程中更新阶段历史
+        _dispatcherQueue.TryEnqueue(() =>
+        {
+            UpdateStageHistory(SchedulingStage.Failed);
+        });
 
         // 构建详细错误消息
         var errorMessage = $"排班执行过程中发生系统错误：\n\n{ex.Message}\n\n";
@@ -883,6 +983,9 @@ public partial class SchedulingProgressViewModel : ObservableObject
             SchedulingStage.ApplyingManualAssignments => "应用手动指定",
             SchedulingStage.GreedyAssignment => "贪心分配",
             SchedulingStage.UpdatingScores => "更新评分",
+            SchedulingStage.GeneticOptimizing => "遗传算法优化",
+            SchedulingStage.Backtracking => "回溯中",
+            SchedulingStage.BacktrackingComplete => "回溯完成",
             SchedulingStage.Finalizing => "完成处理",
             SchedulingStage.Completed => "已完成",
             SchedulingStage.Failed => "失败",
@@ -1408,19 +1511,121 @@ public partial class StageHistoryItem : ObservableObject
     };
 
     /// <summary>
-    /// 状态颜色
+    /// 状态颜色（返回 Windows.UI.Color 类型）
     /// </summary>
-    public string StatusColor => Status switch
+    public Windows.UI.Color StatusColor => Status switch
     {
-        "Completed" => "#107C10", // Green
-        "InProgress" => "#0078D4", // Blue
-        "Failed" => "#D13438", // Red
-        _ => "#8A8A8A" // Gray
+        "Completed" => Windows.UI.Color.FromArgb(255, 16, 124, 16), // Green #107C10
+        "InProgress" => Windows.UI.Color.FromArgb(255, 0, 120, 212), // Blue #0078D4
+        "Failed" => Windows.UI.Color.FromArgb(255, 209, 52, 56), // Red #D13438
+        _ => Windows.UI.Color.FromArgb(255, 138, 138, 138) // Gray #8A8A8A
     };
 
     partial void OnStatusChanged(string value)
     {
         OnPropertyChanged(nameof(StatusIcon));
         OnPropertyChanged(nameof(StatusColor));
+    }
+}
+
+// SchedulingProgressViewModel 的扩展部分 - 草稿保存功能
+public partial class SchedulingProgressViewModel
+{
+    /// <summary>
+    /// 尝试自动保存（异步，不阻塞UI）
+    /// </summary>
+    private async Task TryAutoSaveAsync()
+    {
+        if (_autoSaver == null || Result?.Schedule == null || _latestProgressReport == null)
+        {
+            return;
+        }
+
+        // 如果排班已完成或失败，不再自动保存（避免覆盖最终进度）
+        if (IsCompleted || IsFailed)
+        {
+            return;
+        }
+
+        try
+        {
+            var saved = await _autoSaver.TryAutoSaveAsync(Result.Schedule, _latestProgressReport);
+            
+            if (saved)
+            {
+                // 更新UI显示的上次保存时间
+                _dispatcherQueue.TryEnqueue(() =>
+                {
+                    LastAutoSaveTime = $"{DateTime.Now:HH:mm:ss}";
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SchedulingProgressViewModel] 自动保存失败: {ex.Message}");
+            // 不显示错误对话框，避免打扰用户
+        }
+    }
+
+    /// <summary>
+    /// 执行保存进度为草稿命令
+    /// </summary>
+    private async Task ExecuteSaveProgressAsDraftAsync()
+    {
+        if (Result?.Schedule == null || _latestProgressReport == null)
+        {
+            await _dialogService.ShowWarningAsync("没有可保存的进度数据");
+            return;
+        }
+
+        try
+        {
+            IsSavingDraft = true;
+
+            // 显示加载提示
+            var loadingDialog = _dialogService.ShowLoadingDialog("正在保存草稿...");
+
+            try
+            {
+                await _schedulingService.SaveProgressAsDraftAsync(Result.Schedule, _latestProgressReport);
+
+                // 关闭加载对话框
+                loadingDialog.Hide();
+
+                // 更新上次保存时间
+                LastAutoSaveTime = $"{DateTime.Now:HH:mm:ss}";
+
+                // 显示成功消息
+                await _dialogService.ShowSuccessAsync(
+                    $"草稿已保存\n\n进度: {ProgressPercentage:F1}%\n已完成: {CompletedAssignments}/{TotalSlotsToAssign}");
+            }
+            catch
+            {
+                // 确保关闭加载对话框
+                loadingDialog.Hide();
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync(
+                "保存草稿失败",
+                $"保存排班进度时发生错误：\n\n{ex.Message}");
+            
+            System.Diagnostics.Debug.WriteLine($"[SchedulingProgressViewModel] 保存草稿失败: {ex}");
+        }
+        finally
+        {
+            IsSavingDraft = false;
+        }
+    }
+
+    /// <summary>
+    /// 判断是否可以保存进度为草稿
+    /// </summary>
+    private bool CanSaveProgressAsDraft()
+    {
+        // 只有在执行中且有进度数据时才能保存
+        return IsExecuting && Result?.Schedule != null && _latestProgressReport != null && !IsSavingDraft;
     }
 }

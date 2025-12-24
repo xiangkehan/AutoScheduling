@@ -201,6 +201,9 @@ namespace AutoScheduling3.SchedulingEngine.Core
             {
                 _tensor[x, periodIdx, personIdx] = false;
             }
+            
+            // 同步到二进制张量
+            SyncBinaryTensorForPersonPeriod(personIdx, periodIdx);
         }
 
         /// <summary>
@@ -215,6 +218,31 @@ namespace AutoScheduling3.SchedulingEngine.Core
                     _tensor[positionIdx, periodIdx, z] = false;
                 }
             }
+            
+            // 同步到二进制张量
+            SyncBinaryTensorForSlot(positionIdx, periodIdx);
+        }
+        
+        /// <summary>
+        /// 同步指定哨位和时段的二进制张量
+        /// </summary>
+        private void SyncBinaryTensorForSlot(int positionIdx, int periodIdx)
+        {
+            for (int slice = 0; slice < _binarySlices; slice++)
+            {
+                ulong value = 0;
+                int startPerson = slice * 64;
+                int endPerson = Math.Min(startPerson + 64, _personCount);
+
+                for (int z = startPerson; z < endPerson; z++)
+                {
+                    if (_tensor[positionIdx, periodIdx, z])
+                    {
+                        value |= (1UL << (z - startPerson));
+                    }
+                }
+                _binaryTensor[positionIdx, periodIdx, slice] = value;
+            }
         }
 
         /// <summary>
@@ -227,6 +255,32 @@ namespace AutoScheduling3.SchedulingEngine.Core
                 if (x != assignedPositionIdx)
                 {
                     _tensor[x, periodIdx, personIdx] = false;
+                }
+            }
+            
+            // 同步到二进制张量
+            SyncBinaryTensorForPersonPeriod(personIdx, periodIdx);
+        }
+        
+        /// <summary>
+        /// 同步指定人员和时段的二进制张量
+        /// </summary>
+        private void SyncBinaryTensorForPersonPeriod(int personIdx, int periodIdx)
+        {
+            int slice = personIdx / 64;
+            int bitPosition = personIdx % 64;
+            
+            for (int x = 0; x < _positionCount; x++)
+            {
+                if (_tensor[x, periodIdx, personIdx])
+                {
+                    // 设置为可行（位为1）
+                    _binaryTensor[x, periodIdx, slice] |= (1UL << bitPosition);
+                }
+                else
+                {
+                    // 设置为不可行（位为0）
+                    _binaryTensor[x, periodIdx, slice] &= ~(1UL << bitPosition);
                 }
             }
         }
@@ -512,6 +566,30 @@ namespace AutoScheduling3.SchedulingEngine.Core
         }
 
         /// <summary>
+        /// 获取张量的总内存使用量（字节）
+        /// 对应需求4.4
+        /// </summary>
+        /// <returns>总内存使用量（字节）</returns>
+        public long GetMemoryUsageBytes()
+        {
+            var stats = GetMemoryStats();
+            return stats.TotalBytes;
+        }
+
+        /// <summary>
+        /// 检查内存使用是否超过指定阈值
+        /// 对应需求4.4, 11.3
+        /// </summary>
+        /// <param name="thresholdMB">内存阈值（MB）</param>
+        /// <returns>如果内存使用超过阈值返回 true，否则返回 false</returns>
+        public bool IsMemoryExceeded(long thresholdMB)
+        {
+            long usageBytes = GetMemoryUsageBytes();
+            long thresholdBytes = thresholdMB * 1024 * 1024;
+            return usageBytes > thresholdBytes;
+        }
+
+        /// <summary>
         /// 验证张量一致性（调试用）
         /// </summary>
         public bool ValidateConsistency()
@@ -648,6 +726,70 @@ namespace AutoScheduling3.SchedulingEngine.Core
             {
                 _constraintMatrix.Clear();
                 _constraintMatrix = DenseMatrix.Create(_positionCount * _periodCount, _personCount, 1.0);
+            }
+        }
+
+        /// <summary>
+        /// 序列化张量状态为字节数组（用于回溯快照）
+        /// </summary>
+        public byte[] SerializeState()
+        {
+            // 使用二进制张量进行序列化，因为它更紧凑
+            int totalBytes = _positionCount * _periodCount * _binarySlices * sizeof(ulong);
+            byte[] buffer = new byte[totalBytes];
+            
+            int offset = 0;
+            for (int x = 0; x < _positionCount; x++)
+            {
+                for (int y = 0; y < _periodCount; y++)
+                {
+                    for (int slice = 0; slice < _binarySlices; slice++)
+                    {
+                        ulong value = _binaryTensor[x, y, slice];
+                        byte[] bytes = BitConverter.GetBytes(value);
+                        Array.Copy(bytes, 0, buffer, offset, sizeof(ulong));
+                        offset += sizeof(ulong);
+                    }
+                }
+            }
+            
+            return buffer;
+        }
+
+        /// <summary>
+        /// 从字节数组反序列化张量状态（用于回溯恢复）
+        /// </summary>
+        public void DeserializeState(byte[] buffer)
+        {
+            if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+            
+            int expectedSize = _positionCount * _periodCount * _binarySlices * sizeof(ulong);
+            if (buffer.Length != expectedSize)
+            {
+                throw new ArgumentException($"缓冲区大小不匹配。期望 {expectedSize} 字节，实际 {buffer.Length} 字节");
+            }
+            
+            int offset = 0;
+            for (int x = 0; x < _positionCount; x++)
+            {
+                for (int y = 0; y < _periodCount; y++)
+                {
+                    for (int slice = 0; slice < _binarySlices; slice++)
+                    {
+                        ulong value = BitConverter.ToUInt64(buffer, offset);
+                        _binaryTensor[x, y, slice] = value;
+                        offset += sizeof(ulong);
+                    }
+                }
+            }
+            
+            // 同步到布尔张量
+            SyncBoolTensorFromBinary();
+            
+            // 同步到矩阵（如果存在）
+            if (_constraintMatrix != null)
+            {
+                SyncMatrixFromTensor();
             }
         }
 
