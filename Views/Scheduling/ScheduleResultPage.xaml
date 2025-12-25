@@ -104,6 +104,12 @@
                                         Spacing="8" 
                                         AutomationProperties.Name="视图模式选择"
                                         AutomationProperties.LandmarkType="Navigation">
+                                <RadioButton x:Name="ByPositionRadioButton" 
+                                             Content="按哨位" 
+                                             IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter='ByPosition'}"
+                                             AutomationProperties.Name="哨位视图模式"
+                                             AutomationProperties.HelpText="按哨位分别展示排班表，每个哨位一张表"
+                                             ToolTipService.ToolTip="哨位视图"/>
                                 <RadioButton x:Name="GridRadioButton" 
                                              Content="网格" 
                                              IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter='Grid'}"
@@ -122,12 +128,6 @@
                                              AutomationProperties.Name="人员视图模式"
                                              AutomationProperties.HelpText="按人员分组展示每个人的班次安排"
                                              ToolTipService.ToolTip="人员视图"/>
-                                <RadioButton x:Name="ByPositionRadioButton" 
-                                             Content="按哨位" 
-                                             IsChecked="{x:Bind ViewModel.CurrentViewMode, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter='ByPosition'}"
-                                             AutomationProperties.Name="哨位视图模式"
-                                             AutomationProperties.HelpText="按哨位分别展示排班表，每个哨位一张表"
-                                             ToolTipService.ToolTip="哨位视图"/>
                             </StackPanel>
                         </StackPanel>
                     </CommandBar.Content>

@@ -76,7 +76,7 @@ namespace AutoScheduling3.ViewModels.Scheduling
             set => SetProperty(ref _isConfirming, value);
         }
 
-        private ViewMode _currentViewMode = ViewMode.Grid;
+        private ViewMode _currentViewMode = ViewMode.ByPosition;
         public ViewMode CurrentViewMode
         {
             get => _currentViewMode;
