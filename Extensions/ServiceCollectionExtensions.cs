@@ -96,6 +96,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConflictDetectionService, ConflictDetectionService>();
         services.AddSingleton<IConflictResolutionService, ConflictResolutionService>();
 
+        // 注册排班对比服务
+        services.AddSingleton<IScheduleComparisonService, ScheduleComparisonService>();
+
         // 注册遗传算法配置（单例）
         services.AddSingleton<AutoScheduling3.SchedulingEngine.Config.GeneticSchedulerConfig>(sp => 
             AutoScheduling3.SchedulingEngine.Config.GeneticSchedulerConfig.GetDefault());
@@ -194,7 +197,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<HistoryViewModel>();
         // HistoryDetailViewModel 已移除，使用 ScheduleResultViewModel 代替
         services.AddTransient<DraftsViewModel>();
-        services.AddTransient<CompareViewModel>();
+        services.AddTransient<CompareViewModel>(sp => new CompareViewModel(
+            sp.GetRequiredService<IHistoryService>(),
+            sp.GetRequiredService<IScheduleComparisonService>(),
+            sp.GetRequiredService<DialogService>()));
 
         // 设置 ViewModel
         services.AddTransient<SettingsPageViewModel>();

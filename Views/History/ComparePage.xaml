@@ -5,119 +5,349 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:conv="using:AutoScheduling3.Converters"
-    mc:Ignorable="d">
+    xmlns:vm="using:AutoScheduling3.ViewModels.History"
+    mc:Ignorable="d"
+    Loaded="Page_Loaded">
 
     <Page.Resources>
-        <conv:EnumEqualsToVisibilityConverter x:Key="EnumEqualsToVisibilityConverter"/>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <conv:DiffTypeToColorConverter x:Key="DiffTypeToColorConverter"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <conv:DateTimeFormatConverter x:Key="DateTimeFormatConverter"/>
+        
+        <SolidColorBrush x:Key="AddedBrush" Color="#DFF6DD"/>
+        <SolidColorBrush x:Key="RemovedBrush" Color="#FDE7E9"/>
+        <SolidColorBrush x:Key="ChangedBrush" Color="#FFF4CE"/>
     </Page.Resources>
 
-    <Grid Padding="16" RowDefinitions="Auto,*,Auto">
-        <!-- Top selection bar -->
+    <Grid Padding="24" RowDefinitions="Auto,Auto,*,Auto">
+        
+        <!-- 顶部选择器区域 -->
         <StackPanel Orientation="Horizontal" Spacing="12">
-            <TextBlock Text="ѡ���Ű��1:" VerticalAlignment="Center"/>
-            <ComboBox Width="200" ItemsSource="{Binding Schedules}" SelectedItem="{Binding SelectedSchedule1}" DisplayMemberPath="Name"/>
-            <TextBlock Text="ѡ���Ű��2:" VerticalAlignment="Center"/>
-            <ComboBox Width="200" ItemsSource="{Binding Schedules}" SelectedItem="{Binding SelectedSchedule2}" DisplayMemberPath="Name"/>
-            <Button Content="��ʼ�Ա�" Command="{Binding CompareCommand}"/>
-            <ComboBox Width="140" SelectedItem="{Binding Mode}" ItemsSource="{Binding Modes}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding}"/>
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
+            <StackPanel Spacing="4">
+                <TextBlock Text="排班表 1 (基准)" Style="{StaticResource CaptionTextBlockStyle}"/>
+                <ComboBox x:Name="Schedule1Selector" Width="240"
+                          ItemsSource="{x:Bind ViewModel.Schedules, Mode=OneWay}"
+                          SelectedItem="{x:Bind ViewModel.SelectedSchedule1, Mode=TwoWay}"
+                          PlaceholderText="选择排班表..." DisplayMemberPath="Name"/>
+            </StackPanel>
+            
+            <Button Command="{x:Bind ViewModel.SwapSchedulesCommand}" Margin="0,20,0,0" Padding="8"
+                    ToolTipService.ToolTip="交换">
+                <FontIcon Glyph="&#xE8AB;" FontSize="14"/>
+            </Button>
+            
+            <StackPanel Spacing="4">
+                <TextBlock Text="排班表 2 (对比)" Style="{StaticResource CaptionTextBlockStyle}"/>
+                <ComboBox x:Name="Schedule2Selector" Width="240"
+                          ItemsSource="{x:Bind ViewModel.AvailableSchedules2, Mode=OneWay}"
+                          SelectedItem="{x:Bind ViewModel.SelectedSchedule2, Mode=TwoWay}"
+                          PlaceholderText="选择排班表..." DisplayMemberPath="Name"/>
+            </StackPanel>
+            
+            <Button Content="开始对比" Style="{StaticResource AccentButtonStyle}"
+                    Command="{x:Bind ViewModel.CompareCommand}" Margin="12,20,0,0" Padding="16,8"/>
+            
+            <DropDownButton Content="导出" Margin="8,20,0,0"
+                            IsEnabled="{x:Bind ViewModel.HasCompared, Mode=OneWay}">
+                <DropDownButton.Flyout>
+                    <MenuFlyout Placement="Bottom">
+                        <MenuFlyoutItem Text="导出为 Excel" Command="{x:Bind ViewModel.ExportExcelCommand}"/>
+                        <MenuFlyoutItem Text="导出为 JSON" Command="{x:Bind ViewModel.ExportJsonCommand}"/>
+                    </MenuFlyout>
+                </DropDownButton.Flyout>
+            </DropDownButton>
+            
+            <StackPanel Orientation="Horizontal" Margin="24,20,0,0" Spacing="4">
+                <Button Content="差异列表" Click="DiffListView_Click"/>
+                <Button Content="网格对比" Click="GridView_Click"/>
+                <Button Content="统计对比" Click="StatisticsView_Click"/>
+            </StackPanel>
         </StackPanel>
 
-        <!-- Main content -->
-        <Grid Grid.Row="1">
-            <Grid.Resources>
-                <SolidColorBrush x:Key="AddedBrush" Color="#DFF6DD"/>
-                <SolidColorBrush x:Key="RemovedBrush" Color="#FDE7E9"/>
-                <SolidColorBrush x:Key="ChangedBrush" Color="#FFF4CE"/>
-            </Grid.Resources>
+        <!-- 筛选区域 -->
+        <Border Grid.Row="1" Margin="0,16,0,0" Padding="12" CornerRadius="4"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                Visibility="{x:Bind ViewModel.HasCompared, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="差异类型" Style="{StaticResource CaptionTextBlockStyle}"/>
+                    <ComboBox x:Name="TypeFilterComboBox" Width="120" PlaceholderText="全部"
+                              SelectionChanged="TypeFilter_SelectionChanged">
+                        <ComboBoxItem Content="全部" Tag=""/>
+                        <ComboBoxItem Content="新增" Tag="Added"/>
+                        <ComboBoxItem Content="删除" Tag="Removed"/>
+                        <ComboBoxItem Content="变更" Tag="Changed"/>
+                    </ComboBox>
+                </StackPanel>
+                
+                <StackPanel Spacing="4">
+                    <TextBlock Text="哨位" Style="{StaticResource CaptionTextBlockStyle}"/>
+                    <ComboBox Width="150" ItemsSource="{x:Bind ViewModel.FilterablePositions, Mode=OneWay}"
+                              SelectedValue="{x:Bind ViewModel.PositionFilter, Mode=TwoWay}"
+                              SelectedValuePath="Id" DisplayMemberPath="Name" PlaceholderText="全部哨位"/>
+                </StackPanel>
+                
+                <StackPanel Spacing="4">
+                    <TextBlock Text="人员" Style="{StaticResource CaptionTextBlockStyle}"/>
+                    <ComboBox Width="150" ItemsSource="{x:Bind ViewModel.FilterablePersonnel, Mode=OneWay}"
+                              SelectedValue="{x:Bind ViewModel.PersonnelFilter, Mode=TwoWay}"
+                              SelectedValuePath="Id" DisplayMemberPath="Name" PlaceholderText="全部人员"/>
+                </StackPanel>
+                
+                <Button Content="清除筛选" Command="{x:Bind ViewModel.ClearFilterCommand}"
+                        VerticalAlignment="Bottom" Margin="8,0,0,0"/>
+                
+                <TextBlock VerticalAlignment="Bottom" Margin="16,0,0,0">
+                    <Run Text="显示"/>
+                    <Run Text="{x:Bind ViewModel.FilteredDifferencesCount, Mode=OneWay}" FontWeight="SemiBold"/>
+                    <Run Text="/"/>
+                    <Run Text="{x:Bind ViewModel.TotalDifferencesCount, Mode=OneWay}"/>
+                    <Run Text="条差异"/>
+                </TextBlock>
+            </StackPanel>
+        </Border>
 
-            <!-- Side by Side -->
-            <Grid x:Name="SideBySidePanel" Visibility="{Binding Mode, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=SideBySide}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition/>
-                    <ColumnDefinition Width="16"/>
-                    <ColumnDefinition/>
-                </Grid.ColumnDefinitions>
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="8" CornerRadius="4">
-                    <StackPanel>
-                        <TextBlock Text="{Binding ScheduleDetail1.Name}" FontSize="20" FontWeight="Bold"/>
-                        <ItemsControl ItemsSource="{Binding ScheduleDetail1.Shifts}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding}"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+        <!-- 主内容区域 -->
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <!-- 未对比提示 -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{x:Bind ShowEmptyState, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <FontIcon Glyph="&#xE8F1;" FontSize="48" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock Text="选择两个排班表并点击【开始对比】" Margin="0,16,0,0"
+                           Style="{StaticResource SubtitleTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+            
+            <!-- 加载指示器 -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{x:Bind ViewModel.IsComparing, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ProgressRing IsActive="True" Width="48" Height="48"/>
+                <TextBlock Text="正在计算差异..." Margin="0,16,0,0"/>
+            </StackPanel>
+            
+            <!-- 差异列表视图 -->
+            <ListView x:Name="DiffListView" ItemsSource="{x:Bind ViewModel.FilteredDifferences, Mode=OneWay}"
+                      SelectionMode="None" Visibility="Collapsed">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="12" Margin="0,2" CornerRadius="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <Grid ColumnDefinitions="100,150,80,*">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Date, Converter={StaticResource DateTimeFormatConverter}, ConverterParameter=MM/dd}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding TimeRange}" Style="{StaticResource CaptionTextBlockStyle}"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="{Binding PositionName}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="{Binding Type}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                    <TextBlock Text="{Binding PersonnelName1}" TextDecorations="Strikethrough"/>
+                                    <FontIcon Glyph="&#xE72A;" FontSize="12"/>
+                                    <TextBlock Text="{Binding PersonnelName2}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!-- 网格对比视图 -->
+            <Grid x:Name="GridViewPanel" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- 哨位选择器 -->
+                <Grid Grid.Row="0" 
+                      Margin="0,0,0,12"
+                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                      BorderThickness="1"
+                      CornerRadius="8"
+                      Padding="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0"
+                               Text="选择哨位:"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"
+                               FontWeight="SemiBold"/>
+
+                    <ComboBox x:Name="GridPositionComboBox"
+                              Grid.Column="1"
+                              MinWidth="200"
+                              MaxWidth="400"
+                              HorizontalAlignment="Left"
+                              ItemsSource="{x:Bind ViewModel.GridData.Positions, Mode=OneWay}"
+                              DisplayMemberPath="Name"
+                              SelectionChanged="GridPositionComboBox_SelectionChanged"
+                              PlaceholderText="选择要对比的哨位..."/>
+
+                    <!-- 图例 -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Border Width="16" Height="16" CornerRadius="2" Background="{StaticResource AddedBrush}"/>
+                            <TextBlock Text="新增" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Border Width="16" Height="16" CornerRadius="2" Background="{StaticResource RemovedBrush}"/>
+                            <TextBlock Text="删除" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Border Width="16" Height="16" CornerRadius="2" Background="{StaticResource ChangedBrush}"/>
+                            <TextBlock Text="变更" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </StackPanel>
-                </Border>
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="8" CornerRadius="4" Grid.Column="2">
-                    <StackPanel>
-                        <TextBlock Text="{Binding ScheduleDetail2.Name}" FontSize="20" FontWeight="Bold"/>
-                        <ItemsControl ItemsSource="{Binding ScheduleDetail2.Shifts}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding}"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                </Grid>
+
+                <!-- 周次选择器 -->
+                <Grid Grid.Row="1" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="周次:" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="GridWeekComboBox"
+                                  MinWidth="250"
+                                  SelectionChanged="GridWeekComboBox_SelectionChanged"
+                                  PlaceholderText="选择周次..."/>
                     </StackPanel>
-                </Border>
+                </Grid>
+
+                <!-- 网格内容 -->
+                <ScrollViewer Grid.Row="2" 
+                              HorizontalScrollBarVisibility="Auto" 
+                              VerticalScrollBarVisibility="Auto">
+                    <Grid x:Name="ComparisonGrid">
+                        <!-- 网格内容由代码动态生成 -->
+                    </Grid>
+                </ScrollViewer>
             </Grid>
 
-            <!-- Diff Highlight -->
-            <ScrollViewer x:Name="DiffPanel" Visibility="{Binding Mode, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=DiffHighlight}">
-                <ItemsControl ItemsSource="{Binding Differences}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Padding="6" Margin="0,4,0,0" CornerRadius="4">
-                                <Border.Background>
-                                    <SolidColorBrush Color="{Binding DiffType, Converter={StaticResource DiffTypeToColorConverter}}"/>
-                                </Border.Background>
-                                <StackPanel Orientation="Horizontal" Spacing="12">
-                                    <TextBlock Text="Day: {Binding DayIndex}"/>
-                                    <TextBlock Text="Pos: {Binding PositionId}"/>
-                                    <TextBlock Text="��:{Binding PersonLeft}"/>
-                                    <TextBlock Text="��:{Binding PersonRight}"/>
-                                    <TextBlock Text="{Binding DiffType}" FontWeight="Bold"/>
+            <!-- 统计对比视图 -->
+            <ScrollViewer x:Name="StatisticsViewPanel" Visibility="Collapsed">
+                <StackPanel Spacing="16">
+                    <!-- 差异摘要 -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="差异摘要" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,0,0,16"/>
+                            <Grid ColumnDefinitions="*,*,*">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="{x:Bind ViewModel.AddedCount, Mode=OneWay}" FontSize="32" FontWeight="Bold" 
+                                               Foreground="#107C10" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="新增班次" Style="{StaticResource CaptionTextBlockStyle}" HorizontalAlignment="Center"/>
                                 </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                    <TextBlock Text="{x:Bind ViewModel.RemovedCount, Mode=OneWay}" FontSize="32" FontWeight="Bold" 
+                                               Foreground="#D13438" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="删除班次" Style="{StaticResource CaptionTextBlockStyle}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                    <TextBlock Text="{x:Bind ViewModel.ChangedCount, Mode=OneWay}" FontSize="32" FontWeight="Bold" 
+                                               Foreground="#CA5010" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="人员变更" Style="{StaticResource CaptionTextBlockStyle}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
-            <!-- Statistics -->
-            <StackPanel x:Name="StatisticsPanel" Visibility="{Binding Mode, Converter={StaticResource EnumEqualsToVisibilityConverter}, ConverterParameter=Statistics}" Spacing="12">
-                <TextBlock Text="ͳ�ƶԱ�" FontSize="20" FontWeight="Bold"/>
-                <StackPanel Orientation="Horizontal" Spacing="24">
-                    <StackPanel>
-                        <TextBlock Text="�Ű��1" FontWeight="Bold"/>
-                        <TextBlock Text="�ܰ��: {Binding ScheduleDetail1.Statistics.TotalShifts}"/>
-                        <TextBlock Text="�˾����: {Binding ScheduleDetail1.Statistics.AverageShiftsPerPerson}"/>
-                        <TextBlock Text="��Ϣ�հ��: {Binding ScheduleDetail1.Statistics.WeekendShifts}"/>
-                    </StackPanel>
-                    <StackPanel>
-                        <TextBlock Text="�Ű��2" FontWeight="Bold"/>
-                        <TextBlock Text="�ܰ��: {Binding ScheduleDetail2.Statistics.TotalShifts}"/>
-                        <TextBlock Text="�˾����: {Binding ScheduleDetail2.Statistics.AverageShiftsPerPerson}"/>
-                        <TextBlock Text="��Ϣ�հ��: {Binding ScheduleDetail2.Statistics.WeekendShifts}"/>
-                    </StackPanel>
+                    <!-- 统计指标对比 -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="统计指标对比" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,0,0,16"/>
+                            <Grid ColumnDefinitions="150,*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                                <TextBlock Grid.Column="1" Text="排班表 1" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="排班表 2" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                
+                                <TextBlock Grid.Row="1" Text="总班次数" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Text="{x:Bind ViewModel.ComparisonResult.Statistics.TotalShifts1, Mode=OneWay}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Text="{x:Bind ViewModel.ComparisonResult.Statistics.TotalShifts2, Mode=OneWay}"/>
+                                
+                                <TextBlock Grid.Row="2" Text="夜哨班次" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Text="{x:Bind ViewModel.ComparisonResult.Statistics.NightShifts1, Mode=OneWay}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Text="{x:Bind ViewModel.ComparisonResult.Statistics.NightShifts2, Mode=OneWay}"/>
+                                
+                                <TextBlock Grid.Row="3" Text="休息日班次" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Text="{x:Bind ViewModel.ComparisonResult.Statistics.HolidayShifts1, Mode=OneWay}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Text="{x:Bind ViewModel.ComparisonResult.Statistics.HolidayShifts2, Mode=OneWay}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 人员变更分析 -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="人员变更分析" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,0,0,16"/>
+                            <ListView ItemsSource="{x:Bind ViewModel.ComparisonResult.PersonnelChanges, Mode=OneWay}"
+                                      SelectionMode="None" MaxHeight="400">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Padding="8" ColumnDefinitions="150,80,80,80,*">
+                                            <TextBlock Text="{Binding PersonnelName}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                                <TextBlock Text="{Binding ShiftsInSchedule1}" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="原班次" Style="{StaticResource CaptionTextBlockStyle}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                                <TextBlock Text="{Binding ShiftsInSchedule2}" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="新班次" Style="{StaticResource CaptionTextBlockStyle}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="3" HorizontalAlignment="Center">
+                                                <TextBlock Text="{Binding NetChange}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock Text="净变化" Style="{StaticResource CaptionTextBlockStyle}"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="4" Text="{Binding Status}" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
-            </StackPanel>
+            </ScrollViewer>
         </Grid>
 
-        <!-- Bottom summary -->
-        <Border Grid.Row="2" Margin="0,12,0,0" Padding="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="4">
-            <StackPanel Orientation="Horizontal" Spacing="16">
-                <TextBlock Text="��������:"/>
-                <TextBlock Text="{Binding Differences.Count}" FontWeight="Bold"/>
-            </StackPanel>
+        <!-- 底部状态栏 -->
+        <Border Grid.Row="3" Margin="0,16,0,0" Padding="12" CornerRadius="4"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                Visibility="{x:Bind ViewModel.HasCompared, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="24">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource AddedBrush}"/>
+                        <TextBlock Text="新增" Style="{StaticResource CaptionTextBlockStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.AddedCount, Mode=OneWay}" FontWeight="SemiBold"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource RemovedBrush}"/>
+                        <TextBlock Text="删除" Style="{StaticResource CaptionTextBlockStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.RemovedCount, Mode=OneWay}" FontWeight="SemiBold"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource ChangedBrush}"/>
+                        <TextBlock Text="变更" Style="{StaticResource CaptionTextBlockStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.ChangedCount, Mode=OneWay}" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock Grid.Column="1" VerticalAlignment="Center">
+                    <Run Text="共"/>
+                    <Run Text="{x:Bind ViewModel.TotalDifferencesCount, Mode=OneWay}" FontWeight="SemiBold"/>
+                    <Run Text="处差异"/>
+                </TextBlock>
+            </Grid>
         </Border>
     </Grid>
 </Page>
