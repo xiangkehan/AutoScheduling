@@ -80,20 +80,6 @@ public sealed partial class SettingsPage : Page
             // 设置高对比度
             HighContrastToggle.IsOn = _themeService.IsHighContrastEnabled;
 
-            // 设置字体大小
-            var fontSize = _configurationService.GetValue("FontSize", 14);
-            var fontSizeItem = FontSizeComboBox.Items.Cast<ComboBoxItem>()
-                .FirstOrDefault(item => item.Tag?.ToString() == fontSize.ToString());
-            if (fontSizeItem != null)
-            {
-                FontSizeComboBox.SelectedItem = fontSizeItem;
-            }
-
-            // 设置无障碍选项
-            KeyboardHintsToggle.IsOn = _configurationService.GetValue("ShowKeyboardHints", false);
-            ScreenReaderToggle.IsOn = _configurationService.GetValue("ScreenReaderOptimized", false);
-            ReduceEffectsToggle.IsOn = _configurationService.GetValue("ReduceVisualEffects", false);
-
             // 启用动画速度滑块
             AnimationSpeedSlider.IsEnabled = AnimationToggle.IsOn;
         }
@@ -171,69 +157,6 @@ public sealed partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// 字体大小选择变更
-    /// </summary>
-    private async void FontSizeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_isInitializing || _configurationService == null) return;
-
-        if (FontSizeComboBox.SelectedItem is ComboBoxItem item &&
-            int.TryParse(item.Tag?.ToString(), out var fontSize))
-        {
-            await _configurationService.SetValueAsync("FontSize", fontSize);
-            
-            // 这里可以添加动态更新字体大小的逻辑
-            ApplyFontSize(fontSize);
-        }
-    }
-
-    /// <summary>
-    /// 应用字体大小
-    /// </summary>
-    private void ApplyFontSize(int fontSize)
-    {
-        // 更新应用程序资源中的字体大小
-        if (Application.Current.Resources.ContainsKey("DefaultFontSize"))
-        {
-            Application.Current.Resources["DefaultFontSize"] = fontSize;
-        }
-        else
-        {
-            Application.Current.Resources.Add("DefaultFontSize", fontSize);
-        }
-    }
-
-    /// <summary>
-    /// 键盘提示切换
-    /// </summary>
-    private async void KeyboardHintsToggle_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (_isInitializing || _configurationService == null) return;
-
-        await _configurationService.SetValueAsync("ShowKeyboardHints", KeyboardHintsToggle.IsOn);
-    }
-
-    /// <summary>
-    /// 屏幕阅读器优化切换
-    /// </summary>
-    private async void ScreenReaderToggle_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (_isInitializing || _configurationService == null) return;
-
-        await _configurationService.SetValueAsync("ScreenReaderOptimized", ScreenReaderToggle.IsOn);
-    }
-
-    /// <summary>
-    /// 减少视觉效果切换
-    /// </summary>
-    private async void ReduceEffectsToggle_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (_isInitializing || _configurationService == null) return;
-
-        await _configurationService.SetValueAsync("ReduceVisualEffects", ReduceEffectsToggle.IsOn);
-    }
-
-    /// <summary>
     /// 重置所有设置
     /// </summary>
     private async void ResetButton_Click(object sender, RoutedEventArgs e)
@@ -271,11 +194,7 @@ public sealed partial class SettingsPage : Page
             await _themeService.SetAnimationSpeedMultiplierAsync(1.0);
             await _themeService.SetHighContrastEnabledAsync(false);
 
-            // 重置其他设置
-            await _configurationService.SetValueAsync("FontSize", 14);
-            await _configurationService.SetValueAsync("ShowKeyboardHints", false);
-            await _configurationService.SetValueAsync("ScreenReaderOptimized", false);
-            await _configurationService.SetValueAsync("ReduceVisualEffects", false);
+            // 重置其他设置（保留配置键以便将来使用）
 
             // 重新初始化界面
             InitializeSettings();
