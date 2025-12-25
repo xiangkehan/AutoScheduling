@@ -278,13 +278,16 @@ public class SchedulingService : ISchedulingService
             }
             else
             {
-                // 仅贪心模式
+                // 贪心模式
                 System.Diagnostics.Debug.WriteLine("使用贪心模式");
                 var scheduler = new GreedyScheduler(context);
                 modelSchedule = await scheduler.ExecuteAsync(progress, cancellationToken);
             }
+
+            // 记录当前排班模式，便于后续恢复/继续使用正确算法
+            modelSchedule.SchedulingMode = (int)mode;
             
-            // 保存部分进度信息，用于错误处理 - 对应需求4.1, 4.2, 4.3, 4.4, 4.5
+            // 保存部分进度信息，用于错误处理 - 对应需求1.1, 4.2, 4.3, 4.4, 4.5
             partialSchedule = modelSchedule;
             partialCompletedAssignments = modelSchedule.Results?.Count ?? 0;
             
@@ -701,14 +704,16 @@ public class SchedulingService : ISchedulingService
                 PersonnelName = personnelNames.TryGetValue(s.PersonnelId, out var pername) ? pername : string.Empty,
                 StartTime = s.StartTime,
                 EndTime = s.EndTime,
-                PeriodIndex = CalcPeriodIndex(s.StartTime)
+                // 直接使用 TimeSlotIndex，避免因时区转换导致的计算错误
+                PeriodIndex = s.TimeSlotIndex
             }).ToList(),
             CreatedAt = createdAtOverride ?? schedule.CreatedAt,
             ConfirmedAt = confirmedAt,
             StartDate = schedule.StartDate,
             EndDate = schedule.EndDate,
+            SchedulingMode = (SchedulingMode)schedule.SchedulingMode,
             Conflicts = GenerateBasicConflicts(schedule),
-            // 映射约束配置信息
+            // 映射终端配置信息
             HolidayConfigId = schedule.HolidayConfigId,
             UseActiveHolidayConfig = schedule.UseActiveHolidayConfig,
             EnabledFixedRuleIds = schedule.EnabledFixedRuleIds.ToList(),
@@ -722,8 +727,9 @@ public class SchedulingService : ISchedulingService
         var conflicts = new List<ConflictDto>();
         // 未分配冲突：扫描全部日期、时段、哨位组合
         int totalDays = (schedule.EndDate.Date - schedule.StartDate.Date).Days + 1;
+        // 使用 TimeSlotIndex 而不是重新计算，避免时区问题
         var assignedTriples = schedule.Results
-        .GroupBy(s => (Date: s.StartTime.Date, Period: CalcPeriodIndex(s.StartTime), Pos: s.PositionId))
+        .GroupBy(s => (Date: s.StartTime.Date, Period: s.TimeSlotIndex, Pos: s.PositionId))
         .Select(g => g.Key)
         .ToHashSet();
         for (int d = 0; d < totalDays; d++)
@@ -963,8 +969,9 @@ public class SchedulingService : ISchedulingService
     private async Task<List<(DateTime Date, int Period, int PositionId)>> GetCriticalUnassignedSlotsAsync(Schedule schedule)
     {
         var unassignedSlots = new List<(DateTime Date, int Period, int PositionId)>();
+        // 使用 TimeSlotIndex 而不是重新计算，避免时区问题
         var assignedSlots = schedule.Results
-            .Select(s => (Date: s.StartTime.Date, Period: CalcPeriodIndex(s.StartTime), PositionId: s.PositionId))
+            .Select(s => (Date: s.StartTime.Date, Period: s.TimeSlotIndex, PositionId: s.PositionId))
             .ToHashSet();
 
         var totalDays = (schedule.EndDate.Date - schedule.StartDate.Date).Days + 1;
@@ -1134,8 +1141,8 @@ public class SchedulingService : ISchedulingService
                     personnelShiftCounts[shift.PersonnelId] = 0;
                 personnelShiftCounts[shift.PersonnelId]++;
                 
-                // 时段分布统计
-                var periodIndex = CalcPeriodIndex(shift.StartTime);
+                // 时段分布统计 - 使用 TimeSlotIndex 而不是重新计算
+                var periodIndex = shift.TimeSlotIndex;
                 if (!timeSlotDistribution.ContainsKey(periodIndex))
                     timeSlotDistribution[periodIndex] = 0;
                 timeSlotDistribution[periodIndex]++;
@@ -1298,15 +1305,16 @@ public class SchedulingService : ISchedulingService
             // 统计日哨数和夜哨数
             // 日哨：06:00-18:00 (时段索引 3-8)
             // 夜哨：18:00-06:00 (时段索引 9-11, 0-2)
+            // 使用 TimeSlotIndex 而不是重新计算，避免时区问题
             var dayShifts = shifts.Count(s => 
             {
-                var periodIndex = CalcPeriodIndex(s.StartTime);
+                var periodIndex = s.TimeSlotIndex;
                 return periodIndex >= 3 && periodIndex <= 8;
             });
 
             var nightShifts = shifts.Count(s => 
             {
-                var periodIndex = CalcPeriodIndex(s.StartTime);
+                var periodIndex = s.TimeSlotIndex;
                 return periodIndex >= 9 || periodIndex <= 2;
             });
 
@@ -1448,7 +1456,8 @@ public class SchedulingService : ISchedulingService
                 }
 
                 var date = shift.StartTime.Date;
-                var periodIndex = CalcPeriodIndex(shift.StartTime);
+                // 使用 TimeSlotIndex 而不是重新计算，避免时区问题
+                var periodIndex = shift.TimeSlotIndex;
 
                 // 计算休息时间评分
                 restScore += softConstraintCalculator.CalculateRestScore(personIdx, periodIndex, date);
@@ -1797,6 +1806,10 @@ public class SchedulingService : ISchedulingService
             context.Positions.Count,
             12, // 12个时段
             context.Personals.Count);
+        
+        // 初始化可行性张量 - 使用哨位可用人员列表填充
+        // 这是遗传算法正常工作的关键，否则变异和修复操作无法获取候选人
+        feasibilityTensor.InitializeWithAvailablePersonnel(context.Positions, context.PersonIdToIdx);
         
         // 根据配置创建交叉策略
         ICrossoverStrategy crossoverStrategy = _geneticConfig.CrossoverStrategy switch
@@ -2221,16 +2234,19 @@ public class SchedulingService : ISchedulingService
                     
                     var geneticScheduler = CreateGeneticScheduler(context);
                     
-                    // 使用草稿作为初始解继续优化
+                    // 使用草稿最优解继续优化
                     modelSchedule = await geneticScheduler.ExecuteAsync(draftSchedule, progress, cancellationToken);
                 }
                 else
                 {
-                    // 仅贪心模式：重新执行（贪心算法不支持断点续传）
-                    System.Diagnostics.Debug.WriteLine("贪心模式不支持断点续传，重新执行");
+                    // 贪心模式：重新执行（贪心算法不支持断点继续）
+                    System.Diagnostics.Debug.WriteLine("贪心模式不支持断点续跑，重新执行");
                     var scheduler = new GreedyScheduler(context);
                     modelSchedule = await scheduler.ExecuteAsync(progress, cancellationToken);
                 }
+
+                // 确保保存的排班记录包含本次选择的模式
+                modelSchedule.SchedulingMode = (int)mode;
 
                 // 更新排班信息
                 modelSchedule.Header = request.Title;

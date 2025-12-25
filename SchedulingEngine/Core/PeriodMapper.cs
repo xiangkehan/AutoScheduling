@@ -80,7 +80,9 @@ public class PeriodMapper
     public (DateTime date, int localPeriod) ToDateTime(int globalPeriod)
     {
         var (dayIndex, localPeriod) = ToLocalPeriod(globalPeriod);
-        DateTime date = _startDate.AddDays(dayIndex);
+        // 确保返回的日期只包含日期部分，Kind 为 Unspecified，与 Assignments 字典键一致
+        DateTime date = _startDate.AddDays(dayIndex).Date;
+        
         return (date, localPeriod);
     }
 

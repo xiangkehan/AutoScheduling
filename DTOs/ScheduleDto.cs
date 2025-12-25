@@ -129,7 +129,7 @@ public class ScheduleDto
     public bool IsPartialResult { get; set; }
 
     /// <summary>
-    /// 排班模式（仅贪心或混合模式）
+    /// 排班模式（默认为贪心模式）
     /// </summary>
     [JsonPropertyName("schedulingMode")]
     public SchedulingMode SchedulingMode { get; set; } = SchedulingMode.GreedyOnly;

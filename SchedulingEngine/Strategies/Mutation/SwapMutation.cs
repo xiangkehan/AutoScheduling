@@ -15,21 +15,25 @@ public class SwapMutation : IMutationStrategy
     private readonly ConstraintValidator _constraintValidator;
     private readonly FeasibilityTensor _feasibilityTensor;
     private readonly int _mutationCount;
+    private readonly double _unassignedRepairRatio;
 
     /// <summary>
     /// 构造函数
     /// </summary>
     /// <param name="constraintValidator">约束验证器</param>
     /// <param name="feasibilityTensor">可行性张量</param>
-    /// <param name="mutationCount">每次变异的班次数量（默认3）</param>
+    /// <param name="mutationCount">每次变异的班次数量（默认5）</param>
+    /// <param name="unassignedRepairRatio">未分配时段修复比例（默认0.3，即修复30%的未分配时段）</param>
     public SwapMutation(
         ConstraintValidator constraintValidator,
         FeasibilityTensor feasibilityTensor,
-        int mutationCount = 3)
+        int mutationCount = 5,
+        double unassignedRepairRatio = 0.3)
     {
         _constraintValidator = constraintValidator ?? throw new ArgumentNullException(nameof(constraintValidator));
         _feasibilityTensor = feasibilityTensor ?? throw new ArgumentNullException(nameof(feasibilityTensor));
         _mutationCount = mutationCount;
+        _unassignedRepairRatio = Math.Clamp(unassignedRepairRatio, 0.1, 0.5);
     }
 
     /// <summary>
@@ -46,27 +50,22 @@ public class SwapMutation : IMutationStrategy
         // 收集所有已分配时段
         var assignedSlots = CollectAssignedSlots(individual);
 
-        // 优先变异未分配时段 - 对应需求8.4
-        int unassignedMutations = Math.Min(_mutationCount, unassignedSlots.Count);
-        int assignedMutations = _mutationCount - unassignedMutations;
+        // 计算需要修复的未分配时段数量（按比例，至少修复 _mutationCount 个）
+        int unassignedRepairCount = Math.Max(_mutationCount, (int)(unassignedSlots.Count * _unassignedRepairRatio));
+        unassignedRepairCount = Math.Min(unassignedRepairCount, unassignedSlots.Count);
 
-        // 变异未分配时段
-        for (int i = 0; i < unassignedMutations && unassignedSlots.Count > 0; i++)
+        // 优先修复未分配时段 - 对应需求8.4
+        var shuffledUnassigned = unassignedSlots.OrderBy(_ => random.Next()).Take(unassignedRepairCount).ToList();
+        foreach (var slot in shuffledUnassigned)
         {
-            int randomIndex = random.Next(unassignedSlots.Count);
-            var slot = unassignedSlots[randomIndex];
-            unassignedSlots.RemoveAt(randomIndex);
-
-            MutateSlot(individual, slot.date, slot.periodIdx, slot.positionIdx, context, random);
+            TryFillUnassignedSlot(individual, slot.date, slot.periodIdx, slot.positionIdx, context, random);
         }
 
-        // 变异已分配时段
-        for (int i = 0; i < assignedMutations && assignedSlots.Count > 0; i++)
+        // 变异部分已分配时段（探索新解）
+        int assignedMutations = Math.Min(_mutationCount, assignedSlots.Count);
+        var shuffledAssigned = assignedSlots.OrderBy(_ => random.Next()).Take(assignedMutations).ToList();
+        foreach (var slot in shuffledAssigned)
         {
-            int randomIndex = random.Next(assignedSlots.Count);
-            var slot = assignedSlots[randomIndex];
-            assignedSlots.RemoveAt(randomIndex);
-
             MutateSlot(individual, slot.date, slot.periodIdx, slot.positionIdx, context, random);
         }
 
@@ -126,6 +125,45 @@ public class SwapMutation : IMutationStrategy
         }
 
         return slots;
+    }
+
+    /// <summary>
+    /// 尝试填补未分配时段 - 更积极的修复策略
+    /// </summary>
+    private void TryFillUnassignedSlot(
+        Individual individual,
+        DateTime date,
+        int periodIdx,
+        int positionIdx,
+        SchedulingContext context,
+        Random random)
+    {
+        // 获取该时段的可行人员
+        var feasiblePersons = _feasibilityTensor.GetFeasiblePersons(positionIdx, periodIdx);
+
+        if (feasiblePersons == null || feasiblePersons.Length == 0)
+        {
+            return; // 无可行人员，保持未分配
+        }
+
+        // 随机打乱可行人员顺序
+        var shuffled = feasiblePersons.OrderBy(_ => random.Next()).ToArray();
+
+        // 尝试每个可行人员，直到找到满足约束的
+        foreach (var personIdx in shuffled)
+        {
+            // 临时分配
+            individual.Genes[date][periodIdx, positionIdx] = personIdx;
+
+            // 验证约束
+            if (_constraintValidator.ValidateAllConstraints(personIdx, positionIdx, periodIdx, date))
+            {
+                return; // 分配成功
+            }
+        }
+
+        // 所有可行人员都失败，恢复为未分配
+        individual.Genes[date][periodIdx, positionIdx] = -1;
     }
 
     /// <summary>

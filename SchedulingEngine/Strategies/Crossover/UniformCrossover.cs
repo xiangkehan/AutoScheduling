@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using AutoScheduling3.SchedulingEngine.Core;
 
 namespace AutoScheduling3.SchedulingEngine.Strategies.Crossover;
@@ -13,21 +14,25 @@ public class UniformCrossover : ICrossoverStrategy
     private readonly ConstraintValidator _constraintValidator;
     private readonly FeasibilityTensor _feasibilityTensor;
     private readonly int _maxRepairAttempts;
+    private readonly double _unassignedRepairRatio;
 
     /// <summary>
     /// 构造函数
     /// </summary>
     /// <param name="constraintValidator">约束验证器</param>
     /// <param name="feasibilityTensor">可行性张量</param>
-    /// <param name="maxRepairAttempts">最大修复尝试次数（默认3）</param>
+    /// <param name="maxRepairAttempts">最大修复尝试次数（默认5）</param>
+    /// <param name="unassignedRepairRatio">未分配时段修复比例（默认0.5）</param>
     public UniformCrossover(
         ConstraintValidator constraintValidator,
         FeasibilityTensor feasibilityTensor,
-        int maxRepairAttempts = 3)
+        int maxRepairAttempts = 5,
+        double unassignedRepairRatio = 0.5)
     {
         _constraintValidator = constraintValidator ?? throw new ArgumentNullException(nameof(constraintValidator));
         _feasibilityTensor = feasibilityTensor ?? throw new ArgumentNullException(nameof(feasibilityTensor));
         _maxRepairAttempts = maxRepairAttempts;
+        _unassignedRepairRatio = Math.Clamp(unassignedRepairRatio, 0.1, 0.8);
     }
 
     /// <summary>
@@ -91,7 +96,52 @@ public class UniformCrossover : ICrossoverStrategy
         TryRepairConstraintViolations(child1, context, random);
         TryRepairConstraintViolations(child2, context, random);
 
+        // 积极填补未分配时段
+        TryFillUnassignedSlots(child1, context, random);
+        TryFillUnassignedSlots(child2, context, random);
+
         return (child1, child2);
+    }
+
+    /// <summary>
+    /// 积极填补未分配时段
+    /// </summary>
+    private void TryFillUnassignedSlots(Individual individual, SchedulingContext context, Random random)
+    {
+        var unassignedSlots = new List<(DateTime date, int periodIdx, int positionIdx)>();
+
+        // 收集所有未分配时段
+        foreach (var (date, assignments) in individual.Genes)
+        {
+            int periods = assignments.GetLength(0);
+            int positions = assignments.GetLength(1);
+
+            for (int periodIdx = 0; periodIdx < periods; periodIdx++)
+            {
+                for (int positionIdx = 0; positionIdx < positions; positionIdx++)
+                {
+                    if (assignments[periodIdx, positionIdx] == -1)
+                    {
+                        unassignedSlots.Add((date, periodIdx, positionIdx));
+                    }
+                }
+            }
+        }
+
+        // 计算需要修复的数量
+        int repairCount = (int)(unassignedSlots.Count * _unassignedRepairRatio);
+        repairCount = Math.Max(repairCount, Math.Min(10, unassignedSlots.Count)); // 至少修复10个或全部
+
+        // 随机选择要修复的时段
+        var toRepair = unassignedSlots.OrderBy(_ => random.Next()).Take(repairCount).ToList();
+
+        foreach (var (date, periodIdx, positionIdx) in toRepair)
+        {
+            TryReassignSlot(individual, date, periodIdx, positionIdx, context, random);
+        }
+
+        // 重新识别未分配时段
+        individual.IdentifyUnassignedSlots();
     }
 
     /// <summary>

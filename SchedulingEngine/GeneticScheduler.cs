@@ -83,6 +83,9 @@ public class GeneticScheduler
             EvaluatePopulation(population);
             population.UpdateStatistics();
             System.Diagnostics.Debug.WriteLine($"[GeneticScheduler] 初始种群评估完成，最优适应度: {population.BestIndividual?.Fitness ?? 0}");
+            
+            // 临时调试：输出初始种群详细适应度信息
+            LogGenerationDebug(0, population);
 
             if (_config.EnableDetailedLogging)
             {
@@ -158,6 +161,9 @@ public class GeneticScheduler
                 // 评估新种群的适应度
                 EvaluatePopulation(newPopulation);
                 newPopulation.UpdateStatistics();
+
+                // 临时调试：输出每一代的适应度信息
+                LogGenerationDebug(generation, newPopulation);
 
                 // 替换旧种群
                 population = newPopulation;
@@ -301,5 +307,40 @@ public class GeneticScheduler
             $"平均适应度={population.AverageFitness:F4}, " +
             $"硬约束违反={best.HardConstraintViolations}, " +
             $"未分配={best.UnassignedSlots}");
+    }
+
+    /// <summary>
+    /// 临时调试：输出每一代的详细适应度信息
+    /// </summary>
+    private void LogGenerationDebug(int generation, Population population)
+    {
+        if (population.BestIndividual == null)
+        {
+            System.Diagnostics.Debug.WriteLine($"[DEBUG][{nameof(GeneticScheduler)}] 第 {generation} 代: 无有效个体");
+            return;
+        }
+
+        var best = population.BestIndividual;
+        var worst = population.Individuals.OrderBy(i => i.Fitness).FirstOrDefault();
+        
+        // 统计适应度分布
+        var fitnesses = population.Individuals.Select(i => i.Fitness).ToList();
+        var minFitness = fitnesses.Min();
+        var maxFitness = fitnesses.Max();
+        var avgFitness = fitnesses.Average();
+        var stdDev = Math.Sqrt(fitnesses.Average(f => Math.Pow(f - avgFitness, 2)));
+        
+        // 统计未分配和硬约束违反
+        var totalUnassigned = population.Individuals.Sum(i => i.UnassignedSlots);
+        var totalHardViolations = population.Individuals.Sum(i => i.HardConstraintViolations);
+        var avgUnassigned = population.Individuals.Average(i => i.UnassignedSlots);
+        var avgHardViolations = population.Individuals.Average(i => i.HardConstraintViolations);
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[DEBUG][{nameof(GeneticScheduler)}] === 第 {generation} 代 ===" +
+            $"\n  适应度: 最优={maxFitness:F4}, 最差={minFitness:F4}, 平均={avgFitness:F4}, 标准差={stdDev:F4}" +
+            $"\n  最优个体: 硬约束违反={best.HardConstraintViolations}, 未分配={best.UnassignedSlots}, 软约束分={best.SoftConstraintScore:F4}" +
+            $"\n  种群统计: 平均硬约束违反={avgHardViolations:F2}, 平均未分配={avgUnassigned:F2}" +
+            $"\n  总计: 硬约束违反={totalHardViolations}, 未分配={totalUnassigned}");
     }
 }

@@ -226,13 +226,13 @@ public class FitnessEvaluator
 
     /// <summary>
     /// 计算软约束得分 - 对应需求3.3
+    /// 采用加权求和方式，让分配数量和质量都能拉开差距
     /// </summary>
     /// <param name="individual">个体</param>
     /// <returns>软约束总得分</returns>
     private double CalculateSoftConstraintScore(Individual individual)
     {
         double totalScore = 0.0;
-        int assignmentCount = 0;
 
         // 遍历所有分配，累加软约束得分
         foreach (var (date, assignments) in individual.Genes)
@@ -250,16 +250,15 @@ public class FitnessEvaluator
                     if (personIdx == -1)
                         continue;
 
-                    // 计算该分配的软约束得分
-                    double score = _softConstraintCalculator.CalculateTotalScore(personIdx, periodIdx, date);
+                    // 计算该分配的软约束得分并累加（传入哨位索引用于哨位多样性计算）
+                    double score = _softConstraintCalculator.CalculateTotalScore(personIdx, periodIdx, date, positionIdx);
                     totalScore += score;
-                    assignmentCount++;
                 }
             }
         }
 
-        // 返回平均得分（避免因分配数量不同导致的不公平比较）
-        return assignmentCount > 0 ? totalScore / assignmentCount : 0.0;
+        // 直接返回总分，分配越多、质量越好的个体得分越高
+        return totalScore;
     }
 
     /// <summary>

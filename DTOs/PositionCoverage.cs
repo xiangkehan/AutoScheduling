@@ -34,4 +34,14 @@ public class PositionCoverage
     /// 覆盖率展示文本
     /// </summary>
     public string CoverageRateDisplay => CoverageRate.ToString("P0");
+
+    /// <summary>
+    /// 包值（有效人员数，考虑人员共享）
+    /// </summary>
+    public double PackValue { get; set; }
+
+    /// <summary>
+    /// 包值展示文本
+    /// </summary>
+    public string PackValueDisplay => PackValue.ToString("F1");
 }

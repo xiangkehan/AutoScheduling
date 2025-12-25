@@ -962,21 +962,24 @@ namespace AutoScheduling3.ViewModels.Scheduling
                 TotalPeriods = 12 // 每天12个时段
             };
 
-            // 创建列（哨位）
-            var positionGroups = schedule.Shifts
+            // 创建列（哨位）- 使用 PositionIds 确保所有哨位都有列，即使没有班次
+            // 构建哨位名称映射（从 Shifts 中获取）
+            var positionNames = schedule.Shifts
                 .GroupBy(s => s.PositionId)
-                .OrderBy(g => g.Key)
-                .ToList();
+                .ToDictionary(g => g.Key, g => g.First().PositionName);
 
             int colIndex = 0;
-            foreach (var posGroup in positionGroups)
+            foreach (var positionId in schedule.PositionIds)
             {
-                var firstShift = posGroup.First();
+                var positionName = positionNames.TryGetValue(positionId, out var name) 
+                    ? name 
+                    : $"哨位 {positionId}";
+                    
                 gridData.Columns.Add(new ScheduleGridColumn
                 {
                     ColumnIndex = colIndex,
-                    PositionId = firstShift.PositionId,
-                    PositionName = firstShift.PositionName
+                    PositionId = positionId,
+                    PositionName = positionName
                 });
                 colIndex++;
             }
@@ -1353,6 +1356,10 @@ namespace AutoScheduling3.ViewModels.Scheduling
             var totalDays = (Schedule.EndDate - Schedule.StartDate).Days + 1;
             var totalSlotsPerPosition = totalDays * 12; // 每天12个时段
 
+            // 获取所有哨位的可用人员信息，用于计算包值
+            var positionAvailablePersonnel = await GetPositionAvailablePersonnelAsync(Schedule.PositionIds);
+            var packValues = CalculatePackValues(positionAvailablePersonnel);
+
             foreach (var positionId in Schedule.PositionIds)
             {
                 var assignedSlots = Schedule.Shifts.Count(s => s.PositionId == positionId);
@@ -1363,11 +1370,65 @@ namespace AutoScheduling3.ViewModels.Scheduling
                     PositionName = await GetPositionNameAsync(positionId),
                     AssignedSlots = assignedSlots,
                     TotalSlots = totalSlotsPerPosition,
-                    CoverageRate = (double)assignedSlots / totalSlotsPerPosition
+                    CoverageRate = (double)assignedSlots / totalSlotsPerPosition,
+                    PackValue = packValues.TryGetValue(positionId, out var pv) ? pv : 0
                 });
             }
 
             PositionCoverages = new ObservableCollection<PositionCoverage>(coverages);
+        }
+
+        /// <summary>
+        /// 获取哨位的可用人员ID列表
+        /// </summary>
+        private async Task<Dictionary<int, List<int>>> GetPositionAvailablePersonnelAsync(List<int> positionIds)
+        {
+            var result = new Dictionary<int, List<int>>();
+            foreach (var positionId in positionIds)
+            {
+                var position = await _positionService.GetByIdAsync(positionId);
+                if (position != null)
+                {
+                    result[positionId] = position.AvailablePersonnelIds ?? new List<int>();
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 计算哨位包值（考虑人员共享）
+        /// 包值 = 该哨位的有效人员数（每个人员按共享哨位数加权）
+        /// </summary>
+        private Dictionary<int, double> CalculatePackValues(Dictionary<int, List<int>> positionAvailablePersonnel)
+        {
+            var result = new Dictionary<int, double>();
+
+            // 1. 统计每个人员被多少个哨位共享
+            var personnelShareCount = new Dictionary<int, int>();
+            foreach (var kvp in positionAvailablePersonnel)
+            {
+                foreach (var personnelId in kvp.Value)
+                {
+                    if (!personnelShareCount.ContainsKey(personnelId))
+                        personnelShareCount[personnelId] = 0;
+                    personnelShareCount[personnelId]++;
+                }
+            }
+
+            // 2. 计算每个哨位的包值（有效人员数）
+            foreach (var kvp in positionAvailablePersonnel)
+            {
+                double packValue = 0;
+                foreach (var personnelId in kvp.Value)
+                {
+                    // 人员贡献 = 1 / 被共享的哨位数
+                    int shareCount = personnelShareCount[personnelId];
+                    packValue += 1.0 / shareCount;
+                }
+                result[kvp.Key] = packValue;
+            }
+
+            return result;
         }
 
         /// <summary>

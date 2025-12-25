@@ -85,18 +85,14 @@ namespace AutoScheduling3.SchedulingEngine
             await PreprocessAsync();
             cancellationToken.ThrowIfCancellationRequested();
 
-            // 临时调试：确认全局调度模式配置
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 全局调度配置 - EnableGlobalScheduling: {_config.GlobalScheduling.EnableGlobalScheduling}, 天数: {totalDays}, 最大天数阈值: {_config.GlobalScheduling.MaxDaysForGlobalMode}");
-
             // 检查是否启用全局调度模式 - 对应需求9.1, 9.2, 9.3
             if (_config.GlobalScheduling.EnableGlobalScheduling)
             {
-                _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] ✓ 使用全局调度模式 (天数: {totalDays})");
                 return await ExecuteGlobalSchedulingAsync(progress, cancellationToken);
             }
             else
             {
-                _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] ✗ 使用按天调度模式 (天数: {totalDays})");
+                return await ExecutePerDaySchedulingAsync(progress, cancellationToken);
                 return await ExecutePerDaySchedulingAsync(progress, cancellationToken);
             }
         }
@@ -217,15 +213,9 @@ namespace AutoScheduling3.SchedulingEngine
                 return await FallbackToPerDayScheduling("排班天数超过阈值", progress, cancellationToken);
             }
 
-            // 临时调试：记录全局调度初始化
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 开始初始化全局调度组件 - 开始日期: {_context.StartDate:yyyy-MM-dd}, 结束日期: {_context.EndDate:yyyy-MM-dd}");
-
             // 初始化全局组件
             _periodMapper = new PeriodMapper(_context.StartDate, _context.EndDate);
             int totalPeriods = _periodMapper.TotalPeriods;
-            
-            // 临时调试：记录PeriodMapper信息
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] PeriodMapper已创建 - 总天数: {_periodMapper.TotalDays}, 总时段数: {totalPeriods}, 每天时段数: {_periodMapper.PeriodsPerDay}");
             
             ReportProgress(progress, SchedulingStage.Initializing, 
                 $"正在初始化全局张量 ({totalDays}天 × 12时段 = {totalPeriods}时段)...", 0);
@@ -237,18 +227,12 @@ namespace AutoScheduling3.SchedulingEngine
                 _context.Personals.Count,
                 _config.UseOptimizedTensor);
 
-            // 临时调试：记录全局张量维度
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 全局张量已创建 - 哨位数: {_context.Positions.Count}, 全局时段数: {totalPeriods}, 人员数: {_context.Personals.Count}, 优化模式: {_config.UseOptimizedTensor}");
-
             // 检查内存占用 - 对应需求11.3
             long memoryMB = _tensor.GetMemoryUsageBytes() / (1024 * 1024);
             
-            // 临时调试：记录内存占用
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 全局张量内存占用: {memoryMB}MB, 阈值: {_config.GlobalScheduling.MemoryThresholdMB}MB");
-            
             if (memoryMB > _config.GlobalScheduling.MemoryThresholdMB)
             {
-                _logger.LogWarning($"[DEBUG][{nameof(GreedyScheduler)}] ✗ 全局张量内存占用({memoryMB}MB)超过阈值({_config.GlobalScheduling.MemoryThresholdMB}MB)，降级到按天模式");
+                _logger.LogWarning($"全局张量内存占用({memoryMB}MB)超过阈值({_config.GlobalScheduling.MemoryThresholdMB}MB)，降级到按天模式");
                 return await FallbackToPerDayScheduling("内存占用超过阈值", progress, cancellationToken);
             }
 
@@ -258,50 +242,18 @@ namespace AutoScheduling3.SchedulingEngine
             // 初始化全局张量（使用哨位可用人员列表）
             _tensor.InitializeWithAvailablePersonnel(_context.Positions, _context.PersonIdToIdx);
 
-            // 临时调试：记录初始化后的候选数（应用约束前）
-            int samplePosIdx = 0;
-            int sampleGlobalPeriod = 0;
-            int initialCandidates = _tensor.CountFeasiblePersons(samplePosIdx, sampleGlobalPeriod);
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 张量初始化后样本候选数 - 哨位0, 全局时段0: {initialCandidates}人");
-
             // 应用全局约束 - 对应需求1.1-1.5, 7.1-7.5
             await ApplyGlobalConstraintsAsync(progress, cancellationToken);
-
-            // 临时调试：记录约束应用后的候选数
-            int afterConstraintCandidates = _tensor.CountFeasiblePersons(samplePosIdx, sampleGlobalPeriod);
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 约束应用后样本候选数 - 哨位0, 全局时段0: {afterConstraintCandidates}人 (减少了{initialCandidates - afterConstraintCandidates}人)");
 
             // 应用手动指定（全局范围） - 对应需求5.8
             await ApplyGlobalManualAssignmentsAsync(progress, cancellationToken);
 
-            // 临时调试：记录全局MRV策略初始化
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 开始初始化全局MRV策略");
-
             // 初始化全局MRV策略 - 对应需求3.1-3.5
             var globalMRV = new Strategies.GlobalMRVStrategy(_tensor, _context, _periodMapper);
 
-            // 临时调试：记录全局MRV策略统计
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 全局MRV策略已初始化 - {globalMRV.GetStatistics()}");
-
-            // 临时调试：检查约束应用后的候选数分布
-            var candidateDistribution = new Dictionary<int, int>();
-            for (int globalPeriod = 0; globalPeriod < _periodMapper.TotalPeriods; globalPeriod++)
-            {
-                for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
-                {
-                    int count = globalMRV.GetCandidateCount(posIdx, globalPeriod);
-                    if (!candidateDistribution.ContainsKey(count))
-                        candidateDistribution[count] = 0;
-                    candidateDistribution[count]++;
-                }
-            }
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 约束应用后候选数分布: {string.Join(", ", candidateDistribution.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}人:{kv.Value}个位置"))}");
-
             // 执行全局贪心分配 - 对应需求2.1-2.5, 3.1-3.5
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 开始执行全局贪心分配");
             await PerformGlobalGreedyAssignmentsAsync(
                 globalMRV, progress, cancellationToken);
-            _logger.Log($"[DEBUG][{nameof(GreedyScheduler)}] 全局贪心分配完成");
 
             // 生成排班结果
             return GenerateSchedule();
@@ -472,6 +424,7 @@ namespace AutoScheduling3.SchedulingEngine
                 if (posIdx == -1 || globalPeriodIdx == -1)
                 {
                     break; // 所有位置已分配或无可行分配
+                    break; // 所有位置已分配或无可行分配
                 }
 
                 var (date, localPeriod) = _periodMapper.ToDateTime(globalPeriodIdx);
@@ -485,8 +438,8 @@ namespace AutoScheduling3.SchedulingEngine
                     continue; // 无可行人员，跳过此位置
                 }
 
-                // 使用软约束评分选择最优人员
-                int bestPersonIdx = _softConstraintCalculator.SelectBestPerson(feasiblePersons, localPeriod, date);
+                // 使用软约束评分选择最优人员（传入哨位索引用于哨位多样性计算）
+                int bestPersonIdx = _softConstraintCalculator.SelectBestPerson(feasiblePersons, localPeriod, date, posIdx);
                 if (bestPersonIdx >= 0)
                 {
                     // 执行分配（全局模式）
@@ -951,8 +904,8 @@ namespace AutoScheduling3.SchedulingEngine
                     continue; // 无可行人员，跳过此位置
                 }
 
-                // 使用软约束评分选择最优人员 - 对应需求6.1-6.4
-                int bestPersonIdx = _softConstraintCalculator.SelectBestPerson(feasiblePersons, periodIdx, date);
+                // 使用软约束评分选择最优人员 - 对应需求6.1-6.4（传入哨位索引用于哨位多样性计算）
+                int bestPersonIdx = _softConstraintCalculator.SelectBestPerson(feasiblePersons, periodIdx, date, posIdx);
                 if (bestPersonIdx >= 0)
                 {
                     // 执行分配并更新约束
@@ -1251,6 +1204,7 @@ namespace AutoScheduling3.SchedulingEngine
                 EndDate = _context.EndDate.Date,
                 CreatedAt = DateTime.UtcNow
             };
+            
             foreach (var kvp in _context.Assignments)
             {
                 var date = kvp.Key;
@@ -1258,11 +1212,11 @@ namespace AutoScheduling3.SchedulingEngine
                 // 验证日期在范围内 - 修复遗传算法优化后的日期越界问题
                 if (date.Date < _context.StartDate.Date || date.Date > _context.EndDate.Date)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[警告] 跳过范围外的日期: {date:yyyy-MM-dd}，排班范围: {_context.StartDate:yyyy-MM-dd} 到 {_context.EndDate:yyyy-MM-dd}");
                     continue;
                 }
                 
                 var assignments = kvp.Value;
+                
                 for (int periodIdx = 0; periodIdx < 12; periodIdx++)
                 {
                     for (int posIdx = 0; posIdx < _context.Positions.Count; posIdx++)
@@ -1272,8 +1226,9 @@ namespace AutoScheduling3.SchedulingEngine
                         {
                             int positionId = _context.PositionIdxToId[posIdx];
                             int personalId = _context.PersonIdxToId[personIdx];
-                            var startTime = date.AddHours(periodIdx * 2);
-                            var endTime = startTime.AddHours(2);
+                            // 使用本地时间，不进行 UTC 转换
+                            var startTime = DateTime.SpecifyKind(date.AddHours(periodIdx * 2), DateTimeKind.Local);
+                            var endTime = DateTime.SpecifyKind(startTime.AddHours(2), DateTimeKind.Local);
                             
                             // 判断是否为夜哨
                             bool isNightShift = periodIdx == 11 || periodIdx == 0 || periodIdx == 1 || periodIdx == 2;
@@ -1282,8 +1237,8 @@ namespace AutoScheduling3.SchedulingEngine
                             {
                                 PositionId = positionId,
                                 PersonnelId = personalId,
-                                StartTime = DateTime.SpecifyKind(startTime, DateTimeKind.Utc),
-                                EndTime = DateTime.SpecifyKind(endTime, DateTimeKind.Utc),
+                                StartTime = startTime,
+                                EndTime = endTime,
                                 ScheduleId = schedule.Id,
                                 DayIndex = (date.Date - _context.StartDate.Date).Days,
                                 TimeSlotIndex = periodIdx,
@@ -1293,6 +1248,7 @@ namespace AutoScheduling3.SchedulingEngine
                     }
                 }
             }
+            
             return schedule;
         }
 

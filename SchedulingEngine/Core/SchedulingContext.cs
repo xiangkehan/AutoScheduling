@@ -93,11 +93,15 @@ namespace AutoScheduling3.SchedulingEngine.Core
                 PersonAssignmentDetails[person.Id] = new Dictionary<int, (DateTime, int, int)>();
             }
 
-            // 从历史排班中加载数据
+            // 从历史排班中加载数据（只加载当前排班人员的历史数据）
             if (LastConfirmedSchedule != null)
             {
                 foreach (var shift in LastConfirmedSchedule.Results)
                 {
+                    // 跳过不在当前排班人员列表中的历史数据
+                    if (!PersonAssignmentTimestamps.ContainsKey(shift.PersonnelId))
+                        continue;
+
                     // 计算历史班次的时间戳（可能为负数）
                     int timestamp = CalculateTimestamp(shift.StartTime.Date, shift.StartTime.Hour / 2);
                     int periodIdx = shift.StartTime.Hour / 2;
@@ -154,6 +158,7 @@ namespace AutoScheduling3.SchedulingEngine.Core
         public void InitializeAssignments()
         {
             var currentDate = StartDate.Date;
+            
             while (currentDate <= EndDate.Date)
             {
                 // 每天12个时段，每个哨位一个分配
@@ -174,9 +179,14 @@ namespace AutoScheduling3.SchedulingEngine.Core
         /// </summary>
         public void RecordAssignment(DateTime date, int periodIdx, int positionIdx, int personIdx)
         {
-            if (Assignments.ContainsKey(date.Date))
+            var dateKey = date.Date;
+            if (Assignments.ContainsKey(dateKey))
             {
-                Assignments[date.Date][periodIdx, positionIdx] = personIdx;
+                Assignments[dateKey][periodIdx, positionIdx] = personIdx;
+            }
+            else
+            {
+                return; // 如果日期不存在，不继续更新其他状态
             }
 
             // 更新人员分配索引
