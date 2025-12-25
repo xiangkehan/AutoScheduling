@@ -18,7 +18,7 @@ public partial class AlgorithmConfigViewModel : ObservableObject
     private readonly ISchedulingService _schedulingService;
 
     [ObservableProperty]
-    private SchedulingMode _selectedMode = SchedulingMode.GreedyOnly;
+    private SchedulingMode _selectedMode = SchedulingMode.Hybrid;
 
     [ObservableProperty]
     private int _populationSize = 50;
@@ -48,10 +48,10 @@ public partial class AlgorithmConfigViewModel : ObservableObject
     private int _tournamentSize = 5;
 
     [ObservableProperty]
-    private bool _isHybridMode = false;
+    private bool _isHybridMode = true;
 
     [ObservableProperty]
-    private bool _isGreedyOnlyMode = true;
+    private bool _isGreedyOnlyMode = false;
 
     // 验证错误消息
     [ObservableProperty]

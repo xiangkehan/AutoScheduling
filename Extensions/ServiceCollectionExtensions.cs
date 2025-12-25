@@ -187,7 +187,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<SchedulingViewModel>();
         services.AddTransient<ScheduleResultViewModel>();
         services.AddTransient<SchedulingProgressViewModel>();
-        services.AddTransient<AlgorithmConfigViewModel>();
+        // 使用 Singleton 确保 SchedulingViewModel 和 AlgorithmConfigStep 共享同一实例
+        services.AddSingleton<AlgorithmConfigViewModel>();
 
         // 历史ViewModels
         services.AddTransient<HistoryViewModel>();
